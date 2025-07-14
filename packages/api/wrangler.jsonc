@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "api",
+  "main": "src/index.ts",
+  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_date": "2025-05-08",
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "APP_URL": "",
+    "GOOGLE_GENERATIVE_AI_API_KEY": "",
+    "BETTER_AUTH_SECRET": "",
+    "DATABASE_URL": ""
+  }
+}

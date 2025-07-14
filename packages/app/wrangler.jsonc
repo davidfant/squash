@@ -3,5 +3,8 @@
   "compatibility_date": "2025-04-03",
   "assets": {
     "not_found_handling": "single-page-application"
+  },
+  "vars": {
+    "VITE_API_URL": "http://localhost:8787"
   }
 }

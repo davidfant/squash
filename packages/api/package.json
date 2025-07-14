@@ -1,0 +1,30 @@
+{
+  "name": "api",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "dev:mastra": "mastra dev --env .dev.vars",
+    "deploy": "wrangler deploy --minify",
+    "typegen": "wrangler types --env-interface CloudflareBindings"
+  },
+  "dependencies": {
+    "@ai-sdk/google": "^1.2.22",
+    "@hono/zod-validator": "^0.7.1",
+    "@mastra/cloudflare": "^0.11.0",
+    "@mastra/core": "^0.10.12",
+    "@mastra/deployer-cloudflare": "^0.10.12",
+    "@mastra/memory": "^0.11.2",
+    "@mastra/pg": "^0.12.2",
+    "@neondatabase/serverless": "^1.0.1",
+    "ai": "^4.3.18",
+    "better-auth": "^1.2.12",
+    "drizzle-orm": "^0.44.2",
+    "hono": "^4.8.4",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.4",
+    "mastra": "^0.10.12",
+    "wrangler": "4.16.1"
+  }
+}

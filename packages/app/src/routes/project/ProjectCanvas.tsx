@@ -1,8 +1,10 @@
+import { SectionToolbar } from "@/components/layout/toolbar/SectionToolbar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { AddSectionCard } from "./AddSectionCard";
 
 interface Section {
   label: string;
@@ -150,19 +152,17 @@ export function ProjectCanvas() {
           section={section}
         />
       ))}
-      <Card
-        className="border-2 border-border hover:border-primary hover:bg-primary/10 transition-colors duration-200 cursor-pointer group grid place-items-center mx-auto w-[80%]"
-        onClick={() => {
+      <AddSectionCard
+        onAddSection={() => {
           setSections((prev) => [
             ...prev,
             { label: "New Section", variants: ["X", "Y", "Z"] },
           ]);
         }}
-      >
-        <div className="p-2 text-muted-foreground rounded-full bg-border group-hover:bg-primary transition-colors">
-          <Plus className="size-6 text-foreground-muted group-hover:text-primary-foreground transition-colors" />
-        </div>
-      </Card>
+      />
+      <div className="w-[50%] min-w-md mx-auto">
+        <SectionToolbar submitting={false} onDeleteSection={console.log} />
+      </div>
     </div>
   );
 }

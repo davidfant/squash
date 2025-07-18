@@ -13,6 +13,7 @@ import {
 import {
   ArrowUp,
   Command,
+  CopyMinus,
   CornerDownLeft,
   Loader2,
   MoreVertical,
@@ -110,6 +111,14 @@ export function SectionOptionsButton({
         >
           <Trash2 className="h-4 w-4" />
           Delete section
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          variant="destructive"
+          onClick={onDelete}
+          className="gap-2"
+        >
+          <CopyMinus className="h-4 w-4" />
+          Delete other variants
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

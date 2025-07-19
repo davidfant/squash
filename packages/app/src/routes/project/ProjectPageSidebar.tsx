@@ -23,11 +23,12 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
 import { ChevronDown, Plus } from "lucide-react";
 import { useProjectContext, type ProjectPage } from "./context";
 
 export function ProjectPageSidebar({ page }: { page: ProjectPage }) {
-  const { pages } = useProjectContext();
+  const { pages, selectPage, addPage, selectVariant } = useProjectContext();
 
   const handleAddPage = () => {
     // TODO: Implement add page functionality
@@ -54,7 +55,10 @@ export function ProjectPageSidebar({ page }: { page: ProjectPage }) {
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-60">
                 {pages.map((pageItem) => (
-                  <DropdownMenuItem key={pageItem.id}>
+                  <DropdownMenuItem
+                    key={pageItem.id}
+                    onClick={() => selectPage(pageItem.id)}
+                  >
                     {pageItem.path}
                     <span className="text-muted-foreground">
                       {pageItem.label}
@@ -90,7 +94,15 @@ export function ProjectPageSidebar({ page }: { page: ProjectPage }) {
                     <SidebarMenuSub>
                       {section.variants.map((variant) => (
                         <SidebarMenuSubItem key={variant.id}>
-                          <SidebarMenuSubButton>
+                          <SidebarMenuSubButton
+                            className={cn(
+                              "cursor-pointer",
+                              variant.selected && "bg-sidebar-accent"
+                            )}
+                            onClick={() =>
+                              selectVariant(page.id, section.id, variant.id)
+                            }
+                          >
                             {variant.label}
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>

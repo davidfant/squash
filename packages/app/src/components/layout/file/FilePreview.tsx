@@ -1,31 +1,38 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import type { FilePart, ImagePart } from "ai";
 import { Loader2, X } from "lucide-react";
 
 interface FilePreviewProps {
   file: ImagePart | FilePart;
   loading?: boolean;
+  className?: string;
   onRemove?(): void;
 }
 
-export function FilePreview({ file, loading, onRemove }: FilePreviewProps) {
+export function FilePreview({
+  file,
+  loading,
+  className,
+  onRemove,
+}: FilePreviewProps) {
   const content = (() => {
     if (file.type === "image") {
-      return <img src={file.image} className="size-full object-cover" />;
+      return <img src={file.image} className="object-cover w-auto h-full" />;
     } else if (file.mimeType?.startsWith("image/")) {
       return (
         <img
           src={file.data}
           alt={file.filename}
-          className="size-full object-cover"
+          className="object-cover w-auto h-full"
         />
       );
     } else {
       const extension = file.mimeType.split("/").pop()?.toUpperCase();
       return (
-        <div className="p-2 h-full flex flex-col justify-between">
+        <div className="p-2 h-full flex flex-col justify-between aspect-square">
           <div className="text-xs font-medium text-ellipsis mb-1">
             {file.filename}
           </div>
@@ -40,7 +47,7 @@ export function FilePreview({ file, loading, onRemove }: FilePreviewProps) {
   })();
   return (
     <div className="relative group">
-      <Card className="size-24 p-0 rounded-sm overflow-hidden">
+      <Card className={cn("h-24 p-0 rounded-sm overflow-hidden", className)}>
         {content}
         {loading && (
           <div className="absolute inset-0 bg-background/70 flex items-center justify-center">

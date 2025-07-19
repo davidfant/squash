@@ -1,10 +1,11 @@
 import { ChatThread } from "@/components/layout/chat/ChatThread";
 import { ChatProvider } from "@/components/layout/chat/context";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { useNavigate, useParams } from "react-router";
 import { v4 as uuid } from "uuid";
 import { ProjectContextProvider, useProjectContext } from "./context";
-import { ProjectCanvas } from "./ProjectCanvas";
 import { ProjectPageSidebar } from "./ProjectPageSidebar";
+import { ProjectPreview } from "./ProjectPreview";
 
 function Component() {
   const { pages } = useProjectContext();
@@ -15,13 +16,16 @@ function Component() {
         <ProjectPageSidebar page={pages[0]!} />
       </div>
       <main className="flex-1">
-        <ProjectCanvas />
+        {/* <ProjectCanvas /> */}
+        <ProjectPreview />
       </main>
     </SidebarProvider>
   );
 }
 
 export function ProjectPage() {
+  const { pageId } = useParams();
+  const navigate = useNavigate();
   return (
     <ChatProvider
       endpoint="/todo"
@@ -44,7 +48,10 @@ export function ProjectPage() {
         },
       ]}
     >
-      <ProjectContextProvider>
+      <ProjectContextProvider
+        selectedPageId={pageId}
+        onSelectPage={(pageId) => navigate(`/project/page/${pageId}`)}
+      >
         <Component />
       </ProjectContextProvider>
     </ChatProvider>

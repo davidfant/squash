@@ -208,7 +208,7 @@ export function InlineEditCommand() {
                   key={index}
                   onClick={() => selectSuggestion(suggestion)}
                   className={cn(
-                    "relative flex cursor-default items-center gap-2 rounded-sm mx-1 px-2 py-1.5 text-sm outline-hidden select-none hover:bg-accent hover:text-accent-foreground transition-colors",
+                    "relative flex cursor-pointer items-center gap-2 rounded-sm mx-1 px-2 py-1.5 text-sm outline-hidden select-none hover:bg-accent hover:text-accent-foreground transition-colors",
                     selectedIndex === index &&
                       "bg-accent text-accent-foreground"
                   )}

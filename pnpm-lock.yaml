@@ -83,7 +83,7 @@ importers:
         version: 3.2.2(react@19.1.0)
       '@mastra/client-js':
         specifier: ^0.10.11
-        version: 0.10.11(react@19.1.0)(zod@4.0.5)
+        version: 0.10.11(openapi-types@12.1.3)(react@19.1.0)(zod@4.0.5)
       '@radix-ui/react-accordion':
         specifier: ^1.2.11
         version: 1.2.11(@types/react-dom@19.1.6(@types/react@19.1.8))(@types/react@19.1.8)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -144,6 +144,9 @@ importers:
       framer-motion:
         specifier: ^12.23.3
         version: 12.23.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      html2canvas-pro:
+        specifier: ^1.5.11
+        version: 1.5.11
       lucide-react:
         specifier: ^0.525.0
         version: 0.525.0(react@19.1.0)
@@ -3707,6 +3710,10 @@ packages:
   balanced-match@1.0.2:
     resolution: {integrity: sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==}
 
+  base64-arraybuffer@1.0.2:
+    resolution: {integrity: sha512-I3yl4r9QB5ZRY3XuJVEPfc2XhZO6YweFPI+UovAzn+8/hb3oJ6lnysaFcjVpkCPfVWFUDvoZ8kmVDP7WyRtYtQ==}
+    engines: {node: '>= 0.6.0'}
+
   base64-js@1.5.1:
     resolution: {integrity: sha512-AKpaYlHn8t4SVbOHCy+b5+KKgvR4vrsD8vbvrbiQJps7fKDTkjkDry6ji0rUJjC0kzbNePLwzxq8iypo41qeWA==}
 
@@ -3933,6 +3940,9 @@ packages:
   cross-spawn@7.0.6:
     resolution: {integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==}
     engines: {node: '>= 8'}
+
+  css-line-break@2.1.0:
+    resolution: {integrity: sha512-FHcKFCZcAha3LwfVBhCQbW2nCNbkZXn7KVUJcsT5/P8YmfsVja0FMPJr0B903j/E69HUphKiV9iQArX8SDYA4w==}
 
   csstype@3.1.3:
     resolution: {integrity: sha512-M1uQkMl8rQK/szD0LNhtqxIPLpimGm8sOBwU7lLnCpSbTyY3yeU1Vc7l4KT5zT4s/yOxHH5O7tIuuLOCnLADRw==}
@@ -4668,6 +4678,10 @@ packages:
 
   html-void-elements@3.0.0:
     resolution: {integrity: sha512-bEqo66MRXsUGxWHV5IP0PUiAWwoEjba4VCzg0LjFJBpchPaTfyfCKTG6bc5F8ucKec3q5y6qOdGyYTSBEvhCrg==}
+
+  html2canvas-pro@1.5.11:
+    resolution: {integrity: sha512-W4pEeKLG8+9a54RDOSiEKq7gRXXDzt0ORMaLXX+l6a3urSKbmnkmyzcRDCtgTOzmHLaZTLG2wiTQMJqKLlSh3w==}
+    engines: {node: '>=16.0.0'}
 
   http-errors@2.0.0:
     resolution: {integrity: sha512-FtwrG/euBzaEjYeRqOgly7G0qviiXoJWnvEH2Z1plBdXgbyjv34pHTSb9zoeHMyDy33+DWy5Wt9Wo+TURtOYSQ==}
@@ -6027,6 +6041,9 @@ packages:
     resolution: {integrity: sha512-wK0Ri4fOGjv/XPy8SBHZChl8CM7uMc5VML7SqiQ0zG7+J5Vr+RMQDoHa2CNT6KHUnTGIXH34UDMkPzAUyapBZg==}
     engines: {node: '>=8'}
 
+  text-segmentation@1.0.3:
+    resolution: {integrity: sha512-iOiPUo/BGnZ6+54OsWxZidGCsdU8YbE4PSpdPinp7DeMtUJNJBoJ/ouUSTJjHkh1KntHaltHl/gDs2FC4i5+Nw==}
+
   thread-stream@3.1.0:
     resolution: {integrity: sha512-OqyPZ9u96VohAyMfJykzmivOrY2wfMSf3C5TtFJVgN+Hm6aj+voFhlK+kZEIv2FBh1X6Xp3DlnCOfEQ3B2J86A==}
 
@@ -6274,6 +6291,9 @@ packages:
     resolution: {integrity: sha512-Rb46I4cGGVBmjamjphe8L/UnvJD+uPPtTkNvX5mZgqdbavhI4EbgIWJiIHXJ8bc/i9EQGPRh4DwEURJ552Do0A==}
     peerDependencies:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
+  utrie@1.0.2:
+    resolution: {integrity: sha512-1MLa5ouZiOmQzUbjbu9VmjLzn1QLXBhwpUa7kdLUQK+KQ5KA9I1vk5U4YHe/X2Ch7PYnJfWuWT+VbuxbGwljhw==}
 
   uuid@11.1.0:
     resolution: {integrity: sha512-0/A9rDy9P7cJ+8w1c9WD9V//9Wj15Ce2MPz8Ri6032usz+NfePxx5AcN3bN+r6ZL6jEo066/yNYB3tn4pQEx+A==}
@@ -7855,11 +7875,11 @@ snapshots:
       globby: 11.1.0
       read-yaml-file: 1.1.0
 
-  '@mastra/client-js@0.10.11(react@19.1.0)(zod@4.0.5)':
+  '@mastra/client-js@0.10.11(openapi-types@12.1.3)(react@19.1.0)(zod@4.0.5)':
     dependencies:
       '@ag-ui/client': 0.0.27
       '@ai-sdk/ui-utils': 1.2.11(zod@4.0.5)
-      '@mastra/core': 0.10.12(react@19.1.0)(zod@4.0.5)
+      '@mastra/core': 0.10.12(openapi-types@12.1.3)(react@19.1.0)(zod@4.0.5)
       json-schema: 0.4.0
       rxjs: 7.8.1
       zod: 4.0.5
@@ -7942,7 +7962,7 @@ snapshots:
       - valibot
       - zod-openapi
 
-  '@mastra/core@0.10.12(react@19.1.0)(zod@4.0.5)':
+  '@mastra/core@0.10.12(openapi-types@12.1.3)(react@19.1.0)(zod@4.0.5)':
     dependencies:
       '@ai-sdk/provider': 1.1.3
       '@ai-sdk/provider-utils': 2.2.8(zod@4.0.5)
@@ -7967,7 +7987,7 @@ snapshots:
       date-fns: 3.6.0
       dotenv: 16.6.1
       hono: 4.8.4
-      hono-openapi: 0.4.8(hono@4.8.4)(zod@4.0.5)
+      hono-openapi: 0.4.8(hono@4.8.4)(openapi-types@12.1.3)(zod@4.0.5)
       json-schema: 0.4.0
       json-schema-to-zod: 2.6.1
       pino: 9.7.0
@@ -11033,6 +11053,8 @@ snapshots:
 
   balanced-match@1.0.2: {}
 
+  base64-arraybuffer@1.0.2: {}
+
   base64-js@1.5.1: {}
 
   better-auth@1.2.12:
@@ -11287,6 +11309,10 @@ snapshots:
       path-key: 3.1.1
       shebang-command: 2.0.0
       which: 2.0.2
+
+  css-line-break@2.1.0:
+    dependencies:
+      utrie: 1.0.2
 
   csstype@3.1.3: {}
 
@@ -11988,9 +12014,10 @@ snapshots:
       hono: 4.8.4
       zod: 3.25.76
 
-  hono-openapi@0.4.8(hono@4.8.4)(zod@4.0.5):
+  hono-openapi@0.4.8(hono@4.8.4)(openapi-types@12.1.3)(zod@4.0.5):
     dependencies:
       json-schema-walker: 2.0.0
+      openapi-types: 12.1.3
     optionalDependencies:
       hono: 4.8.4
       zod: 4.0.5
@@ -12000,6 +12027,11 @@ snapshots:
   html-url-attributes@3.0.1: {}
 
   html-void-elements@3.0.0: {}
+
+  html2canvas-pro@1.5.11:
+    dependencies:
+      css-line-break: 2.1.0
+      text-segmentation: 1.0.3
 
   http-errors@2.0.0:
     dependencies:
@@ -13508,6 +13540,10 @@ snapshots:
 
   term-size@2.2.1: {}
 
+  text-segmentation@1.0.3:
+    dependencies:
+      utrie: 1.0.2
+
   thread-stream@3.1.0:
     dependencies:
       real-require: 0.2.0
@@ -13723,6 +13759,10 @@ snapshots:
   use-sync-external-store@1.5.0(react@19.1.0):
     dependencies:
       react: 19.1.0
+
+  utrie@1.0.2:
+    dependencies:
+      base64-arraybuffer: 1.0.2
 
   uuid@11.1.0: {}
 

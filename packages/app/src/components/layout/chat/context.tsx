@@ -9,7 +9,6 @@ import type {
 } from "ai";
 import {
   createContext,
-  useCallback,
   useContext,
   useEffect,
   useState,
@@ -26,11 +25,6 @@ interface ChatContextValue {
   status: ChatStatus;
   messages: Array<Message & { streaming?: boolean }>;
   previewUrl: string | undefined;
-  navigateToAutomationAction(params: {
-    automation: string;
-    action: string;
-    spanId: string;
-  }): void;
   sendMessage(content: Array<TextPart | ImagePart | FilePart>): Promise<void>;
   setMessages(messages: Message[]): void;
 }
@@ -74,15 +68,6 @@ export function ChatProvider({
 
   const [previewUrl, setPreviewUrl] = useState<string | undefined>(
     previewBaseUrl
-  );
-
-  const navigateToAutomationAction = useCallback(
-    (params: { automation: string; action: string; spanId: string }) =>
-      !!previewBaseUrl &&
-      setPreviewUrl(
-        `${previewBaseUrl}/automations/${params.automation}/${params.action}/${params.spanId}`
-      ),
-    [previewBaseUrl]
   );
 
   const submit = async (message?: CoreUserMessage & { id: string }) => {
@@ -181,7 +166,6 @@ export function ChatProvider({
           ? [...messages, { ...streamingMessage, streaming: true }]
           : messages,
         previewUrl,
-        navigateToAutomationAction,
         sendMessage: (content: UserContent) =>
           submit({ id: uuid(), role: "user", content }),
         setMessages,

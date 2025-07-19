@@ -4,7 +4,7 @@ import { Markdown } from "../../Markdown";
 
 export function UserMessage({ message }: { message: CoreUserMessage }) {
   const files = (typeof message.content === "string" ? [] : message.content)
-    .filter((p) => p.type === "file")
+    .filter((p) => p.type === "file" || p.type === "image")
     // .map((p, i) => (
     //   <a
     //     key={i}

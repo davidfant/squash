@@ -12,6 +12,7 @@ createRoot(document.getElementById("root")!).render(
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/project" element={<ProjectPage />} />
+        <Route path="/project/page/:pageId" element={<ProjectPage />} />
         {/* <Route path="/new/:threadId" element={<ThreadPage />} />
           <Route path="/workflows/:workflowId" element={<WorkflowPage />} />
           <Route path="/invite/:inviteId" element={<InvitePage />} />

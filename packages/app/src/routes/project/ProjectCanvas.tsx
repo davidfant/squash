@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { AddSectionCard } from "./AddSectionCard";
+import { InlineEditCommand } from "./InlineEditCommand";
 
 interface Section {
   label: string;
@@ -160,8 +161,9 @@ export function ProjectCanvas() {
           ]);
         }}
       />
-      <div className="w-[50%] min-w-md mx-auto">
+      <div className="w-[50%] min-w-md mx-auto space-y-12">
         <SectionToolbar submitting={false} onDeleteSection={console.log} />
+        <InlineEditCommand />
       </div>
     </div>
   );

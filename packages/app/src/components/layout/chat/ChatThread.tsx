@@ -21,7 +21,7 @@ export function ChatThread({
   const sticky = useStickToBottom();
 
   return (
-    <div className={cn("w-md flex flex-col", className)}>
+    <div className={cn("w-sm flex flex-col", className)}>
       <div className="flex-1 relative overflow-hidden">
         <div className="h-full overflow-y-auto pr-3 space-y-2" ref={sticky.ref}>
           {messages.map((m) => {

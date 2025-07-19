@@ -1,3 +1,4 @@
+import { Badge } from "@/components/ui/badge";
 import type { CoreUserMessage } from "ai";
 import { FilePreview } from "../../file/FilePreview";
 import { Markdown } from "../../Markdown";
@@ -19,6 +20,9 @@ export function UserMessage({ message }: { message: CoreUserMessage }) {
   return (
     <div className="flex flex-col items-end">
       <div className="w-max max-w-[75%] rounded-xl px-3 py-2 bg-muted">
+        <Badge variant="outline" className="rounded-sm px-1">
+          File.tsx
+        </Badge>
         {typeof message.content === "string" ? (
           <Markdown>{message.content}</Markdown>
         ) : (

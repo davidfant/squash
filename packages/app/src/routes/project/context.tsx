@@ -1,4 +1,5 @@
 import { createContext, useContext, useState } from "react";
+import { v4 as uuid } from "uuid";
 
 export interface ProjectSectionVariant {
   id: string;
@@ -19,22 +20,30 @@ export interface ProjectPage {
   sections: ProjectSection[];
 }
 
+export type ScreenSize = "desktop" | "tablet" | "mobile";
+
 export interface ProjectContextValue {
   pages: ProjectPage[];
   selectedPage: ProjectPage | undefined;
+  screenSize: ScreenSize;
   addPage: (page: ProjectPage) => void;
   addSection: (pageId: string, section: ProjectSection) => void;
   selectVariant: (pageId: string, sectionId: string, variantId: string) => void;
   selectPage: (pageId: string) => void;
+  setScreenSize: (size: ScreenSize) => void;
+  toggleScreenSize: () => void;
 }
 
 const ProjectContext = createContext<ProjectContextValue>({
   pages: [],
   selectedPage: undefined,
+  screenSize: "desktop",
   addPage: () => Promise.resolve(""),
   addSection: () => {},
   selectVariant: () => {},
   selectPage: () => {},
+  setScreenSize: () => {},
+  toggleScreenSize: () => {},
 });
 
 export const ProjectContextProvider = ({
@@ -48,7 +57,7 @@ export const ProjectContextProvider = ({
 }) => {
   const [pages, setPages] = useState<ProjectPage[]>([
     {
-      id: "",
+      id: uuid(),
       label: "Home",
       path: "/",
       sections: [
@@ -64,6 +73,8 @@ export const ProjectContextProvider = ({
       ],
     },
   ]);
+
+  const [screenSize, setScreenSize] = useState<ScreenSize>("desktop");
 
   const selectedPage = pages.find((p) => p.id === selectedPageId) || pages[0];
 
@@ -103,15 +114,33 @@ export const ProjectContextProvider = ({
       )
     );
 
+  const toggleScreenSize = () => {
+    setScreenSize((current) => {
+      switch (current) {
+        case "desktop":
+          return "tablet";
+        case "tablet":
+          return "mobile";
+        case "mobile":
+          return "desktop";
+        default:
+          return "desktop";
+      }
+    });
+  };
+
   return (
     <ProjectContext.Provider
       value={{
         pages,
         selectedPage,
+        screenSize,
         addPage,
         addSection,
         selectVariant,
         selectPage: onSelectPage,
+        setScreenSize,
+        toggleScreenSize,
       }}
     >
       {children}

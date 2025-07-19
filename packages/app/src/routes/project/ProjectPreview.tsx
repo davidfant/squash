@@ -1,4 +1,5 @@
 import { useChat } from "@/components/layout/chat/context";
+import { cn } from "@/lib/utils";
 import html2canvas from "html2canvas-pro";
 import { useRef } from "react";
 import { useProjectContext } from "./context";
@@ -28,7 +29,7 @@ const getRandomLightColor = () => {
 };
 
 export function ProjectPreview() {
-  const { selectedPage } = useProjectContext();
+  const { selectedPage, screenSize } = useProjectContext();
   const { sendMessage } = useChat();
   const sectionRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
@@ -82,8 +83,25 @@ export function ProjectPreview() {
     );
   }
 
+  // Define width classes based on screen size
+  const getPreviewWidth = () => {
+    switch (screenSize) {
+      case "mobile":
+        return "w-[375px]"; // Mobile width
+      case "tablet":
+        return "w-[768px]"; // Tablet width
+      case "desktop":
+        return "w-full";
+    }
+  };
+
   return (
-    <div className="h-full overflow-y-scroll">
+    <div
+      className={cn(
+        "h-full overflow-y-scroll mx-auto transition-all duration-300",
+        getPreviewWidth()
+      )}
+    >
       {selectedPage.sections.map((section) => {
         const selectedVariant = section.variants.find(
           (variant) => variant.selected
@@ -97,11 +115,11 @@ export function ProjectPreview() {
             ref={(el) => {
               sectionRefs.current[section.id] = el;
             }}
-            className={`
-                ${getRandomLightColor()} 
-                h-64 flex flex-col items-center justify-center text-center
-                cursor-pointer hover:opacity-80 transition-opacity
-              `}
+            className={cn(
+              getRandomLightColor(),
+              "h-64 flex flex-col items-center justify-center text-center",
+              "cursor-pointer hover:opacity-80 transition-opacity"
+            )}
             onClick={() =>
               handleVariantClick(section.id, selectedVariant.label)
             }

@@ -5,6 +5,7 @@ import { BrowserRouter, Route, Routes } from "react-router";
 import "./index.css";
 import { LandingPage } from "./routes/landing";
 import { ProjectPage } from "./routes/project";
+import { ProjectCanvas } from "./routes/project/ProjectCanvas";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -13,6 +14,7 @@ createRoot(document.getElementById("root")!).render(
         <Route path="/" element={<LandingPage />} />
         <Route path="/project" element={<ProjectPage />} />
         <Route path="/project/page/:pageId" element={<ProjectPage />} />
+        <Route path="/project/x" element={<ProjectCanvas />} />
         {/* <Route path="/new/:threadId" element={<ThreadPage />} />
           <Route path="/workflows/:workflowId" element={<WorkflowPage />} />
           <Route path="/invite/:inviteId" element={<InvitePage />} />

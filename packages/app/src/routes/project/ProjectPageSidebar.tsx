@@ -5,17 +5,12 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
-  SidebarHeader,
+  SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -24,7 +19,7 @@ import {
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
-import { ChevronDown, Plus } from "lucide-react";
+import { ChevronDown, Layers, Plus, Settings } from "lucide-react";
 import { useProjectContext, type ProjectPage } from "./context";
 
 export function ProjectPageSidebar({ page }: { page: ProjectPage }) {
@@ -40,9 +35,14 @@ export function ProjectPageSidebar({ page }: { page: ProjectPage }) {
     console.log("Add variant clicked for section:", sectionId);
   };
 
+  const handleSEOClick = () => {
+    // TODO: Implement SEO functionality
+    console.log("SEO clicked");
+  };
+
   return (
     <Sidebar collapsible="none">
-      <SidebarHeader>
+      {/* <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
@@ -73,57 +73,82 @@ export function ProjectPageSidebar({ page }: { page: ProjectPage }) {
             </DropdownMenu>
           </SidebarMenuItem>
         </SidebarMenu>
-      </SidebarHeader>
+      </SidebarHeader> */}
       <SidebarContent>
         <SidebarGroup>
-          <SidebarMenu>
-            {page.sections.map((section) => (
-              <Collapsible
-                key={section.id}
-                defaultOpen
-                className="group/collapsible"
-              >
-                <SidebarMenuItem>
-                  <CollapsibleTrigger asChild>
-                    <SidebarMenuButton className="w-full">
-                      <span>{section.label}</span>
-                      <ChevronDown className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180" />
-                    </SidebarMenuButton>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <SidebarMenuSub>
-                      {section.variants.map((variant) => (
-                        <SidebarMenuSubItem key={variant.id}>
-                          <SidebarMenuSubButton
-                            className={cn(
-                              "cursor-pointer",
-                              variant.selected && "bg-sidebar-accent"
-                            )}
-                            onClick={() =>
-                              selectVariant(page.id, section.id, variant.id)
-                            }
+          <SidebarGroupLabel>
+            <Layers className="mr-2 h-4 w-4" />
+            Sections
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {page.sections.map((section) => (
+                <Collapsible
+                  key={section.id}
+                  defaultOpen
+                  className="group/collapsible"
+                >
+                  <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                      <SidebarMenuButton className="w-full">
+                        <span>{section.label}</span>
+                        <ChevronDown className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180" />
+                      </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <SidebarMenuSub>
+                        {section.variants.map((variant) => (
+                          <SidebarMenuSubItem key={variant.id}>
+                            <SidebarMenuSubButton
+                              className={cn(
+                                "cursor-pointer",
+                                variant.selected && "bg-sidebar-accent"
+                              )}
+                              onClick={() =>
+                                selectVariant(page.id, section.id, variant.id)
+                              }
+                            >
+                              {variant.label}
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                        ))}
+                        <SidebarMenuSubItem>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-full justify-start h-8 px-2"
+                            onClick={() => handleAddVariant(section.id)}
                           >
-                            {variant.label}
-                          </SidebarMenuSubButton>
+                            <Plus className="mr-2 h-3 w-3" />
+                            Add Variant
+                          </Button>
                         </SidebarMenuSubItem>
-                      ))}
-                      <SidebarMenuSubItem>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="w-full justify-start h-8 px-2"
-                          onClick={() => handleAddVariant(section.id)}
-                        >
-                          <Plus className="mr-2 h-3 w-3" />
-                          Add Variant
-                        </Button>
-                      </SidebarMenuSubItem>
-                    </SidebarMenuSub>
-                  </CollapsibleContent>
-                </SidebarMenuItem>
-              </Collapsible>
-            ))}
-          </SidebarMenu>
+                      </SidebarMenuSub>
+                    </CollapsibleContent>
+                  </SidebarMenuItem>
+                </Collapsible>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>
+            <Settings className="mr-2 h-4 w-4" />
+            Settings
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  className="cursor-pointer"
+                  onClick={handleSEOClick}
+                >
+                  SEO
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter />

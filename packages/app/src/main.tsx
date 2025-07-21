@@ -1,13 +1,20 @@
 import { Toaster } from "@/components/ui/sonner";
+import { addInlineCommentSettingsListener } from "@lp/dev-tools/inlineComments";
+import { postMessage } from "@lp/dev-tools/messaging";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes } from "react-router";
-import "./highlight/fiber";
 import "./index.css";
 import { LandingPage } from "./routes/landing";
 import { OnboardingPage } from "./routes/onboarding";
 import { ProjectPage } from "./routes/project";
 import { ProjectCanvas } from "./routes/project/ProjectCanvas";
+
+addInlineCommentSettingsListener();
+setTimeout(
+  () => postMessage({ type: "InlineCommentSettings", enabled: true }),
+  1000
+);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

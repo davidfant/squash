@@ -103,7 +103,7 @@ export function OnboardingToneStep() {
   return (
     <div className="space-y-6">
       {/* Preview Card */}
-      <Card className="p-6 bg-gradient-to-br from-blue-50 to-indigo-100 border-2 aspect-3/4 min-h-0">
+      <Card className="p-6 bg-gradient-to-br from-blue-50 to-indigo-100 border-2 aspect-3/4 min-h-0 overflow-y-auto">
         <div className="space-y-4">
           {/* Header skeleton */}
           <div className="flex justify-between items-center">

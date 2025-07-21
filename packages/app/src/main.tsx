@@ -2,6 +2,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes } from "react-router";
+import "./highlight/fiber";
 import "./index.css";
 import { LandingPage } from "./routes/landing";
 import { OnboardingPage } from "./routes/onboarding";

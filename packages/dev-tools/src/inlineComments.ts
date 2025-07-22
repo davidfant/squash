@@ -62,12 +62,20 @@ function onPointerMove(e: PointerEvent) {
 function updateOverlayPosition(target: HTMLElement, animate: boolean = false) {
   const box = target.getBoundingClientRect();
 
+  const x0 = box.left + window.scrollX;
+  const y0 = box.top + window.scrollY;
+  const x1 = x0 + box.width;
+  const y1 = y0 + box.height;
+
+  const x = Math.max(x0 - BORDER_WIDTH, 0);
+  const y = Math.max(y0 - BORDER_WIDTH, 0);
+  const w = Math.min(x1 + BORDER_WIDTH - x, window.innerWidth);
+  const h = Math.min(y1 + BORDER_WIDTH - y, window.innerHeight);
+
   overlay.style.display = "block";
-  overlay.style.transform = `translate(${
-    box.left + scrollX - BORDER_WIDTH
-  }px, ${box.top + scrollY - BORDER_WIDTH}px)`;
-  overlay.style.width = box.width + BORDER_WIDTH * 2 + "px";
-  overlay.style.height = box.height + BORDER_WIDTH * 2 + "px";
+  overlay.style.transform = `translate(${x}px, ${y}px)`;
+  overlay.style.width = `${w}px`;
+  overlay.style.height = `${h}px`;
   overlay.style.transition = animate
     ? "transform 200ms ease, width 200ms, height 200ms"
     : "none";

@@ -244,6 +244,9 @@ importers:
 
   packages/dev-tools:
     dependencies:
+      '@babel/types':
+        specifier: ^7.28.1
+        version: 7.28.1
       '@react-dev-inspector/babel-plugin':
         specifier: ^2.0.1
         version: 2.0.1
@@ -251,6 +254,21 @@ importers:
         specifier: ^1.5.11
         version: 1.5.11
     devDependencies:
+      '@babel/core':
+        specifier: ^7.28.0
+        version: 7.28.0
+      '@babel/parser':
+        specifier: ^7.28.0
+        version: 7.28.0
+      '@babel/traverse':
+        specifier: ^7.28.0
+        version: 7.28.0
+      '@types/babel__traverse':
+        specifier: ^7.20.7
+        version: 7.20.7
+      fast-glob:
+        specifier: ^3.3.3
+        version: 3.3.3
       typescript:
         specifier: ~5.8.3
         version: 5.8.3

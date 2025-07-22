@@ -6,15 +6,24 @@
   "exports": {
     "./*": "./dist/*.js"
   },
+  "bin": {
+    "generate-metadata": "./dist/metadata.js"
+  },
   "scripts": {
     "dev": "tsc -w",
     "build": "tsc -b"
   },
   "dependencies": {
+    "@babel/types": "^7.28.1",
     "@react-dev-inspector/babel-plugin": "^2.0.1",
     "html2canvas-pro": "^1.5.11"
   },
   "devDependencies": {
+    "@babel/core": "^7.28.0",
+    "@babel/parser": "^7.28.0",
+    "@babel/traverse": "^7.28.0",
+    "@types/babel__traverse": "^7.20.7",
+    "fast-glob": "^3.3.3",
     "typescript": "~5.8.3"
   }
 }

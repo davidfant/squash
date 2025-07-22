@@ -1,5 +1,8 @@
 import { Toaster } from "@/components/ui/sonner";
-import { addInlineCommentSettingsListener } from "@lp/dev-tools/inlineComments";
+import {
+  addInlineCommentSettingsListener,
+  enableHighlighting,
+} from "@lp/dev-tools/inlineComments";
 import i18n from "i18next";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
@@ -8,6 +11,7 @@ import { BrowserRouter, useRoutes } from "react-router";
 import resources from "./locales/en";
 import "./styles/index.css";
 
+enableHighlighting();
 addInlineCommentSettingsListener();
 
 i18n.use(initReactI18next).init({

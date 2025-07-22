@@ -42,34 +42,51 @@ Object.assign(overlay.style, {
   pointerEvents: "none",
   border: `${BORDER_WIDTH}px dashed #38bdf8`,
   borderRadius: "12px",
-  transition: "transform 200ms ease, width 200ms, height 200ms",
   display: "none", // Hidden by default
 });
 document.body.appendChild(overlay);
 
-// --- state management -----------------------------------------------------
 let isHighlightingEnabled = false;
-let hoverHandler: ((e: PointerEvent) => void) | null = null;
-let clickHandler: ((e: MouseEvent) => void) | null = null;
+let latestTarget: HTMLElement | null = null;
 
-// --- hover handler (simplified - only shows overlay) ---------------------
 function onPointerMove(e: PointerEvent) {
   if (!isHighlightingEnabled) return;
 
   const target = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement;
   if (!target) return;
 
-  // Position the overlay on the target element
+  latestTarget = target;
+  updateOverlayPosition(target, true);
+}
+
+function updateOverlayPosition(target: HTMLElement, animate: boolean = false) {
   const box = target.getBoundingClientRect();
 
+  overlay.style.display = "block";
   overlay.style.transform = `translate(${
     box.left + scrollX - BORDER_WIDTH
   }px, ${box.top + scrollY - BORDER_WIDTH}px)`;
   overlay.style.width = box.width + BORDER_WIDTH * 2 + "px";
   overlay.style.height = box.height + BORDER_WIDTH * 2 + "px";
+  overlay.style.transition = animate
+    ? "transform 200ms ease, width 200ms, height 200ms"
+    : "none";
 }
 
-// --- click handler (collects element stack and takes screenshot) ---------
+function onResize() {
+  if (!isHighlightingEnabled || !latestTarget) return;
+  updateOverlayPosition(latestTarget);
+}
+
+function onPointerLeave() {
+  if (!isHighlightingEnabled) return;
+
+  // Hide overlay and clear target when pointer leaves the screen
+  overlay.style.display = "none";
+  latestTarget = null;
+}
+
+// --- click andler (collects element stack and takes screenshot) ---------
 async function onClick(e: MouseEvent) {
   if (!isHighlightingEnabled) return;
 
@@ -82,7 +99,6 @@ async function onClick(e: MouseEvent) {
 
   // Collect the entire stack of DOM elements with inspector metadata
   const elementStack = collectElementStack(target);
-  const elementWithSource = elementStack.find((item) => item.file);
   const box = target.getBoundingClientRect();
 
   try {
@@ -124,14 +140,11 @@ export function enableHighlighting(): void {
   if (isHighlightingEnabled) return;
 
   isHighlightingEnabled = true;
-  overlay.style.display = "block";
 
-  // Add event listeners
-  hoverHandler = onPointerMove;
-  clickHandler = onClick;
-
-  window.addEventListener("pointermove", hoverHandler);
-  window.addEventListener("click", clickHandler, { capture: true });
+  window.addEventListener("pointermove", onPointerMove);
+  window.addEventListener("click", onClick, { capture: true });
+  window.addEventListener("resize", onResize);
+  document.addEventListener("pointerleave", onPointerLeave);
 }
 
 export function disableHighlighting(): void {
@@ -140,16 +153,12 @@ export function disableHighlighting(): void {
   isHighlightingEnabled = false;
   overlay.style.display = "none";
 
-  // Remove event listeners
-  if (hoverHandler) {
-    window.removeEventListener("pointermove", hoverHandler);
-    hoverHandler = null;
-  }
+  window.removeEventListener("pointermove", onPointerMove);
+  window.removeEventListener("click", onClick, { capture: true });
+  window.removeEventListener("resize", onResize);
+  document.removeEventListener("pointerleave", onPointerLeave);
 
-  if (clickHandler) {
-    window.removeEventListener("click", clickHandler, { capture: true });
-    clickHandler = null;
-  }
+  latestTarget = null;
 }
 
 export const addInlineCommentSettingsListener = () =>

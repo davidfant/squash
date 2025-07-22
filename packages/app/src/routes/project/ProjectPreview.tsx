@@ -96,41 +96,12 @@ export function ProjectPreview() {
   };
 
   return (
-    <div
+    <iframe
       className={cn(
-        "h-full overflow-y-scroll mx-auto transition-all duration-300",
+        "h-full mx-auto transition-all duration-300",
         getPreviewWidth()
       )}
-    >
-      {selectedPage.sections.map((section) => {
-        const selectedVariant = section.variants.find(
-          (variant) => variant.selected
-        );
-
-        if (!selectedVariant) return null;
-
-        return (
-          <div
-            key={section.id}
-            ref={(el) => {
-              sectionRefs.current[section.id] = el;
-            }}
-            className={cn(
-              getRandomLightColor(),
-              "h-64 flex flex-col items-center justify-center text-center",
-              "cursor-pointer hover:opacity-80 transition-opacity"
-            )}
-            onClick={() =>
-              handleVariantClick(section.id, selectedVariant.label)
-            }
-          >
-            <h3 className="text-sm font-medium text-muted-foreground mb-2">
-              {section.label}
-            </h3>
-            <p className="text-lg font-semibold">{selectedVariant.label}</p>
-          </div>
-        );
-      })}
-    </div>
+      src="http://localhost:5174"
+    />
   );
 }

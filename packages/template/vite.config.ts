@@ -18,5 +18,13 @@ const wranglerEnv = Object.assign(
 Object.assign(process.env, wranglerEnv);
 
 export default defineConfig({
-  plugins: [react(), cloudflare(), tailwindcss(), tsconfigPaths(), dts()],
+  plugins: [
+    react({
+      babel: { plugins: ["@react-dev-inspector/babel-plugin"] },
+    }),
+    cloudflare(),
+    tailwindcss(),
+    tsconfigPaths(),
+    dts(),
+  ],
 });

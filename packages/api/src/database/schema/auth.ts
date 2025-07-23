@@ -1,3 +1,4 @@
+import { relations } from "drizzle-orm";
 import {
   boolean,
   integer,
@@ -6,6 +7,7 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
+import { projects } from "./projects";
 
 export const user = pgTable("user", {
   id: uuid("id").primaryKey(),
@@ -94,3 +96,16 @@ export const invitation = pgTable("invitation", {
   usageCount: integer("usage_count").default(0).notNull(),
   maxUsages: integer("max_usages").default(1).notNull(),
 });
+
+export const organizationRelations = relations(organization, ({ many }) => ({
+  projects: many(projects),
+  members: many(member),
+}));
+
+export const memberRelations = relations(member, ({ one }) => ({
+  organization: one(organization, {
+    fields: [member.organizationId],
+    references: [organization.id],
+  }),
+  user: one(user, { fields: [member.userId], references: [user.id] }),
+}));

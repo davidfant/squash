@@ -8,6 +8,7 @@ import { streamSSE } from "hono/streaming";
 import { authMiddleware } from "./auth/middleware";
 import { databaseMiddleware } from "./database/middleware";
 import { createQualifyAgent } from "./mastra/qualify";
+import { projectsRouter } from "./routers/projects";
 
 export default new Hono<{ Bindings: CloudflareBindings }>()
   .use(requestId())
@@ -16,6 +17,7 @@ export default new Hono<{ Bindings: CloudflareBindings }>()
   .use(authMiddleware)
   .use("*", cors({ origin: process.env.APP_URL, credentials: true }))
   .on(["GET", "POST"], "/auth/*", (c) => c.get("auth").handler(c.req.raw))
+  .route("/projects", projectsRouter)
   .post("/chat", zValidator("json", coreUserMessageSchema), async (c) => {
     const message = c.req.valid("json");
     const agent = createQualifyAgent(c.env.DATABASE_URL);

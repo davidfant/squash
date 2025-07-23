@@ -11,10 +11,10 @@ export const authMiddleware = createMiddleware<{
   await next();
 });
 
-type User = InferSelectModel<typeof schema.user>;
-type Session = InferSelectModel<typeof schema.session>;
+export type User = InferSelectModel<typeof schema.user>;
+export type Session = InferSelectModel<typeof schema.session>;
 
-export const assertAuth = createMiddleware<{
+export const requireAuth = createMiddleware<{
   Variables: { auth: Auth; user: User; session: Session };
 }>(async (c, next) => {
   const s = await c.get("auth").api.getSession({ headers: c.req.raw.headers });

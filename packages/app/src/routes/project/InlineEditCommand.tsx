@@ -6,8 +6,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 export function InlineEditCommand({
   onSubmit,
+  onCancel,
 }: {
   onSubmit: (value: string) => void;
+  onCancel: () => void;
 }) {
   const [value, setValue] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -149,6 +151,8 @@ export function InlineEditCommand({
       } else {
         handleSubmit();
       }
+    } else if (e.key === "Escape") {
+      onCancel();
     }
   };
 

@@ -9,29 +9,31 @@ import path from "path";
 const traverse: typeof BabelTraverse = BabelTraverse.default;
 
 // –––––––––––––––––––––––––––––––––  interfaces  –––––––––––––––––––––––––––– //
-interface SectionVariant {
+export interface ProjectSectionVariant {
   id: string;
   name: string;
 }
-interface Section {
+export interface ProjectSection {
   id: string;
   name: string;
-  variants: SectionVariant[];
+  variants: ProjectSectionVariant[];
 }
-interface Page {
+export interface ProjectPage {
   id: string;
   path: string;
   sectionIds: string[];
 }
-interface Output {
-  sections: Section[];
-  pages: Page[];
+export interface ProjectMetadata {
+  sections: ProjectSection[];
+  pages: ProjectPage[];
 }
 
 // –––––––––––––––––––––––––––––––––  helpers  –––––––––––––––––––––––––––––––– //
 const SRC = (repo: string) => path.join(repo, "src");
 const reName = /export\s+const\s+name\s*=\s*["'`]([^"'`]+)["'`]/;
 const reIndexOut = /export\s+\{\s*default\s*\}\s+from\s+["'`]([^"'`]+)["'`]/;
+
+const toBase64 = (str: string) => Buffer.from(str).toString("base64");
 
 const exists = (file: string) =>
   fs
@@ -91,7 +93,7 @@ async function run(repoRoot = process.cwd()) {
     cwd: path.join(srcDir, "sections"),
     onlyDirectories: true,
   });
-  const sections: Section[] = [];
+  const sections: ProjectSection[] = [];
 
   for (const dir of sectionDirs) {
     const folder = path.join(srcDir, "sections", dir);
@@ -111,20 +113,20 @@ async function run(repoRoot = process.cwd()) {
     }
 
     /* harvest variants */
-    const varMeta: SectionVariant[] = [];
+    const varMeta: ProjectSectionVariant[] = [];
     let sectionName = dir; // fallback
     for (const vf of variants) {
       const full = path.join(folder, vf);
       const vName = await getName(full, path.parse(vf).name);
       if (full === chosen) sectionName = vName;
       varMeta.push({
-        id: `@/sections/${dir}/${path.parse(vf).name}`,
+        id: toBase64(`@/sections/${dir}/${path.parse(vf).name}`),
         name: vName,
       });
     }
 
     sections.push({
-      id: `@/sections/${dir}`,
+      id: toBase64(`@/sections/${dir}`),
       name: sectionName,
       variants: varMeta,
     });
@@ -132,21 +134,21 @@ async function run(repoRoot = process.cwd()) {
 
   /* ──────────── 2)  pages ──────────── */
   const pageFiles = await fg(["pages/**/*.tsx"], { cwd: srcDir });
-  const pages: Page[] = [];
+  const pages: ProjectPage[] = [];
 
   for (const rel of pageFiles) {
     const file = path.join(srcDir, rel);
     const source = await fs.readFile(file, "utf8");
 
     pages.push({
-      id: `@/${rel.replace(/\.tsx$/, "")}`,
+      id: toBase64(`@/${rel.replace(/\.tsx$/, "")}`),
       path: fileToRoute(rel),
-      sectionIds: orderedSectionIds(source),
+      sectionIds: orderedSectionIds(source).map(toBase64),
     });
   }
 
   /* ──────────── 3)  write metadata.json ──────────── */
-  const out: Output = { sections, pages };
+  const out: ProjectMetadata = { sections, pages };
   // await fs.writeFile(
   //   path.join(repoRoot, "metadata.json"),
   //   JSON.stringify(out, null, 2)

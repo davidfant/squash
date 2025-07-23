@@ -1,6 +1,5 @@
 {
-  "name": "@lp/dev-tools",
-  "private": true,
+  "name": "@hypershape-ai/utils",
   "version": "0.0.0",
   "type": "module",
   "exports": {
@@ -8,6 +7,9 @@
   },
   "bin": {
     "generate-metadata": "./dist/metadata.js"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
   },
   "scripts": {
     "dev": "tsc -w",

@@ -5,7 +5,7 @@ import {
   addEventListener,
   postMessage,
   type InlineCommentMessage,
-} from "@lp/dev-tools/messaging";
+} from "@hypershape-ai/utils/messaging";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { useProjectContext } from "./context";
@@ -93,6 +93,7 @@ export function ProjectPreview() {
             transition={{ duration: 0.1, ease: "easeOut" }}
           >
             <InlineEditCommand
+              onCancel={() => setComment(null)}
               onSubmit={(text) => {
                 if (!comment) return;
                 sendMessage(

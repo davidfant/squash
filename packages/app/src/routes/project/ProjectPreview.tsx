@@ -1,79 +1,49 @@
 import { useChat } from "@/components/layout/chat/context";
+import { Toggle } from "@/components/ui/toggle";
 import { cn } from "@/lib/utils";
-import html2canvas from "html2canvas-pro";
-import { useRef } from "react";
+import {
+  addEventListener,
+  postMessage,
+  type InlineCommentMessage,
+} from "@lp/dev-tools/messaging";
+import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 import { useProjectContext } from "./context";
-
-const lightColors = [
-  "bg-red-100",
-  "bg-blue-100",
-  "bg-green-100",
-  "bg-yellow-100",
-  "bg-purple-100",
-  "bg-pink-100",
-  "bg-indigo-100",
-  "bg-orange-100",
-  "bg-teal-100",
-  "bg-cyan-100",
-  "bg-lime-100",
-  "bg-emerald-100",
-  "bg-violet-100",
-  "bg-fuchsia-100",
-  "bg-rose-100",
-  "bg-sky-100",
-  "bg-amber-100",
-];
-
-const getRandomLightColor = () => {
-  return lightColors[Math.floor(Math.random() * lightColors.length)];
-};
+import { InlineEditCommand } from "./InlineEditCommand";
 
 export function ProjectPreview() {
   const { selectedPage, screenSize } = useProjectContext();
   const { sendMessage } = useChat();
-  const sectionRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [isPointAndClick, setIsPointAndClick] = useState(false);
+  const [comment, setComment] = useState<
+    (InlineCommentMessage & { screenshot?: string }) | null
+  >(null);
 
-  const handleVariantClick = async (
-    sectionId: string,
-    variantLabel: string
-  ) => {
-    const sectionElement = sectionRefs.current[sectionId];
-    if (!sectionElement) return;
+  useEffect(() => {
+    postMessage(
+      { type: "InlineCommentSettings", enabled: isPointAndClick },
+      "*",
+      iframeRef.current?.contentWindow ?? null
+    );
 
-    try {
-      // Take screenshot of the section
-      const canvas = await html2canvas(sectionElement, {
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: null,
-      });
-
-      // Convert to base64
-      const imageDataUrl = canvas.toDataURL("image/png");
-
-      // Show alert for feedback
-      const feedback = prompt(
-        `Please provide feedback for the "${variantLabel}" variant:`
+    if (isPointAndClick) {
+      const unsubInlineComment = addEventListener("InlineComment", setComment);
+      const unsubInlineCommentScreenshot = addEventListener(
+        "InlineCommentScreenshot",
+        (c) =>
+          setComment((p) =>
+            p?.id === c.id ? { ...p, screenshot: c.screenshot } : p
+          )
       );
-
-      if (feedback) {
-        // Send message with feedback and screenshot
-        await sendMessage([
-          {
-            type: "text",
-            text: `User feedback for "${variantLabel}" variant: ${feedback}`,
-          },
-          {
-            type: "image",
-            image: imageDataUrl,
-          },
-        ]);
-      }
-    } catch (error) {
-      console.error("Error taking screenshot:", error);
-      alert("Failed to take screenshot. Please try again.");
+      return () => {
+        unsubInlineComment();
+        unsubInlineCommentScreenshot();
+      };
+    } else {
+      setComment(null);
     }
-  };
+  }, [isPointAndClick]);
 
   if (!selectedPage) {
     return (
@@ -96,12 +66,49 @@ export function ProjectPreview() {
   };
 
   return (
-    <iframe
-      className={cn(
-        "h-full mx-auto transition-all duration-300",
-        getPreviewWidth()
-      )}
-      src="http://localhost:5174"
-    />
+    <div className="relative h-full">
+      <iframe
+        ref={iframeRef}
+        src="http://localhost:5174"
+        className={cn(
+          "h-full mx-auto transition-all duration-300",
+          getPreviewWidth()
+        )}
+      />
+      <Toggle
+        className="absolute top-0 left-0"
+        onClick={() => setIsPointAndClick((prev) => !prev)}
+      >
+        Point & Click
+      </Toggle>
+      <AnimatePresence mode="wait">
+        {comment && (
+          <motion.div
+            key={comment.id}
+            className="absolute w-64"
+            style={{ left: comment.point.x! - 256 / 2, top: comment.point.y }}
+            initial={{ opacity: 0, scale: 0.8, y: -10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.8, y: -10 }}
+            transition={{ duration: 0.1, ease: "easeOut" }}
+          >
+            <InlineEditCommand
+              onSubmit={(text) => {
+                if (!comment) return;
+                sendMessage(
+                  !!comment.screenshot
+                    ? [
+                        { type: "text", text },
+                        { type: "image", image: comment.screenshot },
+                      ]
+                    : [{ type: "text", text }]
+                );
+                setComment(null);
+              }}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }

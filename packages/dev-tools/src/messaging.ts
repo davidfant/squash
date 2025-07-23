@@ -5,12 +5,22 @@ export interface InlineCommentSettingsMessage {
 
 export interface InlineCommentMessage {
   type: "InlineComment";
+  id: string;
   stack: Array<{ line: number; column: number; file: string }>;
-  screenshot: string | null;
+  point: { x: number; y: number };
   box: { x: number; y: number; width: number; height: number };
 }
 
-export type PostMessage = InlineCommentSettingsMessage | InlineCommentMessage;
+export interface InlineCommentScreenshotMessage {
+  type: "InlineCommentScreenshot";
+  id: string;
+  screenshot: string;
+}
+
+export type PostMessage =
+  | InlineCommentSettingsMessage
+  | InlineCommentMessage
+  | InlineCommentScreenshotMessage;
 type MessageOfType<T extends PostMessage["type"]> = Extract<
   PostMessage,
   { type: T }
@@ -20,12 +30,13 @@ export type MessageHandler<T extends PostMessage> = (message: T) => void;
 
 export function postMessage<T extends PostMessage>(
   message: T,
-  targetOrigin: string = "*"
+  targetOrigin: string = "*",
+  targetWindow: Window | null = window.top
 ): void {
   // if (window.top && window.top !== window.self) {
   //   window.top.postMessage(message, targetOrigin);
   // }
-  window.top?.postMessage(message, targetOrigin);
+  targetWindow?.postMessage(message, targetOrigin);
 }
 
 export function addEventListener<T extends PostMessage["type"]>(

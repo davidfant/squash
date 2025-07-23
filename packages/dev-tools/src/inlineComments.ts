@@ -108,6 +108,16 @@ async function onClick(e: MouseEvent) {
   // Collect the entire stack of DOM elements with inspector metadata
   const elementStack = collectElementStack(target);
   const box = target.getBoundingClientRect();
+  const point = { x: e.clientX, y: e.clientY };
+  const id = Date.now().toString();
+
+  postMessage({
+    type: "InlineComment",
+    id,
+    stack: elementStack,
+    box,
+    point,
+  });
 
   try {
     // overlay.style.display = "none";
@@ -128,19 +138,12 @@ async function onClick(e: MouseEvent) {
     const screenshot = canvas.toDataURL("image/webp");
 
     postMessage({
-      type: "InlineComment",
-      stack: elementStack,
+      type: "InlineCommentScreenshot",
+      id,
       screenshot,
-      box,
     });
   } catch (error) {
     console.error("Failed to take screenshot:", error);
-    postMessage({
-      type: "InlineComment",
-      stack: elementStack,
-      screenshot: null,
-      box,
-    });
   }
 }
 

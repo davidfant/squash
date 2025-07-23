@@ -1,14 +1,14 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
 import { ArrowUp, Loader2, Sparkles } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-export function InlineEditCommand() {
+export function InlineEditCommand({
+  onSubmit,
+}: {
+  onSubmit: (value: string) => void;
+}) {
   const [value, setValue] = useState("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(true);
@@ -103,33 +103,37 @@ export function InlineEditCommand() {
   const handleSubmit = async (text = value) => {
     if (!text.trim()) return;
 
-    setIsSubmitting(true);
-    setSuggestions([]);
+    onSubmit(text);
 
-    // Simulate submission
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setValue("");
-      // Reset suggestions after submission
-      getSuggestions("").then((initialSuggestions) => {
-        setSuggestions(initialSuggestions);
-        setSelectedIndex(-1);
-      });
-    }, 3000);
+    // setIsSubmitting(true);
+    // setSuggestions([]);
+
+    // // Simulate submission
+    // setTimeout(() => {
+    //   setIsSubmitting(false);
+    //   setValue("");
+    //   // Reset suggestions after submission
+    //   getSuggestions("").then((initialSuggestions) => {
+    //     setSuggestions(initialSuggestions);
+    //     setSelectedIndex(-1);
+    //   });
+    // }, 3000);
   };
 
   // Handle keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (isSubmitting) return;
 
-    if (e.key === "ArrowDown") {
+    const isMultiline = () => value.split("\n").length > 1;
+
+    if (e.key === "ArrowDown" && !isMultiline()) {
       e.preventDefault();
       const newIndex = Math.min(selectedIndex + 1, suggestions.length - 1);
       setSelectedIndex(newIndex);
       if (newIndex >= 0 && suggestions[newIndex]) {
         setValue(suggestions[newIndex]);
       }
-    } else if (e.key === "ArrowUp") {
+    } else if (e.key === "ArrowUp" && !isMultiline()) {
       e.preventDefault();
       const newIndex = Math.max(selectedIndex - 1, -1);
       setSelectedIndex(newIndex);
@@ -138,7 +142,7 @@ export function InlineEditCommand() {
       } else {
         setValue("");
       }
-    } else if (e.key === "Enter" && !e.shiftKey) {
+    } else if (e.key === "Enter" && e.metaKey) {
       e.preventDefault();
       if (selectedIndex >= 0 && suggestions[selectedIndex]) {
         selectSuggestion(suggestions[selectedIndex]);
@@ -149,7 +153,7 @@ export function InlineEditCommand() {
   };
 
   return (
-    <Card className="py-1 gap-1">
+    <Card className="py-1 gap-1 shadow-2xl">
       {/* Input row */}
       <div className="flex items-center gap-2 pl-3 pr-1">
         <div className="flex-shrink-0">
@@ -181,10 +185,8 @@ export function InlineEditCommand() {
         </Button>
       </div>
 
-      {/* Separator */}
-      <Separator className="mb-2" />
+      {/* <Separator className="mb-2" />
 
-      {/* Suggestions section */}
       {!isSubmitting && (
         <div>
           <div className="flex items-center gap-2 px-3">
@@ -221,7 +223,6 @@ export function InlineEditCommand() {
         </div>
       )}
 
-      {/* Submit state skeleton */}
       {isSubmitting && (
         <div className="space-y-2 px-3">
           <span className="text-sm font-medium text-muted-foreground">
@@ -229,7 +230,7 @@ export function InlineEditCommand() {
           </span>
           <Skeleton className="h-8 w-full" />
         </div>
-      )}
+      )} */}
     </Card>
   );
 }

@@ -20,13 +20,15 @@ export function FilePreview({
 }: FilePreviewProps) {
   const content = (() => {
     if (file.type === "image") {
-      return <img src={file.image} className="object-cover w-auto h-full" />;
+      return (
+        <img src={file.image} className="object-cover w-auto h-full max-h-24" />
+      );
     } else if (file.mimeType?.startsWith("image/")) {
       return (
         <img
           src={file.data}
           alt={file.filename}
-          className="object-cover w-auto h-full"
+          className="object-cover w-auto h-full max-h-24"
         />
       );
     } else {
@@ -47,7 +49,9 @@ export function FilePreview({
   })();
   return (
     <div className="relative group">
-      <Card className={cn("h-24 p-0 rounded-sm overflow-hidden", className)}>
+      <Card
+        className={cn("max-h-24 p-0 rounded-sm overflow-hidden", className)}
+      >
         {content}
         {loading && (
           <div className="absolute inset-0 bg-background/70 flex items-center justify-center">

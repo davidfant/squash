@@ -20,6 +20,7 @@ export interface ProjectSection {
 }
 export interface ProjectPage {
   id: string;
+  name: string;
   path: string;
   sectionIds: string[];
 }
@@ -30,7 +31,7 @@ export interface ProjectMetadata {
 
 // –––––––––––––––––––––––––––––––––  helpers  –––––––––––––––––––––––––––––––– //
 const SRC = (repo: string) => path.join(repo, "src");
-const reName = /export\s+const\s+name\s*=\s*["'`]([^"'`]+)["'`]/;
+const reName = /export\s+const\s+name\s*=\s*(["'`][^"'`]+["'`])/;
 const reIndexOut = /export\s+\{\s*default\s*\}\s+from\s+["'`]([^"'`]+)["'`]/;
 
 const toBase64 = (str: string) => Buffer.from(str).toString("base64");
@@ -43,7 +44,8 @@ const exists = (file: string) =>
 
 async function getName(file: string, fallback: string) {
   const txt = await fs.readFile(file, "utf8");
-  return reName.exec(txt)?.[1] ?? fallback;
+  const name = reName.exec(txt)?.[1];
+  return !!name ? JSON.parse(name) : fallback;
 }
 
 /* replicate the route‑generation logic from src/main.tsx */
@@ -142,6 +144,7 @@ async function run(repoRoot = process.cwd()) {
 
     pages.push({
       id: toBase64(`@/${rel.replace(/\.tsx$/, "")}`),
+      name: await getName(file, path.parse(rel).name),
       path: fileToRoute(rel),
       sectionIds: orderedSectionIds(source).map(toBase64),
     });

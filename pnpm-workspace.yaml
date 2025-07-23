@@ -1,2 +1,5 @@
 packages:
   - packages/*
+overrides:
+  '@hypershape-ai/utils': link:packages/utils
+  utils: link:../../../Library/pnpm/global/5/node_modules/@hypershape-ai/utils

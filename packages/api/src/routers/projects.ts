@@ -1,4 +1,9 @@
-import { requireAuth, type Session, type User } from "@/auth/middleware";
+import {
+  requireActiveOrganization,
+  requireAuth,
+  type Session,
+  type User,
+} from "@/auth/middleware";
 import type { Database } from "@/database";
 import * as schema from "@/database/schema";
 import { generatePageFileContent } from "@/repo/generateFileContent";
@@ -23,6 +28,7 @@ const loadProject = (id: string, userId: string, db: Database) =>
       },
     })
     .from(schema.projects)
+    .innerJoin(schema.user, eq(schema.projects.createdBy, schema.user.id))
     .innerJoin(
       schema.organization,
       eq(schema.projects.organizationId, schema.organization.id)
@@ -56,14 +62,11 @@ export const projectsRouter = new Hono<{
   Bindings: CloudflareBindings;
   Variables: { db: Database };
 }>()
-  .get("/", requireAuth, async (c) => {
+  .get("/", requireAuth, requireActiveOrganization, async (c) => {
     const session = c.get("session");
     const user = c.get("user");
     const db = c.get("db");
-
-    if (!session?.activeOrganizationId) {
-      return c.json({ error: "No active organization" }, 400);
-    }
+    const organizationId = c.get("organizationId");
 
     const projects = await db
       .select({
@@ -90,15 +93,13 @@ export const projectsRouter = new Hono<{
       )
       .orderBy(
         desc(
-          sql`CASE WHEN ${schema.projects.createdBy} = ${
-            user!.id
-          } THEN 1 ELSE 0 END`
+          sql`CASE WHEN ${schema.projects.createdBy} = ${user.id} THEN 1 ELSE 0 END`
         ),
         desc(schema.projects.updatedAt)
       )
       .where(
         and(
-          eq(schema.organization.id, session.activeOrganizationId),
+          eq(schema.organization.id, organizationId),
           isNull(schema.projects.deletedAt),
           eq(schema.member.userId, user!.id)
         )
@@ -106,6 +107,32 @@ export const projectsRouter = new Hono<{
 
     return c.json(projects);
   })
+  .post(
+    "/",
+    zValidator("json", z.object({ name: z.string() })),
+    requireAuth,
+    requireActiveOrganization,
+    async (c) => {
+      const user = c.get("user");
+      const organizationId = c.get("organizationId");
+      const db = c.get("db");
+      const body = c.req.valid("json");
+
+      const [project] = await db
+        .insert(schema.projects)
+        .values({
+          name: body.name,
+          organizationId,
+          createdBy: user.id,
+          // TODO: initialize this correctly!!
+          gitRepoUrl: "",
+          metadata: { pages: [], sections: [] },
+        })
+        .returning();
+
+      return c.json({ id: project!.id });
+    }
+  )
   .get(
     "/:projectId",
     zValidator("param", z.object({ projectId: z.string().uuid() })),
@@ -170,5 +197,4 @@ export const projectsRouter = new Hono<{
 
       return c.json(project);
     }
-  )
-  .post("/");
+  );

@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@hypershape-ai/utils':
-        specifier: ^0.0.0
-        version: 0.0.0
+        specifier: ^0.0.1
+        version: 0.0.1
       '@radix-ui/react-accordion':
         specifier: ^1.2.11
         version: 1.2.11(@types/react-dom@19.1.6(@types/react@19.1.8))(@types/react@19.1.8)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -687,8 +687,8 @@ packages:
     resolution: {integrity: sha512-bV0Tgo9K4hfPCek+aMAn81RppFKv2ySDQeMoSZuvTASywNTnVJCArCZE2FWqpvIatKu7VMRLWlR1EazvVhDyhQ==}
     engines: {node: '>=18.18'}
 
-  '@hypershape-ai/utils@0.0.0':
-    resolution: {integrity: sha512-I6jeBZJGy+PzrXH7rUBEIOoCe1Y10VZsoRz3U9itVaSKNFhaYpBR+etmZ1/cawUunIHXzZR4oNsPlfgovpKbdw==, tarball: https://npm.pkg.github.com/download/@hypershape-ai/utils/0.0.0/53d084ac3be232627cdfeee180eb84a2058ce12b}
+  '@hypershape-ai/utils@0.0.1':
+    resolution: {integrity: sha512-qaG6MOtoE4gUHJuEQK9xb3X4SmUD469aeJIzOIZ/UVLaAWVU9hRurphHgxOBGNCz53HAQwjvTS91TiGyqRrqJA==, tarball: https://npm.pkg.github.com/download/@hypershape-ai/utils/0.0.1/446e0f1320f8fea7e4a20d5c8e317e410c0621db}
     hasBin: true
 
   '@img/sharp-darwin-arm64@0.33.5':
@@ -3286,7 +3286,7 @@ snapshots:
 
   '@humanwhocodes/retry@0.4.3': {}
 
-  '@hypershape-ai/utils@0.0.0':
+  '@hypershape-ai/utils@0.0.1':
     dependencies:
       '@babel/types': 7.28.1
       '@react-dev-inspector/babel-plugin': 2.0.1

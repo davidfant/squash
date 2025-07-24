@@ -1,7 +1,10 @@
 {
   "extends": "../../tsconfig.base.json",
+  "include": ["src/**/*", "worker-configuration.d.ts"],
   "compilerOptions": {
-    "rootDir": "src",
+    "baseUrl": ".",
+    "rootDir": "./src",
+    "outDir": "./dist",
     "paths": {
       "@/*": ["./src/*"]
     }

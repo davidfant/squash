@@ -10,7 +10,7 @@ import { databaseMiddleware } from "./database/middleware";
 import { createQualifyAgent } from "./mastra/qualify";
 import { projectsRouter } from "./routers/projects";
 
-export default new Hono<{ Bindings: CloudflareBindings }>()
+const app = new Hono<{ Bindings: CloudflareBindings }>()
   .use(requestId())
   .use(logger())
   .use(databaseMiddleware)
@@ -52,3 +52,6 @@ export default new Hono<{ Bindings: CloudflareBindings }>()
       // await stream.writeSSE({ event: "done", data: "" });
     });
   });
+
+export default app;
+export type AppType = typeof app;

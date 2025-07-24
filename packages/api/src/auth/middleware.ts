@@ -23,3 +23,14 @@ export const requireAuth = createMiddleware<{
   c.set("session", s.session as Session);
   await next();
 });
+
+export const requireActiveOrganization = createMiddleware<{
+  Variables: { session: Session; organizationId: string };
+}>(async (c, next) => {
+  const session = c.get("session");
+  if (!session?.activeOrganizationId) {
+    return c.json({ error: "No active organization" }, 400);
+  }
+  c.set("organizationId", session.activeOrganizationId);
+  await next();
+});

@@ -13,7 +13,7 @@ addInlineCommentSettingsListener();
 
 i18n.use(initReactI18next).init({
   lng: "en",
-  ns: ["common"],
+  ns: Object.keys(resources),
   defaultNS: "common",
   resources: { en: resources },
 });

@@ -1,10 +1,17 @@
 {
   "name": "@hypershape-ai/api",
   "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
   "scripts": {
     "dev": "wrangler dev",
     "dev:mastra": "mastra dev --env .dev.vars",
     "deploy": "wrangler deploy --minify",
+    "build": "tsc -b",
     "typegen": "wrangler types --env-interface CloudflareBindings"
   },
   "dependencies": {
@@ -28,6 +35,7 @@
   "devDependencies": {
     "@types/lodash.camelcase": "^4.3.9",
     "@types/lodash.upperfirst": "^4.3.9",
+    "dotenv": "^17.2.0",
     "drizzle-kit": "^0.31.4",
     "mastra": "^0.10.12",
     "wrangler": "4.16.1"

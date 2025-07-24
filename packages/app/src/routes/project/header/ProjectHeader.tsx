@@ -27,11 +27,11 @@ import {
   Users,
 } from "lucide-react";
 import { Link } from "react-router";
+import type { Project } from "../types";
 import { ProjectAddressBar } from "./ProjectAddressBar";
 
 interface ProjectHeaderProps {
-  projectName?: string;
-  isPublic?: boolean;
+  project: Project;
   isHistoryEnabled?: boolean;
   onHistoryToggle?: (enabled: boolean) => void;
   onHideChatSidebar?: () => void;
@@ -48,8 +48,7 @@ interface ProjectHeaderProps {
 type ScreenSize = "mobile" | "tablet" | "desktop";
 
 export function ProjectHeader({
-  projectName = "My Project",
-  isPublic = false,
+  project,
   isHistoryEnabled = false,
   onHistoryToggle,
   onHideChatSidebar,
@@ -66,6 +65,7 @@ export function ProjectHeader({
     navigator.clipboard.writeText(publicUrl);
   };
 
+  const isPublic = true;
   return (
     <header
       className={cn(
@@ -92,7 +92,7 @@ export function ProjectHeader({
                 variant="ghost"
                 className="flex items-center gap-2 px-3 hover:bg-muted"
               >
-                <span className="font-medium">{projectName}</span>
+                <span className="font-medium">{project.name}</span>
                 {isPublic ? (
                   <Globe className="size-4 text-muted-foreground" />
                 ) : (

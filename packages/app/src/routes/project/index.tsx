@@ -1,14 +1,16 @@
 import { ChatThread } from "@/components/layout/chat/ChatThread";
 import { ChatProvider } from "@/components/layout/chat/context";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { api, useQuery } from "@/hooks/api";
 import { useNavigate, useParams } from "react-router";
 import { v4 as uuid } from "uuid";
 import { ProjectContextProvider, useProjectContext } from "./context";
 import { ProjectHeader } from "./header/ProjectHeader";
 import { ProjectPageSidebar } from "./ProjectPageSidebar";
 import { ProjectPreview } from "./ProjectPreview";
+import type { Project } from "./types";
 
-function Component() {
+function Component({ project }: { project: Project }) {
   const { pages, selectedPage } = useProjectContext();
 
   const handleHistoryToggle = (enabled: boolean) => {
@@ -40,8 +42,7 @@ function Component() {
   return (
     <SidebarProvider className="flex flex-col h-screen">
       <ProjectHeader
-        projectName="Landing Page Builder"
-        isPublic={true}
+        project={project}
         isHistoryEnabled={false}
         onHistoryToggle={handleHistoryToggle}
         onHideChatSidebar={handleHideChatSidebar}
@@ -67,8 +68,12 @@ function Component() {
 }
 
 export function ProjectPage() {
-  const { pageId } = useParams();
+  const { projectId, pageId } = useParams();
   const navigate = useNavigate();
+  const project = useQuery(api.projects[":projectId"].$get, {
+    params: { projectId },
+  });
+
   return (
     <ChatProvider
       endpoint="/todo"
@@ -95,7 +100,7 @@ export function ProjectPage() {
         selectedPageId={pageId}
         onSelectPage={(pageId) => navigate(`/project/page/${pageId}`)}
       >
-        <Component />
+        {!!project.data && <Component project={project.data} />}
       </ProjectContextProvider>
     </ChatProvider>
   );

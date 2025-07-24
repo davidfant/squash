@@ -122,7 +122,7 @@ export function useDictation(onTranscription?: (text: string) => void): {
           formData.append("file", blob, "audio.webm");
 
           const res = await fetch(
-            `${import.meta.env.VITE_GODMODE_API_URL}/transcribe`,
+            `${import.meta.env.VITE_API_URL}/transcribe`,
             {
               method: "POST",
               body: formData,

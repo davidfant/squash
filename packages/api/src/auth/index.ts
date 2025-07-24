@@ -13,8 +13,8 @@ async function createDefaultOrganization(db: Database, user: User) {
     .insert(schema.organization)
     .values({
       id: organizationId,
-      name: "My LP",
-      slug: `my-lp-${user.id.split("-")[0]}`,
+      name: "My Hypershape",
+      slug: `my-hypershape-${user.id.split("-")[0]}`,
       logo: user.image,
     })
     .execute();
@@ -38,7 +38,7 @@ export function createAuth(env: CloudflareBindings) {
     appName: "LP",
     database: drizzleAdapter(db, { provider: "pg" }),
     basePath: "/auth",
-    trustedOrigins: process.env.GODMODE_APP_URLS?.split(","),
+    trustedOrigins: [process.env.APP_URL],
     baseURL: process.env.BETTER_AUTH_URL,
     secret: process.env.BETTER_AUTH_SECRET,
     socialProviders: {

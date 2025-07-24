@@ -12,6 +12,7 @@ const traverse: typeof BabelTraverse = BabelTraverse.default;
 export interface ProjectSectionVariant {
   id: string;
   name: string;
+  selected: boolean;
 }
 export interface ProjectSection {
   id: string;
@@ -104,32 +105,31 @@ async function run(repoRoot = process.cwd()) {
 
     // which variant does index.ts export?  (→ section display‑name)
     let chosen: string | undefined;
-    if (await exists(idxFile)) {
-      const idx = await fs.readFile(idxFile, "utf8");
-      const relMatch = reIndexOut.exec(idx)?.[1];
-      if (relMatch)
-        chosen = path.join(
-          folder,
-          relMatch + (path.extname(relMatch) ? "" : ".tsx")
-        );
+    const idx = await fs.readFile(idxFile, "utf8");
+    const relMatch = reIndexOut.exec(idx)?.[1];
+    if (relMatch) {
+      chosen = path.join(
+        folder,
+        relMatch + (path.extname(relMatch) ? "" : ".tsx")
+      );
     }
+    const sName = await getName(idxFile, dir);
 
     /* harvest variants */
     const varMeta: ProjectSectionVariant[] = [];
-    let sectionName = dir; // fallback
     for (const vf of variants) {
       const full = path.join(folder, vf);
       const vName = await getName(full, path.parse(vf).name);
-      if (full === chosen) sectionName = vName;
       varMeta.push({
         id: toBase64(`@/sections/${dir}/${path.parse(vf).name}`),
         name: vName,
+        selected: full === chosen,
       });
     }
 
     sections.push({
       id: toBase64(`@/sections/${dir}`),
-      name: sectionName,
+      name: sName,
       variants: varMeta,
     });
   }

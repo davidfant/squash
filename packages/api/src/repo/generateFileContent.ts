@@ -13,7 +13,7 @@ export const generatePageFileContent = (page: {
       .map(fromBase64)
       .map((id) => `import ${n(id)} from "${id}";`),
     "",
-    `export const name = "${JSON.stringify(page.name)}";`,
+    `export const name = ${JSON.stringify(page.name)};`,
     "",
     "export default () => (",
     "  <>",
@@ -29,6 +29,6 @@ export const generateSectionFileContent = (section: {
 }) =>
   [
     `export { default } from "${fromBase64(section.variantId)}";`,
-    `export const name = "${JSON.stringify(section.name)}";`,
+    `export const name = ${JSON.stringify(section.name)};`,
     "",
   ].join("\n");

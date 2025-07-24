@@ -19,8 +19,8 @@ export function InlineEditCommand({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const throttleRef = useRef<number | undefined>(undefined);
-  const updateTimeoutRef = useRef<number | undefined>(undefined);
+  const throttleRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const updateTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   // Mock function to simulate getting suggestions
   const getSuggestions = useCallback(

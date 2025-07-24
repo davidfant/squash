@@ -19,32 +19,28 @@ import {
   Smartphone,
   Tablet,
 } from "lucide-react";
-import { v4 as uuid } from "uuid";
+import { useTranslation } from "react-i18next";
 import {
   useProjectContext,
-  type ProjectPage,
+  useSelectedPage,
   type ScreenSize,
 } from "../context";
 
 export function ProjectAddressBar() {
-  const {
-    pages,
-    selectedPage,
-    addPage,
-    selectPage,
-    toggleScreenSize,
-    screenSize,
-  } = useProjectContext();
+  const { t } = useTranslation("project");
+  const selectedPage = useSelectedPage();
+  const { project, selectPage, toggleScreenSize, screenSize } =
+    useProjectContext();
 
   const handleAddPage = () => {
-    const page: ProjectPage = {
-      id: uuid(),
-      label: "New Page",
-      path: "/new-page",
-      sections: [],
-    };
-    addPage(page);
-    selectPage(page.id);
+    alert("TODO: add page...");
+    // const page: ProjectPage = {
+    //   id: uuid(),
+    //   label: "New Page",
+    //   path: "/new-page",
+    //   sections: [],
+    // };
+    // selectPage(page.id);
   };
 
   const screenSizeIcons = {
@@ -54,33 +50,12 @@ export function ProjectAddressBar() {
   };
 
   const getNextScreenSize = (current: ScreenSize): ScreenSize => {
-    switch (current) {
-      case "desktop":
-        return "tablet";
-      case "tablet":
-        return "mobile";
-      case "mobile":
-        return "desktop";
-      default:
-        return "desktop";
-    }
-  };
-
-  const getScreenSizeLabel = (size: ScreenSize): string => {
-    switch (size) {
-      case "desktop":
-        return "Desktop";
-      case "tablet":
-        return "Tablet";
-      case "mobile":
-        return "Mobile";
-      default:
-        return "Desktop";
-    }
+    const order = ["desktop", "tablet", "mobile"] as const;
+    return order[(order.indexOf(current) + 1) % order.length]!;
   };
 
   const nextScreenSize = getNextScreenSize(screenSize);
-  const nextScreenSizeLabel = getScreenSizeLabel(nextScreenSize);
+  const nextScreenSizeLabel = t(`addressBar.screen.size.${nextScreenSize}`);
 
   return (
     <div className="flex items-center flex-1 border rounded-md overflow-hidden bg-background max-w-64">
@@ -95,7 +70,9 @@ export function ProjectAddressBar() {
             {screenSizeIcons[screenSize]}
           </Button>
         </TooltipTrigger>
-        <TooltipContent>Show {nextScreenSizeLabel} preview</TooltipContent>
+        <TooltipContent>
+          {t("addressBar.screen.showPreview", { size: nextScreenSizeLabel })}
+        </TooltipContent>
       </Tooltip>
 
       {/* URL Input with Page Selector */}
@@ -107,22 +84,22 @@ export function ProjectAddressBar() {
                 <p className="w-full text-center">{selectedPage?.path}</p>
               </DropdownMenuTrigger>
             </TooltipTrigger>
-            <TooltipContent>Change page</TooltipContent>
+            <TooltipContent>{t("addressBar.changePage")}</TooltipContent>
           </Tooltip>
           <DropdownMenuContent align="center" className="w-64">
-            {pages.map((page) => (
+            {project.metadata.pages.map((page) => (
               <DropdownMenuItem
                 key={page.id}
                 onClick={() => selectPage(page.id)}
                 className={cn(selectedPage?.id === page.id && "bg-accent")}
               >
-                {page.label}
+                {page.name}
                 <Badge variant="outline">{page.path}</Badge>
               </DropdownMenuItem>
             ))}
             <DropdownMenuItem onClick={handleAddPage}>
               <Plus />
-              Add Page
+              {t("addressBar.addPage")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -139,7 +116,7 @@ export function ProjectAddressBar() {
             <RotateCw />
           </Button>
         </TooltipTrigger>
-        <TooltipContent>Refresh</TooltipContent>
+        <TooltipContent>{t("addressBar.refresh")}</TooltipContent>
       </Tooltip>
 
       {/* Open in New Tab - Ghost */}

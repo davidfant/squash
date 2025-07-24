@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 
-export const name = "My Hero";
+export const name = "My Hero 2";
 
 export default () => {
   const { t } = useTranslation("hero");

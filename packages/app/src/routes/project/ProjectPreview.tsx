@@ -8,11 +8,12 @@ import {
 } from "@hypershape-ai/utils/messaging";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
-import { useProjectContext } from "./context";
+import { useProjectContext, useSelectedPage } from "./context";
 import { InlineEditCommand } from "./InlineEditCommand";
 
 export function ProjectPreview() {
-  const { selectedPage, screenSize } = useProjectContext();
+  const { screenSize } = useProjectContext();
+  const selectedPage = useSelectedPage();
   const { sendMessage } = useChat();
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [isPointAndClick, setIsPointAndClick] = useState(false);
@@ -53,16 +54,10 @@ export function ProjectPreview() {
     );
   }
 
-  // Define width classes based on screen size
   const getPreviewWidth = () => {
-    switch (screenSize) {
-      case "mobile":
-        return "w-[375px]"; // Mobile width
-      case "tablet":
-        return "w-[768px]"; // Tablet width
-      case "desktop":
-        return "w-full";
-    }
+    if (screenSize === "desktop") return "w-full";
+    if (screenSize === "tablet") return "w-[768px]";
+    if (screenSize === "mobile") return "w-[375px]";
   };
 
   return (

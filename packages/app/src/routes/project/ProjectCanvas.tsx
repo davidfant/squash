@@ -45,7 +45,7 @@ function PageSectionVariants({
     const scrollContainer = scrollRef.current;
     if (!scrollContainer) return;
 
-    let timeout: number;
+    let timeout: NodeJS.Timeout;
     const throttledHandler = () => {
       clearTimeout(timeout);
       timeout = setTimeout(() => {
@@ -163,7 +163,7 @@ export function ProjectCanvas() {
       />
       <div className="w-[50%] min-w-md mx-auto space-y-12">
         <SectionToolbar submitting={false} onDeleteSection={console.log} />
-        <InlineEditCommand />
+        <InlineEditCommand onSubmit={console.log} onCancel={console.log} />
       </div>
     </div>
   );

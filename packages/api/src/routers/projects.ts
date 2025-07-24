@@ -6,7 +6,10 @@ import {
 } from "@/auth/middleware";
 import type { Database } from "@/database";
 import * as schema from "@/database/schema";
-import { generatePageFileContent } from "@/repo/generateFileContent";
+import {
+  generatePageFileContent,
+  generateSectionFileContent,
+} from "@/repo/generateFileContent";
 import { zValidator } from "@hono/zod-validator";
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { Hono } from "hono";
@@ -126,7 +129,34 @@ export const projectsRouter = new Hono<{
           createdBy: user.id,
           // TODO: initialize this correctly!!
           gitRepoUrl: "",
-          metadata: { pages: [], sections: [] },
+          metadata: {
+            sections: [
+              {
+                id: "QC9zZWN0aW9ucy9IZXJv",
+                name: "Hero",
+                variants: [
+                  {
+                    id: "QC9zZWN0aW9ucy9IZXJvL0hlcm8x",
+                    name: "My Hero 1",
+                    selected: true,
+                  },
+                  {
+                    id: "QC9zZWN0aW9ucy9IZXJvL0hlcm8y",
+                    name: "My Hero 2",
+                    selected: false,
+                  },
+                ],
+              },
+            ],
+            pages: [
+              {
+                id: "QC9wYWdlcy9pbmRleA==",
+                name: "Home",
+                path: "/",
+                sectionIds: ["QC9zZWN0aW9ucy9IZXJv"],
+              },
+            ],
+          },
         })
         .returning();
 
@@ -194,6 +224,62 @@ export const projectsRouter = new Hono<{
         sectionIds: body.sectionIds ?? page.sectionIds,
       });
       console.log("UPDATE PAGE...", content);
+
+      return c.json(project);
+    }
+  )
+  .put(
+    "/:projectId/pages/:pageId/sections/:sectionId",
+    zValidator(
+      "param",
+      z.object({
+        projectId: z.string().uuid(),
+        pageId: z.string(),
+        sectionId: z.string(),
+      })
+    ),
+    zValidator(
+      "json",
+      z.object({
+        name: z.string().optional(),
+        variantId: z.string().optional(),
+      })
+    ),
+    requireAuth,
+    requireProject,
+    async (c) => {
+      const project = c.get("project");
+      const body = c.req.valid("json");
+      const params = c.req.valid("param");
+
+      const section = project.metadata.sections.find(
+        (s) => s.id === params.sectionId
+      );
+      if (!section) return c.json({ error: "Section not found" }, 404);
+
+      const content = generateSectionFileContent({
+        name: body.name ?? section.name,
+        variantId:
+          body.variantId ?? section.variants.find((v) => v.selected)?.id!,
+      });
+      // TODO: get/create dev server
+      // TODO: write to file system in preview dev server, commit and push
+      // TODO: insert message in chat thread
+      // TODO: regenerate metadata and update the project
+      project.metadata.sections.forEach((s) => {
+        if (s.id === params.sectionId) {
+          s.name = body.name ?? s.name;
+          s.variants = s.variants.map((v) => ({
+            ...v,
+            selected: v.id === body.variantId,
+          }));
+        }
+      });
+      await c
+        .get("db")
+        .update(schema.projects)
+        .set({ metadata: project.metadata })
+        .where(eq(schema.projects.id, project.id));
 
       return c.json(project);
     }

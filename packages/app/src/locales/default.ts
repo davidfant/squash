@@ -43,4 +43,19 @@ export default {
   landing: {
     startBuilding: "Start Building",
   },
+  project: {
+    addressBar: {
+      screen: {
+        size: {
+          desktop: "Desktop",
+          tablet: "Tablet",
+          mobile: "Mobile",
+        },
+        showPreview: "Show {size} preview",
+      },
+      changePage: "Change page",
+      addPage: "Add page",
+      refresh: "Refresh",
+    },
+  },
 } as const;

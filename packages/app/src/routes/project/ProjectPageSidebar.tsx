@@ -19,61 +19,63 @@ import {
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
-import { ChevronDown, Layers, Plus, Settings } from "lucide-react";
-import { useProjectContext, type ProjectPage } from "./context";
+import type {
+  ProjectPage,
+  ProjectSectionVariant,
+} from "@hypershape-ai/utils/metadata";
+import { ChevronDown, Layers, Loader2, Plus, Settings } from "lucide-react";
+import { useState } from "react";
+import { usePageSections, useProjectContext } from "./context";
+
+function SectionVariantMenuItem({
+  variant,
+  pageId,
+  sectionId,
+}: {
+  variant: ProjectSectionVariant;
+  pageId: string;
+  sectionId: string;
+}) {
+  const { selectVariant } = useProjectContext();
+  const [loading, setLoading] = useState(false);
+  const handleSelect = async () => {
+    setLoading(true);
+    await selectVariant(pageId, sectionId, variant.id);
+    setLoading(false);
+  };
+  return (
+    <SidebarMenuSubItem key={variant.id}>
+      <SidebarMenuSubButton
+        isActive={variant.selected}
+        className={cn(
+          "cursor-pointer",
+          variant.selected && "bg-sidebar-accent"
+        )}
+        onClick={handleSelect}
+      >
+        {variant.name}{" "}
+        {loading && <Loader2 className="opacity-30 animate-spin" />}
+      </SidebarMenuSubButton>
+    </SidebarMenuSubItem>
+  );
+}
 
 export function ProjectPageSidebar({ page }: { page: ProjectPage }) {
-  const { pages, selectPage, addPage, selectVariant } = useProjectContext();
-
-  const handleAddPage = () => {
-    // TODO: Implement add page functionality
-    console.log("Add page clicked");
-  };
+  const { selectVariant } = useProjectContext();
+  const sections = usePageSections(page.id);
 
   const handleAddVariant = (sectionId: string) => {
     // TODO: Implement add variant functionality
-    console.log("Add variant clicked for section:", sectionId);
+    alert("Add variant clicked for section: " + sectionId);
   };
 
   const handleSEOClick = () => {
     // TODO: Implement SEO functionality
-    console.log("SEO clicked");
+    alert("SEO clicked");
   };
 
   return (
     <Sidebar collapsible="none">
-      {/* <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton>
-                  <span>{page.path}</span>
-                  <span className="text-muted-foreground">{page.label}</span>
-                  <ChevronDown className="ml-auto" />
-                </SidebarMenuButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-60">
-                {pages.map((pageItem) => (
-                  <DropdownMenuItem
-                    key={pageItem.id}
-                    onClick={() => selectPage(pageItem.id)}
-                  >
-                    {pageItem.path}
-                    <span className="text-muted-foreground">
-                      {pageItem.label}
-                    </span>
-                  </DropdownMenuItem>
-                ))}
-                <DropdownMenuItem onClick={handleAddPage}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  <span>Add Page</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarHeader> */}
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>
@@ -82,35 +84,24 @@ export function ProjectPageSidebar({ page }: { page: ProjectPage }) {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {page.sections.map((section) => (
-                <Collapsible
-                  key={section.id}
-                  defaultOpen
-                  className="group/collapsible"
-                >
+              {sections.map((section) => (
+                <Collapsible key={section.id} className="group/collapsible">
                   <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
                       <SidebarMenuButton className="w-full">
-                        <span>{section.label}</span>
+                        <span>{section.name}</span>
                         <ChevronDown className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180" />
                       </SidebarMenuButton>
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                       <SidebarMenuSub>
                         {section.variants.map((variant) => (
-                          <SidebarMenuSubItem key={variant.id}>
-                            <SidebarMenuSubButton
-                              className={cn(
-                                "cursor-pointer",
-                                variant.selected && "bg-sidebar-accent"
-                              )}
-                              onClick={() =>
-                                selectVariant(page.id, section.id, variant.id)
-                              }
-                            >
-                              {variant.label}
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
+                          <SectionVariantMenuItem
+                            key={variant.id}
+                            variant={variant}
+                            pageId={page.id}
+                            sectionId={section.id}
+                          />
                         ))}
                         <SidebarMenuSubItem>
                           <Button

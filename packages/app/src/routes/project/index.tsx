@@ -4,14 +4,14 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { api, useQuery } from "@/hooks/api";
 import { useNavigate, useParams } from "react-router";
 import { v4 as uuid } from "uuid";
-import { ProjectContextProvider, useProjectContext } from "./context";
+import { ProjectContextProvider, useSelectedPage } from "./context";
 import { ProjectHeader } from "./header/ProjectHeader";
 import { ProjectPageSidebar } from "./ProjectPageSidebar";
 import { ProjectPreview } from "./ProjectPreview";
 import type { Project } from "./types";
 
 function Component({ project }: { project: Project }) {
-  const { pages, selectedPage } = useProjectContext();
+  const selectedPage = useSelectedPage();
 
   const handleHistoryToggle = (enabled: boolean) => {
     console.log("History toggle:", enabled);
@@ -97,7 +97,8 @@ export function ProjectPage() {
       ]}
     >
       <ProjectContextProvider
-        selectedPageId={pageId}
+        projectId={projectId!}
+        selectedPageId={pageId ?? null}
         onSelectPage={(pageId) => navigate(`/project/page/${pageId}`)}
       >
         {!!project.data && <Component project={project.data} />}

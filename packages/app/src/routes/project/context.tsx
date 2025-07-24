@@ -1,142 +1,113 @@
-import { createContext, useContext, useState } from "react";
-import { v4 as uuid } from "uuid";
-
-export interface ProjectSectionVariant {
-  id: string;
-  label: string;
-  selected: boolean;
-}
-
-export interface ProjectSection {
-  id: string;
-  label: string;
-  variants: ProjectSectionVariant[];
-}
-
-export interface ProjectPage {
-  id: string;
-  label: string;
-  path: string;
-  sections: ProjectSection[];
-}
+import { api, useMutation, useQuery } from "@/hooks/api";
+import { useQueryClient } from "@tanstack/react-query";
+import { createContext, useContext, useState, type ReactNode } from "react";
+import type { Project } from "./types";
 
 export type ScreenSize = "desktop" | "tablet" | "mobile";
 
 export interface ProjectContextValue {
-  pages: ProjectPage[];
-  selectedPage: ProjectPage | undefined;
+  project: Project;
+  selectedPageId: string | null;
   screenSize: ScreenSize;
-  addPage: (page: ProjectPage) => void;
-  addSection: (pageId: string, section: ProjectSection) => void;
-  selectVariant: (pageId: string, sectionId: string, variantId: string) => void;
+  selectVariant: (
+    pageId: string,
+    sectionId: string,
+    variantId: string
+  ) => Promise<unknown>;
   selectPage: (pageId: string) => void;
   setScreenSize: (size: ScreenSize) => void;
   toggleScreenSize: () => void;
 }
 
 const ProjectContext = createContext<ProjectContextValue>({
-  pages: [],
-  selectedPage: undefined,
+  project: null as any,
+  selectedPageId: null,
   screenSize: "desktop",
-  addPage: () => Promise.resolve(""),
-  addSection: () => {},
-  selectVariant: () => {},
+  selectVariant: () => Promise.resolve(),
   selectPage: () => {},
   setScreenSize: () => {},
   toggleScreenSize: () => {},
 });
 
 export const ProjectContextProvider = ({
-  children,
+  projectId,
   selectedPageId,
+  children,
   onSelectPage,
 }: {
-  children: React.ReactNode;
-  selectedPageId: string | undefined;
+  projectId: string;
+  selectedPageId: string | null;
+  children: ReactNode;
   onSelectPage: (pageId: string) => void;
 }) => {
-  const [pages, setPages] = useState<ProjectPage[]>([
-    {
-      id: uuid(),
-      label: "Home",
-      path: "/",
-      sections: [
-        {
-          id: "hero",
-          label: "Hero",
-          variants: [
-            { id: "hero-1", label: "Hero 1", selected: true },
-            { id: "hero-2", label: "Hero 2", selected: false },
-            { id: "hero-3", label: "Hero 3", selected: false },
-          ],
-        },
-      ],
-    },
-  ]);
-
+  const project = useQuery(api.projects[":projectId"].$get, {
+    params: { projectId },
+  });
   const [screenSize, setScreenSize] = useState<ScreenSize>("desktop");
 
-  const selectedPage = pages.find((p) => p.id === selectedPageId) || pages[0];
+  // const addSection = (pageId: string, section: ProjectSection) =>
+  //   setPages((prev) =>
+  //     prev.map((page) =>
+  //       page.id === pageId
+  //         ? { ...page, sections: [...page.sections, section] }
+  //         : page
+  //     )
+  //   );
 
-  const addPage = (page: ProjectPage) => setPages((prev) => [...prev, page]);
-  const addSection = (pageId: string, section: ProjectSection) =>
-    setPages((prev) =>
-      prev.map((page) =>
-        page.id === pageId
-          ? { ...page, sections: [...page.sections, section] }
-          : page
-      )
-    );
-
-  const selectVariant = (
+  const queryClient = useQueryClient();
+  // const updatePage = useMutation(
+  //   api.projects[":projectId"].pages[":pageId"].$put,
+  //   { onSuccess: () => project.refetch() }
+  // );
+  const updateSection = useMutation(
+    api.projects[":projectId"].pages[":pageId"].sections[":sectionId"].$put
+  );
+  const selectVariant = async (
     pageId: string,
     sectionId: string,
     variantId: string
-  ) =>
-    setPages((prev) =>
-      prev.map((p) =>
-        p.id === pageId
-          ? {
-              ...p,
-              sections: p.sections.map((s) =>
-                s.id === sectionId
-                  ? {
-                      ...s,
-                      variants: s.variants.map((v) => ({
-                        ...v,
-                        selected: v.id === variantId,
-                      })),
-                    }
-                  : s
-              ),
-            }
-          : p
-      )
-    );
-
-  const toggleScreenSize = () => {
-    setScreenSize((current) => {
-      switch (current) {
-        case "desktop":
-          return "tablet";
-        case "tablet":
-          return "mobile";
-        case "mobile":
-          return "desktop";
-        default:
-          return "desktop";
-      }
+  ) => {
+    await updateSection.mutateAsync({
+      param: { projectId, pageId, sectionId },
+      json: { variantId },
     });
+    await project.refetch();
   };
+  // setPages((prev) =>
+  //   prev.map((p) =>
+  //     p.id === pageId
+  //       ? {
+  //           ...p,
+  //           sections: p.sections.map((s) =>
+  //             s.id === sectionId
+  //               ? {
+  //                   ...s,
+  //                   variants: s.variants.map((v) => ({
+  //                     ...v,
+  //                     selected: v.id === variantId,
+  //                   })),
+  //                 }
+  //               : s
+  //           ),
+  //         }
+  //       : p
+  //   )
+  // );
 
+  const toggleScreenSize = () =>
+    setScreenSize((current) => {
+      const order = ["desktop", "tablet", "mobile"] as const;
+      return order[(order.indexOf(current) + 1) % order.length]!;
+    });
+
+  if (!project.data) return null;
   return (
     <ProjectContext.Provider
       value={{
-        pages,
-        selectedPage,
+        project: project.data,
+        selectedPageId:
+          selectedPageId ?? project.data.metadata.pages[0]?.id ?? null,
         screenSize,
-        addPage,
-        addSection,
         selectVariant,
         selectPage: onSelectPage,
         setScreenSize,
@@ -149,3 +120,25 @@ export const ProjectContextProvider = ({
 };
 
 export const useProjectContext = () => useContext(ProjectContext);
+export function usePage(pageId: string) {
+  const { project } = useProjectContext();
+  const page = project.metadata.pages.find((p) => p.id === pageId);
+  if (!page) throw new Error("Page not found");
+  return page;
+}
+
+export function useSelectedPage() {
+  const { selectedPageId, project } = useProjectContext();
+  return project.metadata.pages.find((p) => p.id === selectedPageId);
+}
+
+export function usePageSections(pageId: string) {
+  const { project } = useProjectContext();
+  const page = project.metadata.pages.find((p) => p.id === pageId);
+  if (!page) throw new Error("Page not found");
+  return page.sectionIds.map((sectionId) => {
+    const section = project.metadata.sections.find((s) => s.id === sectionId);
+    if (!section) throw new Error("Section not found");
+    return section;
+  });
+}

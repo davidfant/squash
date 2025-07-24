@@ -14,7 +14,6 @@
     "publish:template": "source .env && cd template && docker build --platform linux/amd64 --build-arg NPM_TOKEN=$NPM_TOKEN -t hypershape . && pnpm wrangler containers push hypershape"
   },
   "dependencies": {
-    "@hypershape-ai/utils": "link:packages/utils",
-    "utils": "link:../../../Library/pnpm/global/5/node_modules/@hypershape-ai/utils"
+    "@hypershape-ai/utils": "link:packages/utils"
   }
 }

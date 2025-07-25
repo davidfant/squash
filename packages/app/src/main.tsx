@@ -27,6 +27,10 @@ createRoot(document.getElementById("root")!).render(
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/projects/:projectId" element={<ProjectPage />} />
+          <Route
+            path="/projects/:projectId/pages/:pageId"
+            element={<ProjectPage />}
+          />
           {/* <Route path="/project/page/:pageId" element={<ProjectPage />} />
           <Route path="/project/x" element={<ProjectCanvas />} /> */}
           <Route path="/onboarding" element={<OnboardingPage />} />

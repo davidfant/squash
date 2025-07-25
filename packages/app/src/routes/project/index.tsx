@@ -99,7 +99,9 @@ export function ProjectPage() {
       <ProjectContextProvider
         projectId={projectId!}
         selectedPageId={pageId ?? null}
-        onSelectPage={(pageId) => navigate(`/project/page/${pageId}`)}
+        onSelectPage={(pageId) =>
+          navigate(`/projects/${projectId}/pages/${pageId}`)
+        }
       >
         {!!project.data && <Component project={project.data} />}
       </ProjectContextProvider>

@@ -17,10 +17,18 @@ export interface InlineCommentScreenshotMessage {
   screenshot: string;
 }
 
+export interface NavigateMessage {
+  type: "Navigate";
+  path: string;
+  pathname: string;
+  params: Record<string, string | undefined>;
+}
+
 export type PostMessage =
   | InlineCommentSettingsMessage
   | InlineCommentMessage
-  | InlineCommentScreenshotMessage;
+  | InlineCommentScreenshotMessage
+  | NavigateMessage;
 type MessageOfType<T extends PostMessage["type"]> = Extract<
   PostMessage,
   { type: T }

@@ -155,6 +155,12 @@ export const projectsRouter = new Hono<{
                 path: "/",
                 sectionIds: ["QC9zZWN0aW9ucy9IZXJv"],
               },
+              {
+                id: "QC9wYWdlcy9hYm91dA==",
+                name: "About",
+                path: "/about",
+                sectionIds: ["QC9zZWN0aW9ucy9IZXJv"],
+              },
             ],
           },
         })

@@ -39,6 +39,6 @@
     "dotenv": "^17.2.0",
     "drizzle-kit": "^0.31.4",
     "mastra": "^0.10.12",
-    "wrangler": "4.16.1"
+    "wrangler": "^4.26.0"
   }
 }

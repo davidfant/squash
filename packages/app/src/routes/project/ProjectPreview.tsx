@@ -12,7 +12,7 @@ import { useProjectContext, useSelectedPage } from "./context";
 import { InlineEditCommand } from "./InlineEditCommand";
 
 export function ProjectPreview() {
-  const { screenSize } = useProjectContext();
+  const { screenSize, project, selectPage } = useProjectContext();
   const selectedPage = useSelectedPage();
   const { sendMessage } = useChat();
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -20,6 +20,15 @@ export function ProjectPreview() {
   const [comment, setComment] = useState<
     (InlineCommentMessage & { screenshot?: string }) | null
   >(null);
+
+  useEffect(
+    () =>
+      addEventListener("Navigate", (m) => {
+        const page = project.metadata.pages.find((p) => p.path === m.path);
+        if (page) selectPage(page.id);
+      }),
+    []
+  );
 
   useEffect(() => {
     postMessage(

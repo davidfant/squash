@@ -7,10 +7,6 @@ settings:
 importers:
 
   .:
-    dependencies:
-      dev-server-utils:
-        specifier: link:packages/utils
-        version: link:packages/utils
     devDependencies:
       '@changesets/cli':
         specifier: ^2.29.3

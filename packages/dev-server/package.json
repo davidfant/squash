@@ -1,6 +1,6 @@
 {
   "name": "@hypershape-ai/dev-server",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "scripts": {
     "build": ". ./.env && docker build --platform linux/amd64 --build-arg AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID --build-arg AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY --build-arg AWS_ENDPOINT_URL_S3=$AWS_ENDPOINT_URL_S3 -t dev-server:$npm_package_version .",
     "push": "daytona snapshot push --disk 1 dev-server:$npm_package_version --name dev-server:$npm_package_version --entrypoint \"pnpm dev --host 0.0.0.0 --port 3000\""

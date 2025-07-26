@@ -10,10 +10,10 @@ ARG AWS_SECRET_ACCESS_KEY
 ARG AWS_ENDPOINT_URL_S3
 ARG AWS_DEFAULT_REGION=auto
 
-RUN git clone --depth 1 --branch v0.0.3 s3://repos/templates/vite /root/repo \
-&& git checkout -b master
-
 WORKDIR /root/repo
+RUN git clone --depth 1 --branch v0.0.4 s3://repos/templates/vite /root/repo \
+ && git checkout -b master
+
 RUN pnpm install
 
 ENV PORT=3000

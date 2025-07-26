@@ -199,7 +199,7 @@ export const projectsRouter = new Hono<{
               autoStopInterval: 5,
               autoArchiveInterval: 60,
               public: true,
-              snapshot: "dev-server:0.0.3",
+              snapshot: "dev-server:0.0.4",
             });
           } catch (error) {
             if (
@@ -368,12 +368,12 @@ export const projectsRouter = new Hono<{
       const metadata = await timer("generate metadata", () =>
         generateMetadata(sandbox)
       );
-      console.log("generated metadata...", JSON.stringify(metadata, null, 2));
-      await c
+      const res = await c
         .get("db")
         .update(schema.projects)
-        .set({ metadata: project.metadata })
-        .where(eq(schema.projects.id, project.id));
+        .set({ metadata })
+        .where(eq(schema.projects.id, project.id))
+        .returning();
 
       return c.json({ id: project.id, metadata });
     }

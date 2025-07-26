@@ -10,7 +10,7 @@
   },
   "packageManager": "pnpm@10.10.0+sha512.d615db246fe70f25dcfea6d8d73dee782ce23e2245e3c4f6f888249fb568149318637dca73c2c5c8ef2a4ca0d5657fb9567188bfab47f566d1ee6ce987815c39",
   "scripts": {
-    "publish:utils": "source .env && pnpm --filter ./packages/utils build && pnpm changeset version && pnpm --filter ./packages/utils publish --access restricted --no-git-checks",
+    "publish:utils": "source .env && pnpm --filter ./packages/utils build && pnpm changeset version && pnpm --filter ./packages/utils publish --no-git-checks",
     "publish:template": "source .env && cd template && docker build --platform linux/amd64 --build-arg NPM_TOKEN=$NPM_TOKEN -t hypershape . && pnpm wrangler containers push hypershape"
   },
   "dependencies": {

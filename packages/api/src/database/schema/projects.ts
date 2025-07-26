@@ -1,4 +1,4 @@
-import type { ProjectMetadata } from "@hypershape-ai/utils/metadata";
+import type { ProjectMetadata } from "dev-server-utils/metadata";
 import { relations } from "drizzle-orm";
 import { jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { organization, user } from "./auth";
@@ -10,7 +10,7 @@ export const projects = pgTable("projects", {
   metadata: jsonb().$type<ProjectMetadata>().notNull(),
   // inputSchema: jsonb("input_schema").notNull(),
   // outputSchema: jsonb("output_schema").notNull(),
-  gitRepoUrl: text("git_repo_url").notNull(),
+  daytonaSandboxId: text("daytona_sandbox_id").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),

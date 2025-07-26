@@ -1,6 +1,6 @@
 import { Toaster } from "@/components/ui/sonner";
-import { addInlineCommentSettingsListener } from "@hypershape-ai/utils/inlineComments";
-import { postMessage } from "@hypershape-ai/utils/messaging";
+import { addInlineCommentSettingsListener } from "dev-server-utils/inlineComments";
+import { postMessage } from "dev-server-utils/messaging";
 import i18n from "i18next";
 import { StrictMode, useEffect } from "react";
 import { createRoot } from "react-dom/client";

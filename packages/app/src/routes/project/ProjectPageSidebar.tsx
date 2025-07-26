@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 import type {
   ProjectPage,
   ProjectSectionVariant,
-} from "@hypershape-ai/utils/metadata";
+} from "dev-server-utils/metadata";
 import { ChevronDown, Layers, Loader2, Plus, Settings } from "lucide-react";
 import { useState } from "react";
 import { usePageSections, useProjectContext } from "./context";

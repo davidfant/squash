@@ -1,4 +1,4 @@
-# @hypershape-ai/utils
+# dev-server-utils
 
 ## 0.0.2
 

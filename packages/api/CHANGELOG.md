@@ -5,4 +5,4 @@
 ### Patch Changes
 
 - Updated dependencies
-  - @hypershape-ai/utils@0.0.2
+  - dev-server-utils@0.0.2

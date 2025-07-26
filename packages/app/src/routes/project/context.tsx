@@ -7,10 +7,7 @@ export type ScreenSize = "desktop" | "tablet" | "mobile";
 
 export interface ProjectContextValue {
   project: Project;
-  devServer: {
-    ephemeralUrl: string;
-    codeServerUrl: string;
-  } | null;
+  devServer: { url: string } | null;
   selectedPageId: string | null;
   screenSize: ScreenSize;
   selectVariant: (

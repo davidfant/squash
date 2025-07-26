@@ -10,9 +10,9 @@ import {
   generatePageFileContent,
   generateSectionFileContent,
 } from "@/repo/generateFileContent";
+import { Daytona, DaytonaError } from "@daytonaio/sdk";
 import { zValidator } from "@hono/zod-validator";
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
-import { FreestyleSandboxes } from "freestyle-sandboxes";
 import { Hono } from "hono";
 import { createMiddleware } from "hono/factory";
 import { z } from "zod";
@@ -25,7 +25,6 @@ const loadProject = (id: string, userId: string, db: Database) =>
       metadata: schema.projects.metadata,
       createdAt: schema.projects.createdAt,
       updatedAt: schema.projects.updatedAt,
-      gitRepoUrl: schema.projects.gitRepoUrl,
       createdBy: {
         id: schema.user.id,
         name: schema.user.name,
@@ -68,7 +67,6 @@ export const projectsRouter = new Hono<{
   Variables: { db: Database };
 }>()
   .get("/", requireAuth, requireActiveOrganization, async (c) => {
-    const session = c.get("session");
     const user = c.get("user");
     const db = c.get("db");
     const organizationId = c.get("organizationId");
@@ -123,20 +121,49 @@ export const projectsRouter = new Hono<{
       const db = c.get("db");
       const body = c.req.valid("json");
 
-      const { repoId } = await new FreestyleSandboxes({
-        apiKey: c.env.FREESTYLE_API_KEY,
-      }).createGitRepository({
-        name: body.name,
-        // This will make it easy for us to clone the repo during testing.
-        // The repo won't be listed on any public registry, but anybody
-        // with the uuid can clone it. You should disable this in production.
-        public: true,
-        import: {
-          url: "https://github.com/freestyle-sh/freestyle-next",
-          type: "git",
-          commit_message: "Project created",
-        },
+      const daytona = new Daytona({ apiKey: c.env.DAYTONA_API_KEY });
+
+      async function timer<T>(name: string, fn: () => Promise<T>) {
+        const startedAt = performance.now();
+        const res = await fn();
+        const duration = performance.now() - startedAt;
+        console.log(`[${name}] took ${duration}ms`);
+        return res;
+      }
+
+      const sandbox = await timer("create sandbox", async () => {
+        let attempts = 0;
+        while (true) {
+          try {
+            return await daytona.create({
+              language: "typescript",
+              autoStopInterval: 5,
+              autoArchiveInterval: 60,
+              public: true,
+              snapshot: "dev-server:0.0.3",
+            });
+          } catch (error) {
+            if (
+              error instanceof DaytonaError &&
+              error.message === "No available runners"
+            ) {
+              attempts++;
+              if (attempts > 10) throw error;
+              console.log(
+                `[create sandbox] no available runners, retrying... (${attempts})`
+              );
+              await new Promise((resolve) => setTimeout(resolve, 1000));
+              continue;
+            } else {
+              throw error;
+            }
+          }
+        }
       });
+
+      const res = await timer("generate metadata", () =>
+        sandbox.process.executeCommand("pnpm generate-metadata", "/root/repo")
+      );
 
       const [project] = await db
         .insert(schema.projects)
@@ -144,41 +171,8 @@ export const projectsRouter = new Hono<{
           name: body.name,
           organizationId,
           createdBy: user.id,
-          gitRepoUrl: `https://git.freestyle.sh/${repoId}`,
-          metadata: {
-            sections: [
-              {
-                id: "QC9zZWN0aW9ucy9IZXJv",
-                name: "Hero",
-                variants: [
-                  {
-                    id: "QC9zZWN0aW9ucy9IZXJvL0hlcm8x",
-                    name: "My Hero 1",
-                    selected: true,
-                  },
-                  {
-                    id: "QC9zZWN0aW9ucy9IZXJvL0hlcm8y",
-                    name: "My Hero 2",
-                    selected: false,
-                  },
-                ],
-              },
-            ],
-            pages: [
-              {
-                id: "QC9wYWdlcy9pbmRleA==",
-                name: "Home",
-                path: "/",
-                sectionIds: ["QC9zZWN0aW9ucy9IZXJv"],
-              },
-              {
-                id: "QC9wYWdlcy9hYm91dA==",
-                name: "About",
-                path: "/about",
-                sectionIds: ["QC9zZWN0aW9ucy9IZXJv"],
-              },
-            ],
-          },
+          daytonaSandboxId: sandbox.id,
+          metadata: JSON.parse(res.result),
         })
         .returning();
 
@@ -199,19 +193,20 @@ export const projectsRouter = new Hono<{
     requireProject,
     async (c) => {
       const project = c.get("project");
-      const freestyle = new FreestyleSandboxes({
-        apiKey: c.env.FREESTYLE_API_KEY,
-      });
+      const daytona = new Daytona({ apiKey: c.env.DAYTONA_API_KEY });
 
-      const repoId = project.gitRepoUrl.split("/").pop()!;
-      const devServer = await freestyle.requestDevServer({
-        repoId,
-        timeout: 60,
-      });
-      return c.json({
-        ephemeralUrl: devServer.ephemeralUrl,
-        codeServerUrl: devServer.codeServerUrl,
-      });
+      const sandboxId = await c
+        .get("db")
+        .query.projects.findFirst({ where: eq(schema.projects.id, project.id) })
+        .then((p) => p?.daytonaSandboxId);
+      if (!sandboxId) return c.json({ error: "Sandbox not found" }, 404);
+
+      const sandbox = await daytona.get(sandboxId);
+      const [{ url }] = await Promise.all([
+        sandbox.getPreviewLink(3000),
+        sandbox.waitUntilStarted(60),
+      ]);
+      return c.json({ url });
     }
   )
   // .post(

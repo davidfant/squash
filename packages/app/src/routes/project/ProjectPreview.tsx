@@ -5,7 +5,7 @@ import {
   addEventListener,
   postMessage,
   type InlineCommentMessage,
-} from "@hypershape-ai/utils/messaging";
+} from "dev-server-utils/messaging";
 import { AnimatePresence, motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -75,7 +75,7 @@ export function ProjectPreview() {
       {!!devServer ? (
         <iframe
           ref={iframeRef}
-          src={devServer.ephemeralUrl}
+          src={devServer.url}
           className={cn(
             "h-full mx-auto transition-all duration-300",
             getPreviewWidth()

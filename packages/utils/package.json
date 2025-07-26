@@ -1,5 +1,5 @@
 {
-  "name": "@hypershape-ai/utils",
+  "name": "dev-server-utils",
   "version": "0.0.3",
   "type": "module",
   "exports": {
@@ -7,9 +7,6 @@
   },
   "bin": {
     "generate-metadata": "./dist/metadata.js"
-  },
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
   },
   "scripts": {
     "dev": "tsc -w",

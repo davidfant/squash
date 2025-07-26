@@ -10,7 +10,7 @@ import {
   generatePageFileContent,
   generateSectionFileContent,
 } from "@/repo/generateFileContent";
-import { Daytona, DaytonaError } from "@daytonaio/sdk";
+import { Daytona, DaytonaError, SandboxState } from "@daytonaio/sdk";
 import { zValidator } from "@hono/zod-validator";
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { Hono } from "hono";
@@ -204,7 +204,8 @@ export const projectsRouter = new Hono<{
       const sandbox = await daytona.get(sandboxId);
       const [{ url }] = await Promise.all([
         sandbox.getPreviewLink(3000),
-        sandbox.waitUntilStarted(60),
+        sandbox.state !== SandboxState.STARTED &&
+          sandbox.start().then(() => sandbox.waitUntilStarted(60)),
       ]);
       return c.json({ url });
     }

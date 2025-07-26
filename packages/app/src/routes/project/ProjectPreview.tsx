@@ -7,12 +7,13 @@ import {
   type InlineCommentMessage,
 } from "@hypershape-ai/utils/messaging";
 import { AnimatePresence, motion } from "framer-motion";
+import { Loader2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useProjectContext, useSelectedPage } from "./context";
 import { InlineEditCommand } from "./InlineEditCommand";
 
 export function ProjectPreview() {
-  const { screenSize, project, selectPage } = useProjectContext();
+  const { screenSize, project, selectPage, devServer } = useProjectContext();
   const selectedPage = useSelectedPage();
   const { sendMessage } = useChat();
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -71,14 +72,20 @@ export function ProjectPreview() {
 
   return (
     <div className="relative h-full">
-      <iframe
-        ref={iframeRef}
-        src="http://localhost:5174"
-        className={cn(
-          "h-full mx-auto transition-all duration-300",
-          getPreviewWidth()
-        )}
-      />
+      {!!devServer ? (
+        <iframe
+          ref={iframeRef}
+          src={devServer.ephemeralUrl}
+          className={cn(
+            "h-full mx-auto transition-all duration-300",
+            getPreviewWidth()
+          )}
+        />
+      ) : (
+        <div className="flex items-center justify-center h-full text-muted-foreground">
+          <Loader2 className="w-4 h-4 animate-spin" />
+        </div>
+      )}
       <Toggle
         className="absolute top-0 left-0"
         onClick={() => setIsPointAndClick((prev) => !prev)}

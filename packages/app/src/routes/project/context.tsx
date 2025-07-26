@@ -7,6 +7,10 @@ export type ScreenSize = "desktop" | "tablet" | "mobile";
 
 export interface ProjectContextValue {
   project: Project;
+  devServer: {
+    ephemeralUrl: string;
+    codeServerUrl: string;
+  } | null;
   selectedPageId: string | null;
   screenSize: ScreenSize;
   selectVariant: (
@@ -21,6 +25,7 @@ export interface ProjectContextValue {
 
 const ProjectContext = createContext<ProjectContextValue>({
   project: null as any,
+  devServer: null,
   selectedPageId: null,
   screenSize: "desktop",
   selectVariant: () => Promise.resolve(),
@@ -41,6 +46,9 @@ export const ProjectContextProvider = ({
   onSelectPage: (pageId: string) => void;
 }) => {
   const project = useQuery(api.projects[":projectId"].$get, {
+    params: { projectId },
+  });
+  const devServer = useQuery(api.projects[":projectId"]["dev-server"].$get, {
     params: { projectId },
   });
   const [screenSize, setScreenSize] = useState<ScreenSize>("desktop");
@@ -105,6 +113,7 @@ export const ProjectContextProvider = ({
     <ProjectContext.Provider
       value={{
         project: project.data,
+        devServer: devServer.data ?? null,
         selectedPageId:
           selectedPageId ?? project.data.metadata.pages[0]?.id ?? null,
         screenSize,

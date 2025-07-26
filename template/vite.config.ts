@@ -4,7 +4,6 @@ import react from "@vitejs/plugin-react";
 import fs from "fs";
 import path from "path";
 import { defineConfig } from "vite";
-import dts from "vite-plugin-dts";
 import tsconfigPaths from "vite-tsconfig-paths";
 
 const wrangler = JSON.parse(
@@ -25,6 +24,5 @@ export default defineConfig({
     cloudflare(),
     tailwindcss(),
     tsconfigPaths(),
-    dts(),
   ],
 });

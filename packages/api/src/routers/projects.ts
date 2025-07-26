@@ -12,6 +12,7 @@ import {
 } from "@/repo/generateFileContent";
 import { zValidator } from "@hono/zod-validator";
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { FreestyleSandboxes } from "freestyle-sandboxes";
 import { Hono } from "hono";
 import { createMiddleware } from "hono/factory";
 import { z } from "zod";
@@ -24,6 +25,7 @@ const loadProject = (id: string, userId: string, db: Database) =>
       metadata: schema.projects.metadata,
       createdAt: schema.projects.createdAt,
       updatedAt: schema.projects.updatedAt,
+      gitRepoUrl: schema.projects.gitRepoUrl,
       createdBy: {
         id: schema.user.id,
         name: schema.user.name,
@@ -121,14 +123,28 @@ export const projectsRouter = new Hono<{
       const db = c.get("db");
       const body = c.req.valid("json");
 
+      const { repoId } = await new FreestyleSandboxes({
+        apiKey: c.env.FREESTYLE_API_KEY,
+      }).createGitRepository({
+        name: body.name,
+        // This will make it easy for us to clone the repo during testing.
+        // The repo won't be listed on any public registry, but anybody
+        // with the uuid can clone it. You should disable this in production.
+        public: true,
+        import: {
+          url: "https://github.com/freestyle-sh/freestyle-next",
+          type: "git",
+          commit_message: "Project created",
+        },
+      });
+
       const [project] = await db
         .insert(schema.projects)
         .values({
           name: body.name,
           organizationId,
           createdBy: user.id,
-          // TODO: initialize this correctly!!
-          gitRepoUrl: "",
+          gitRepoUrl: `https://git.freestyle.sh/${repoId}`,
           metadata: {
             sections: [
               {
@@ -175,6 +191,28 @@ export const projectsRouter = new Hono<{
     requireAuth,
     requireProject,
     (c) => c.json(c.get("project"))
+  )
+  .get(
+    "/:projectId/dev-server",
+    zValidator("param", z.object({ projectId: z.string().uuid() })),
+    requireAuth,
+    requireProject,
+    async (c) => {
+      const project = c.get("project");
+      const freestyle = new FreestyleSandboxes({
+        apiKey: c.env.FREESTYLE_API_KEY,
+      });
+
+      const repoId = project.gitRepoUrl.split("/").pop()!;
+      const devServer = await freestyle.requestDevServer({
+        repoId,
+        timeout: 60,
+      });
+      return c.json({
+        ephemeralUrl: devServer.ephemeralUrl,
+        codeServerUrl: devServer.codeServerUrl,
+      });
+    }
   )
   // .post(
   //   "/:projectId/pages",

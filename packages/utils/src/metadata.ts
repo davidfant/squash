@@ -12,17 +12,20 @@ const traverse: typeof BabelTraverse = BabelTraverse.default;
 export interface ProjectSectionVariant {
   id: string;
   name: string;
+  filePath: string;
   selected: boolean;
 }
 export interface ProjectSection {
   id: string;
   name: string;
+  filePath: string;
   variants: ProjectSectionVariant[];
 }
 export interface ProjectPage {
   id: string;
   name: string;
   path: string;
+  filePath: string;
   sectionIds: string[];
 }
 export interface ProjectMetadata {
@@ -31,17 +34,10 @@ export interface ProjectMetadata {
 }
 
 // –––––––––––––––––––––––––––––––––  helpers  –––––––––––––––––––––––––––––––– //
-const SRC = (repo: string) => path.join(repo, "src");
 const reName = /export\s+const\s+name\s*=\s*(["'`][^"'`]+["'`])/;
 const reIndexOut = /export\s+\{\s*default\s*\}\s+from\s+["'`]([^"'`]+)["'`]/;
 
 const toBase64 = (str: string) => Buffer.from(str).toString("base64");
-
-const exists = (file: string) =>
-  fs
-    .access(file)
-    .then(() => true)
-    .catch(() => false);
 
 async function getName(file: string, fallback: string) {
   const txt = await fs.readFile(file, "utf8");
@@ -89,7 +85,7 @@ function orderedSectionIds(source: string): string[] {
 
 // –––––––––––––––––––––––––––––––––  main  ––––––––––––––––––––––––––––––––––– //
 async function run(repoRoot = process.cwd()) {
-  const srcDir = SRC(repoRoot);
+  const srcDir = path.join(repoRoot, "src");
 
   /* ──────────── 1)  sections & variants ──────────── */
   const sectionDirs = await fg(["*"], {
@@ -110,7 +106,8 @@ async function run(repoRoot = process.cwd()) {
     if (relMatch) {
       chosen = path.join(
         folder,
-        relMatch + (path.extname(relMatch) ? "" : ".tsx")
+        relMatch.replace(`@/sections/${dir}`, "") +
+          (path.extname(relMatch) ? "" : ".tsx")
       );
     }
     const sName = await getName(idxFile, dir);
@@ -124,6 +121,7 @@ async function run(repoRoot = process.cwd()) {
         id: toBase64(`@/sections/${dir}/${path.parse(vf).name}`),
         name: vName,
         selected: full === chosen,
+        filePath: path.relative(repoRoot, full),
       });
     }
 
@@ -131,6 +129,7 @@ async function run(repoRoot = process.cwd()) {
       id: toBase64(`@/sections/${dir}`),
       name: sName,
       variants: varMeta,
+      filePath: path.relative(repoRoot, idxFile),
     });
   }
 
@@ -147,6 +146,7 @@ async function run(repoRoot = process.cwd()) {
       name: await getName(file, path.parse(rel).name),
       path: fileToRoute(rel),
       sectionIds: orderedSectionIds(source).map(toBase64),
+      filePath: path.relative(repoRoot, file),
     });
   }
 

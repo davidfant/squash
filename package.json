@@ -12,5 +12,8 @@
   "scripts": {
     "publish:utils": "pnpm --filter ./packages/utils build && pnpm changeset version && pnpm --filter ./packages/utils publish --no-git-checks",
     "publish:template": "source packages/api/.dev.vars && cd template && npm version patch && git remote set-url origin s3://repos/templates/vite && git push --tags"
+  },
+  "dependencies": {
+    "dev-server-utils": "link:packages/utils"
   }
 }

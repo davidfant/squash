@@ -1,7 +1,6 @@
 import {
   requireActiveOrganization,
   requireAuth,
-  type Session,
   type User,
 } from "@/auth/middleware";
 import type { Database } from "@/database";
@@ -10,12 +9,33 @@ import {
   generatePageFileContent,
   generateSectionFileContent,
 } from "@/repo/generateFileContent";
-import { Daytona, DaytonaError, SandboxState } from "@daytonaio/sdk";
+import { uploadFiles } from "@/repo/uploadFiles";
+import { Daytona, DaytonaError, Sandbox, SandboxState } from "@daytonaio/sdk";
 import { zValidator } from "@hono/zod-validator";
+import type { ProjectMetadata } from "dev-server-utils/metadata";
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { createMiddleware } from "hono/factory";
+import path from "node:path";
 import { z } from "zod";
+
+const REPO_ROOT = "/root/repo";
+
+const generateMetadata = async (sandbox: Sandbox): Promise<ProjectMetadata> => {
+  const res = await sandbox.process.executeCommand(
+    "pnpm generate-metadata",
+    "/root/repo"
+  );
+  return JSON.parse(res.result);
+};
+
+async function timer<T>(name: string, fn: () => Promise<T>) {
+  const startedAt = performance.now();
+  const res = await fn();
+  const duration = performance.now() - startedAt;
+  console.log(`[${name}] took ${duration}ms`);
+  return res;
+}
 
 const loadProject = (id: string, userId: string, db: Database) =>
   db
@@ -44,11 +64,30 @@ const loadProject = (id: string, userId: string, db: Database) =>
     .where(and(eq(schema.projects.id, id), eq(schema.member.userId, userId)))
     .then((ps) => ps[0]);
 
+const loadProjectSandboxData = (id: string, userId: string, db: Database) =>
+  db
+    .select({
+      id: schema.projects.id,
+      metadata: schema.projects.metadata,
+      daytonaSandboxId: schema.projects.daytonaSandboxId,
+    })
+    .from(schema.projects)
+    .innerJoin(schema.user, eq(schema.projects.createdBy, schema.user.id))
+    .innerJoin(
+      schema.organization,
+      eq(schema.projects.organizationId, schema.organization.id)
+    )
+    .innerJoin(
+      schema.member,
+      eq(schema.organization.id, schema.member.organizationId)
+    )
+    .where(and(eq(schema.projects.id, id), eq(schema.member.userId, userId)))
+    .then((ps) => ps[0]);
+
 export const requireProject = createMiddleware<{
   Variables: {
     db: Database;
     user: User;
-    session: Session;
     project: NonNullable<Awaited<ReturnType<typeof loadProject>>>;
   };
 }>(async (c, next) => {
@@ -58,6 +97,34 @@ export const requireProject = createMiddleware<{
   const project = await loadProject(projectId, userId, db);
   if (!project) return c.json({ error: "Project not found" }, 404);
 
+  c.set("project", project);
+  await next();
+});
+
+export const requireProjectSandbox = createMiddleware<{
+  Bindings: CloudflareBindings;
+  Variables: {
+    db: Database;
+    user: User;
+    sandbox: Sandbox;
+    project: NonNullable<Awaited<ReturnType<typeof loadProjectSandboxData>>>;
+  };
+}>(async (c, next) => {
+  const db = c.get("db");
+  const projectId = c.req.param("projectId")!;
+  const userId = c.get("user").id;
+  const project = await loadProjectSandboxData(projectId, userId, db);
+  if (!project) return c.json({ error: "Project not found" }, 404);
+
+  const daytona = new Daytona({ apiKey: c.env.DAYTONA_API_KEY });
+  const sandbox = await daytona.get(project.daytonaSandboxId);
+
+  const sbx = await daytona.get(project.daytonaSandboxId);
+  if (sbx.state !== SandboxState.STARTED) {
+    await sbx.start().finally(() => sbx.waitUntilStarted(60));
+  }
+
+  c.set("sandbox", sandbox);
   c.set("project", project);
   await next();
 });
@@ -123,14 +190,6 @@ export const projectsRouter = new Hono<{
 
       const daytona = new Daytona({ apiKey: c.env.DAYTONA_API_KEY });
 
-      async function timer<T>(name: string, fn: () => Promise<T>) {
-        const startedAt = performance.now();
-        const res = await fn();
-        const duration = performance.now() - startedAt;
-        console.log(`[${name}] took ${duration}ms`);
-        return res;
-      }
-
       const sandbox = await timer("create sandbox", async () => {
         let attempts = 0;
         while (true) {
@@ -161,10 +220,9 @@ export const projectsRouter = new Hono<{
         }
       });
 
-      const res = await timer("generate metadata", () =>
-        sandbox.process.executeCommand("pnpm generate-metadata", "/root/repo")
+      const metadata = await timer("generate metadata", () =>
+        generateMetadata(sandbox)
       );
-
       const [project] = await db
         .insert(schema.projects)
         .values({
@@ -172,7 +230,7 @@ export const projectsRouter = new Hono<{
           organizationId,
           createdBy: user.id,
           daytonaSandboxId: sandbox.id,
-          metadata: JSON.parse(res.result),
+          metadata,
         })
         .returning();
 
@@ -190,23 +248,20 @@ export const projectsRouter = new Hono<{
     "/:projectId/dev-server",
     zValidator("param", z.object({ projectId: z.string().uuid() })),
     requireAuth,
-    requireProject,
+    requireProjectSandbox,
     async (c) => {
-      const project = c.get("project");
-      const daytona = new Daytona({ apiKey: c.env.DAYTONA_API_KEY });
+      const sandbox = c.get("sandbox");
+      const { url } = await sandbox.getPreviewLink(3000);
 
-      const sandboxId = await c
-        .get("db")
-        .query.projects.findFirst({ where: eq(schema.projects.id, project.id) })
-        .then((p) => p?.daytonaSandboxId);
-      if (!sandboxId) return c.json({ error: "Sandbox not found" }, 404);
+      let attempts = 0;
+      while (true) {
+        const res = await fetch(url, { method: "HEAD" });
+        if (res.ok) break;
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        attempts++;
+        if (attempts > 10) return c.json({ error: "Sandbox not ready" }, 500);
+      }
 
-      const sandbox = await daytona.get(sandboxId);
-      const [{ url }] = await Promise.all([
-        sandbox.getPreviewLink(3000),
-        sandbox.state !== SandboxState.STARTED &&
-          sandbox.start().then(() => sandbox.waitUntilStarted(60)),
-      ]);
       return c.json({ url });
     }
   )
@@ -286,11 +341,12 @@ export const projectsRouter = new Hono<{
       })
     ),
     requireAuth,
-    requireProject,
+    requireProjectSandbox,
     async (c) => {
-      const project = c.get("project");
       const body = c.req.valid("json");
       const params = c.req.valid("param");
+      const sandbox = c.get("sandbox");
+      const project = c.get("project");
 
       const section = project.metadata.sections.find(
         (s) => s.id === params.sectionId
@@ -302,25 +358,23 @@ export const projectsRouter = new Hono<{
         variantId:
           body.variantId ?? section.variants.find((v) => v.selected)?.id!,
       });
-      // TODO: get/create dev server
-      // TODO: write to file system in preview dev server, commit and push
-      // TODO: insert message in chat thread
-      // TODO: regenerate metadata and update the project
-      project.metadata.sections.forEach((s) => {
-        if (s.id === params.sectionId) {
-          s.name = body.name ?? s.name;
-          s.variants = s.variants.map((v) => ({
-            ...v,
-            selected: v.id === body.variantId,
-          }));
-        }
-      });
+
+      await uploadFiles(
+        sandbox.id,
+        [{ content, path: path.join(REPO_ROOT, section.filePath) }],
+        { apiKey: c.env.DAYTONA_API_KEY }
+      );
+
+      const metadata = await timer("generate metadata", () =>
+        generateMetadata(sandbox)
+      );
+      console.log("generated metadata...", JSON.stringify(metadata, null, 2));
       await c
         .get("db")
         .update(schema.projects)
         .set({ metadata: project.metadata })
         .where(eq(schema.projects.id, project.id));
 
-      return c.json(project);
+      return c.json({ id: project.id, metadata });
     }
   );

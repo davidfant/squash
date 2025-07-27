@@ -1,4 +1,9 @@
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Sidebar,
   SidebarContent,
   SidebarGroup,
@@ -61,22 +66,19 @@ export function App() {
             {/* Theme Selection */}
             <SidebarGroup>
               <SidebarGroupLabel>Theme</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {availableThemes.map((themeName) => (
-                    <SidebarMenuItem key={themeName}>
-                      <SidebarMenuButton
-                        isActive={theme === themeName}
-                        onClick={() => setTheme(themeName)}
-                      >
-                        <span>
-                          {themeName.charAt(0).toUpperCase() +
-                            themeName.slice(1)}
-                        </span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
+              <SidebarGroupContent className="px-2">
+                <Select value={theme} onValueChange={setTheme}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue>{theme}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableThemes.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {t}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </SidebarGroupContent>
             </SidebarGroup>
 

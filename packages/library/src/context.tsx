@@ -1,127 +1,189 @@
-// src/ComponentsContext.tsx
 import {
   createContext,
   useContext,
-  useMemo,
+  useEffect,
   useState,
   type ReactNode,
 } from "react";
-import * as BaseComponents from "./themes/base/ui";
+import { tokens as defaultTokens } from "./themes/base/tokens";
+import type { ThemeTokens } from "./themes/base/types";
+import * as defaultComponents from "./themes/base/ui";
 
-type Components = typeof BaseComponents;
+type Components = typeof defaultComponents;
+type ComponentModule = Partial<Components>;
+type TokensExport = { tokens?: Partial<ThemeTokens> };
 
-// ---- Discover all themes under ./themes/<name>/ui/index.ts ----
-// Each theme's index should export the same shape as BaseComponents.
-const themeModules = import.meta.glob("./themes/*/ui/index.ts", {
+const componentModules = import.meta.glob("./themes/*/ui/index.ts", {
   eager: true,
-  import: "*", // import the full module object (all named exports)
-}) as Record<string, unknown>;
+  import: "*",
+}) as Record<string, ComponentModule>;
 
-const themesMap: Record<string, Components> = Object.fromEntries(
-  Object.entries(themeModules).map(([path, mod]) => {
-    // Extract the <name> from "./themes/<name>/ui/index.ts"
+const tokenModules = import.meta.glob("./themes/*/tokens.ts", {
+  eager: true,
+  import: "*",
+}) as Record<string, TokensExport>;
+
+// Map path -> theme name for components and tokens
+const componentsByName: Record<string, ComponentModule> = Object.fromEntries(
+  Object.entries(componentModules).map(([path, mod]) => {
+    // "./themes/<name>/ui/index.ts"
     const match = path.match(/\.\/themes\/([^/]+)\/ui\/index\.ts$/);
     const name = match?.[1] ?? "base";
-    return [name, { ...BaseComponents, ...(mod as Partial<Components>) }];
+    return [name, mod ?? {}];
   })
+);
+
+const tokensByName: Record<string, Partial<ThemeTokens>> = Object.fromEntries(
+  Object.entries(tokenModules).map(([path, mod]) => {
+    // "./themes/<name>/tokens.ts"
+    const match = path.match(/\.\/themes\/([^/]+)\/tokens\.ts$/);
+    const name = match?.[1] ?? "base";
+    return [name, mod?.tokens ?? {}];
+  })
+);
+
+// Union of all theme names we discovered (ensure "base" is present)
+const allThemeNames = Array.from(
+  new Set([
+    "base",
+    ...Object.keys(componentsByName),
+    ...Object.keys(tokensByName),
+  ])
+);
+
+const themesMap: Record<
+  string,
+  { components: Components; tokens: ThemeTokens }
+> = Object.fromEntries(
+  allThemeNames.map((name) => [
+    name,
+    {
+      components: { ...defaultComponents, ...componentsByName[name] },
+      tokens: { ...defaultTokens, ...tokensByName[name] },
+    },
+  ])
 );
 
 const availableThemes = Object.keys(themesMap).sort();
 const defaultTheme = "base";
 
-// ---- Context shape ----
-type ComponentsContextValue = {
-  components: Components;
+interface ThemeContextValue {
   theme: string;
+  components: Components;
+  tokens: ThemeTokens;
   availableThemes: string[];
-  setTheme: (name: string) => void;
-
   isDark: boolean;
-  toggleDark: () => void;
-  setDark: (dark: boolean) => void;
-};
 
-const ComponentsContext = createContext<ComponentsContextValue>({
-  components: BaseComponents,
+  setTheme(name: string): void;
+  setDark(dark: boolean): void;
+  setTokens(tokens: Partial<ThemeTokens>): void;
+}
+
+const ThemeContext = createContext<ThemeContextValue>({
+  components: defaultComponents,
+  tokens: defaultTokens,
   theme: defaultTheme,
   availableThemes,
   setTheme: () => {},
   isDark: false,
-  toggleDark: () => {},
   setDark: () => {},
+  setTokens: () => {},
 });
 
-// ---- Provider ----
-export function ComponentsProvider({
+export function ThemeProvider({
   children,
   initialTheme = defaultTheme,
-  initialDark = true,
-  wrapperClassName,
+  initialDark = false,
 }: {
   children: ReactNode;
-  /** Optional initial theme name; defaults to "base" */
   initialTheme?: string;
-  /** Optional initial dark mode; defaults to false */
   initialDark?: boolean;
-  /** Optional extra classes for the wrapping container */
-  wrapperClassName?: string;
 }) {
-  const [theme, setThemeState] = useState<string>(
+  const [theme, setTheme] = useState<string>(
     themesMap[initialTheme] ? initialTheme : defaultTheme
   );
   const [isDark, setDark] = useState<boolean>(initialDark);
+  const [tokens, setTokens] = useState<ThemeTokens>(defaultTokens);
+  const [components, setComponents] = useState<Components>(defaultComponents);
 
-  const setTheme = (name: string) => {
-    if (themesMap[name]) setThemeState(name);
-    else {
-      // eslint-disable-next-line no-console
-      console.warn(`[ComponentsProvider] Unknown theme "${name}".`);
-      setThemeState(defaultTheme);
-    }
-  };
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", isDark);
+  }, [isDark]);
 
-  const value = useMemo<ComponentsContextValue>(() => {
-    return {
-      components: themesMap[theme] ?? BaseComponents,
-      theme,
-      availableThemes,
-      setTheme,
-      isDark,
-      toggleDark: () => setDark((d) => !d),
-      setDark,
-    };
-  }, [theme, isDark]);
-
-  // Wrap children. When dark mode is on, the wrapper gets the "dark" class.
-  // If you use Tailwind, set `darkMode: "class"` in tailwind.config.js.
   return (
-    <ComponentsContext.Provider value={value}>
-      <div
-        className={[isDark ? "dark" : "", wrapperClassName]
-          .filter(Boolean)
-          .join(" ")}
-        data-theme={theme}
-      >
-        {children}
-      </div>
-    </ComponentsContext.Provider>
+    <ThemeContext.Provider
+      value={{
+        components,
+        tokens,
+        theme,
+        availableThemes,
+        setTheme: (name: string) => {
+          setTheme(name);
+          setTokens(themesMap[name]!.tokens);
+          setComponents(themesMap[name]!.components);
+        },
+        isDark,
+        setDark,
+        setTokens: (tokens: Partial<ThemeTokens>) =>
+          setTokens((prev) => ({ ...prev, ...tokens })),
+      }}
+    >
+      {/* <div
+        style={
+          {
+            "--dimension": `${tokens.dimension}px`,
+            "--radius": `${tokens.radius * tokens.dimension}px`,
+            "--spacing": `${tokens.spacing * tokens.dimension}px`,
+
+            // Generate color variants 1-12 for each color in tokens.colors
+            ...Object.entries(tokens.colors).reduce(
+              (acc, [colorName, colorValue]) => {
+                for (let i = 1; i <= 12; i++) {
+                  acc[`--${colorName}-${i}`] = `var(--${colorValue}-${i})`;
+                }
+                return acc;
+              },
+              {} as Record<string, string>
+            ),
+          } as React.CSSProperties
+        }
+      > */}
+      <style>{`
+          :root {
+            ${Object.entries({
+              dimension: `${tokens.dimension}px`,
+              radius: `${tokens.radius * tokens.dimension}px`,
+              spacing: `${tokens.spacing * tokens.dimension}px`,
+              ...Object.entries(tokens.colors).reduce(
+                (acc, [colorName, colorValue]) => {
+                  for (let i = 1; i <= 12; i++) {
+                    acc[`${colorName}-${i}`] = `var(--${colorValue}-${i})`;
+                  }
+                  return acc;
+                },
+                {} as Record<string, string>
+              ),
+            })
+              .map(([key, value]) => `--${key}: ${value};`)
+              .join("\n")}
+          }
+        `}</style>
+      {children}
+      {/* </div> */}
+    </ThemeContext.Provider>
   );
 }
 
 export const useComponent = <T extends keyof Components>(name: T) => {
-  const { components } = useContext(ComponentsContext);
+  const { components } = useContext(ThemeContext);
   return components[name];
 };
 
 export const themedComponent =
-  <T extends keyof Components>(name: T): Components[T] =>
+  <T extends keyof Components>(name: T) =>
   (props: any) => {
-    const Component = useComponent(name);
+    const Component = useComponent(name) as React.ComponentType<any>;
     return <Component {...props} />;
   };
 
-export const useTheme = () => {
-  const { theme, availableThemes, setTheme, isDark, toggleDark, setDark } =
-    useContext(ComponentsContext);
-  return { theme, availableThemes, setTheme, isDark, toggleDark, setDark };
-};
+export const useTheme = () => useContext(ThemeContext);

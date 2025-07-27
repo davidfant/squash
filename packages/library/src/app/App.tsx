@@ -15,9 +15,23 @@ import {
   TabsTrigger,
 } from "@/components/ui";
 import { useTheme } from "@/context";
+import { ButtonPreviews } from "./previews/button";
+import { ThemeColorTokensForm } from "./ThemeColorTokensForm";
+import { ThemeTokensForm } from "./ThemeTokensForm";
+
+// Define the preview list
+const previews = [
+  {
+    key: "buttons",
+    label: "Buttons",
+    component: ButtonPreviews,
+  },
+];
 
 export function App() {
   const { theme, availableThemes, setTheme, isDark, setDark } = useTheme();
+  const handlePreviewClick = (key: string) => (window.location.hash = key);
+  const currentPreviewKey = window.location.hash.slice(1);
 
   return (
     <SidebarProvider defaultOpen={true}>
@@ -32,7 +46,7 @@ export function App() {
                 <div className="px-2">
                   <Tabs
                     value={isDark ? "dark" : "light"}
-                    onValueChange={(value) => setDark(value === "dark")}
+                    onValueChange={(value: string) => setDark(value === "dark")}
                   >
                     <TabsList className="grid w-full grid-cols-2">
                       <TabsTrigger value="light">Light</TabsTrigger>
@@ -64,16 +78,51 @@ export function App() {
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
+
+            <SidebarGroup>
+              <SidebarGroupLabel>Tokens</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <ThemeTokensForm />
+              </SidebarGroupContent>
+            </SidebarGroup>
+            <SidebarGroup>
+              <SidebarGroupLabel>Colors</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <ThemeColorTokensForm />
+              </SidebarGroupContent>
+            </SidebarGroup>
+
+            {/* Components Preview Navigation */}
+            <SidebarGroup>
+              <SidebarGroupLabel>Components</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {previews.map((preview) => (
+                    <SidebarMenuItem key={preview.key}>
+                      <SidebarMenuButton
+                        isActive={currentPreviewKey === preview.key}
+                        onClick={() => handlePreviewClick(preview.key)}
+                      >
+                        <span>{preview.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
           </SidebarContent>
         </Sidebar>
-        <SidebarInset>
-          <div className="flex flex-1 flex-col gap-4 p-4">
-            <div className="grid auto-rows-min gap-4 md:grid-cols-3">
-              <div className="aspect-video rounded-xl bg-muted/50" />
-              <div className="aspect-video rounded-xl bg-muted/50" />
-              <div className="aspect-video rounded-xl bg-muted/50" />
-            </div>
-            <div className="min-h-[100vh] flex-1 rounded-xl bg-muted/50 md:min-h-min" />
+        <SidebarInset className="p-4">
+          <div className="space-y-8">
+            {previews.map((preview) => {
+              const Component = preview.component;
+              return (
+                <div key={preview.key} id={preview.key} className="space-y-4">
+                  <h2 className="text-2xl font-bold">{preview.label}</h2>
+                  <Component />
+                </div>
+              );
+            })}
           </div>
         </SidebarInset>
       </div>

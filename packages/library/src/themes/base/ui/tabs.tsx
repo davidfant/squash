@@ -5,7 +5,7 @@ import * as React from "react";
 
 const TabsContext = React.createContext<string | undefined>(undefined);
 
-function Tabs({
+export function Tabs({
   className,
   value,
   defaultValue,
@@ -42,7 +42,7 @@ function Tabs({
   );
 }
 
-function TabsList({
+export function TabsList({
   className,
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.List>) {
@@ -58,7 +58,7 @@ function TabsList({
   );
 }
 
-function TabsTrigger({
+export function TabsTrigger({
   className,
   children,
   value,
@@ -88,7 +88,7 @@ function TabsTrigger({
   );
 }
 
-function TabsContent({
+export function TabsContent({
   className,
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.Content>) {
@@ -100,5 +100,3 @@ function TabsContent({
     />
   );
 }
-
-export { Tabs, TabsContent, TabsList, TabsTrigger };

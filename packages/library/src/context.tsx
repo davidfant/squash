@@ -55,7 +55,7 @@ const ComponentsContext = createContext<ComponentsContextValue>({
 export function ComponentsProvider({
   children,
   initialTheme = defaultTheme,
-  initialDark = false,
+  initialDark = true,
   wrapperClassName,
 }: {
   children: ReactNode;

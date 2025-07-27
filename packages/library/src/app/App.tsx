@@ -17,6 +17,7 @@ import {
 import { useTheme } from "@/context";
 import { ButtonPreviews } from "./previews/button";
 import { ThemeColorTokensForm } from "./ThemeColorTokensForm";
+import { ThemeFontTokensForm } from "./ThemeFontTokensForm";
 import { ThemeTokensForm } from "./ThemeTokensForm";
 
 // Define the preview list
@@ -38,7 +39,7 @@ export function App() {
       <div className="flex min-h-screen w-full">
         <Sidebar>
           <SidebarHeader>Theme Configuration</SidebarHeader>
-          <SidebarContent>
+          <SidebarContent className="gap-0">
             {/* Dark Mode Tabs */}
             <SidebarGroup>
               <SidebarGroupLabel>Mode</SidebarGroupLabel>
@@ -89,6 +90,12 @@ export function App() {
               <SidebarGroupLabel>Colors</SidebarGroupLabel>
               <SidebarGroupContent>
                 <ThemeColorTokensForm />
+              </SidebarGroupContent>
+            </SidebarGroup>
+            <SidebarGroup>
+              <SidebarGroupLabel>Typography</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <ThemeFontTokensForm />
               </SidebarGroupContent>
             </SidebarGroup>
 

@@ -6,7 +6,7 @@ import {
   type ReactNode,
 } from "react";
 import { tokens as defaultTokens } from "./themes/base/tokens";
-import type { ThemeTokens } from "./themes/base/types";
+import type { FontToken, ThemeTokens } from "./themes/base/types";
 import * as defaultComponents from "./themes/base/ui";
 
 type Components = typeof defaultComponents;
@@ -90,6 +90,12 @@ const ThemeContext = createContext<ThemeContextValue>({
   setTokens: () => {},
 });
 
+const fontFallbackByType: Record<FontToken["type"], string> = {
+  serif: `ui-serif, Georgia, Cambria, "Times New Roman", Times, serif`,
+  "sans-serif": `ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"`,
+  monospace: `ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace`,
+};
+
 export function ThemeProvider({
   children,
   initialTheme = defaultTheme,
@@ -163,6 +169,7 @@ export function ThemeProvider({
                 },
                 {} as Record<string, string>
               ),
+              "default-font-family": tokens.fonts.body.family,
             })
               .map(([key, value]) => `--${key}: ${value};`)
               .join("\n")}

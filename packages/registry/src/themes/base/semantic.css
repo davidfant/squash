@@ -12,9 +12,6 @@
 }
 
 @theme inline {
-  --spacing: calc(var(--theme-dimension) * var(--theme-spacing));
-  --radius: calc(var(--theme-dimension) * var(--theme-radius));
-
   /* --text-base: calc(var(--theme-dimension) * var(--theme-typography-base));
   --text-sm: calc(var(--text-base) / var(--theme-typography-ratio));
   --text-xs: calc(var(--text-sm) / var(--theme-typography-ratio));

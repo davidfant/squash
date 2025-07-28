@@ -69,6 +69,11 @@
 @import "@radix-ui/colors/sky-dark.css";
 @import "@radix-ui/colors/white-alpha.css";
 
+:root {
+  --spacing: calc(var(--theme-dimension) * var(--theme-spacing));
+  --radius: calc(var(--theme-dimension) * var(--theme-radius));
+}
+
 @layer base {
   * {
     border-color: var(--color-border);

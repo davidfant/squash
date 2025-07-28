@@ -30,7 +30,7 @@ export default ({ i18n, assets }: { i18n: I18n; assets: Assets }) => {
           />
         </div>
       )}
-      <div className="relative z-10 container">
+      <div className="relative z-10 container px-4 mx-auto">
         <div className="mx-auto flex max-w-5xl flex-col items-center">
           <div className="flex flex-col items-center gap-6 text-center">
             {assets.logo && (
@@ -43,7 +43,7 @@ export default ({ i18n, assets }: { i18n: I18n; assets: Assets }) => {
               </div>
             )}
             <div>
-              <h1 className="mb-6 text-2xl font-bold tracking-tight text-pretty lg:text-5xl">
+              <h1 className="mb-6 text-2xl font-bold tracking-tight text-pretty lg:text-5xl font-display">
                 {i18n.heading.main}{" "}
                 <span className="text-primary">{i18n.heading.highlight}</span>
               </h1>

@@ -16,10 +16,10 @@ import {
 // } satisfies Record<string, number>;
 
 const spacing = {
-  tight: 0.2,
-  normal: 0.25,
-  relaxed: 0.375,
-  loose: 0.5,
+  tight: 0.375,
+  normal: 0.5,
+  relaxed: 0.625,
+  loose: 0.75,
 } satisfies Record<string, number>;
 
 const radius = {

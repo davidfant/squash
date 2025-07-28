@@ -1,0 +1,82 @@
+@import "tailwindcss";
+
+:root,
+.light {
+  --color-background: var(--theme-color-neutral-3);
+  --color-surface: var(--theme-color-neutral-1);
+}
+
+.dark {
+  --color-background: var(--theme-color-neutral-1);
+  --color-surface: var(--theme-color-neutral-2);
+}
+
+@theme inline {
+  --spacing: calc(var(--theme-dimension) * var(--theme-spacing));
+  --radius: calc(var(--theme-dimension) * var(--theme-radius));
+
+  /* --text-base: calc(var(--theme-dimension) * var(--theme-typography-base));
+  --text-sm: calc(var(--text-base) / var(--theme-typography-ratio));
+  --text-xs: calc(var(--text-sm) / var(--theme-typography-ratio));
+  --text-md: var(--text-base);
+  --text-lg: calc(var(--text-base) * var(--theme-typography-ratio));
+  --text-xl: calc(var(--text-lg) * var(--theme-typography-ratio));
+  --text-2xl: calc(var(--text-xl) * var(--theme-typography-ratio));
+  --text-3xl: calc(var(--text-2xl) * var(--theme-typography-ratio));
+  --text-4xl: calc(var(--text-3xl) * var(--theme-typography-ratio));
+  --text-5xl: calc(var(--text-4xl) * var(--theme-typography-ratio));
+  --text-6xl: calc(var(--text-5xl) * var(--theme-typography-ratio));
+  --text-7xl: calc(var(--text-6xl) * var(--theme-typography-ratio));
+  --text-8xl: calc(var(--text-7xl) * var(--theme-typography-ratio));
+  --text-9xl: calc(var(--text-8xl) * var(--theme-typography-ratio));
+
+  --text-sm--line-height: calc(var(--text-sm) * 1.25);
+  --text-xs--line-height: calc(var(--text-xs) * 1.25);
+  --text-md--line-height: calc(var(--text-md) * 1.25);
+  --text-lg--line-height: calc(var(--text-lg) * 1.25);
+  --text-xl--line-height: calc(var(--text-xl) * 1.25);
+  --text-2xl--line-height: calc(var(--text-2xl) * 1.25);
+  --text-3xl--line-height: calc(var(--text-3xl) * 1.25);
+  --text-4xl--line-height: calc(var(--text-4xl) * 1.25);
+  --text-5xl--line-height: calc(var(--text-5xl) * 1.25);
+  --text-6xl--line-height: calc(var(--text-6xl) * 1.25);
+  --text-7xl--line-height: calc(var(--text-7xl) * 1.25);
+  --text-8xl--line-height: calc(var(--text-8xl) * 1.25);
+  --text-9xl--line-height: calc(var(--text-9xl) * 1.25); */
+
+  --font-display: var(--theme-font-display);
+  --font-display-alt: var(--theme-font-display-alt);
+  --font-body: var(--theme-font-body);
+  --font-mono: var(--theme-font-mono);
+
+  /* --font-thin: calc(var(--theme-typography-weight) - 300);
+  --font-extralight: calc(var(--theme-typography-weight) - 200);
+  --font-light: calc(var(--theme-typography-weight) - 100);
+  --font-normal: var(--theme-typography-weight);
+  --font-medium: calc(var(--theme-typography-weight) + 100);
+  --font-semibold: calc(var(--theme-typography-weight) + 200);
+  --font-bold: calc(var(--theme-typography-weight) + 300);
+  --font-extrabold: calc(var(--theme-typography-weight) + 400);
+  --font-black: calc(var(--theme-typography-weight) + 500); */
+
+  /* --color-background: var(--theme-color-neutral-2);
+  --color-surface: var(--theme-color-neutral-1); */
+  --color-background: var(--color-background);
+  --color-surface: var(--color-surface);
+  --color-foreground: var(--theme-color-neutral-12);
+  --color-brand: var(--theme-color-brand-9);
+  --color-brand-foreground: var(--theme-color-brand-2);
+  --color-primary: var(--theme-color-primary-9);
+  --color-primary-foreground: var(--theme-color-primary-2);
+  --color-secondary: var(--theme-color-secondary-9);
+  --color-secondary-foreground: var(--theme-color-secondary-2);
+  --color-muted: var(--theme-color-neutral-3);
+  --color-muted-foreground: var(--theme-color-neutral-9);
+  --color-success: var(--theme-color-success-9);
+  --color-success-foreground: var(--theme-color-success-1);
+  --color-destructive: var(--theme-color-destructive-9);
+  --color-destructive-foreground: var(--theme-color-destructive-2);
+  --color-border: var(--theme-color-neutral-6);
+  --color-input: var(--theme-color-neutral-6);
+  --color-ring: var(--theme-color-primary-8);
+}

@@ -1,36 +1,6 @@
 import { Button } from "@/components/ui";
 import { ArrowRight, Star } from "lucide-react";
-
-export interface I18n {
-  heading: string;
-  description: string;
-  buttons?: {
-    primary?: {
-      text: string;
-      url: string;
-    };
-    secondary?: {
-      text: string;
-      url: string;
-    };
-  };
-  reviews?: {
-    count: number;
-    rating: number;
-    reviewText: string;
-  };
-}
-
-export interface Assets {
-  image?: {
-    src: string;
-    alt: string;
-  };
-  reviewAvatars?: {
-    src: string;
-    alt: string;
-  }[];
-}
+import { assets, i18n } from "./content";
 
 // Simple Avatar component since it's not available in the UI library
 const Avatar = ({
@@ -43,7 +13,7 @@ const Avatar = ({
   className?: string;
 }) => <img src={src} alt={alt} className={`rounded-full ${className}`} />;
 
-export default ({ i18n, assets }: { i18n: I18n; assets: Assets }) => {
+export default () => {
   return (
     <section>
       <div className="container p-4 mx-auto grid items-center gap-10 lg:grid-cols-2 lg:gap-20">

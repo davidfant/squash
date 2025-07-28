@@ -1,21 +1,8 @@
 import { Badge, Button } from "@/components/ui";
 import { ArrowRight, ArrowUpRight } from "lucide-react";
+import { assets, i18n } from "./content";
 
-export interface I18n {
-  badge?: string;
-  heading: string;
-  description: string;
-  buttons?: {
-    primary?: { text: string; url: string };
-    secondary?: { text: string; url: string };
-  };
-}
-
-export interface Assets {
-  image?: { src: string; alt: string };
-}
-
-export default ({ i18n, assets }: { i18n: I18n; assets: Assets }) => {
+export default () => {
   return (
     <section className="py-32">
       <div className="container px-4 mx-auto">

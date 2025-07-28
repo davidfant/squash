@@ -21,20 +21,19 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui";
+import Hero1 from "@/sections/hero/hero1";
+import Hero12 from "@/sections/hero/hero12";
+import Hero3 from "@/sections/hero/hero3";
 import { ButtonPreviews } from "./previews/button";
-import { Hero1Preview } from "./previews/hero/hero1";
-import { Hero12Preview } from "./previews/hero/hero12";
-import { Hero3Preview } from "./previews/hero/hero3";
 import { ThemeColorTokensForm } from "./ThemeColorTokensForm";
 import { ThemeFontTokensForm } from "./ThemeFontTokensForm";
 import { ThemeTokensForm } from "./ThemeTokensForm";
 
-// Define the preview list
 const previews = [
-  { key: "buttons", label: "Buttons", component: ButtonPreviews },
-  { key: "hero1", label: "Hero 1", component: Hero1Preview },
-  { key: "hero3", label: "Hero 3", component: Hero3Preview },
-  { key: "hero12", label: "Hero 12", component: Hero12Preview },
+  { key: "buttons", label: "Buttons", component: <ButtonPreviews /> },
+  { key: "hero1", label: "Hero 1", component: <Hero1 /> },
+  { key: "hero3", label: "Hero 3", component: <Hero3 /> },
+  { key: "hero12", label: "Hero 12", component: <Hero12 /> },
 ];
 
 export function App() {
@@ -128,19 +127,14 @@ export function App() {
         </Sidebar>
         <SidebarInset className="p-4">
           <div className="space-y-8">
-            {previews.map((preview) => {
-              const Component = preview.component;
-              return (
-                <div key={preview.key} id={preview.key} className="space-y-4">
-                  <h2 className="text-2xl font-bold font-display">
-                    {preview.label}
-                  </h2>
-                  <Card className="p-0">
-                    <Component />
-                  </Card>
-                </div>
-              );
-            })}
+            {previews.map((preview) => (
+              <div key={preview.key} id={preview.key} className="space-y-4">
+                <h2 className="text-2xl font-bold font-display">
+                  {preview.label}
+                </h2>
+                <Card className="p-0">{preview.component}</Card>
+              </div>
+            ))}
           </div>
         </SidebarInset>
       </div>

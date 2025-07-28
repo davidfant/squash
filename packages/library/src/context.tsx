@@ -157,9 +157,9 @@ export function ThemeProvider({
       <style>{`
           :root {
             ${Object.entries({
-              dimension: `${tokens.dimension}px`,
-              radius: `${tokens.radius * tokens.dimension}px`,
-              spacing: `${tokens.spacing * tokens.dimension}px`,
+              // dimension: `${tokens.dimension}px`,
+              radius: `${tokens.radius}rem`,
+              spacing: `${tokens.spacing}rem`,
               ...Object.entries(tokens.colors).reduce(
                 (acc, [colorName, colorValue]) => {
                   for (let i = 1; i <= 12; i++) {

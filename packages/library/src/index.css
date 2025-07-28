@@ -140,7 +140,7 @@
   --foreground: var(--background-12);
 
   --card: var(--primary-1);
-  --card-foreground: var(--primary-12);
+  --card-foreground: var(--background-12);
 
   --popover: var(--background-1);
   --popover-foreground: var(--background-12);
@@ -151,8 +151,8 @@
   --secondary: var(--primary-4);
   --secondary-foreground: var(--primary-12);
 
-  --muted: var(--primary-3);
-  --muted-foreground: var(--primary-11);
+  --muted: var(--background-3);
+  --muted-foreground: var(--background-9);
 
   --accent: var(--primary-3);
   --accent-foreground: var(--primary-12);
@@ -160,9 +160,9 @@
   --destructive: var(--red-9);
   --destructive-foreground: var(--red-1);
 
-  --border: var(--primary-6);
-  --input: var(--primary-6);
-  --ring: var(--violet-8);
+  --border: var(--background-6);
+  --input: var(--background-6);
+  --ring: var(--primary-8);
 
   --chart-1: var(--violet-9);
   --chart-2: var(--cyan-9);

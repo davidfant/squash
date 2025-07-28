@@ -1,4 +1,5 @@
 import {
+  Card,
   Select,
   SelectContent,
   SelectItem,
@@ -21,17 +22,19 @@ import {
 } from "@/components/ui";
 import { useTheme } from "@/context";
 import { ButtonPreviews } from "./previews/button";
+import { Hero1Preview } from "./previews/hero/hero1";
+import { Hero12Preview } from "./previews/hero/hero12";
+import { Hero3Preview } from "./previews/hero/hero3";
 import { ThemeColorTokensForm } from "./ThemeColorTokensForm";
 import { ThemeFontTokensForm } from "./ThemeFontTokensForm";
 import { ThemeTokensForm } from "./ThemeTokensForm";
 
 // Define the preview list
 const previews = [
-  {
-    key: "buttons",
-    label: "Buttons",
-    component: ButtonPreviews,
-  },
+  { key: "buttons", label: "Buttons", component: ButtonPreviews },
+  { key: "hero1", label: "Hero 1", component: Hero1Preview },
+  { key: "hero3", label: "Hero 3", component: Hero3Preview },
+  { key: "hero12", label: "Hero 12", component: Hero12Preview },
 ];
 
 export function App() {
@@ -128,7 +131,9 @@ export function App() {
               return (
                 <div key={preview.key} id={preview.key} className="space-y-4">
                   <h2 className="text-2xl font-bold">{preview.label}</h2>
-                  <Component />
+                  <Card className="p-0">
+                    <Component />
+                  </Card>
                 </div>
               );
             })}

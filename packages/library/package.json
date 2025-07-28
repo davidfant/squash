@@ -9,6 +9,10 @@
     "lint": "eslint .",
     "preview": "vite preview"
   },
+  "peerDependencies": {
+    "i18next": "^25.3.2",
+    "react-i18next": "^15.6.1"
+  },
   "dependencies": {
     "@radix-ui/colors": "^3.0.0",
     "@radix-ui/react-dialog": "^1.1.14",

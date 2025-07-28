@@ -1,8 +1,8 @@
 import type { ThemeTokens } from "./types";
 
 export const tokens: ThemeTokens = {
-  dimension: 8,
-  spacing: 0.5,
+  // dimension: 8,
+  spacing: 0.25,
   radius: 0.5,
   colors: { primary: "blue", background: "slate" },
   fonts: {

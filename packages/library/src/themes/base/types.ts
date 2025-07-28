@@ -19,7 +19,7 @@ export interface ThemeFontTokens {
 export interface ThemeTokens {
   colors: ThemeColorTokens;
   fonts: ThemeFontTokens;
-  dimension: number;
+  // dimension: number;
   spacing: number;
   radius: number;
 }

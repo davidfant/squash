@@ -2,7 +2,7 @@ import { Button, Label } from "@/components/ui";
 import { Award, Ghost, Link, Medal, Square, Trash2 } from "lucide-react";
 
 export const ButtonPreviews = () => (
-  <div className="space-y-2">
+  <div className="space-y-2 p-4">
     <Label>Icon</Label>
     <div className="flex gap-4">
       <Button size="icon">

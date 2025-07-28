@@ -8,27 +8,27 @@ import {
 } from "@/components/ui";
 import { useTheme } from "@/context";
 
-const dimensions = {
-  sm: 6,
-  md: 8,
-  lg: 12,
-  xl: 16,
-} satisfies Record<string, number>;
+// const dimensions = {
+//   sm: 6,
+//   md: 8,
+//   lg: 12,
+//   xl: 16,
+// } satisfies Record<string, number>;
 
 const spacing = {
-  tight: 0.5,
-  normal: 0.625,
-  relaxed: 0.75,
-  loose: 1,
+  tight: 0.2,
+  normal: 0.25,
+  relaxed: 0.375,
+  loose: 0.5,
 } satisfies Record<string, number>;
 
 const radius = {
   none: 0,
-  sm: 0.5,
-  md: 1,
-  lg: 1.5,
-  xl: 2,
-  full: 5,
+  sm: 0.25,
+  md: 0.5,
+  lg: 0.75,
+  xl: 1,
+  full: 2,
 } satisfies Record<string, number>;
 
 const colors = [
@@ -100,12 +100,12 @@ export function ThemeTokensForm() {
   const { tokens, setTokens } = useTheme();
   return (
     <div className="px-2 space-y-4">
-      <NumberSelect
+      {/* <NumberSelect
         title="Dimension"
         value={tokens.dimension}
         options={dimensions}
         onChange={(dimension) => setTokens({ dimension })}
-      />
+      /> */}
 
       <NumberSelect
         title="Spacing"

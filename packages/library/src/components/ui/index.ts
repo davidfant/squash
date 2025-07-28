@@ -1,6 +1,8 @@
 import { themedComponent } from "@/context";
 export { useSidebar } from "@/themes/base/ui/sidebar";
 
+export const Badge = themedComponent("Badge");
+
 export const Button = themedComponent("Button");
 
 export const Card = themedComponent("Card");

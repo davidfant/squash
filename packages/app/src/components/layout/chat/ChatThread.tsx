@@ -24,16 +24,24 @@ export function ChatThread({
     <div className={cn("w-sm flex flex-col", className)}>
       <div className="flex-1 relative overflow-hidden">
         <div className="h-full overflow-y-auto pr-3 space-y-2" ref={sticky.ref}>
-          {messages.map((m) => {
-            switch (m.role) {
-              case "user":
-                return <UserMessage key={m.id} message={m} />;
-              case "assistant":
-                return <AssistantMessage key={m.id} message={m} />;
-              default:
-                return <div key={m.id}>{m.role}: todo...</div>;
-            }
-          })}
+          {messages
+            .filter((m) => m.role !== "tool")
+            .map((m, i, all) => {
+              switch (m.role) {
+                case "user":
+                  return <UserMessage key={m.id} message={m} />;
+                case "assistant":
+                  return (
+                    <AssistantMessage
+                      key={m.id}
+                      message={m}
+                      header={all[i - 1]?.role !== "assistant"}
+                    />
+                  );
+                // default:
+                //   return <div key={m.id}>{m.role}: todo...</div>;
+              }
+            })}
           {status === "submitted" && (
             <div>
               <MessageHeader author="LP" />

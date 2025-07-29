@@ -195,6 +195,9 @@ importers:
       lodash.kebabcase:
         specifier: ^4.1.1
         version: 4.1.1
+      lodash.startcase:
+        specifier: ^4.4.0
+        version: 4.4.0
       lucide-react:
         specifier: ^0.525.0
         version: 0.525.0(react@19.1.0)
@@ -238,6 +241,9 @@ importers:
       '@types/lodash.kebabcase':
         specifier: ^4.1.9
         version: 4.1.9
+      '@types/lodash.startcase':
+        specifier: ^4.4.9
+        version: 4.4.9
       '@types/react':
         specifier: ^19.1.8
         version: 19.1.8
@@ -4260,6 +4266,9 @@ packages:
 
   '@types/lodash.kebabcase@4.1.9':
     resolution: {integrity: sha512-kPrrmcVOhSsjAVRovN0lRfrbuidfg0wYsrQa5IYuoQO1fpHHGSme66oyiYA/5eQPVl8Z95OA3HG0+d2SvYC85w==}
+
+  '@types/lodash.startcase@4.4.9':
+    resolution: {integrity: sha512-C0M4DlN1pnn2vEEhLHkTHxiRZ+3GlTegpoAEHHGXnuJkSOXyJMHGiSc+SLRzBlFZWHsBkixe6FqvEAEU04g14g==}
 
   '@types/lodash.upperfirst@4.3.9':
     resolution: {integrity: sha512-bYhT1QEsk9/ggrFjK86Pb5bnKJgTBbpVA77Ygbb1aW1oiWJNGRbVjSlQ9We/ihB9vVpX5WqDJvbISXlukGR+dQ==}
@@ -12994,6 +13003,10 @@ snapshots:
       '@types/lodash': 4.17.20
 
   '@types/lodash.kebabcase@4.1.9':
+    dependencies:
+      '@types/lodash': 4.17.20
+
+  '@types/lodash.startcase@4.4.9':
     dependencies:
       '@types/lodash': 4.17.20
 

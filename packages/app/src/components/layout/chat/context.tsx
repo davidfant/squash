@@ -2,7 +2,7 @@ import { useMounted } from "@/hooks/useMounted";
 import { convertStreamPartsToMessages } from "@/lib/convertStreamPartsToMessages";
 import { sseStream } from "@/lib/sseStream";
 import type { AnyMessage, UserMessagePart } from "@hypershape-ai/api/types";
-import type { TextStreamPart } from "ai";
+import type { TextStreamPart, ToolResultPart } from "ai";
 import {
   createContext,
   useContext,
@@ -18,6 +18,7 @@ interface ChatContextValue {
   isLoading: boolean;
   status: ChatStatus;
   messages: Array<AnyMessage & { streaming?: boolean }>;
+  toolResults: Record<string, ToolResultPart>;
   sendMessage(content: UserMessagePart[]): Promise<void>;
   setMessages(messages: AnyMessage[]): void;
 }
@@ -128,6 +129,13 @@ export function ChatProvider({
         messages: !!streamingMessage
           ? [...messages, { ...streamingMessage, streaming: true }]
           : messages,
+        toolResults: messages
+          .filter((m) => m.role === "tool")
+          .flatMap((m) => m.content)
+          .reduce(
+            (acc, p) => ({ ...acc, [p.toolCallId]: p }),
+            {} as Record<string, ToolResultPart>
+          ),
         sendMessage,
         setMessages,
       }}

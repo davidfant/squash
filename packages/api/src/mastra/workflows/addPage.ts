@@ -69,10 +69,7 @@ export function addPage(
   { messages: ResponseMessage[] }
 > {
   const newMessages: ResponseMessage[] = [];
-
-  const deferred = defer<{
-    messages: Array<CoreAssistantMessage | CoreToolMessage>;
-  }>();
+  const deferred = defer<{ messages: ResponseMessage[] }>();
 
   const iterable = (async function* () {
     const componentsReq = await run({
@@ -103,6 +100,8 @@ export function addPage(
     for await (const p of pageReq.stream) yield p;
     const page = await pageReq.response;
     newMessages.push(...page.messages);
+
+    deferred.resolve({ messages: newMessages });
   })();
 
   return Object.assign(iterable, { response: deferred.promise });

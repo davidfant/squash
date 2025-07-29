@@ -1,5 +1,5 @@
 import { Mastra } from "@mastra/core/mastra";
-import { createQualifyAgent } from "./qualify";
+import { createQualifyAgent } from "./agents/qualify";
 
 export const mastra: Mastra = new Mastra({
   agents: {

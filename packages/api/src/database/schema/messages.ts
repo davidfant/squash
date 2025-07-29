@@ -48,7 +48,7 @@ export const messages = pgTable(
       .notNull(),
     status: messageStatus().default("pending").notNull(),
     usage: jsonb().$type<{
-      model: string;
+      modelId: string;
       promptTokens: number;
       completionTokens: number;
       totalTokens: number;

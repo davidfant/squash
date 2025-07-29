@@ -1,7 +1,8 @@
 import type { Database } from "@/database";
 import type { MessageStatus } from "@/database/schema";
 import * as schema from "@/database/schema";
-import { createQualifyAgent } from "@/mastra/qualify";
+import { createQualifyAgent } from "@/mastra/agents/qualify";
+import { addPage } from "@/mastra/workflows/addPage";
 import type { AnyMessage } from "@/types";
 import { zValidator } from "@hono/zod-validator";
 import { asc, eq } from "drizzle-orm";
@@ -118,6 +119,125 @@ export const threadsRouter = new Hono<{
 
     return c.json(thread);
   })
+  .get("/test", async (c) => {
+    return streamSSE(c, async (stream) => {
+      const s = await addPage([
+        {
+          id: "",
+          role: "user",
+          content: [{ type: "text", text: "help me create a landing page" }],
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+
+      const usagePerMessage: Record<
+        string,
+        {
+          modelId: string;
+          promptTokens: number;
+          completionTokens: number;
+          totalTokens: number;
+        }
+      > = {};
+      for await (const delta of s) {
+        switch (delta.type) {
+          case "error":
+            await stream.writeSSE({
+              event: "error",
+              data: (delta.error as Error).message,
+              id: c.get("requestId"),
+            });
+            break;
+          // TODO: remove model metadata/prompts...
+          // case "step-start":
+          // case "finish":
+          //   break;
+          case "step-finish":
+            usagePerMessage[delta.messageId] = {
+              modelId: delta.response.modelId,
+              ...delta.usage,
+            };
+          default:
+            await stream.writeSSE({ data: JSON.stringify(delta) });
+            break;
+        }
+      }
+
+      // const response = await s.response;
+      // await db.insert(schema.messages).values(
+      //   response.messages.map((m, i) => ({
+      //     id: m.id,
+      //     role: m.role,
+      //     content: m.content as AnyMessage["content"],
+      //     threadId: thread.id,
+      //     status: "done" as const,
+      //     usage: usagePerMessage[m.id],
+      //   }))
+      // );
+
+      // await stream.writeSSE({ event: "done", data: "" });
+    });
+
+    // // const add = createStep({
+    // //   id: "add",
+    // //   inputSchema: z.number(),
+    // //   outputSchema: z.number(),
+    // //   execute: async ({ inputData }) => inputData + 1,
+    // // });
+
+    // const addTool = createTool({
+    //   id: "add",
+    //   inputSchema: z.object({ number: z.number() }),
+    //   outputSchema: z.object({ number: z.number() }),
+    //   description: `Adds 1 to the input`,
+    //   execute: async ({ context }) => {
+    //     // Tool logic here (e.g., API call)
+    //     console.log("Using tool to fetch weather information for", context);
+    //     return { number: context.number + 1 }; // Example return
+    //   },
+    // });
+
+    // const add = createStep(addTool);
+    // // const add = createStep({
+    // //   id: "add",
+    // //   inputSchema: z.number(),
+    // //   outputSchema: z.number(),
+    // //   execute: async ({ inputData }) => inputData + 1,
+    // // });
+
+    // const add3 = createWorkflow({
+    //   id: "add3",
+    //   description: "Add 3",
+    //   inputSchema: z.object({ number: z.number() }),
+    //   outputSchema: z.object({ number: z.number() }),
+    // })
+    //   .then(add)
+    //   .then(add)
+    //   .then(add)
+    //   .then(add)
+    //   .then(add)
+    //   .then(add)
+    //   .then(add)
+    //   // .then(createStep(
+    //   //   new Agent({
+    //   //     name: "Generate Registry Component Search Queries",
+    //   //     instructions: `
+    //   //     We are building a website. You have been given a conversation with a user and your goal is to generate search queries for the component registry that are relevant to the page the user is trying to add.
+    //   //     `,
+    //   //     model: google('gemini-2.5-flash'),
+    //   //     tools: { searchComponents },
+    //   //   })
+    //   // ))
+    //   .commit();
+
+    // const run = await add3.createRunAsync();
+    // const result = await run.stream({ inputData: { number: 1 } });
+    // for await (const chunk of result.stream) {
+    //   console.log(chunk);
+    //   if (chunk.type === "step-start") {
+    //   }
+    // }
+  })
   .post(
     "/:threadId",
     zValidator("param", z.object({ threadId: z.string().uuid() })),
@@ -153,7 +273,7 @@ export const threadsRouter = new Hono<{
         const usagePerMessage: Record<
           string,
           {
-            model: string;
+            modelId: string;
             promptTokens: number;
             completionTokens: number;
             totalTokens: number;
@@ -174,7 +294,7 @@ export const threadsRouter = new Hono<{
             //   break;
             case "step-finish":
               usagePerMessage[delta.messageId] = {
-                model: delta.response.modelId,
+                modelId: delta.response.modelId,
                 ...delta.usage,
               };
             default:

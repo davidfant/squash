@@ -1,11 +1,10 @@
-// TODO: import from api package
+import type { TextStreamPart, ToolCallUnion, ToolResultUnion } from "ai";
 import type {
   AssistantMessage,
   AssistantMessagePart,
   ToolMessage,
   ToolMessagePart,
-} from "@hypershape-ai/api/types";
-import type { TextStreamPart, ToolCallUnion, ToolResultUnion } from "ai";
+} from "../types";
 
 /**
 A message that was generated during the generation process.

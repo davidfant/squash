@@ -1,14 +1,13 @@
 import type { Database } from "@/database";
 import type { MessageStatus } from "@/database/schema";
 import * as schema from "@/database/schema";
-import { createQualifyAgent } from "@/mastra/agents/qualify";
+import { stream } from "@/lib/streaming";
 import { addPage } from "@/mastra/workflows/addPage";
 import type { AnyMessage } from "@/types";
 import { zValidator } from "@hono/zod-validator";
 import { asc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
-import { randomUUID } from "node:crypto";
 import { z } from "zod";
 
 async function checkMessages(
@@ -260,62 +259,28 @@ export const threadsRouter = new Hono<{
       );
       if (!messages) return c.text("", 200);
 
-      const agent = createQualifyAgent(c.env.DATABASE_URL);
+      // const agent = createQualifyAgent(c.env.DATABASE_URL);
+      // const s = await agent.stream(messages, {
+      //   providerOptions: {
+      //     google: { thinkingConfig: { includeThoughts: true } },
+      //   },
+      //   experimental_generateMessageId: () => randomUUID(),
+      // });
 
-      return streamSSE(c, async (stream) => {
-        const s = await agent.stream(messages, {
-          providerOptions: {
-            google: { thinkingConfig: { includeThoughts: true } },
-          },
-          experimental_generateMessageId: () => randomUUID(),
-        });
+      // return stream({
+      //   context: c,
+      //   db,
+      //   threadId: thread.id,
+      //   stream: s.fullStream,
+      //   response: s.response,
+      // });
+      // const agent = createQualifyAgent(c.env.DATABASE_URL);
 
-        const usagePerMessage: Record<
-          string,
-          {
-            modelId: string;
-            promptTokens: number;
-            completionTokens: number;
-            totalTokens: number;
-          }
-        > = {};
-        for await (const delta of s.fullStream) {
-          switch (delta.type) {
-            case "error":
-              await stream.writeSSE({
-                event: "error",
-                data: (delta.error as Error).message,
-                id: c.get("requestId"),
-              });
-              break;
-            // TODO: remove model metadata/prompts...
-            // case "step-start":
-            // case "finish":
-            //   break;
-            case "step-finish":
-              usagePerMessage[delta.messageId] = {
-                modelId: delta.response.modelId,
-                ...delta.usage,
-              };
-            default:
-              await stream.writeSSE({ data: JSON.stringify(delta) });
-              break;
-          }
-        }
-
-        const response = await s.response;
-        await db.insert(schema.messages).values(
-          response.messages.map((m, i) => ({
-            id: m.id,
-            role: m.role,
-            content: m.content as AnyMessage["content"],
-            threadId: thread.id,
-            status: "done" as const,
-            usage: usagePerMessage[m.id],
-          }))
-        );
-
-        // await stream.writeSSE({ event: "done", data: "" });
+      return stream({
+        context: c,
+        db,
+        threadId: thread.id,
+        stream: addPage(messages),
       });
     }
   );

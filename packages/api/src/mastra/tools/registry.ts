@@ -21,7 +21,6 @@ export const searchComponents = createTool({
     ),
   }),
   execute: async ({ context }) => {
-    console.log("XXXXX", context);
     return {
       component: [
         {

@@ -1,15 +1,54 @@
 import type { AnyMessage } from "@/types";
 import { google } from "@ai-sdk/google";
 import { Agent } from "@mastra/core/agent";
+import type { ToolAction } from "@mastra/core/tools";
+import type {
+  CoreAssistantMessage,
+  CoreToolMessage,
+  CoreUserMessage,
+  LanguageModelV1,
+  TextStreamPart,
+} from "ai";
+import { z } from "zod";
 import { createPage } from "../tools/page";
 import { searchComponents } from "../tools/registry";
 
-const searchComponentsAgent = new Agent({
-  name: "Generate Registry Component Search Queries",
-  instructions: `We are building a website. You have been given a conversation with a user and your goal is to search in the component registry for components that are relevant to the page the user is trying to add. Before calling the tool to search for components you MUST respond with a short message to the user explaining what you will search for. You should not ask the user any questions and should immediately search for components.`,
-  model: google("gemini-2.5-flash"),
-  tools: { searchComponents },
-});
+async function run<T extends ToolAction<any, any, any>>(data: {
+  name: string;
+  instructions: string;
+  messages: Array<CoreUserMessage | CoreAssistantMessage | CoreToolMessage>;
+  model: LanguageModelV1;
+  tool: T;
+}): Promise<{
+  stream: AsyncIterable<TextStreamPart<any>, void, unknown>;
+  response: Promise<{
+    messages: Array<CoreAssistantMessage | CoreToolMessage>;
+    result: z.infer<T["outputSchema"]>;
+  }>;
+}> {
+  const agent = new Agent({
+    name: data.name,
+    instructions: data.instructions,
+    model: data.model,
+    tools: { [data.tool.id]: data.tool },
+  });
+  const result = await agent.stream(data.messages, {
+    providerOptions: { google: { thinkingConfig: { includeThoughts: true } } },
+    toolChoice: { type: "tool", toolName: data.tool.id },
+    maxSteps: 1,
+  });
+  return {
+    stream: result.fullStream,
+    // response: Promise.all([result.response, result.toolResults])
+    //   .then(([{ messages }, [res]]) => ({ messages, result: res!.result })),
+    response: (async () => {
+      console.log("woza...", await result.toolResults);
+      return Promise.all([result.response, result.toolResults]).then(
+        ([{ messages }, [res]]) => ({ messages, result: res!.result })
+      );
+    })(),
+  };
+}
 
 // const generateRegistryComponentSearchQueries = createStep({
 //   id: "generateRegistryComponentSearchQueries",
@@ -46,7 +85,7 @@ const instructions = `
 You are Splash, a website builder. You are given a conversation with a user and your goal is to add a page to a website.
 
 The general process for adding a page is:
-1. Search for components in the component registry that are relevant to the page
+1. Search for components in the component registry that are relevant to the page being added
 2. Create a new page with a list of sections. The sections can either be from the component registry or from existing sections used in the website.
 3. For each section, fill in the content.
 `.trim();
@@ -94,14 +133,38 @@ const agent = new Agent({
 // };
 
 export async function* addPage(messages: AnyMessage[]) {
-  const queries = await searchComponentsAgent.stream(messages, {
-    providerOptions: { google: { thinkingConfig: { includeThoughts: true } } },
-    // toolChoice: { type: "tool", toolName: searchComponents.id },
-    maxSteps: 1,
+  const aiMessages: Array<
+    CoreUserMessage | CoreAssistantMessage | CoreToolMessage
+  > = [...messages];
+
+  const componentsReq = await run({
+    name: "Search Components",
+    instructions: `We are building a website. You have been given a conversation with a user and your goal is to search in the component registry for components that are relevant to the page the user is trying to add. You should not ask the user any questions and should provide a best guess at what the user is trying to do.`,
+    model: google("gemini-2.5-flash"),
+    messages,
+    tool: searchComponents,
   });
-  for await (const p of queries.fullStream) yield p;
+  for await (const p of componentsReq.stream) yield p;
+  const components = await componentsReq.response;
+  aiMessages.push(...components.messages);
 
-  console.log("XXXXX", JSON.stringify(await queries.response, null, 2));
+  const pageReq = await run({
+    name: "Create Page",
+    instructions: `
+We are building a website. You have searched for section components in a registry and below have a list of the existing sections in the website. Next your goal is to create an outline for the page. You can either choose to reuse existing sections of the website or create new ones from the registry. You should not ask the user any questions and should provide a best guess at what the user is trying to do.
 
-  queries.toolCalls;
+<existing-sections>
+You can only reuse the below sections that are already in the website:
+N/A
+</existing-sections>
+`.trim(),
+    model: google("gemini-2.5-flash"),
+    messages: aiMessages,
+    tool: createPage,
+  });
+  for await (const p of pageReq.stream) yield p;
+  const page = await pageReq.response;
+  aiMessages.push(...page.messages);
+
+  console.log("XXXXX", JSON.stringify(page.result, null, 2));
 }

@@ -1,22 +1,18 @@
-import type { CoreAssistantMessage } from "ai";
+import type { AssistantMessage as AssistantMessageType } from "@hypershape-ai/api/types";
 import { Markdown } from "../../Markdown";
 import { MessageHeader } from "./MessageHeader";
 
 export const AssistantMessage = ({
   message,
 }: {
-  message: CoreAssistantMessage;
+  message: AssistantMessageType;
 }) => (
   <div>
     <MessageHeader author="LP" />
-    {typeof message.content === "string" ? (
-      <Markdown>{message.content}</Markdown>
-    ) : (
-      message.content.map((c, index) => {
-        if (c.type === "text") {
-          return <Markdown key={index}>{c.text}</Markdown>;
-        }
-      })
-    )}
+    {message.content.map((c, index) => {
+      if (c.type === "text") {
+        return <Markdown key={index}>{c.text}</Markdown>;
+      }
+    })}
   </div>
 );

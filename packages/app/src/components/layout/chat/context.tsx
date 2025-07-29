@@ -1,12 +1,8 @@
 import { useMounted } from "@/hooks/useMounted";
-import type {
-  CoreMessage,
-  CoreUserMessage,
-  FilePart,
-  ImagePart,
-  TextPart,
-  UserContent,
-} from "ai";
+import { convertStreamPartsToMessages } from "@/lib/convertStreamPartsToMessages";
+import { sseStream } from "@/lib/sseStream";
+import type { AnyMessage, UserMessagePart } from "@hypershape-ai/api/types";
+import type { TextStreamPart } from "ai";
 import {
   createContext,
   useContext,
@@ -18,21 +14,18 @@ import { v4 as uuid } from "uuid";
 
 type ChatStatus = "ready" | "submitted" | "streaming" | "error";
 
-type Message = CoreMessage & { id: string };
-
 interface ChatContextValue {
   isLoading: boolean;
   status: ChatStatus;
-  messages: Array<Message & { streaming?: boolean }>;
-  previewUrl: string | undefined;
-  sendMessage(content: Array<TextPart | ImagePart | FilePart>): Promise<void>;
-  setMessages(messages: Message[]): void;
+  messages: Array<AnyMessage & { streaming?: boolean }>;
+  sendMessage(content: UserMessagePart[]): Promise<void>;
+  setMessages(messages: AnyMessage[]): void;
 }
 
 const ChatContext = createContext<ChatContextValue>(null as any);
 
-function useMessages(initial: Message[] | undefined) {
-  const [messages, setMessages] = useState<Message[]>(initial ?? []);
+function useMessages(initial: AnyMessage[] | undefined) {
+  const [messages, setMessages] = useState<AnyMessage[]>(initial ?? []);
 
   useEffect(() => {
     if (initial) setMessages(initial);
@@ -44,67 +37,55 @@ function useMessages(initial: Message[] | undefined) {
 export function ChatProvider({
   endpoint,
   initialMessages,
-  previewBaseUrl,
   children,
   autoSubmit,
   ready = true,
-  onSendMessage,
-}: {
+}: // onSendMessage,
+{
   endpoint: string;
-  initialMessages: Message[] | undefined;
+  initialMessages: AnyMessage[] | undefined;
   previewBaseUrl?: string;
   children: ReactNode;
   ready?: boolean;
-  autoSubmit?: Array<TextPart | ImagePart | FilePart>;
-  onSendMessage?(
-    content: Array<TextPart | ImagePart | FilePart>,
-    messages: Message[]
-  ): Promise<boolean>;
+  autoSubmit?: UserMessagePart[];
+  // onSendMessage?(
+  //   content: UserMessagePart[],
+  //   messages: AnyMessage[]
+  // ): Promise<boolean>;
 }) {
   const isLoading = !initialMessages;
   const [messages, setMessages] = useMessages(initialMessages);
-  const [streamingMessage, setChatMessage] = useState<Message>();
+  const [streamingMessage, setChatMessage] = useState<AnyMessage>();
   const [status, setStatus] = useState<ChatStatus>("ready");
 
-  const [previewUrl, setPreviewUrl] = useState<string | undefined>(
-    previewBaseUrl
-  );
-
-  const submit = async (message?: CoreUserMessage & { id: string }) => {
+  const sendMessage = async (content?: UserMessagePart[]) => {
     setStatus("submitted");
+    const message = !!content ? { id: uuid(), content } : undefined;
     if (message) {
-      setMessages((prev) => [...prev, message]);
+      setMessages((prev) => [
+        ...prev,
+        { ...message, role: "user", createdAt: new Date().toISOString() },
+      ]);
     }
 
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    setMessages((prev) => [
-      ...prev,
-      { id: uuid(), role: "assistant", content: "response..." },
-    ]);
-    setStatus("ready");
-
-    /*
-    if (onSendMessage && !!message) {
-      const shouldSend = await onSendMessage(message.parts ?? [], messages);
-      if (!shouldSend) {
-        setStatus("ready");
-        return;
-      }
-    }
+    // if (onSendMessage && !!message) {
+    //   const shouldSend = await onSendMessage(message.parts ?? [], messages);
+    //   if (!shouldSend) {
+    //     setStatus("ready");
+    //     return;
+    //   }
+    // }
 
     try {
-      const chunks: MessageStream.Chunk.Any[] = [];
+      const streamParts: TextStreamPart<any>[] = [];
       let prevMessagesLength = 0;
       await sseStream({
         endpoint,
         message,
-        onEvent: (chunk) => {
-          chunks.push(chunk);
-          const messages = parseMessageStreamChunks(chunks, {
-            suggestions: false,
-          });
-          if (messages.some((m) => !!m.parts.length)) setStatus("streaming");
+        onEvent: (streamPart) => {
+          streamParts.push(streamPart);
+          const messages = convertStreamPartsToMessages(streamParts);
+          if (messages.some((m) => !!m.content.length)) setStatus("streaming");
 
           if (messages.length > prevMessagesLength) {
             const newMessages = messages.slice(
@@ -115,24 +96,11 @@ export function ChatProvider({
             prevMessagesLength = messages.length;
           }
 
-          if (
-            chunk.type === "tool.input" &&
-            chunk.name === "runAutomationAction"
-          ) {
-            const input = chunk.input as RunAutomationActionInput;
-            navigateToAutomationAction({
-              automation: input.automation,
-              action: input.action,
-              spanId: input.runs[0]!.spanId,
-            });
-          }
-
           setChatMessage(messages[messages.length - 1]);
-          console.log("EVENT", { chunks, messages });
         },
       });
 
-      const messages = parseMessageStreamChunks(chunks);
+      const messages = convertStreamPartsToMessages(streamParts);
       setChatMessage(undefined);
       setMessages((prev) => [
         ...prev,
@@ -143,17 +111,12 @@ export function ChatProvider({
       console.error(error);
       setStatus("error");
     }
-    */
   };
 
   const mounted = useMounted();
   useEffect(() => {
     if (mounted && ready) {
-      submit(
-        !!autoSubmit
-          ? { id: uuid(), role: "user", content: autoSubmit }
-          : undefined
-      );
+      sendMessage(autoSubmit);
     }
   }, [mounted, ready]);
 
@@ -165,9 +128,7 @@ export function ChatProvider({
         messages: !!streamingMessage
           ? [...messages, { ...streamingMessage, streaming: true }]
           : messages,
-        previewUrl,
-        sendMessage: (content: UserContent) =>
-          submit({ id: uuid(), role: "user", content }),
+        sendMessage,
         setMessages,
       }}
     >

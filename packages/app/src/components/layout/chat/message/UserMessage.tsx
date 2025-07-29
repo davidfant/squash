@@ -1,9 +1,8 @@
-import { Badge } from "@/components/ui/badge";
-import type { CoreUserMessage } from "ai";
+import type { UserMessage as UserMessageType } from "@hypershape-ai/api/types";
 import { FilePreview } from "../../file/FilePreview";
 import { Markdown } from "../../Markdown";
 
-export function UserMessage({ message }: { message: CoreUserMessage }) {
+export function UserMessage({ message }: { message: UserMessageType }) {
   const files = (typeof message.content === "string" ? [] : message.content)
     .filter((p) => p.type === "file" || p.type === "image")
     // .map((p, i) => (
@@ -20,18 +19,14 @@ export function UserMessage({ message }: { message: CoreUserMessage }) {
   return (
     <div className="flex flex-col items-end">
       <div className="w-max max-w-[75%] rounded-xl px-3 py-2 bg-muted">
-        <Badge variant="outline" className="rounded-sm px-1">
+        {/* <Badge variant="outline" className="rounded-sm px-1">
           File.tsx
-        </Badge>
-        {typeof message.content === "string" ? (
-          <Markdown>{message.content}</Markdown>
-        ) : (
-          message.content.map((c, index) => {
-            if (c.type === "text") {
-              return <Markdown key={index}>{c.text}</Markdown>;
-            }
-          })
-        )}
+        </Badge> */}
+        {message.content.map((c, index) => {
+          if (c.type === "text") {
+            return <Markdown key={index}>{c.text}</Markdown>;
+          }
+        })}
       </div>
       {!!files.length && (
         <div className="flex flex-wrap gap-2 justify-end mt-1">{files}</div>

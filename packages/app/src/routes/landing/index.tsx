@@ -3,23 +3,17 @@ import { SignInButton } from "@/components/layout/auth/SignInButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api, useMutation } from "@/hooks/api";
-import { convertStreamPartsToMessages } from "@/lib/convertStreamPartsToMessages";
-import type { TextStreamPart } from "ai";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
 export function LandingPage() {
   const [value, setValue] = useState("");
-  const [parts, setParts] = useState<TextStreamPart<any>[]>([]);
-
-  const messages = convertStreamPartsToMessages(parts);
   const navigate = useNavigate();
   const { t } = useTranslation("landing");
 
-  console.log("XXX", parts, messages);
-
   const createProject = useMutation(api.projects.$post);
+  const createThread = useMutation(api.threads.$post);
 
   return (
     <>
@@ -34,9 +28,12 @@ export function LandingPage() {
       <Button
         onClick={
           () =>
-            createProject
-              .mutateAsync({ json: { name: value } })
-              .then((res) => navigate(`/projects/${res.id}`))
+            createThread
+              .mutateAsync({ json: [{ type: "text", text: value }] })
+              .then((res) => navigate(`/threads/${res.id}`))
+          // createProject
+          //   .mutateAsync({ json: { name: value } })
+          //   .then((res) => navigate(`/projects/${res.id}`))
           // sseStream({
           //   endpoint: "chat",
           //   message: {
@@ -51,7 +48,6 @@ export function LandingPage() {
       >
         Send
       </Button>
-      <div>{parts.length}</div>
     </>
   );
 }

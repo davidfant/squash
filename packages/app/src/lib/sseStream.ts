@@ -1,15 +1,10 @@
-import type { SourceUIPart, TextUIPart } from "@ai-sdk/ui-utils";
+import type { UserMessagePart } from "@hypershape-ai/api/types";
 import type { TextStreamPart } from "ai";
 import { createParser } from "eventsource-parser";
 
 export async function sseStream(opts: {
   endpoint: string;
-  message?: {
-    id: string;
-    role: "user";
-    content: string;
-    parts: Array<TextUIPart | SourceUIPart>;
-  };
+  message?: { id: string; content: UserMessagePart[] };
   onEvent: (chunk: TextStreamPart<any>) => void;
 }) {
   const response = await fetch(
@@ -18,7 +13,7 @@ export async function sseStream(opts: {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include",
-      body: JSON.stringify(opts.message),
+      body: JSON.stringify({ message: opts.message }),
     }
   );
 

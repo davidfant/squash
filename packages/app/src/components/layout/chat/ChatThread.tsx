@@ -1,7 +1,7 @@
 import { ChatInput } from "@/components/layout/chat/input/ChatInput";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import type { FilePart, ImagePart, TextPart } from "ai";
+import type { UserMessagePart } from "@hypershape/api/types";
 import { AlertCircle } from "lucide-react";
 import { useChat } from "./context";
 import { AssistantMessage } from "./message/AssistantMessage";
@@ -14,7 +14,7 @@ export function ChatThread({
   initialValue,
   className,
 }: {
-  initialValue?: Array<TextPart | ImagePart | FilePart>;
+  initialValue?: UserMessagePart[];
   className?: string;
 }) {
   const { messages, status, sendMessage } = useChat();

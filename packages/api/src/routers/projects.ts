@@ -179,7 +179,7 @@ export const projectsRouter = new Hono<{
   })
   .post(
     "/",
-    zValidator("json", z.object({ name: z.string() })),
+    zValidator("json", z.object({ name: z.string(), threadId: z.string() })),
     requireAuth,
     requireActiveOrganization,
     async (c) => {
@@ -230,6 +230,7 @@ export const projectsRouter = new Hono<{
           organizationId,
           createdBy: user.id,
           daytonaSandboxId: sandbox.id,
+          threadId: body.threadId,
           metadata,
         })
         .returning();

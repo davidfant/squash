@@ -147,25 +147,6 @@ export function ThemeProvider({
     document.documentElement.classList.toggle("dark", tokens.scheme === "dark");
   }, [tokens.scheme]);
 
-  console.log(
-    "XX",
-    Object.fromEntries(
-      Object.entries(tokens.colors).flatMap(([name, value]) => {
-        if (radixColorNames.includes(value)) {
-          return Array.from({ length: 12 }, (_, i) => [
-            `theme-color-${name}-${i + 1}`,
-            `var(--${value}-${i + 1})`,
-          ]);
-        } else {
-          const hexes = generateScaleProcedural({
-            hex: value,
-            scheme: tokens.scheme,
-          });
-          return hexes.map((hex, i) => [`theme-color-${name}-${i + 1}`, hex]);
-        }
-      })
-    )
-  );
   return (
     <ThemeContext.Provider
       value={{

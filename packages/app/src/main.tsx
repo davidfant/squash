@@ -10,6 +10,7 @@ import resources from "./locales/default";
 import { LandingPage } from "./routes/landing";
 import { OnboardingPage } from "./routes/onboarding";
 import { ProjectPage } from "./routes/project";
+import { ThreadPage } from "./routes/thread";
 
 i18n.use(initReactI18next).init({
   lng: "default",
@@ -26,6 +27,7 @@ createRoot(document.getElementById("root")!).render(
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<LandingPage />} />
+          <Route path="/threads/:threadId" element={<ThreadPage />} />
           <Route path="/projects/:projectId" element={<ProjectPage />} />
           <Route
             path="/projects/:projectId/pages/:pageId"

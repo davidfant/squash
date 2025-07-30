@@ -3,7 +3,7 @@ import type { MessageStatus } from "@/database/schema";
 import * as schema from "@/database/schema";
 import type { AnyMessage } from "@/types";
 import { zValidator } from "@hono/zod-validator";
-import { asc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 
@@ -71,50 +71,28 @@ export const zMessageInput = z.object({
 export const threadsRouter = new Hono<{
   Bindings: CloudflareBindings;
   Variables: { db: Database };
-}>()
-  .get(
-    "/:threadId/messages",
-    zValidator("param", z.object({ threadId: z.string().uuid() })),
-    async (c) => {
-      const threadId = c.req.valid("param").threadId;
-      const messages = await c
-        .get("db")
-        .select({
-          id: schema.messages.id,
-          role: schema.messages.role,
-          content: schema.messages.content,
-          status: schema.messages.status,
-          createdAt: schema.messages.createdAt,
-        })
-        .from(schema.messages)
-        .where(eq(schema.messages.threadId, threadId))
-        .orderBy(asc(schema.messages.createdAt));
+}>().post("/", zValidator("json", zMessagePart.array().min(1)), async (c) => {
+  const ipAddress =
+    c.req.header("cf-connecting-ip") ??
+    c.req.header("x-forwarded-for") ??
+    c.req.raw.headers.get("x-forwarded-for");
+  const content = c.req.valid("json");
+  const thread = await c
+    .get("db")
+    .insert(schema.messageThreads)
+    .values({ ipAddress })
+    .returning()
+    .then(([thread]) => thread!);
 
-      return c.json(messages as (AnyMessage & { status: MessageStatus })[]);
-    }
-  )
-  .post("/", zValidator("json", zMessagePart.array().min(1)), async (c) => {
-    const ipAddress =
-      c.req.header("cf-connecting-ip") ??
-      c.req.header("x-forwarded-for") ??
-      c.req.raw.headers.get("x-forwarded-for");
-    const content = c.req.valid("json");
-    const thread = await c
-      .get("db")
-      .insert(schema.messageThreads)
-      .values({ ipAddress })
-      .returning()
-      .then(([thread]) => thread!);
-
-    await c.get("db").insert(schema.messages).values({
-      role: "user",
-      content,
-      threadId: thread.id,
-      status: "pending",
-    });
-
-    return c.json(thread);
+  await c.get("db").insert(schema.messages).values({
+    role: "user",
+    content,
+    threadId: thread.id,
+    status: "pending",
   });
+
+  return c.json(thread);
+});
 // .post(
 //   "/:threadId",
 //   zValidator("param", z.object({ threadId: z.string().uuid() })),

@@ -6,7 +6,7 @@ import { useParams } from "react-router";
 
 export function ThreadPage() {
   const { threadId } = useParams();
-  const threadMessages = useQuery(api.threads[":threadId"].messages.$get, {
+  const threadMessages = useQuery(api.chat.messages.threads[":threadId"].$get, {
     params: { threadId },
   });
   const session = authClient.useSession();

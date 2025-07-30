@@ -73,34 +73,22 @@ export function ProjectPage() {
   const project = useQuery(api.projects[":projectId"].$get, {
     params: { projectId },
   });
-  const threadMessages = useQuery(api.projects[":projectId"].messages.$get, {
-    params: { projectId },
-  });
+  const threadMessages = useQuery(
+    api.chat.messages.projects[":projectId"].$get,
+    { params: { projectId } }
+  );
   const session = authClient.useSession();
 
   return (
     <ChatProvider
       ready={!session.isPending}
-      endpoint={`projects/${projectId}/messages`}
+      endpoint={`chat/messages/projects/${projectId}`}
       initialMessages={threadMessages.data}
-      // initialMessages={[
-      //   {
-      //     id: uuid(),
-      //     role: "user",
-      //     content: [
-      //       {
-      //         type: "text",
-      //         text: "I wanna build a LP!!!",
-      //       },
-      //       {
-      //         type: "image",
-      //         image: new URL(
-      //           "https://media.istockphoto.com/id/2181735944/photo/natural-mountains-landscapes.jpg?s=612x612&w=0&k=20&c=4EZdF1438jegkW3U8h0TG4JaPO_cpMMBY-MouwLlyf4="
-      //         ),
-      //       },
-      //     ],
-      //   },
-      // ]}
+      onToolResult={(r) => {
+        if (r.toolName === "updateMetadata") {
+          project.refetch();
+        }
+      }}
     >
       <ProjectContextProvider
         projectId={projectId!}

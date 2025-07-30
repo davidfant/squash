@@ -1,4 +1,3 @@
-import { updateMetadata } from "@/lib/repo/metadata";
 import type { AsyncIterableWithResponse } from "@/lib/streaming";
 import type { AnyMessage } from "@/types";
 import { google } from "@ai-sdk/google";
@@ -14,26 +13,46 @@ import type {
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { searchComponents } from "../tools/registry";
-import { createPage, type RepoRuntimeContext } from "../tools/repo";
+import {
+  createPage,
+  updateMetadata,
+  type RepoRuntimeContext,
+} from "../tools/repo";
 
 type ResponseMessage = (CoreAssistantMessage | CoreToolMessage) & {
   id: string;
 };
 
-async function run<T extends ToolAction<any, any, any>>(data: {
+function defer<T>() {
+  let resolve!: (v: T | PromiseLike<T>) => void;
+  let reject!: (e?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
+async function runAgent<T extends ToolAction<any, any, any>>(data: {
   name: string;
   instructions: string;
   messages: Array<CoreUserMessage | CoreAssistantMessage | CoreToolMessage>;
   model: LanguageModelV1;
   tool: T;
   runtimeContext: RepoRuntimeContext;
-}): Promise<{
-  stream: AsyncIterable<TextStreamPart<any>, void, unknown>;
-  response: Promise<{
-    messages: ResponseMessage[];
-    result: z.infer<T["outputSchema"]>;
-  }>;
-}> {
+  // }): Promise<{
+  //   stream: AsyncIterable<TextStreamPart<any>, void, unknown>;
+  //   response: Promise<{
+  //     messages: ResponseMessage[];
+  //     result: z.infer<T["outputSchema"]>;
+  //   }>;
+  // }> {
+}): Promise<
+  AsyncIterableWithResponse<
+    TextStreamPart<any>,
+    { messages: ResponseMessage[]; result: z.infer<T["outputSchema"]> }
+  >
+> {
   const agent = new Agent({
     name: data.name,
     instructions: data.instructions,
@@ -47,22 +66,80 @@ async function run<T extends ToolAction<any, any, any>>(data: {
     runtimeContext: data.runtimeContext,
     experimental_generateMessageId: () => randomUUID(),
   });
-  return {
-    stream: result.fullStream,
+
+  return Object.assign(result.fullStream, {
     response: Promise.all([result.response, result.toolResults]).then(
       ([{ messages }, [res]]) => ({ messages, result: res!.result })
     ),
-  };
+  });
 }
 
-function defer<T>() {
-  let resolve!: (v: T | PromiseLike<T>) => void;
-  let reject!: (e?: unknown) => void;
-  const promise = new Promise<T>((res, rej) => {
-    resolve = res;
-    reject = rej;
-  });
-  return { promise, resolve, reject };
+function runTool<T extends ToolAction<any, any, any>>(
+  tool: T,
+  args: z.infer<T["inputSchema"]>,
+  ctx: RepoRuntimeContext
+): AsyncIterableWithResponse<
+  TextStreamPart<any>,
+  { messages: ResponseMessage[]; result: z.infer<T["outputSchema"]> }
+> {
+  const messageId = randomUUID();
+  const toolCallId = randomUUID();
+
+  const deferred = defer<{
+    messages: ResponseMessage[];
+    result: z.infer<T["outputSchema"]>;
+  }>();
+  const iterable = (async function* (): AsyncIterable<TextStreamPart<any>> {
+    yield {
+      type: "step-start",
+      messageId,
+      request: {},
+      warnings: [],
+    };
+
+    yield { type: "tool-call", toolCallId, toolName: tool.id, args };
+
+    const result = await tool.execute!({ runtimeContext: ctx, context: args });
+
+    yield {
+      type: "tool-result",
+      toolCallId,
+      toolName: tool.id,
+      args: args,
+      result,
+    };
+    yield {
+      type: "step-finish",
+      messageId,
+      request: {},
+      warnings: undefined,
+      response: { id: messageId, timestamp: new Date(), modelId: "" },
+      usage: { totalTokens: 0, promptTokens: 0, completionTokens: 0 },
+      finishReason: "stop",
+      providerMetadata: undefined,
+      isContinued: false,
+    };
+
+    deferred.resolve({
+      result,
+      messages: [
+        {
+          id: messageId,
+          role: "assistant",
+          content: [{ type: "tool-call", args, toolCallId, toolName: tool.id }],
+        },
+        {
+          id: toolCallId,
+          role: "tool",
+          content: [
+            { type: "tool-result", toolCallId, toolName: tool.id, result },
+          ],
+        },
+      ],
+    });
+  })();
+
+  return Object.assign(iterable, { response: deferred.promise });
 }
 
 export function addPage(
@@ -76,7 +153,7 @@ export function addPage(
   const deferred = defer<{ messages: ResponseMessage[] }>();
 
   const iterable = (async function* () {
-    const componentsReq = await run({
+    const componentsStream = await runAgent({
       name: "Search Components",
       instructions: `We are building a website. You have been given a conversation with a user and your goal is to search in the component registry for components that are relevant to the page the user is trying to add. You should not ask the user any questions and should provide a best guess at what the user is trying to do.`,
       model: google("gemini-2.5-flash"),
@@ -84,11 +161,11 @@ export function addPage(
       tool: searchComponents,
       runtimeContext: ctx,
     });
-    for await (const p of componentsReq.stream) yield p;
-    const components = await componentsReq.response;
+    for await (const p of componentsStream) yield p;
+    const components = await componentsStream.response;
     newMessages.push(...components.messages.map((m) => ({ ...m, id: m.id })));
 
-    const pageReq = await run({
+    const pageStream = await runAgent({
       name: "Create Page",
       instructions: `
   We are building a website. You have searched for section components in a registry and below have a list of the existing sections in the website. Next your goal is to create an outline for the page. You can either choose to reuse existing sections of the website or create new ones from the registry. You should not ask the user any questions and should provide a best guess at what the user is trying to do.
@@ -103,15 +180,14 @@ export function addPage(
       tool: createPage,
       runtimeContext: ctx,
     });
-    for await (const p of pageReq.stream) yield p;
-    const page = await pageReq.response;
+    for await (const p of pageStream) yield p;
+    const page = await pageStream.response;
     newMessages.push(...page.messages);
 
-    await updateMetadata(
-      ctx.get("projectId"),
-      ctx.get("daytona").sandbox,
-      ctx.get("db")
-    );
+    const metadataStream = await runTool(updateMetadata, undefined, ctx);
+    for await (const p of metadataStream) yield p;
+    const metadata = await metadataStream.response;
+    newMessages.push(...metadata.messages);
 
     deferred.resolve({ messages: newMessages });
   })();

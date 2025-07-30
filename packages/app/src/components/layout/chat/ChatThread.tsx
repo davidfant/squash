@@ -20,6 +20,7 @@ export function ChatThread({
   const { messages, status, sendMessage } = useChat();
   const sticky = useStickToBottom();
 
+  console.log(messages);
   return (
     <div className={cn("w-sm flex flex-col", className)}>
       <div className="flex-1 relative overflow-hidden">

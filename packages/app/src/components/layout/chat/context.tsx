@@ -19,7 +19,7 @@ interface ChatContextValue {
   status: ChatStatus;
   messages: Array<AnyMessage & { streaming?: boolean }>;
   toolResults: Record<string, ToolResultPart>;
-  sendMessage(content: UserMessagePart[]): Promise<void>;
+  sendMessage(content: UserMessagePart[], endpoint?: string): Promise<void>;
   setMessages(messages: AnyMessage[]): void;
 }
 
@@ -41,6 +41,7 @@ export function ChatProvider({
   children,
   autoSubmit,
   ready = true,
+  onToolResult,
 }: // onSendMessage,
 {
   endpoint: string;
@@ -49,6 +50,7 @@ export function ChatProvider({
   children: ReactNode;
   ready?: boolean;
   autoSubmit?: UserMessagePart[];
+  onToolResult?(toolResult: ToolResultPart): void;
   // onSendMessage?(
   //   content: UserMessagePart[],
   //   messages: AnyMessage[]
@@ -59,7 +61,10 @@ export function ChatProvider({
   const [streamingMessage, setChatMessage] = useState<AnyMessage>();
   const [status, setStatus] = useState<ChatStatus>("ready");
 
-  const sendMessage = async (content?: UserMessagePart[]) => {
+  const sendMessage = async (
+    content?: UserMessagePart[],
+    customEndpoint: string = endpoint
+  ) => {
     setStatus("submitted");
     const message = !!content ? { id: uuid(), content } : undefined;
     if (message) {
@@ -81,12 +86,16 @@ export function ChatProvider({
       const streamParts: TextStreamPart<any>[] = [];
       let prevMessagesLength = 0;
       await sseStream({
-        endpoint,
         message,
+        endpoint: customEndpoint,
         onEvent: (streamPart) => {
           streamParts.push(streamPart);
           const messages = convertStreamPartsToMessages(streamParts);
           if (messages.some((m) => !!m.content.length)) setStatus("streaming");
+
+          if (streamPart.type === "tool-result") {
+            onToolResult?.(streamPart);
+          }
 
           if (messages.length > prevMessagesLength) {
             const newMessages = messages.slice(

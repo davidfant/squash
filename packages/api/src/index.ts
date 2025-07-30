@@ -4,6 +4,7 @@ import { logger } from "hono/logger";
 import { requestId } from "hono/request-id";
 import { authMiddleware } from "./auth/middleware";
 import { databaseMiddleware } from "./database/middleware";
+import { chatRouter } from "./routers/chat";
 import { projectsRouter } from "./routers/projects";
 import { threadsRouter } from "./routers/threads";
 
@@ -15,7 +16,8 @@ const app = new Hono<{ Bindings: CloudflareBindings }>()
   .use("*", cors({ origin: process.env.APP_URL, credentials: true }))
   .on(["GET", "POST"], "/auth/*", (c) => c.get("auth").handler(c.req.raw))
   .route("/projects", projectsRouter)
-  .route("/threads", threadsRouter);
+  .route("/threads", threadsRouter)
+  .route("/chat", chatRouter);
 
 export default app;
 export type AppType = typeof app;

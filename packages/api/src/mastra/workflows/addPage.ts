@@ -1,4 +1,7 @@
-import type { AsyncIterableWithResponse } from "@/lib/streaming";
+import type {
+  AsyncIterableWithResponse,
+  ResponseMessage,
+} from "@/lib/streaming";
 import type { AnyMessage } from "@/types";
 import { google } from "@ai-sdk/google";
 import { Agent } from "@mastra/core/agent";
@@ -18,10 +21,6 @@ import {
   updateMetadata,
   type RepoRuntimeContext,
 } from "../tools/repo";
-
-type ResponseMessage = (CoreAssistantMessage | CoreToolMessage) & {
-  id: string;
-};
 
 function defer<T>() {
   let resolve!: (v: T | PromiseLike<T>) => void;
@@ -67,10 +66,29 @@ async function runAgent<T extends ToolAction<any, any, any>>(data: {
     experimental_generateMessageId: () => randomUUID(),
   });
 
+  // consume result.fullStream and create a map of messageId to createdAt on step-start
+  const createdAtByIdP = (async () => {
+    const createdAtById = new Map<string, Date>();
+    for await (const part of result.fullStream) {
+      if (part.type === "step-start") {
+        createdAtById.set(part.messageId, new Date());
+      }
+    }
+    return createdAtById;
+  })();
+
   return Object.assign(result.fullStream, {
-    response: Promise.all([result.response, result.toolResults]).then(
-      ([{ messages }, [res]]) => ({ messages, result: res!.result })
-    ),
+    response: Promise.all([
+      result.response,
+      result.toolResults,
+      createdAtByIdP,
+    ]).then(([{ messages }, [res], createdAtById]) => ({
+      messages: messages.map((m) => ({
+        ...m,
+        createdAt: createdAtById.get(m.id) ?? new Date(),
+      })),
+      result: res!.result,
+    })),
   });
 }
 
@@ -84,6 +102,7 @@ function runTool<T extends ToolAction<any, any, any>>(
 > {
   const messageId = randomUUID();
   const toolCallId = randomUUID();
+  const startedAt = new Date();
 
   const deferred = defer<{
     messages: ResponseMessage[];
@@ -127,6 +146,7 @@ function runTool<T extends ToolAction<any, any, any>>(
           id: messageId,
           role: "assistant",
           content: [{ type: "tool-call", args, toolCallId, toolName: tool.id }],
+          createdAt: startedAt,
         },
         {
           id: toolCallId,
@@ -134,6 +154,7 @@ function runTool<T extends ToolAction<any, any, any>>(
           content: [
             { type: "tool-result", toolCallId, toolName: tool.id, result },
           ],
+          createdAt: new Date(),
         },
       ],
     });
@@ -163,7 +184,7 @@ export function addPage(
     });
     for await (const p of componentsStream) yield p;
     const components = await componentsStream.response;
-    newMessages.push(...components.messages.map((m) => ({ ...m, id: m.id })));
+    newMessages.push(...components.messages);
 
     const pageStream = await runAgent({
       name: "Create Page",

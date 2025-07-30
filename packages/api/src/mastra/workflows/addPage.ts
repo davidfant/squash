@@ -1,3 +1,4 @@
+import { updateMetadata } from "@/lib/repo/metadata";
 import type { AsyncIterableWithResponse } from "@/lib/streaming";
 import type { AnyMessage } from "@/types";
 import { google } from "@ai-sdk/google";
@@ -12,8 +13,8 @@ import type {
 } from "ai";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
-import { createPage } from "../tools/page";
 import { searchComponents } from "../tools/registry";
+import { createPage, type RepoRuntimeContext } from "../tools/repo";
 
 type ResponseMessage = (CoreAssistantMessage | CoreToolMessage) & {
   id: string;
@@ -25,6 +26,7 @@ async function run<T extends ToolAction<any, any, any>>(data: {
   messages: Array<CoreUserMessage | CoreAssistantMessage | CoreToolMessage>;
   model: LanguageModelV1;
   tool: T;
+  runtimeContext: RepoRuntimeContext;
 }): Promise<{
   stream: AsyncIterable<TextStreamPart<any>, void, unknown>;
   response: Promise<{
@@ -42,6 +44,7 @@ async function run<T extends ToolAction<any, any, any>>(data: {
     providerOptions: { google: { thinkingConfig: { includeThoughts: true } } },
     toolChoice: { type: "tool", toolName: data.tool.id },
     maxSteps: 1,
+    runtimeContext: data.runtimeContext,
     experimental_generateMessageId: () => randomUUID(),
   });
   return {
@@ -63,7 +66,8 @@ function defer<T>() {
 }
 
 export function addPage(
-  messages: AnyMessage[]
+  messages: AnyMessage[],
+  ctx: RepoRuntimeContext
 ): AsyncIterableWithResponse<
   TextStreamPart<any>,
   { messages: ResponseMessage[] }
@@ -78,6 +82,7 @@ export function addPage(
       model: google("gemini-2.5-flash"),
       messages: [...messages, ...newMessages],
       tool: searchComponents,
+      runtimeContext: ctx,
     });
     for await (const p of componentsReq.stream) yield p;
     const components = await componentsReq.response;
@@ -96,10 +101,17 @@ export function addPage(
       model: google("gemini-2.5-flash"),
       messages: [...messages, ...newMessages],
       tool: createPage,
+      runtimeContext: ctx,
     });
     for await (const p of pageReq.stream) yield p;
     const page = await pageReq.response;
     newMessages.push(...page.messages);
+
+    await updateMetadata(
+      ctx.get("projectId"),
+      ctx.get("daytona").sandbox,
+      ctx.get("db")
+    );
 
     deferred.resolve({ messages: newMessages });
   })();

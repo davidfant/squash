@@ -4,38 +4,27 @@ import {
   type User,
 } from "@/auth/middleware";
 import type { Database } from "@/database";
+import type { MessageStatus } from "@/database/schema";
 import * as schema from "@/database/schema";
+import { generateMetadata } from "@/lib/repo/metadata";
 import {
-  generatePageFileContent,
-  generateSectionFileContent,
-} from "@/repo/generateFileContent";
-import { uploadFiles } from "@/repo/uploadFiles";
-import { Daytona, DaytonaError, Sandbox, SandboxState } from "@daytonaio/sdk";
+  staticPageFileContent,
+  staticSectionFileContent,
+} from "@/lib/repo/static";
+import { uploadFiles } from "@/lib/repo/uploadFiles";
+import { stream } from "@/lib/streaming";
+import { timer } from "@/lib/timer";
+import type { RepoRuntimeContext } from "@/mastra/tools/repo";
+import { addPage } from "@/mastra/workflows/addPage";
+import type { AnyMessage } from "@/types";
+import { Daytona, DaytonaError, SandboxState } from "@daytonaio/sdk";
 import { zValidator } from "@hono/zod-validator";
-import type { ProjectMetadata } from "dev-server-utils/metadata";
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { RuntimeContext } from "@mastra/core/runtime-context";
+import { and, asc, desc, eq, isNull, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { createMiddleware } from "hono/factory";
-import path from "node:path";
 import { z } from "zod";
-
-const REPO_ROOT = "/root/repo";
-
-const generateMetadata = async (sandbox: Sandbox): Promise<ProjectMetadata> => {
-  const res = await sandbox.process.executeCommand(
-    "pnpm generate-metadata",
-    "/root/repo"
-  );
-  return JSON.parse(res.result);
-};
-
-async function timer<T>(name: string, fn: () => Promise<T>) {
-  const startedAt = performance.now();
-  const res = await fn();
-  const duration = performance.now() - startedAt;
-  console.log(`[${name}] took ${duration}ms`);
-  return res;
-}
+import { checkMessages, zMessageInput } from "./threads";
 
 const loadProject = (id: string, userId: string, db: Database) =>
   db
@@ -68,6 +57,7 @@ const loadProjectSandboxData = (id: string, userId: string, db: Database) =>
   db
     .select({
       id: schema.projects.id,
+      threadId: schema.projects.threadId,
       metadata: schema.projects.metadata,
       daytonaSandboxId: schema.projects.daytonaSandboxId,
     })
@@ -106,7 +96,6 @@ export const requireProjectSandbox = createMiddleware<{
   Variables: {
     db: Database;
     user: User;
-    sandbox: Sandbox;
     project: NonNullable<Awaited<ReturnType<typeof loadProjectSandboxData>>>;
   };
 }>(async (c, next) => {
@@ -115,25 +104,27 @@ export const requireProjectSandbox = createMiddleware<{
   const userId = c.get("user").id;
   const project = await loadProjectSandboxData(projectId, userId, db);
   if (!project) return c.json({ error: "Project not found" }, 404);
-
-  const daytona = new Daytona({ apiKey: c.env.DAYTONA_API_KEY });
-  const sandbox = await daytona.get(project.daytonaSandboxId);
-
-  const sbx = await daytona.get(project.daytonaSandboxId);
-  if (sbx.state !== SandboxState.STARTED) {
-    await sbx.start().finally(() => sbx.waitUntilStarted(60));
-  }
-
-  c.set("sandbox", sandbox);
   c.set("project", project);
   await next();
 });
+
+async function loadSandbox(sandboxId: string, apiKey: string) {
+  const daytona = new Daytona({ apiKey });
+  const sandbox = await daytona.get(sandboxId);
+
+  const sbx = await daytona.get(sandboxId);
+  if (sbx.state !== SandboxState.STARTED) {
+    await sbx.start().finally(() => sbx.waitUntilStarted(60));
+  }
+  return sandbox;
+}
 
 export const projectsRouter = new Hono<{
   Bindings: CloudflareBindings;
   Variables: { db: Database };
 }>()
-  .get("/", requireAuth, requireActiveOrganization, async (c) => {
+  .use(requireAuth)
+  .get("/", requireActiveOrganization, async (c) => {
     const user = c.get("user");
     const db = c.get("db");
     const organizationId = c.get("organizationId");
@@ -180,7 +171,6 @@ export const projectsRouter = new Hono<{
   .post(
     "/",
     zValidator("json", z.object({ name: z.string(), threadId: z.string() })),
-    requireAuth,
     requireActiveOrganization,
     async (c) => {
       const user = c.get("user");
@@ -241,17 +231,57 @@ export const projectsRouter = new Hono<{
   .get(
     "/:projectId",
     zValidator("param", z.object({ projectId: z.string().uuid() })),
-    requireAuth,
     requireProject,
     (c) => c.json(c.get("project"))
   )
   .get(
+    "/:projectId/messages",
+    zValidator("param", z.object({ projectId: z.string().uuid() })),
+    async (c) => {
+      const user = c.get("user");
+      const { projectId } = c.req.valid("param");
+      const messages = await c
+        .get("db")
+        .select({
+          id: schema.messages.id,
+          role: schema.messages.role,
+          content: schema.messages.content,
+          status: schema.messages.status,
+          createdAt: schema.messages.createdAt,
+        })
+        .from(schema.projects)
+        .innerJoin(
+          schema.messages,
+          eq(schema.messages.threadId, schema.projects.threadId)
+        )
+        .innerJoin(
+          schema.organization,
+          eq(schema.projects.organizationId, schema.organization.id)
+        )
+        .innerJoin(
+          schema.member,
+          eq(schema.organization.id, schema.member.organizationId)
+        )
+        .where(
+          and(
+            eq(schema.projects.id, projectId),
+            eq(schema.member.userId, user.id)
+          )
+        )
+        .orderBy(asc(schema.messages.createdAt));
+
+      if (!messages.length) return c.json({ error: "Project not found" }, 404);
+
+      return c.json(messages as (AnyMessage & { status: MessageStatus })[]);
+    }
+  )
+  .get(
     "/:projectId/dev-server",
     zValidator("param", z.object({ projectId: z.string().uuid() })),
-    requireAuth,
     requireProjectSandbox,
     async (c) => {
-      const sandbox = c.get("sandbox");
+      const sandboxId = c.get("project").daytonaSandboxId;
+      const sandbox = await loadSandbox(sandboxId, c.env.DAYTONA_API_KEY);
       const { url } = await sandbox.getPreviewLink(3000);
 
       let attempts = 0;
@@ -297,7 +327,6 @@ export const projectsRouter = new Hono<{
         sectionIds: z.string().array().optional(),
       })
     ),
-    requireAuth,
     requireProject,
     async (c) => {
       // 1. get/create dev server
@@ -315,9 +344,9 @@ export const projectsRouter = new Hono<{
       );
       if (!page) return c.json({ error: "Page not found" }, 404);
 
-      const content = generatePageFileContent({
+      const content = staticPageFileContent({
         name: body.name ?? page.name,
-        sectionIds: body.sectionIds ?? page.sectionIds,
+        sectionPaths: body.sectionIds ?? page.sectionIds,
       });
       console.log("UPDATE PAGE...", content);
 
@@ -341,41 +370,84 @@ export const projectsRouter = new Hono<{
         variantId: z.string().optional(),
       })
     ),
-    requireAuth,
     requireProjectSandbox,
     async (c) => {
       const body = c.req.valid("json");
       const params = c.req.valid("param");
-      const sandbox = c.get("sandbox");
       const project = c.get("project");
+      const sandboxId = c.get("project").daytonaSandboxId;
+      const sandbox = await loadSandbox(sandboxId, c.env.DAYTONA_API_KEY);
 
       const section = project.metadata.sections.find(
         (s) => s.id === params.sectionId
       );
       if (!section) return c.json({ error: "Section not found" }, 404);
 
-      const content = generateSectionFileContent({
+      const variant = body.variantId
+        ? section.variants.find((v) => v.id === body.variantId)
+        : section.variants.find((v) => v.selected);
+      const content = staticSectionFileContent({
         name: body.name ?? section.name,
-        variantId:
-          body.variantId ?? section.variants.find((v) => v.selected)?.id!,
+        variantFilePath: variant!.filePath,
       });
 
-      await uploadFiles(
-        sandbox.id,
-        [{ content, path: path.join(REPO_ROOT, section.filePath) }],
-        { apiKey: c.env.DAYTONA_API_KEY }
-      );
+      await uploadFiles([{ content, path: section.filePath }], {
+        sandboxId: sandbox.id,
+        apiKey: c.env.DAYTONA_API_KEY,
+      });
 
       const metadata = await timer("generate metadata", () =>
         generateMetadata(sandbox)
       );
-      const res = await c
+      await c
         .get("db")
         .update(schema.projects)
         .set({ metadata })
-        .where(eq(schema.projects.id, project.id))
-        .returning();
+        .where(eq(schema.projects.id, project.id));
 
       return c.json({ id: project.id, metadata });
+    }
+  )
+  .post(
+    "/:projectId/chat/page",
+    zValidator("param", z.object({ projectId: z.string().uuid() })),
+    zValidator("json", z.object({ message: zMessageInput.optional() })),
+    requireProjectSandbox,
+    async (c) => {
+      const project = c.get("project");
+      const db = c.get("db");
+      const body = c.req.valid("json");
+
+      const sandboxP = loadSandbox(
+        project.daytonaSandboxId,
+        c.env.DAYTONA_API_KEY
+      );
+
+      const thread = await db.query.messageThreads.findFirst({
+        where: eq(schema.messageThreads.id, project.threadId),
+        with: { messages: { orderBy: asc(schema.messages.createdAt) } },
+      });
+      if (!thread) return c.json({ error: "Thread not found" }, 404);
+
+      const messages = await checkMessages(
+        thread.messages as (AnyMessage & { status: MessageStatus })[],
+        body.message,
+        thread.id,
+        db
+      );
+      if (!messages) return c.text("", 200);
+
+      const runtimeContext = new RuntimeContext([
+        ["daytona", { sandbox: await sandboxP, apiKey: c.env.DAYTONA_API_KEY }],
+        ["db", db],
+        ["projectId", project.id],
+      ]) satisfies RepoRuntimeContext;
+
+      return stream({
+        context: c,
+        db,
+        threadId: thread.id,
+        stream: addPage(messages, runtimeContext),
+      });
     }
   );

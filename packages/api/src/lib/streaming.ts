@@ -32,41 +32,45 @@ export async function stream(data: {
         totalTokens: number;
       }
     > = {};
-    for await (const delta of data.stream) {
-      switch (delta.type) {
-        case "error":
-          await stream.writeSSE({
-            event: "error",
-            data: (delta.error as Error).message,
-            id: data.context.get("requestId"),
-          });
-          break;
-        // TODO: remove model metadata/prompts...
-        // case "step-start":
-        // case "finish":
-        //   break;
-        case "step-finish":
-          usagePerMessage[delta.messageId] = {
-            modelId: delta.response.modelId,
-            ...delta.usage,
-          };
-        default:
-          await stream.writeSSE({ data: JSON.stringify(delta) });
-          break;
+    try {
+      for await (const delta of data.stream) {
+        switch (delta.type) {
+          case "error":
+            await stream.writeSSE({
+              event: "error",
+              data: (delta.error as Error).message,
+              id: data.context.get("requestId"),
+            });
+            break;
+          // TODO: remove model metadata/prompts...
+          // case "step-start":
+          // case "finish":
+          //   break;
+          case "step-finish":
+            usagePerMessage[delta.messageId] = {
+              modelId: delta.response.modelId,
+              ...delta.usage,
+            };
+          default:
+            await stream.writeSSE({ data: JSON.stringify(delta) });
+            break;
+        }
       }
-    }
 
-    const response = await data.stream.response;
-    await data.db.insert(schema.messages).values(
-      response.messages.map((m) => ({
-        id: m.id,
-        role: m.role,
-        content: m.content as AnyMessage["content"],
-        threadId: data.threadId,
-        status: "done" as const,
-        usage: usagePerMessage[m.id],
-      }))
-    );
+      const response = await data.stream.response;
+      await data.db.insert(schema.messages).values(
+        response.messages.map((m) => ({
+          id: m.id,
+          role: m.role,
+          content: m.content as AnyMessage["content"],
+          threadId: data.threadId,
+          status: "done" as const,
+          usage: usagePerMessage[m.id],
+        }))
+      );
+    } catch (error) {
+      console.error(error);
+    }
 
     // await stream.writeSSE({ event: "done", data: "" });
   });

@@ -11,6 +11,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { sseStream } from "@/lib/sseStream";
 import { cn } from "@/lib/utils";
 import {
   MonitorSmartphone,
@@ -20,6 +21,7 @@ import {
   Tablet,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { v4 as uuid } from "uuid";
 import {
   useProjectContext,
   useSelectedPage,
@@ -33,7 +35,19 @@ export function ProjectAddressBar() {
     useProjectContext();
 
   const handleAddPage = () => {
-    alert("TODO: add page...");
+    const message = prompt("What do u want on ur page?");
+    if (!message) return;
+
+    sseStream({
+      endpoint: `projects/${project.id}/chat/page`,
+      message: {
+        id: uuid(),
+        content: [{ type: "text", text: message }],
+      },
+      onEvent: (chunk) => {
+        console.log(chunk);
+      },
+    });
     // const page: ProjectPage = {
     //   id: uuid(),
     //   label: "New Page",

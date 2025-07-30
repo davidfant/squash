@@ -1,9 +1,9 @@
+import { authClient } from "@/auth";
 import { ChatThread } from "@/components/layout/chat/ChatThread";
 import { ChatProvider } from "@/components/layout/chat/context";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { api, useQuery } from "@/hooks/api";
 import { useNavigate, useParams } from "react-router";
-import { v4 as uuid } from "uuid";
 import { ProjectContextProvider, useSelectedPage } from "./context";
 import { ProjectHeader } from "./header/ProjectHeader";
 import { ProjectPageSidebar } from "./ProjectPageSidebar";
@@ -73,28 +73,34 @@ export function ProjectPage() {
   const project = useQuery(api.projects[":projectId"].$get, {
     params: { projectId },
   });
+  const threadMessages = useQuery(api.projects[":projectId"].messages.$get, {
+    params: { projectId },
+  });
+  const session = authClient.useSession();
 
   return (
     <ChatProvider
-      endpoint="/todo"
-      initialMessages={[
-        {
-          id: uuid(),
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: "I wanna build a LP!!!",
-            },
-            {
-              type: "image",
-              image: new URL(
-                "https://media.istockphoto.com/id/2181735944/photo/natural-mountains-landscapes.jpg?s=612x612&w=0&k=20&c=4EZdF1438jegkW3U8h0TG4JaPO_cpMMBY-MouwLlyf4="
-              ),
-            },
-          ],
-        },
-      ]}
+      ready={!session.isPending}
+      endpoint={`projects/${projectId}/messages`}
+      initialMessages={threadMessages.data}
+      // initialMessages={[
+      //   {
+      //     id: uuid(),
+      //     role: "user",
+      //     content: [
+      //       {
+      //         type: "text",
+      //         text: "I wanna build a LP!!!",
+      //       },
+      //       {
+      //         type: "image",
+      //         image: new URL(
+      //           "https://media.istockphoto.com/id/2181735944/photo/natural-mountains-landscapes.jpg?s=612x612&w=0&k=20&c=4EZdF1438jegkW3U8h0TG4JaPO_cpMMBY-MouwLlyf4="
+      //         ),
+      //       },
+      //     ],
+      //   },
+      // ]}
     >
       <ProjectContextProvider
         projectId={projectId!}

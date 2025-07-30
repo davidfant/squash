@@ -1,11 +1,13 @@
+import path from "node:path";
+import { REPO_ROOT } from "./consts";
+
 export async function uploadFiles(
-  sandboxId: string,
   files: Array<{ content: string; path: string }>,
-  options: { apiKey: string }
+  options: { sandboxId: string; apiKey: string }
 ): Promise<void> {
   const formData = new FormData();
   files.forEach((file, index) => {
-    formData.append(`files[${index}].path`, file.path);
+    formData.append(`files[${index}].path`, path.join(REPO_ROOT, file.path));
     formData.append(
       `files[${index}].file`,
       new Blob([file.content]),
@@ -19,7 +21,7 @@ export async function uploadFiles(
 
   const response = await fetch(
     `https://app.daytona.io/api/toolbox/${encodeURIComponent(
-      sandboxId
+      options.sandboxId
     )}/toolbox/files/bulk-upload`,
     { method: "POST", headers, body: formData }
   );

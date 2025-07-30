@@ -1,4 +1,4 @@
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertTitle } from "@/components/ui/alert";
 import type { AssistantMessage as AssistantMessageType } from "@hypershape-ai/api/types";
 import startCase from "lodash.startcase";
 import { CircleCheck, Loader2 } from "lucide-react";
@@ -24,19 +24,19 @@ export const AssistantMessage = ({
           case "tool-call":
             const result = toolResults[c.toolCallId];
             return (
-              <Alert>
+              <Alert key={index}>
                 {!result ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : (
                   <CircleCheck className="size-4" />
                 )}
                 <AlertTitle>{startCase(c.toolName)}</AlertTitle>
-                <AlertDescription>
+                {/* <AlertDescription>
                   <pre>{JSON.stringify(c.args, null, 2)}</pre>
                   {!!result && (
                     <pre>{JSON.stringify(result.result, null, 2)}</pre>
                   )}
-                </AlertDescription>
+                </AlertDescription> */}
               </Alert>
             );
         }

@@ -27,10 +27,16 @@ export function LandingPage() {
       <Input value={value} onChange={(e) => setValue(e.target.value)} />
       <Button
         onClick={
-          () =>
-            createThread
-              .mutateAsync({ json: [{ type: "text", text: value }] })
-              .then((res) => navigate(`/threads/${res.id}`))
+          async () => {
+            const thread = await createThread.mutateAsync({
+              json: [{ type: "text", text: value }],
+            });
+            const project = await createProject.mutateAsync({
+              json: { name: value, threadId: thread.id },
+            });
+
+            await navigate(`/projects/${project.id}`);
+          }
           // createProject
           //   .mutateAsync({ json: { name: value } })
           //   .then((res) => navigate(`/projects/${res.id}`))

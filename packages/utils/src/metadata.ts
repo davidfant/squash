@@ -4,6 +4,7 @@ import type { File } from "@babel/types";
 import fg from "fast-glob";
 import { promises as fs } from "fs";
 import path from "path";
+import * as uuid from "uuid";
 
 // @ts-expect-error
 const traverse: typeof BabelTraverse = BabelTraverse.default;
@@ -37,8 +38,6 @@ export interface ProjectMetadata {
 const reName = /export\s+const\s+name\s*=\s*(["'`][^"'`]+["'`])/;
 const reIndexOut = /export\s+\{\s*default\s*\}\s+from\s+["'`]([^"'`]+)["'`]/;
 
-const toBase64 = (str: string) => Buffer.from(str).toString("base64");
-
 async function getName(file: string, fallback: string) {
   const txt = await fs.readFile(file, "utf8");
   const name = reName.exec(txt)?.[1];
@@ -66,7 +65,10 @@ function orderedSectionIds(source: string): string[] {
     ImportDeclaration({ node }) {
       if (node.source.value.startsWith("@/sections/"))
         node.specifiers.forEach(
-          (s) => (importMap[s.local.name] = node.source.value)
+          (s) =>
+            (importMap[s.local.name] = node.source.value
+              .replace(/@\//, "src")
+              .replace(/index\.tsx?$/, ""))
         );
     },
   });
@@ -117,16 +119,17 @@ async function run(repoRoot = process.cwd()) {
     for (const vf of variants) {
       const full = path.join(folder, vf);
       const vName = await getName(full, path.parse(vf).name);
+      const filePath = path.relative(repoRoot, full);
       varMeta.push({
-        id: toBase64(`@/sections/${dir}/${path.parse(vf).name}`),
+        id: uuid.v5(filePath, uuid.NIL),
         name: vName,
         selected: full === chosen,
-        filePath: path.relative(repoRoot, full),
+        filePath,
       });
     }
 
     sections.push({
-      id: toBase64(`@/sections/${dir}`),
+      id: uuid.v5(path.relative(repoRoot, folder), uuid.NIL),
       name: sName,
       variants: varMeta,
       filePath: path.relative(repoRoot, idxFile),
@@ -141,12 +144,13 @@ async function run(repoRoot = process.cwd()) {
     const file = path.join(srcDir, rel);
     const source = await fs.readFile(file, "utf8");
 
+    const pageFilePath = path.relative(repoRoot, file);
     pages.push({
-      id: toBase64(`@/${rel.replace(/\.tsx$/, "")}`),
+      id: uuid.v5(pageFilePath, uuid.NIL),
       name: await getName(file, path.parse(rel).name),
       path: fileToRoute(rel),
-      sectionIds: orderedSectionIds(source).map(toBase64),
-      filePath: path.relative(repoRoot, file),
+      sectionIds: orderedSectionIds(source).map((s) => uuid.v5(s, uuid.NIL)),
+      filePath: pageFilePath,
     });
   }
 

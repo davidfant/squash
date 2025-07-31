@@ -20,6 +20,7 @@
     "typegen": "wrangler types --env-interface CloudflareBindings"
   },
   "dependencies": {
+    "@hypershape-ai/registry": "workspace:*",
     "@ai-sdk/anthropic": "^1.2.12",
     "@ai-sdk/google": "^1.2.22",
     "@daytonaio/sdk": "^0.24.2",

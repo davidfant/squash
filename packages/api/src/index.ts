@@ -1,3 +1,4 @@
+import { search } from "@hypershape-ai/registry";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
@@ -15,6 +16,9 @@ const app = new Hono<{ Bindings: CloudflareBindings }>()
   .use(authMiddleware)
   .use("*", cors({ origin: process.env.APP_URL, credentials: true }))
   .on(["GET", "POST"], "/auth/*", (c) => c.get("auth").handler(c.req.raw))
+  .get("/test", async (c) => {
+    return c.json(await search(["hero"], "section"));
+  })
   .route("/projects", projectsRouter)
   .route("/threads", threadsRouter)
   .route("/chat", chatRouter);

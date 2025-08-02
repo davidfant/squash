@@ -7,7 +7,7 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
-import { projects } from "./projects";
+import { repo } from "./repos";
 
 export const user = pgTable("user", {
   id: uuid("id").primaryKey(),
@@ -98,7 +98,7 @@ export const invitation = pgTable("invitation", {
 });
 
 export const organizationRelations = relations(organization, ({ many }) => ({
-  projects: many(projects),
+  repos: many(repo),
   members: many(member),
 }));
 

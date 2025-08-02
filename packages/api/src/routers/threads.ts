@@ -19,13 +19,13 @@ export async function checkMessages(
   await Promise.all([
     !!last &&
       db
-        .update(schema.messages)
+        .update(schema.message)
         .set({ status: "done" })
-        .where(eq(schema.messages.id, last.id)),
+        .where(eq(schema.message.id, last.id)),
     (async () => {
       if (input) {
         const message = await db
-          .insert(schema.messages)
+          .insert(schema.message)
           .values({
             id: input.id,
             role: "user",
@@ -79,12 +79,12 @@ export const threadsRouter = new Hono<{
   const content = c.req.valid("json");
   const thread = await c
     .get("db")
-    .insert(schema.messageThreads)
+    .insert(schema.messageThread)
     .values({ ipAddress })
     .returning()
     .then(([thread]) => thread!);
 
-  await c.get("db").insert(schema.messages).values({
+  await c.get("db").insert(schema.message).values({
     role: "user",
     content,
     threadId: thread.id,

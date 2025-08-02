@@ -1,132 +1,132 @@
-import type { TextStreamPart, ToolCallUnion, ToolResultUnion } from "ai";
-import type {
-  AssistantMessage,
-  AssistantMessagePart,
-  ToolMessage,
-  ToolMessagePart,
-} from "../types";
+// import type { TextStreamPart, ToolCallUnion, ToolResultUnion } from "ai";
+// import type {
+//   AssistantMessage,
+//   AssistantMessagePart,
+//   ToolMessage,
+//   ToolMessagePart,
+// } from "../types";
 
-/**
-A message that was generated during the generation process.
-It can be either an assistant message or a tool message.
- */
-export type ResponseMessage = (AssistantMessage | ToolMessage) & {
-  streaming?: boolean;
-};
+// /**
+// A message that was generated during the generation process.
+// It can be either an assistant message or a tool message.
+//  */
+// export type ResponseMessage = (AssistantMessage | ToolMessage) & {
+//   streaming?: boolean;
+// };
 
-export function convertStreamPartsToMessages<TOOLS extends Record<string, any>>(
-  streamParts: TextStreamPart<TOOLS>[],
-  generateMessageId: () => string = () =>
-    Math.random().toString(36).substring(2, 9)
-): ResponseMessage[] {
-  const messages: ResponseMessage[] = [];
+// export function convertStreamPartsToMessages<TOOLS extends Record<string, any>>(
+//   streamParts: TextStreamPart<TOOLS>[],
+//   generateMessageId: () => string = () =>
+//     Math.random().toString(36).substring(2, 9)
+// ): ResponseMessage[] {
+//   const messages: ResponseMessage[] = [];
 
-  // Track accumulated content per step
-  let currentParts: TextStreamPart<TOOLS>[] = [];
-  let currentText = "";
-  let currentReasoning = "";
-  let currentToolCalls: ToolCallUnion<TOOLS>[] = [];
-  let currentToolResults: ToolResultUnion<TOOLS>[] = [];
-  let currentFiles: any[] = [];
-  let currentMessageId = generateMessageId();
+//   // Track accumulated content per step
+//   let currentParts: TextStreamPart<TOOLS>[] = [];
+//   let currentText = "";
+//   let currentReasoning = "";
+//   let currentToolCalls: ToolCallUnion<TOOLS>[] = [];
+//   let currentToolResults: ToolResultUnion<TOOLS>[] = [];
+//   let currentFiles: any[] = [];
+//   let currentMessageId = generateMessageId();
 
-  function flush(finish: boolean) {
-    // End of step - create message(s)
-    const content: Array<AssistantMessagePart | ToolMessagePart> = [];
+//   function flush(finish: boolean) {
+//     // End of step - create message(s)
+//     const content: Array<AssistantMessagePart | ToolMessagePart> = [];
 
-    // Add reasoning if present
-    if (currentReasoning.length > 0) {
-      content.push({ type: "reasoning" as const, text: currentReasoning });
-    }
+//     // Add reasoning if present
+//     if (currentReasoning.length > 0) {
+//       content.push({ type: "reasoning" as const, text: currentReasoning });
+//     }
 
-    // Add files if present
-    if (currentFiles.length > 0) {
-      content.push(
-        ...currentFiles.map((file) => ({
-          type: "file" as const,
-          data: file.base64,
-          mimeType: file.mimeType,
-        }))
-      );
-    }
+//     // Add files if present
+//     if (currentFiles.length > 0) {
+//       content.push(
+//         ...currentFiles.map((file) => ({
+//           type: "file" as const,
+//           data: file.base64,
+//           mimeType: file.mimeType,
+//         }))
+//       );
+//     }
 
-    // Add text if present
-    if (currentText.length > 0) {
-      content.push({ type: "text" as const, text: currentText });
-    }
+//     // Add text if present
+//     if (currentText.length > 0) {
+//       content.push({ type: "text" as const, text: currentText });
+//     }
 
-    // Add tool calls if present
-    if (currentToolCalls.length > 0) {
-      content.push(...currentToolCalls);
-    }
+//     // Add tool calls if present
+//     if (currentToolCalls.length > 0) {
+//       content.push(...currentToolCalls);
+//     }
 
-    // Create assistant message if there's content
-    if (content.length > 0) {
-      messages.push({
-        role: "assistant",
-        content: content as AssistantMessagePart[],
-        id: currentMessageId,
-        streaming: !finish,
-        createdAt: new Date().toISOString(),
-      });
-    }
+//     // Create assistant message if there's content
+//     if (content.length > 0) {
+//       messages.push({
+//         role: "assistant",
+//         content: content as AssistantMessagePart[],
+//         id: currentMessageId,
+//         streaming: !finish,
+//         createdAt: new Date().toISOString(),
+//       });
+//     }
 
-    // Create tool message if there are tool results
-    if (currentToolResults.length > 0) {
-      messages.push({
-        role: "tool",
-        id: generateMessageId(),
-        content: currentToolResults.map((toolResult) => ({
-          type: "tool-result" as const,
-          toolCallId: toolResult.toolCallId,
-          toolName: toolResult.toolName,
-          result: toolResult.result,
-        })),
-        streaming: !finish,
-        createdAt: new Date().toISOString(),
-      });
-    }
+//     // Create tool message if there are tool results
+//     if (currentToolResults.length > 0) {
+//       messages.push({
+//         role: "tool",
+//         id: generateMessageId(),
+//         content: currentToolResults.map((toolResult) => ({
+//           type: "tool-result" as const,
+//           toolCallId: toolResult.toolCallId,
+//           toolName: toolResult.toolName,
+//           result: toolResult.result,
+//         })),
+//         streaming: !finish,
+//         createdAt: new Date().toISOString(),
+//       });
+//     }
 
-    currentText = "";
-    currentReasoning = "";
-    currentToolCalls = [];
-    currentToolResults = [];
-    currentFiles = [];
-  }
+//     currentText = "";
+//     currentReasoning = "";
+//     currentToolCalls = [];
+//     currentToolResults = [];
+//     currentFiles = [];
+//   }
 
-  // Process each stream part
-  for (const part of streamParts) {
-    switch (part.type) {
-      case "text-delta":
-        currentText += part.textDelta;
-        break;
+//   // Process each stream part
+//   for (const part of streamParts) {
+//     switch (part.type) {
+//       case "text-delta":
+//         currentText += part.textDelta;
+//         break;
 
-      case "reasoning":
-        currentReasoning += part.textDelta;
-        break;
+//       case "reasoning":
+//         currentReasoning += part.textDelta;
+//         break;
 
-      case "tool-call":
-        currentToolCalls.push(part);
-        break;
+//       case "tool-call":
+//         currentToolCalls.push(part);
+//         break;
 
-      case "tool-result":
-        currentToolResults.push(part);
-        break;
+//       case "tool-result":
+//         currentToolResults.push(part);
+//         break;
 
-      case "file":
-        currentFiles.push(part);
-        break;
+//       case "file":
+//         currentFiles.push(part);
+//         break;
 
-      case "step-start":
-        currentMessageId = part.messageId;
-      case "step-finish":
-      case "finish":
-        flush(true);
-        break;
-    }
-  }
+//       case "step-start":
+//         currentMessageId = part.messageId;
+//       case "step-finish":
+//       case "finish":
+//         flush(true);
+//         break;
+//     }
+//   }
 
-  flush(false);
+//   flush(false);
 
-  return messages;
-}
+//   return messages;
+// }

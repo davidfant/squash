@@ -8,7 +8,7 @@ import { BrowserRouter, Route, Routes } from "react-router";
 import "./index.css";
 import resources from "./locales/default";
 import { LandingPage } from "./routes/landing";
-import { OnboardingPage } from "./routes/onboarding";
+import { NewRepoFromProvider, NewRepoPage } from "./routes/new/repo";
 import { ProjectPage } from "./routes/project";
 import { ThreadPage } from "./routes/thread";
 
@@ -33,9 +33,13 @@ createRoot(document.getElementById("root")!).render(
             path="/projects/:projectId/pages/:pageId"
             element={<ProjectPage />}
           />
+          <Route path="/new/repo" element={<NewRepoPage />} />
+          <Route
+            path="/new/repo/:providerId"
+            element={<NewRepoFromProvider />}
+          />
           {/* <Route path="/project/page/:pageId" element={<ProjectPage />} />
           <Route path="/project/x" element={<ProjectCanvas />} /> */}
-          <Route path="/onboarding" element={<OnboardingPage />} />
           {/* <Route path="/new/:threadId" element={<ThreadPage />} />
           <Route path="/workflows/:workflowId" element={<WorkflowPage />} />
           <Route path="/invite/:inviteId" element={<InvitePage />} />

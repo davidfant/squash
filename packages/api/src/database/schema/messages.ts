@@ -13,9 +13,9 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
-import { projects } from "./projects";
+import { repoBranch } from "./repos";
 
-export const messageRoles = pgEnum("message_roles", [
+export const messageRole = pgEnum("message_role", [
   "user",
   "assistant",
   "tool",
@@ -31,18 +31,18 @@ export const messageStatus = pgEnum("message_status", [
 
 export type MessageStatus = InferEnum<typeof messageStatus>;
 
-export const messageThreads = pgTable("message_threads", {
+export const messageThread = pgTable("message_thread", {
   id: uuid().primaryKey().defaultRandom(),
   ipAddress: text("ip_address"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const messages = pgTable(
-  "messages",
+export const message = pgTable(
+  "message",
   {
     id: uuid().primaryKey().defaultRandom(),
-    role: messageRoles().notNull(),
+    role: messageRole().notNull(),
     content: jsonb()
       .$type<Array<UserMessagePart | AssistantMessagePart | ToolMessagePart>>()
       .notNull(),
@@ -61,7 +61,7 @@ export const messages = pgTable(
       .notNull(),
     threadId: uuid("thread_id")
       .notNull()
-      .references(() => messageThreads.id),
+      .references(() => messageThread.id),
     // parentId: uuid("parent_id").references((): AnyPgColumn => messages.id),
   },
   (table) => [
@@ -71,13 +71,13 @@ export const messages = pgTable(
 );
 
 export const messageThreadsRelations = relations(
-  messageThreads,
-  ({ many, one }) => ({ messages: many(messages), project: one(projects) })
+  messageThread,
+  ({ many, one }) => ({ messages: many(message), repoBranch: one(repoBranch) })
 );
 
-export const messagesRelations = relations(messages, ({ one }) => ({
-  thread: one(messageThreads, {
-    fields: [messages.threadId],
-    references: [messageThreads.id],
+export const messagesRelations = relations(message, ({ one }) => ({
+  thread: one(messageThread, {
+    fields: [message.threadId],
+    references: [messageThread.id],
   }),
 }));

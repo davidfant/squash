@@ -20,10 +20,13 @@ export type SuccessBody<R> = R extends ClientResponse<infer B, infer S, any>
     : B
   : never;
 
+export type QueryOutput<Fn extends (a: { param: any }) => Promise<any>> =
+  SuccessBody<Awaited<ReturnType<Fn>>>;
+
 export function useQuery<
   Fn extends (a: { param: any }) => Promise<any>,
   Params = Parameters<Fn>[0] extends { param: infer P } ? P : never,
-  Output = SuccessBody<Awaited<ReturnType<Fn>>>
+  Output = QueryOutput<Fn>
 >(
   query: Fn,
   options: Omit<UseQueryOptions<Output>, "queryKey" | "queryFn"> & {

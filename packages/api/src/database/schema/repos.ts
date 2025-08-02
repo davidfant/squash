@@ -1,0 +1,106 @@
+import { relations } from "drizzle-orm";
+import {
+  index,
+  json,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
+import { organization, user } from "./auth";
+import { messageThread } from "./messages";
+
+export interface BranchVirtualMachine {
+  type: "flyio";
+  appId: string;
+  url: string;
+}
+
+export const repoProviderType = pgEnum("repo_provider_type", ["github"]);
+
+export const repo = pgTable("repo", {
+  id: uuid().primaryKey().defaultRandom(),
+  name: text().notNull(),
+  url: text().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at"),
+  defaultBranch: text("default_branch").notNull(),
+  providerId: uuid("provider_id")
+    .notNull()
+    .references(() => repoProvider.id),
+  externalId: text("external_id").notNull(),
+  organizationId: uuid("organization_id")
+    .notNull()
+    .references(() => organization.id),
+});
+
+export const repoBranch = pgTable(
+  "repo_branch",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    name: text().notNull(),
+    vm: json("vm").$type<BranchVirtualMachine>().notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    deletedAt: timestamp("deleted_at"),
+    threadId: uuid("thread_id")
+      .notNull()
+      .references(() => messageThread.id),
+    repoId: uuid("repo_id")
+      .notNull()
+      .references(() => repo.id),
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => user.id),
+    // previewImageUrl: text("preview_image_url"),
+  },
+  (table) => [index("workflow_thread_id_index").on(table.threadId)]
+);
+
+export const repoProvider = pgTable("repo_provider", {
+  id: uuid().primaryKey().defaultRandom(),
+  type: repoProviderType("type").notNull(),
+  organizationId: uuid("organization_id")
+    .notNull()
+    .references(() => organization.id),
+  data: json("data").$type<{ installationId: string }>().notNull(),
+  // scopes: text("scopes").notNull(),
+  // token: text().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  deletedAt: timestamp("deleted_at"),
+});
+
+export const repoProviderVerification = pgTable("repo_provider_verification", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  type: repoProviderType("type").notNull(),
+  organizationId: uuid("organization_id")
+    .notNull()
+    .references(() => organization.id),
+  callbackUrl: text("callback_url"),
+});
+
+export const repoRelations = relations(repo, ({ one }) => ({
+  provider: one(repoProvider, {
+    fields: [repo.providerId],
+    references: [repoProvider.id],
+  }),
+}));
+
+export const branchesRelations = relations(repoBranch, ({ one }) => ({
+  thread: one(messageThread, {
+    fields: [repoBranch.threadId],
+    references: [messageThread.id],
+  }),
+  repo: one(repo, { fields: [repoBranch.repoId], references: [repo.id] }),
+}));
+
+export const reposRelations = relations(repo, ({ many, one }) => ({
+  branches: many(repoBranch),
+  organization: one(organization, {
+    fields: [repo.organizationId],
+    references: [organization.id],
+  }),
+}));

@@ -5,12 +5,13 @@ import {
 } from "@/auth/middleware";
 import type { Database } from "@/database";
 import type {
+  RepoBranchSandbox,
   RepoProviderData,
   RepoProviderType,
   RepoSnapshot,
 } from "@/database/schema";
 import * as schema from "@/database/schema";
-import { createFlyApp, createFlyMachine } from "@/lib/flyio";
+import { createFlyApp, createFlyMachine, deleteFlyApp } from "@/lib/flyio";
 import { google } from "@ai-sdk/google";
 import { zValidator } from "@hono/zod-validator";
 import { createAppAuth } from "@octokit/auth-app";
@@ -94,7 +95,13 @@ export const requireRepo = createMiddleware<
       db: Database;
       user: User;
       organizationId: string;
-      repo: { id: string; name: string; snapshot: RepoSnapshot };
+      repo: {
+        id: string;
+        name: string;
+        url: string;
+        defaultBranch: string;
+        snapshot: RepoSnapshot;
+      };
     };
   },
   string,
@@ -109,6 +116,8 @@ export const requireRepo = createMiddleware<
     .select({
       id: schema.repo.id,
       name: schema.repo.name,
+      url: schema.repo.url,
+      defaultBranch: schema.repo.defaultBranch,
       snapshot: schema.repo.snapshot,
     })
     .from(schema.repo)
@@ -135,6 +144,68 @@ export const requireRepo = createMiddleware<
   }
 
   c.set("repo", repo);
+  await next();
+});
+
+export const requireRepoBranch = createMiddleware<
+  {
+    Bindings: CloudflareBindings;
+    Variables: {
+      db: Database;
+      user: User;
+      organizationId: string;
+      branch: {
+        id: string;
+        name: string;
+        sandbox: RepoBranchSandbox;
+        createdAt: Date;
+        updatedAt: Date;
+        createdBy: { id: string; name: string; image: string | null };
+      };
+    };
+  },
+  string,
+  { out: { param: { branchId: string } } }
+>(async (c, next) => {
+  const { branchId } = c.req.valid("param");
+  const db = c.get("db");
+  const user = c.get("user");
+  const organizationId = c.get("organizationId");
+
+  const [branch] = await db
+    .select({
+      id: schema.repoBranch.id,
+      name: schema.repoBranch.name,
+      sandbox: schema.repoBranch.sandbox,
+      createdAt: schema.repoBranch.createdAt,
+      updatedAt: schema.repoBranch.updatedAt,
+      createdBy: {
+        id: schema.user.id,
+        name: schema.user.name,
+        image: schema.user.image,
+      },
+    })
+    .from(schema.repo)
+    .innerJoin(schema.repoBranch, eq(schema.repo.id, schema.repoBranch.repoId))
+    .innerJoin(schema.user, eq(schema.repoBranch.createdBy, schema.user.id))
+    .innerJoin(
+      schema.member,
+      eq(schema.repo.organizationId, schema.member.organizationId)
+    )
+    .where(
+      and(
+        eq(schema.repoBranch.id, branchId),
+        eq(schema.repo.organizationId, organizationId),
+        isNull(schema.repo.deletedAt),
+        eq(schema.member.userId, user.id),
+        isNull(schema.repoBranch.deletedAt)
+      )
+    )
+    .orderBy(desc(schema.repoBranch.createdAt));
+
+  if (!branch) return c.json({ error: "Branch not found" }, 404);
+
+  c.set("branch", branch);
   await next();
 });
 
@@ -358,8 +429,10 @@ export const reposRouter = new Hono<{
     async (c) => {
       const { repoId } = c.req.valid("param");
       const messageInput = c.req.valid("json");
+      const organizationId = c.get("organizationId");
       const user = c.get("user");
       const db = c.get("db");
+      const repo = c.get("repo");
 
       try {
         const ipAddress =
@@ -386,7 +459,7 @@ export const reposRouter = new Hono<{
           .map((part) => part.text)
           .join(" ");
 
-        const { text: name } = await generateText({
+        const { text: title } = await generateText({
           model: google("gemini-2.5-flash"),
           prompt: `Generate a concise Jira ticket name (title case, max 50 chars) for this feature request: "${textContent}". Only return the branch name, nothing else.`,
           providerOptions: {
@@ -395,35 +468,54 @@ export const reposRouter = new Hono<{
         });
 
         const branchId = randomUUID();
-        const slug = `${kebabCase(name)}-${branchId.split("-")[0]}`;
+        const branchName = `${kebabCase(title)}-${branchId.split("-")[0]}`;
+        const flyioAppName = [
+          organizationId.split("-")[0],
+          repo.id.split("-")[0],
+          kebabCase(title),
+          branchId.split("-")[0],
+        ].join("-");
 
-        const flyApp = await createFlyApp(
-          slug,
-          c.env.FLY_API_KEY,
-          c.env.FLY_ORG_SLUG
-        );
-        const flyMachine = await createFlyMachine(slug, c.env.FLY_API_KEY);
-
-        // Create repo branch record
-        const [repoBranch] = await db
-          .insert(schema.repoBranch)
-          .values({
-            id: branchId,
-            name,
-            slug,
-            sandbox: {
-              type: "flyio",
-              appId: flyApp.id,
-              machineId: flyMachine.id,
-              url: `https://${slug}.fly.dev`,
+        try {
+          await createFlyApp(
+            flyioAppName,
+            c.env.FLY_API_KEY,
+            c.env.FLY_ORG_SLUG
+          );
+          const flyMachine = await createFlyMachine({
+            appName: flyioAppName,
+            git: {
+              url: repo.url,
+              defaultBranch: repo.defaultBranch,
+              branch: branchName,
             },
-            threadId: thread.id,
-            repoId: repoId,
-            createdBy: user.id,
-          })
-          .returning();
+            apiKey: c.env.FLY_API_KEY,
+          });
 
-        return c.json(repoBranch!);
+          // Create repo branch record
+          const [repoBranch] = await db
+            .insert(schema.repoBranch)
+            .values({
+              id: branchId,
+              title,
+              name: branchName,
+              sandbox: {
+                type: "flyio",
+                appId: flyioAppName,
+                machineId: flyMachine.id,
+                url: `https://${branchName}.fly.dev`,
+              },
+              threadId: thread.id,
+              repoId: repoId,
+              createdBy: user.id,
+            })
+            .returning();
+
+          return c.json(repoBranch!);
+        } catch (error) {
+          await deleteFlyApp(branchName, c.env.FLY_API_KEY);
+          throw error;
+        }
       } catch (error) {
         console.error("Error creating repo branch:", error);
         return c.json({ error: "Failed to create repo branch" }, 500);
@@ -478,47 +570,25 @@ export const reposRouter = new Hono<{
   .get(
     "/branches/:branchId",
     zValidator("param", z.object({ branchId: z.string().uuid() })),
+    requireRepoBranch,
+    (c) => c.json(c.get("branch"))
+  )
+  .delete(
+    "/branches/:branchId",
+    zValidator("param", z.object({ branchId: z.string().uuid() })),
+    requireRepoBranch,
     async (c) => {
-      const { branchId } = c.req.valid("param");
-      const user = c.get("user");
       const db = c.get("db");
-      const organizationId = c.get("organizationId");
+      const branch = c.get("branch");
+      if (branch.sandbox.type === "flyio") {
+        await deleteFlyApp(branch.sandbox.appId, c.env.FLY_API_KEY);
+      }
 
-      const [branch] = await db
-        .select({
-          id: schema.repoBranch.id,
-          name: schema.repoBranch.name,
-          sandbox: schema.repoBranch.sandbox,
-          createdAt: schema.repoBranch.createdAt,
-          updatedAt: schema.repoBranch.updatedAt,
-          createdBy: {
-            id: schema.user.id,
-            name: schema.user.name,
-            image: schema.user.image,
-          },
-        })
-        .from(schema.repo)
-        .innerJoin(
-          schema.repoBranch,
-          eq(schema.repo.id, schema.repoBranch.repoId)
-        )
-        .innerJoin(schema.user, eq(schema.repoBranch.createdBy, schema.user.id))
-        .innerJoin(
-          schema.member,
-          eq(schema.repo.organizationId, schema.member.organizationId)
-        )
-        .where(
-          and(
-            eq(schema.repoBranch.id, branchId),
-            eq(schema.repo.organizationId, organizationId),
-            isNull(schema.repo.deletedAt),
-            eq(schema.member.userId, user.id),
-            isNull(schema.repoBranch.deletedAt)
-          )
-        )
-        .orderBy(desc(schema.repoBranch.createdAt));
+      await db
+        .update(schema.repoBranch)
+        .set({ deletedAt: new Date() })
+        .where(eq(schema.repoBranch.id, branch.id));
 
-      if (!branch) return c.json({ error: "Branch not found" }, 404);
-      return c.json(branch);
+      return c.json({ success: true });
     }
   );

@@ -2,6 +2,7 @@ import { CurrentUserAvatar } from "@/components/layout/auth/avatar/CurrentUserAv
 import { SignInButton } from "@/components/layout/auth/SignInButton";
 import { ChatInput } from "@/components/layout/chat/input/ChatInput";
 import { Button } from "@/components/ui/button";
+import { Card, CardAction, CardContent, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -32,6 +33,10 @@ export function LandingPage() {
 
   const createBranch = useMutation(api.repos[":repoId"].branches.$post, {
     onSuccess: (data) => navigate(`/branches/${data.id}`),
+  });
+
+  const deleteBranch = useMutation(api.repos.branches[":branchId"].$delete, {
+    onSuccess: () => branches.refetch(),
   });
 
   // Set default selectedRepoId to first available repo
@@ -79,11 +84,41 @@ export function LandingPage() {
           {branches.data && (
             <div>
               <Label>Branches</Label>
-              {branches.data.map((branch) => (
-                <Link key={branch.id} to={`/branches/${branch.id}`}>
-                  <Button variant="link">{branch.name}</Button>
-                </Link>
-              ))}
+              <div className="grid gap-4 mt-4">
+                {branches.data
+                  .filter(
+                    (branch): branch is typeof branch & { id: string } =>
+                      !!branch.id
+                  )
+                  .map((branch) => (
+                    <Card
+                      key={branch.id}
+                      className="cursor-pointer hover:bg-accent/50"
+                    >
+                      <Link to={`/branches/${branch.id}`} className="block">
+                        <CardContent>
+                          <CardTitle>{branch.name}</CardTitle>
+                          <CardAction>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                deleteBranch.mutate({
+                                  param: { branchId: branch.id },
+                                });
+                              }}
+                              disabled={deleteBranch.isPending}
+                            >
+                              Delete
+                            </Button>
+                          </CardAction>
+                        </CardContent>
+                      </Link>
+                    </Card>
+                  ))}
+              </div>
             </div>
           )}
         </>

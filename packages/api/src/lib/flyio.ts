@@ -1,13 +1,42 @@
+interface FlyMachineCheck {
+  name: string;
+  status: "passing" | "warning" | "critical" | string;
+  output?: string;
+  updated_at?: string;
+}
+
 interface FlyMachine {
   id: string;
   name: string;
   state: string;
   region: string;
   instance_id: string;
+  checks: FlyMachineCheck[];
   private_ip: string;
   created_at: string;
   updated_at: string;
   config: any;
+}
+
+const FLY_API = "https://api.machines.dev/v1";
+
+async function flyFetch<T>(
+  path: string,
+  apiKey: string,
+  init: RequestInit = {}
+): Promise<T> {
+  const res = await fetch(`${FLY_API}${path}`, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Fly API ${res.status} ${res.statusText}: ${text}`);
+  }
+  return (await res.json()) as T;
 }
 
 export async function createFlyApp(
@@ -15,19 +44,11 @@ export async function createFlyApp(
   apiKey: string,
   orgSlug: string
 ) {
-  const response = await fetch("https://api.machines.dev/v1/apps", {
+  await flyFetch("/apps", apiKey, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify({ app_name: appName, org_slug: orgSlug }),
   });
-  if (!response.ok) {
-    throw new Error(`Failed to create Fly.io app: ${response.statusText}`);
-  }
 
-  await response.json();
   const ipResponse = await fetch("https://api.fly.io/graphql", {
     method: "POST",
     headers: {
@@ -63,15 +84,11 @@ export async function createFlyApp(
   }
 }
 
-export function deleteFlyApp(appName: string, apiKey: string) {
-  return fetch(`https://api.machines.dev/v1/apps/${appName}`, {
-    method: "DELETE",
-    headers: { Authorization: `Bearer ${apiKey}` },
-  });
-}
+export const deleteFlyApp = (appName: string, apiKey: string) =>
+  flyFetch(`/apps/${appName}`, apiKey, { method: "DELETE", body: "{}" });
 
 // Helper function to create Fly.io machine
-export async function createFlyMachine({
+export const createFlyMachine = ({
   appName,
   git,
   apiKey,
@@ -79,58 +96,52 @@ export async function createFlyMachine({
   appName: string;
   git: { url: string; defaultBranch: string; branch: string };
   apiKey: string;
-}): Promise<FlyMachine> {
-  const response = await fetch(
-    `https://api.machines.dev/v1/apps/${appName}/machines`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        config: {
-          image: "node:20-alpine",
-          size: "performance-2x",
-          auto_destroy: false,
-          restart: { policy: "no" },
-          services: [
-            {
-              protocol: "tcp",
-              internal_port: 3000,
-              ports: [
-                { port: 80, handlers: ["http"] },
-                { port: 443, handlers: ["tls", "http"] },
-              ],
-              autostop: "stop",
-              autostart: true,
-            },
-          ],
-          checks: {
-            health: {
-              type: "http",
-              port: 3000,
-              method: "GET",
-              path: "/",
-              interval: "5s",
-              timeout: "5s",
-              grace_period: "10s",
-            },
+}) =>
+  flyFetch<FlyMachine>(`/apps/${appName}/machines`, apiKey, {
+    method: "POST",
+    body: JSON.stringify({
+      config: {
+        image: "node:20-alpine",
+        size: "performance-2x",
+        auto_destroy: false,
+        restart: { policy: "no" },
+        services: [
+          {
+            protocol: "tcp",
+            internal_port: 3000,
+            ports: [
+              { port: 80, handlers: ["http"] },
+              { port: 443, handlers: ["tls", "http"] },
+            ],
+            autostop: "stop",
+            autostart: true,
           },
-          env: {
-            PORT: "3000",
-            GIT_REPO_DIR: "/app",
-            GIT_URL: git.url,
-            GIT_BRANCH: git.branch,
-            GIT_DEFAULT_BRANCH: git.defaultBranch,
+        ],
+        checks: {
+          health: {
+            type: "http",
+            port: 3000,
+            method: "GET",
+            path: "/",
+            interval: "5s",
+            timeout: "5s",
+            grace_period: "10s",
           },
-          init: {
-            // install and run basic hello world http server
-            // entrypoint: ["/bin/sh", "-c", "npx -y http-server -p 3000"],
-            entrypoint: [
-              "/bin/sh",
-              "-c",
-              `
+        },
+        env: {
+          PORT: "3000",
+          GIT_REPO_DIR: "/app",
+          GIT_URL: git.url,
+          GIT_BRANCH: git.branch,
+          GIT_DEFAULT_BRANCH: git.defaultBranch,
+        },
+        init: {
+          // install and run basic hello world http server
+          // entrypoint: ["/bin/sh", "-c", "npx -y http-server -p 3000"],
+          entrypoint: [
+            "/bin/sh",
+            "-c",
+            `
                 apk update;
                 apk add --no-cache git;
 
@@ -144,17 +155,58 @@ export async function createFlyMachine({
                 npm install;
                 npx vite --host 0.0.0.0 --port 3000;
               `,
-            ],
-          },
-          stop_config: { timeout: 10, signal: "SIGTERM" },
+          ],
         },
-      }),
-    }
+        stop_config: { timeout: 10, signal: "SIGTERM" },
+      },
+    }),
+  });
+
+function isHealthy(machine: FlyMachine): boolean {
+  const running = machine.state === "started";
+  const checks = machine.checks ?? [];
+  const checksPassing =
+    checks.length === 0 || checks.every((c) => c.status === "passing");
+  return running && checksPassing;
+}
+
+export async function awaitFlyMachineHealthy(
+  appId: string,
+  machineId: string,
+  apiKey: string,
+  timeoutMs = 5 * 60_000,
+  pollMs = 2_000
+) {
+  const machine = await flyFetch<FlyMachine>(
+    `/apps/${appId}/machines/${machineId}`,
+    apiKey
+  );
+  if (isHealthy(machine)) return machine;
+
+  await flyFetch<unknown>(
+    `/apps/${appId}/machines/${machine.id}/start`,
+    apiKey,
+    { method: "POST" }
   );
 
-  if (!response.ok) {
-    throw new Error(`Failed to create Fly.io machine: ${response.statusText}`);
-  }
+  const startTime = Date.now();
+  while (true) {
+    const machine = await flyFetch<FlyMachine>(
+      `/apps/${appId}/machines/${machineId}`,
+      apiKey
+    );
 
-  return response.json() as Promise<FlyMachine>;
+    if (isHealthy(machine)) return machine;
+    if (Date.now() - startTime > timeoutMs) {
+      const summary = (machine.checks ?? [])
+        .map((c) => `${c.name}:${c.status}`)
+        .join(", ");
+      throw new Error(
+        `Timed out waiting for machine ${machine.id} to become healthy. ` +
+          `state=${machine.state} checks=[${summary}]`
+      );
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, pollMs));
+  }
 }

@@ -11,7 +11,12 @@ import type {
   RepoSnapshot,
 } from "@/database/schema";
 import * as schema from "@/database/schema";
-import { createFlyApp, createFlyMachine, deleteFlyApp } from "@/lib/flyio";
+import {
+  awaitFlyMachineHealthy,
+  createFlyApp,
+  createFlyMachine,
+  deleteFlyApp,
+} from "@/lib/flyio";
 import { google } from "@ai-sdk/google";
 import { zValidator } from "@hono/zod-validator";
 import { createAppAuth } from "@octokit/auth-app";
@@ -503,7 +508,7 @@ export const reposRouter = new Hono<{
                 type: "flyio",
                 appId: flyioAppName,
                 machineId: flyMachine.id,
-                url: `https://${branchName}.fly.dev`,
+                url: `https://${flyioAppName}.fly.dev`,
               },
               threadId: thread.id,
               repoId: repoId,
@@ -571,7 +576,26 @@ export const reposRouter = new Hono<{
     "/branches/:branchId",
     zValidator("param", z.object({ branchId: z.string().uuid() })),
     requireRepoBranch,
-    (c) => c.json(c.get("branch"))
+    (c) => {
+      const { sandbox, ...branch } = c.get("branch");
+      return c.json(branch);
+    }
+  )
+  // TODO: using e.g. fly health checks or similar, stream progress of machine creation
+  .post(
+    "/branches/:branchId/preview",
+    zValidator("param", z.object({ branchId: z.string().uuid() })),
+    requireRepoBranch,
+    async (c) => {
+      const branch = c.get("branch");
+      await awaitFlyMachineHealthy(
+        branch.sandbox.appId,
+        branch.sandbox.machineId,
+        c.env.FLY_API_KEY
+      );
+
+      return c.json({ url: branch.sandbox.url });
+    }
   )
   .delete(
     "/branches/:branchId",

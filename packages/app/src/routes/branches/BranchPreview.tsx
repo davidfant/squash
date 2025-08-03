@@ -1,17 +1,12 @@
-import { useChat } from "@/components/layout/chat/context";
 import { cn } from "@/lib/utils";
-import { type InlineCommentMessage } from "dev-server-utils/messaging";
-import { useRef, useState } from "react";
+import { Loader2 } from "lucide-react";
+import { useRef } from "react";
 import { useBranchContext } from "./context";
 
 export function BranchPreview() {
-  const { screenSize, branch, previewPath, setPreviewPath } =
+  const { screenSize, branch, previewPath, previewUrl, setPreviewPath } =
     useBranchContext();
-  const { sendMessage } = useChat();
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const [comment, setComment] = useState<
-    (InlineCommentMessage & { screenshot?: string }) | null
-  >(null);
 
   // useEffect(
   //   () =>
@@ -54,14 +49,20 @@ export function BranchPreview() {
 
   return (
     <div className="relative h-full">
-      <iframe
-        ref={iframeRef}
-        src={`${branch.sandbox.url}${previewPath}`}
-        className={cn(
-          "h-full mx-auto transition-all duration-300",
-          getPreviewWidth()
-        )}
-      />
+      {previewUrl ? (
+        <iframe
+          ref={iframeRef}
+          src={`${previewUrl}${previewPath}`}
+          className={cn(
+            "h-full mx-auto transition-all duration-300",
+            getPreviewWidth()
+          )}
+        />
+      ) : (
+        <div className="flex h-full items-center justify-center">
+          <Loader2 className="size-8 animate-spin opacity-30" />
+        </div>
+      )}
       {/* <AnimatePresence mode="wait">
         {comment && (
           <motion.div

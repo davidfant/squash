@@ -10,6 +10,7 @@ export interface BranchContextValue {
   setScreenSize(size: ScreenSize): void;
   toggleScreenSize(): void;
 
+  previewUrl: string | null;
   previewPath: string;
   setPreviewPath(path: string): void;
 }
@@ -19,6 +20,7 @@ const BranchContext = createContext<BranchContextValue>({
   screenSize: "desktop",
   setScreenSize: () => {},
   toggleScreenSize: () => {},
+  previewUrl: null,
   previewPath: "",
   setPreviewPath: () => {},
 });
@@ -41,6 +43,10 @@ export const BranchContextProvider = ({
   const [screenSize, setScreenSize] = useState<ScreenSize>("desktop");
   const [previewPath, setPreviewPath] = useState("");
 
+  const preview = useQuery(api.repos.branches[":branchId"].preview.$post, {
+    params: { branchId },
+  });
+
   const toggleScreenSize = () => setScreenSize(getNextScreenSize(screenSize));
 
   if (!branch.data) return null;
@@ -52,6 +58,7 @@ export const BranchContextProvider = ({
         setScreenSize,
         toggleScreenSize,
         previewPath,
+        previewUrl: preview.data?.url ?? null,
         setPreviewPath,
       }}
     >

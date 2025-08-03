@@ -30,6 +30,7 @@ async function flyFetch<T>(
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${apiKey}`,
+      ...init.headers,
     },
   });
   if (!res.ok) {
@@ -85,16 +86,20 @@ export async function createFlyApp(
 }
 
 export const deleteFlyApp = (appName: string, apiKey: string) =>
-  flyFetch(`/apps/${appName}`, apiKey, { method: "DELETE", body: "{}" });
+  flyFetch(`/apps/${appName}`, apiKey, {
+    method: "DELETE",
+    headers: { "Content-Type": "" },
+  });
 
-// Helper function to create Fly.io machine
 export const createFlyMachine = ({
   appName,
   git,
+  auth,
   apiKey,
 }: {
   appName: string;
   git: { url: string; defaultBranch: string; branch: string };
+  auth: { github?: { username: string; password: string } };
   apiKey: string;
 }) =>
   flyFetch<FlyMachine>(`/apps/${appName}/machines`, apiKey, {
@@ -134,6 +139,8 @@ export const createFlyMachine = ({
           GIT_URL: git.url,
           GIT_BRANCH: git.branch,
           GIT_DEFAULT_BRANCH: git.defaultBranch,
+          GITHUB_USERNAME: auth.github?.username,
+          GITHUB_PASSWORD: auth.github?.password,
         },
         init: {
           // install and run basic hello world http server
@@ -144,6 +151,9 @@ export const createFlyMachine = ({
             `
                 apk update;
                 apk add --no-cache git;
+
+                git config --global credential.helper store;
+                printf "protocol=https\nhost=github.com\nusername=$GITHUB_USERNAME\npassword=$GITHUB_PASSWORD\n" | git credential approve;
 
                 if [ -d $GIT_REPO_DIR ]; then
                   cd $GIT_REPO_DIR;
@@ -177,33 +187,37 @@ export async function awaitFlyMachineHealthy(
   timeoutMs = 5 * 60_000,
   pollMs = 2_000
 ) {
-  const machine = await flyFetch<FlyMachine>(
-    `/apps/${appId}/machines/${machineId}`,
-    apiKey
-  );
-  if (isHealthy(machine)) return machine;
-
   await flyFetch<unknown>(
-    `/apps/${appId}/machines/${machine.id}/start`,
+    `/apps/${appId}/machines/${machineId}/start`,
     apiKey,
     { method: "POST" }
   );
 
   const startTime = Date.now();
   while (true) {
-    const machine = await flyFetch<FlyMachine>(
-      `/apps/${appId}/machines/${machineId}`,
-      apiKey
-    );
+    let machine: FlyMachine | undefined;
+    try {
+      machine = await flyFetch<FlyMachine>(
+        `/apps/${appId}/machines/${machineId}`,
+        apiKey
+      );
 
-    if (isHealthy(machine)) return machine;
+      if (isHealthy(machine)) return machine;
+    } catch (e) {
+      console.warn(
+        `Failed to fetch machine ${machineId} after start: ${
+          (e as Error).message
+        }`
+      );
+    }
+
     if (Date.now() - startTime > timeoutMs) {
-      const summary = (machine.checks ?? [])
+      const summary = (machine?.checks ?? [])
         .map((c) => `${c.name}:${c.status}`)
         .join(", ");
       throw new Error(
-        `Timed out waiting for machine ${machine.id} to become healthy. ` +
-          `state=${machine.state} checks=[${summary}]`
+        `Timed out waiting for machine ${machineId} to become healthy. ` +
+          `state=${machine?.state} checks=[${summary}]`
       );
     }
 

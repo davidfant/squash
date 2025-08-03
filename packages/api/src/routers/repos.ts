@@ -106,6 +106,11 @@ export const requireRepo = createMiddleware<
         url: string;
         defaultBranch: string;
         snapshot: RepoSnapshot;
+        provider: {
+          id: string;
+          type: RepoProviderType;
+          data: RepoProviderData;
+        };
       };
     };
   },
@@ -124,6 +129,11 @@ export const requireRepo = createMiddleware<
       url: schema.repo.url,
       defaultBranch: schema.repo.defaultBranch,
       snapshot: schema.repo.snapshot,
+      provider: {
+        id: schema.repoProvider.id,
+        type: schema.repoProvider.type,
+        data: schema.repoProvider.data,
+      },
     })
     .from(schema.repo)
     .innerJoin(
@@ -487,12 +497,28 @@ export const reposRouter = new Hono<{
             c.env.FLY_API_KEY,
             c.env.FLY_ORG_SLUG
           );
+
           const flyMachine = await createFlyMachine({
             appName: flyioAppName,
             git: {
               url: repo.url,
               defaultBranch: repo.defaultBranch,
               branch: branchName,
+            },
+            auth: {
+              github:
+                repo.provider.type === "github"
+                  ? {
+                      username: "x-access-token",
+                      password: await createAppAuth({
+                        appId: c.env.GITHUB_APP_ID,
+                        privateKey: c.env.GITHUB_APP_PRIVATE_KEY,
+                        installationId: repo.provider.data.installationId,
+                      })({ type: "installation", installationId: "" }).then(
+                        (auth) => auth.token
+                      ),
+                    }
+                  : undefined,
             },
             apiKey: c.env.FLY_API_KEY,
           });

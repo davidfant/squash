@@ -1,5 +1,6 @@
 import { relations } from "drizzle-orm";
 import {
+  boolean,
   index,
   json,
   pgEnum,
@@ -27,6 +28,7 @@ export const repo = pgTable("repo", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),
   defaultBranch: text("default_branch").notNull(),
+  private: boolean("private").notNull(),
   providerId: uuid("provider_id")
     .notNull()
     .references(() => repoProvider.id),

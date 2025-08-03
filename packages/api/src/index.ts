@@ -7,7 +7,6 @@ import { databaseMiddleware } from "./database/middleware";
 import { chatRouter } from "./routers/chat";
 // import { projectsRouter } from "./routers/projects";
 import { githubRouter } from "./routers/integrations/github";
-import { repoProvidersRouter } from "./routers/repoProviders";
 import { reposRouter } from "./routers/repos";
 import { threadsRouter } from "./routers/threads";
 
@@ -20,7 +19,6 @@ const app = new Hono<{ Bindings: CloudflareBindings }>()
   .on(["GET", "POST"], "/auth/*", (c) => c.get("auth").handler(c.req.raw))
   // .route("/projects", projectsRouter)
   .route("/repos", reposRouter)
-  .route("/repo-providers", repoProvidersRouter)
   .route("/threads", threadsRouter)
   .route("/chat", chatRouter)
   .route("/integrations/github", githubRouter);

@@ -15,7 +15,7 @@ import { useState } from "react";
 import { useParams } from "react-router";
 
 type ProviderData = QueryOutput<
-  (typeof api)["repo-providers"][":providerId"]["$get"]
+  (typeof api.repos.providers)[":providerId"]["$get"]
 >;
 
 function NewRepoForm({ provider }: { provider: ProviderData }) {
@@ -89,7 +89,13 @@ function NewRepoForm({ provider }: { provider: ProviderData }) {
                       </div>
                     </div>
                   </div>
-                  <Button size="sm">Import</Button>
+                  {repo.imported ? (
+                    <Button size="sm" disabled>
+                      Imported
+                    </Button>
+                  ) : (
+                    <Button size="sm">Import</Button>
+                  )}
                 </div>
               ))}
             </div>
@@ -112,8 +118,8 @@ function NewRepoForm({ provider }: { provider: ProviderData }) {
 }
 
 function NewRepo({ providerId }: { providerId: string }) {
-  const providers = useQuery(api["repo-providers"].$get, { params: {} });
-  const provider = useQuery(api["repo-providers"][":providerId"].$get, {
+  const providers = useQuery(api.repos.providers.$get, { params: {} });
+  const provider = useQuery(api.repos.providers[":providerId"].$get, {
     params: { providerId },
     enabled: !!providerId,
   });
@@ -131,7 +137,7 @@ export function NewRepoFromProvider() {
 }
 
 export function NewRepoPage() {
-  const providers = useQuery(api["repo-providers"].$get, { params: {} });
+  const providers = useQuery(api.repos.providers.$get, { params: {} });
   if (!providers.data) {
     return <div>Loading...</div>;
   } else if (!providers.data.length) {

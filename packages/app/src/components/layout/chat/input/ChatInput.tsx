@@ -3,7 +3,7 @@ import { useFileUpload } from "@/components/layout/file/useFileUpload";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import type { FilePart, ImagePart, TextPart } from "ai";
+import type { FilePart, ImagePart, TextPart } from "@hypershape-ai/api/types";
 import { useState } from "react";
 import {
   ChatInputAttachButton,

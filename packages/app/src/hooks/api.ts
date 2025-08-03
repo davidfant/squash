@@ -7,7 +7,10 @@ import {
   useQuery as useReactQuery,
 } from "@tanstack/react-query";
 import { type ClientResponse, hc } from "hono/client";
-import type { ClientErrorStatusCode } from "hono/utils/http-status";
+import type {
+  ClientErrorStatusCode,
+  ServerErrorStatusCode,
+} from "hono/utils/http-status";
 
 export const api = hc<AppType>(import.meta.env.VITE_API_URL, {
   fetch: (input: RequestInfo | URL, init?: RequestInit) =>
@@ -15,7 +18,7 @@ export const api = hc<AppType>(import.meta.env.VITE_API_URL, {
 });
 
 export type SuccessBody<R> = R extends ClientResponse<infer B, infer S, any>
-  ? S extends ClientErrorStatusCode
+  ? S extends ClientErrorStatusCode | ServerErrorStatusCode
     ? never
     : B
   : never;

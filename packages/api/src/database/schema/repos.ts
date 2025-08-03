@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, type InferEnum } from "drizzle-orm";
 import {
   boolean,
   index,
@@ -12,18 +12,32 @@ import {
 import { organization, user } from "./auth";
 import { messageThread } from "./messages";
 
-export interface BranchVirtualMachine {
+export interface RepoSnapshot {
+  type: "docker";
+  port: number;
+  image: string;
+  entrypoint: string;
+}
+
+export interface RepoBranchSandbox {
   type: "flyio";
   appId: string;
+  machineId: string;
   url: string;
 }
 
 export const repoProviderType = pgEnum("repo_provider_type", ["github"]);
+export type RepoProviderType = InferEnum<typeof repoProviderType>;
+
+export interface RepoProviderData {
+  installationId: string;
+}
 
 export const repo = pgTable("repo", {
   id: uuid().primaryKey().defaultRandom(),
   name: text().notNull(),
   url: text().notNull(),
+  snapshot: json("snapshot").$type<RepoSnapshot>().notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),
@@ -43,7 +57,8 @@ export const repoBranch = pgTable(
   {
     id: uuid().primaryKey().defaultRandom(),
     name: text().notNull(),
-    vm: json("vm").$type<BranchVirtualMachine>().notNull(),
+    slug: text().notNull(),
+    sandbox: json("sandbox").$type<RepoBranchSandbox>().notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
     deletedAt: timestamp("deleted_at"),
@@ -67,7 +82,7 @@ export const repoProvider = pgTable("repo_provider", {
   organizationId: uuid("organization_id")
     .notNull()
     .references(() => organization.id),
-  data: json("data").$type<{ installationId: string }>().notNull(),
+  data: json("data").$type<RepoProviderData>().notNull(),
   // scopes: text("scopes").notNull(),
   // token: text().notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),

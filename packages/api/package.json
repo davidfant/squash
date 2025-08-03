@@ -19,8 +19,7 @@
     "typegen": "wrangler types --env-interface CloudflareBindings"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^1.2.12",
-    "@ai-sdk/google": "^1.2.22",
+    "@ai-sdk/google": "^2.0.0",
     "@daytonaio/sdk": "^0.24.2",
     "@hono/zod-validator": "^0.7.1",
     "@hypershape-ai/registry": "workspace:*",

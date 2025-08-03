@@ -43,7 +43,7 @@ export default {
   landing: {
     startBuilding: "Start Building",
   },
-  project: {
+  branch: {
     addressBar: {
       screen: {
         size: {
@@ -53,8 +53,10 @@ export default {
         },
         showPreview: "Show {size} preview",
       },
-      changePage: "Change page",
-      addPage: "Add page",
+      path: {
+        placeholder: "Go to...",
+        tooltip: "Change page",
+      },
       refresh: "Refresh",
     },
   },

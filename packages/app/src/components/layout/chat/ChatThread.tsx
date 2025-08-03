@@ -1,7 +1,7 @@
 import { ChatInput } from "@/components/layout/chat/input/ChatInput";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import type { UserMessagePart } from "@hypershape/api/types";
+import type { UserMessagePart } from "@hypershape-ai/api/types";
 import { AlertCircle } from "lucide-react";
 import { useChat } from "./context";
 import { AssistantMessage } from "./message/AssistantMessage";

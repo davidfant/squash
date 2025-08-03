@@ -9,10 +9,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { api, useQuery, type QueryOutput } from "@/hooks/api";
+import { api, useMutation, useQuery, type QueryOutput } from "@/hooks/api";
 import { ExternalLink, GitBranch, Lock, Unlock } from "lucide-react";
 import { useState } from "react";
-import { useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
+import { useSelectedRepoId } from "../landing";
 
 type ProviderData = QueryOutput<
   (typeof api.repos.providers)[":providerId"]["$get"]
@@ -25,6 +26,18 @@ function NewRepoForm({ provider }: { provider: ProviderData }) {
 
   const selectedAccount = provider.accounts.find(
     (a) => a.id === selectedAccountId
+  );
+
+  const navigate = useNavigate();
+  const [, setSelectedRepoId] = useSelectedRepoId();
+  const importRepo = useMutation(
+    api.repos.providers[":providerId"].repos.$post,
+    {
+      onSuccess: (repo) => {
+        setSelectedRepoId(repo.id);
+        navigate(`/`);
+      },
+    }
   );
 
   return (
@@ -94,7 +107,17 @@ function NewRepoForm({ provider }: { provider: ProviderData }) {
                       Imported
                     </Button>
                   ) : (
-                    <Button size="sm">Import</Button>
+                    <Button
+                      size="sm"
+                      onClick={() =>
+                        importRepo.mutate({
+                          param: { providerId: provider.id },
+                          json: { repoId: repo.id },
+                        })
+                      }
+                    >
+                      Import
+                    </Button>
                   )}
                 </div>
               ))}

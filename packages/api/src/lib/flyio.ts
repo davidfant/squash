@@ -12,7 +12,8 @@ interface FlyMachine {
 
 export async function createFlyApp(
   appName: string,
-  apiKey: string
+  apiKey: string,
+  orgSlug: string
 ): Promise<{ id: string }> {
   const response = await fetch("https://api.machines.dev/v1/apps", {
     method: "POST",
@@ -20,10 +21,7 @@ export async function createFlyApp(
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      app_name: appName,
-      network: `${appName}-network`,
-    }),
+    body: JSON.stringify({ app_name: appName, org_slug: orgSlug }),
   });
 
   if (!response.ok) {
@@ -99,18 +97,7 @@ export async function createFlyMachine(
           },
           env: { PORT: "3000" },
           init: {
-            // Start a simple HTTP server that shuts down after 10 minutes of inactivity
-            exec: [
-              "sh",
-              "-c",
-              `
-              npm install -g http-server &&
-              mkdir -p /app &&
-              echo '<!DOCTYPE html><html><head><title>Dev Server</title></head><body><h1>Development Server Ready</h1><p>Port 3000 is active</p></body></html>' > /app/index.html &&
-              cd /app &&
-              timeout 600 http-server -p 3000 -a 0.0.0.0 || exit 0
-            `.trim(),
-            ],
+            entrypoint: ["/bin/sh", "-c", "npm install && npm run dev"],
           },
           stop_config: { timeout: 10, signal: "SIGTERM" },
         },

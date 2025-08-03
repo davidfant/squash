@@ -1,5 +1,4 @@
 import { useMounted } from "@/hooks/useMounted";
-import { convertStreamPartsToMessages } from "@/lib/convertStreamPartsToMessages";
 import { sseStream } from "@/lib/sseStream";
 import type { AnyMessage, UserMessagePart } from "@hypershape-ai/api/types";
 import type { TextStreamPart, ToolResultPart } from "ai";
@@ -85,6 +84,10 @@ export function ChatProvider({
     try {
       const streamParts: TextStreamPart<any>[] = [];
       let prevMessagesLength = 0;
+      const convertStreamPartsToMessages = (...args: any[]): any[] => {
+        throw new Error("TODO");
+      };
+
       await sseStream({
         message,
         endpoint: customEndpoint,

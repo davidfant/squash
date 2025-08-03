@@ -64,7 +64,7 @@ const zMessagePart = z.discriminatedUnion("type", [
 ]);
 
 export const zMessageInput = z.object({
-  id: z.string(),
+  id: z.string().uuid().optional(),
   content: zMessagePart.array().min(1),
 });
 

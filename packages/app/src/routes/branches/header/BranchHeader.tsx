@@ -27,11 +27,10 @@ import {
   Users,
 } from "lucide-react";
 import { Link } from "react-router";
-import type { Project } from "../types";
-import { ProjectAddressBar } from "./ProjectAddressBar";
+import { PreviewAddressBar } from "./PreviewAddressBar";
 
-interface ProjectHeaderProps {
-  project: Project;
+interface BranchHeaderProps {
+  title: string;
   isHistoryEnabled?: boolean;
   onHistoryToggle?: (enabled: boolean) => void;
   onHideChatSidebar?: () => void;
@@ -47,8 +46,8 @@ interface ProjectHeaderProps {
 
 type ScreenSize = "mobile" | "tablet" | "desktop";
 
-export function ProjectHeader({
-  project,
+export function BranchHeader({
+  title,
   isHistoryEnabled = false,
   onHistoryToggle,
   onHideChatSidebar,
@@ -60,7 +59,7 @@ export function ProjectHeader({
   onUpgrade,
   publicUrl = "https://myproject.com",
   className,
-}: ProjectHeaderProps) {
+}: BranchHeaderProps) {
   const copyPublicUrl = () => {
     navigator.clipboard.writeText(publicUrl);
   };
@@ -92,7 +91,7 @@ export function ProjectHeader({
                 variant="ghost"
                 className="flex items-center gap-2 px-3 hover:bg-muted"
               >
-                <span className="font-medium">{project.name}</span>
+                <span className="font-medium">{title}</span>
                 {isPublic ? (
                   <Globe className="size-4 text-muted-foreground" />
                 ) : (
@@ -148,7 +147,7 @@ export function ProjectHeader({
       <div className="flex items-center gap-1 flex-1">
         {/* URL Bar with Screen Size Toggle - Combined in bordered container */}
         <div className="flex-1 flex justify-center">
-          <ProjectAddressBar />
+          <PreviewAddressBar />
         </div>
       </div>
 

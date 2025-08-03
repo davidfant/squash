@@ -3,16 +3,13 @@ import { ChatThread } from "@/components/layout/chat/ChatThread";
 import { ChatProvider } from "@/components/layout/chat/context";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { api, useQuery } from "@/hooks/api";
-import { useNavigate, useParams } from "react-router";
-import { ProjectContextProvider, useSelectedPage } from "./context";
-import { ProjectHeader } from "./header/ProjectHeader";
-import { ProjectPageSidebar } from "./ProjectPageSidebar";
-import { ProjectPreview } from "./ProjectPreview";
-import type { Project } from "./types";
+import { useParams } from "react-router";
+import { BranchPreview } from "./BranchPreview";
+import { BranchContextProvider, useBranchContext } from "./context";
+import { BranchHeader } from "./header/BranchHeader";
 
-function Component({ project }: { project: Project }) {
-  const selectedPage = useSelectedPage();
-
+function Component() {
+  const { branch } = useBranchContext();
   const handleHistoryToggle = (enabled: boolean) => {
     console.log("History toggle:", enabled);
   };
@@ -41,8 +38,8 @@ function Component({ project }: { project: Project }) {
 
   return (
     <SidebarProvider className="flex flex-col h-screen">
-      <ProjectHeader
-        project={project}
+      <BranchHeader
+        title={branch.name}
         isHistoryEnabled={false}
         onHistoryToggle={handleHistoryToggle}
         onHideChatSidebar={handleHideChatSidebar}
@@ -55,50 +52,31 @@ function Component({ project }: { project: Project }) {
       />
       <div className="flex-1 flex">
         <ChatThread className="p-2 flex-shrink-0" />
-        <div className="border-x">
-          {!!selectedPage && <ProjectPageSidebar page={selectedPage} />}
-        </div>
         <main className="flex-1">
-          {/* <ProjectCanvas /> */}
-          <ProjectPreview />
+          <BranchPreview />
         </main>
       </div>
     </SidebarProvider>
   );
 }
 
-export function ProjectPage() {
-  const { projectId, pageId } = useParams();
-  const navigate = useNavigate();
-  const project = useQuery(api.projects[":projectId"].$get, {
-    params: { projectId },
-  });
+export function BranchPage() {
+  const { branchId } = useParams();
   const threadMessages = useQuery(
-    api.chat.messages.projects[":projectId"].$get,
-    { params: { projectId } }
+    api.chat.messages.branches[":branchId"].$get,
+    { params: { branchId } }
   );
   const session = authClient.useSession();
 
   return (
     <ChatProvider
       ready={!session.isPending}
-      endpoint={`chat/messages/projects/${projectId}`}
+      endpoint={`chat/messages/branches/${branchId}`}
       initialMessages={threadMessages.data}
-      onToolResult={(r) => {
-        if (r.toolName === "updateMetadata") {
-          project.refetch();
-        }
-      }}
     >
-      <ProjectContextProvider
-        projectId={projectId!}
-        selectedPageId={pageId ?? null}
-        onSelectPage={(pageId) =>
-          navigate(`/projects/${projectId}/pages/${pageId}`)
-        }
-      >
-        {!!project.data && <Component project={project.data} />}
-      </ProjectContextProvider>
+      <BranchContextProvider branchId={branchId!}>
+        <Component />
+      </BranchContextProvider>
     </ChatProvider>
   );
 }

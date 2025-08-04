@@ -14,6 +14,7 @@ import {
 } from "ai";
 import { and, asc, eq } from "drizzle-orm";
 import { Hono } from "hono";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 
 export const chatRouter = new Hono<{
@@ -107,6 +108,7 @@ export const chatRouter = new Hono<{
 
     return result.toUIMessageStreamResponse({
       originalMessages: messages,
+      generateMessageId: randomUUID,
       onFinish: ({ messages, responseMessage }) => {
         console.log(
           "ON FINISH...",

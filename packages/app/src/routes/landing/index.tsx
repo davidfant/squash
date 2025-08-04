@@ -20,6 +20,7 @@ import { DefaultChatTransport } from "ai";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router";
+import { v4 as uuid } from "uuid";
 
 export const useSelectedRepoId = () =>
   useLocalStorage<string | undefined>("lp.selectedRepoId", undefined);
@@ -31,6 +32,7 @@ const Chat = () => {
     transport: new DefaultChatTransport({
       api: `${import.meta.env.VITE_API_URL}/chat`,
     }),
+    generateId: uuid,
   });
 
   return (

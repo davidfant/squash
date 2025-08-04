@@ -11,12 +11,7 @@ import type {
   RepoSnapshot,
 } from "@/database/schema";
 import * as schema from "@/database/schema";
-import {
-  awaitFlyMachineHealthy,
-  createFlyApp,
-  createFlyMachine,
-  deleteFlyApp,
-} from "@/lib/flyio";
+import * as FlyioSandbox from "@/lib/flyio/sandbox";
 import { google } from "@ai-sdk/google";
 import { zValidator } from "@hono/zod-validator";
 import { createAppAuth } from "@octokit/auth-app";
@@ -484,7 +479,7 @@ export const reposRouter = new Hono<{
 
         const branchId = randomUUID();
         const branchName = `${kebabCase(title)}-${branchId.split("-")[0]}`;
-        const flyioAppName = [
+        const flyioAppId = [
           organizationId.split("-")[0],
           repo.id.split("-")[0],
           kebabCase(title),
@@ -492,19 +487,23 @@ export const reposRouter = new Hono<{
         ].join("-");
 
         try {
-          await createFlyApp(
-            flyioAppName,
+          const workdir = "/app";
+          await FlyioSandbox.createApp(
+            flyioAppId,
             c.env.FLY_API_KEY,
             c.env.FLY_ORG_SLUG
           );
 
-          const flyMachine = await createFlyMachine({
-            appName: flyioAppName,
+          const flyMachine = await FlyioSandbox.createMachine({
+            appId: flyioAppId,
             git: {
               url: repo.url,
               defaultBranch: repo.defaultBranch,
               branch: branchName,
+              workdir,
             },
+            image: "node:20-alpine",
+            port: 3000,
             auth: {
               github:
                 repo.provider.type === "github"
@@ -532,9 +531,10 @@ export const reposRouter = new Hono<{
               name: branchName,
               sandbox: {
                 type: "flyio",
-                appId: flyioAppName,
+                appId: flyioAppId,
                 machineId: flyMachine.id,
-                url: `https://${flyioAppName}.fly.dev`,
+                url: `https://${flyioAppId}.fly.dev`,
+                workdir: workdir,
               },
               threadId: thread.id,
               repoId: repoId,
@@ -544,7 +544,7 @@ export const reposRouter = new Hono<{
 
           return c.json(repoBranch!);
         } catch (error) {
-          await deleteFlyApp(branchName, c.env.FLY_API_KEY);
+          await FlyioSandbox.deleteApp(branchName, c.env.FLY_API_KEY);
           throw error;
         }
       } catch (error) {
@@ -614,7 +614,7 @@ export const reposRouter = new Hono<{
     requireRepoBranch,
     async (c) => {
       const branch = c.get("branch");
-      await awaitFlyMachineHealthy(
+      await FlyioSandbox.waitForMachineHealthy(
         branch.sandbox.appId,
         branch.sandbox.machineId,
         c.env.FLY_API_KEY
@@ -631,7 +631,7 @@ export const reposRouter = new Hono<{
       const db = c.get("db");
       const branch = c.get("branch");
       if (branch.sandbox.type === "flyio") {
-        await deleteFlyApp(branch.sandbox.appId, c.env.FLY_API_KEY);
+        await FlyioSandbox.deleteApp(branch.sandbox.appId, c.env.FLY_API_KEY);
       }
 
       await db

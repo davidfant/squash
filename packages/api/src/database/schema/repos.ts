@@ -24,6 +24,7 @@ export interface RepoBranchSandbox {
   appId: string;
   machineId: string;
   url: string;
+  workdir: string;
 }
 
 export const repoProviderType = pgEnum("repo_provider_type", ["github"]);

@@ -1,3 +1,5 @@
+import { flyFetch } from "./util";
+
 interface FlyMachineCheck {
   name: string;
   status: "passing" | "warning" | "critical" | string;
@@ -18,36 +20,14 @@ interface FlyMachine {
   config: any;
 }
 
-const FLY_API = "https://api.machines.dev/v1";
-
-async function flyFetch<T>(
-  path: string,
-  apiKey: string,
-  init: RequestInit = {}
-): Promise<T> {
-  const res = await fetch(`${FLY_API}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-      ...init.headers,
-    },
-  });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`Fly API ${res.status} ${res.statusText}: ${text}`);
-  }
-  return (await res.json()) as T;
-}
-
-export async function createFlyApp(
-  appName: string,
+export async function createApp(
+  appId: string,
   apiKey: string,
   orgSlug: string
 ) {
   await flyFetch("/apps", apiKey, {
     method: "POST",
-    body: JSON.stringify({ app_name: appName, org_slug: orgSlug }),
+    body: JSON.stringify({ app_name: appId, org_slug: orgSlug }),
   });
 
   const ipResponse = await fetch("https://api.fly.io/graphql", {
@@ -68,52 +48,56 @@ export async function createFlyApp(
           }
         }
       `,
-      variables: { input: { appId: appName, type: "v6" } },
+      variables: { input: { appId: appId, type: "v6" } },
     }),
   });
 
   const ip: { data: unknown; errors: unknown } = await ipResponse.json();
   if (ip.errors) {
     console.error(
-      `Failed to allocate IP for app ${appName}: with status ${
+      `Failed to allocate IP for app ${appId}: with status ${
         ipResponse.statusText
       }: ${JSON.stringify(ip)}`
     );
     throw new Error(
-      `Failed to allocate IP for app ${appName}: ${ipResponse.statusText}`
+      `Failed to allocate IP for app ${appId}: ${ipResponse.statusText}`
     );
   }
 }
 
-export const deleteFlyApp = (appName: string, apiKey: string) =>
+export const deleteApp = (appName: string, apiKey: string) =>
   flyFetch(`/apps/${appName}`, apiKey, {
     method: "DELETE",
-    headers: { "Content-Type": "" },
+    headers: { "Content-Type": undefined as any },
   });
 
-export const createFlyMachine = ({
-  appName,
+export const createMachine = ({
+  appId,
   git,
   auth,
   apiKey,
+  image,
+  port,
 }: {
-  appName: string;
-  git: { url: string; defaultBranch: string; branch: string };
+  appId: string;
+  git: { url: string; defaultBranch: string; branch: string; workdir: string };
   auth: { github?: { username: string; password: string } };
+  image: string;
+  port: number;
   apiKey: string;
 }) =>
-  flyFetch<FlyMachine>(`/apps/${appName}/machines`, apiKey, {
+  flyFetch<FlyMachine>(`/apps/${appId}/machines`, apiKey, {
     method: "POST",
     body: JSON.stringify({
       config: {
-        image: "node:20-alpine",
+        image,
         size: "performance-2x",
         auto_destroy: false,
         restart: { policy: "no" },
         services: [
           {
             protocol: "tcp",
-            internal_port: 3000,
+            internal_port: port,
             ports: [
               { port: 80, handlers: ["http"] },
               { port: 443, handlers: ["tls", "http"] },
@@ -125,7 +109,7 @@ export const createFlyMachine = ({
         checks: {
           health: {
             type: "http",
-            port: 3000,
+            port: port,
             method: "GET",
             path: "/",
             interval: "5s",
@@ -134,8 +118,8 @@ export const createFlyMachine = ({
           },
         },
         env: {
-          PORT: "3000",
-          GIT_REPO_DIR: "/app",
+          PORT: port.toString(),
+          GIT_REPO_DIR: git.workdir,
           GIT_URL: git.url,
           GIT_BRANCH: git.branch,
           GIT_DEFAULT_BRANCH: git.defaultBranch,
@@ -180,7 +164,7 @@ function isHealthy(machine: FlyMachine): boolean {
   return running && checksPassing;
 }
 
-export async function awaitFlyMachineHealthy(
+export async function waitForMachineHealthy(
   appId: string,
   machineId: string,
   apiKey: string,

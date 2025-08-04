@@ -1,7 +1,12 @@
+import { marked } from "marked";
+import { memo, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 
-export const Markdown = ({ children }: { children: string }) => (
-  <div className="prose-sm prose-ul:list-disc prose-ol:list-decimal break-words">
+const parseMarkdownIntoBlocks = (markdown: string) =>
+  marked.lexer(markdown).map((t) => t.raw);
+
+const MemoizedMarkdownBlock = memo(
+  ({ content }: { content: string }) => (
     <ReactMarkdown
       components={{
         a: ({ children, href }) => (
@@ -16,7 +21,28 @@ export const Markdown = ({ children }: { children: string }) => (
         ),
       }}
     >
-      {children}
+      {content}
     </ReactMarkdown>
-  </div>
+  ),
+  (prev, next) => prev.content === next.content
+);
+
+MemoizedMarkdownBlock.displayName = "MemoizedMarkdownBlock";
+
+export const Markdown = memo(
+  ({ content, id }: { content: string; id: string }) => {
+    const blocks = useMemo(() => parseMarkdownIntoBlocks(content), [content]);
+    return (
+      <>
+        <div className="prose-sm prose-ul:list-disc prose-ol:list-decimal break-words">
+          {blocks.map((block, index) => (
+            <MemoizedMarkdownBlock
+              content={block}
+              key={`${id}-block_${index}`}
+            />
+          ))}
+        </div>
+      </>
+    );
+  }
 );

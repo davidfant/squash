@@ -171,11 +171,15 @@ export async function waitForMachineHealthy(
   timeoutMs = 5 * 60_000,
   pollMs = 2_000
 ) {
-  await flyFetch<unknown>(
-    `/apps/${appId}/machines/${machineId}/start`,
-    apiKey,
-    { method: "POST" }
+  const machine = await flyFetch<FlyMachine>(
+    `/apps/${appId}/machines/${machineId}`,
+    apiKey
   );
+  if (isHealthy(machine)) return machine;
+
+  await flyFetch(`/apps/${appId}/machines/${machineId}/start`, apiKey, {
+    method: "POST",
+  });
 
   const startTime = Date.now();
   while (true) {

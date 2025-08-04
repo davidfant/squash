@@ -3,6 +3,7 @@ import { SignInButton } from "@/components/layout/auth/SignInButton";
 import { ChatInput } from "@/components/layout/chat/input/ChatInput";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -13,12 +14,53 @@ import {
 } from "@/components/ui/select";
 import { api, useMutation, useQuery } from "@/hooks/api";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { useEffect } from "react";
+import { useChat } from "@ai-sdk/react";
+import type { ChatMessage } from "@hypershape-ai/api/agent/types";
+import { DefaultChatTransport } from "ai";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate } from "react-router";
 
 export const useSelectedRepoId = () =>
   useLocalStorage<string | undefined>("lp.selectedRepoId", undefined);
+
+const Chat = () => {
+  const [input, setInput] = useState("");
+
+  const { messages, sendMessage } = useChat<ChatMessage>({
+    transport: new DefaultChatTransport({
+      api: `${import.meta.env.VITE_API_URL}/chat`,
+    }),
+  });
+
+  return (
+    <div>
+      <Input
+        value={input}
+        onChange={(event) => {
+          setInput(event.target.value);
+        }}
+        onKeyDown={async (event) => {
+          if (event.key === "Enter") {
+            sendMessage({
+              parts: [{ type: "text", text: input }],
+            });
+          }
+        }}
+      />
+
+      {messages.map((message, index) => (
+        <div key={index}>
+          {message.parts.map((part) => {
+            if (part.type === "text") {
+              return <div key={`${message.id}-text`}>{part.text}</div>;
+            }
+          })}
+        </div>
+      ))}
+    </div>
+  );
+};
 
 export function LandingPage() {
   const navigate = useNavigate();
@@ -54,7 +96,6 @@ export function LandingPage() {
           fallback={<SignInButton>{t("startBuilding")}</SignInButton>}
         />
       </header>
-
       {!!repos.data?.length ? (
         <>
           <Select value={selectedRepoId} onValueChange={setSelectedRepoId}>
@@ -127,6 +168,7 @@ export function LandingPage() {
           <Button>Connect Github</Button>
         </a>
       )}
+      <Chat />
     </>
   );
 }

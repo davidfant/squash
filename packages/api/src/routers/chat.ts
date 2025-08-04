@@ -3,7 +3,15 @@ import type { Database } from "@/database";
 import type { MessageStatus } from "@/database/schema";
 import * as schema from "@/database/schema";
 import type { AnyMessage } from "@/types";
+import { google } from "@ai-sdk/google";
 import { zValidator } from "@hono/zod-validator";
+import {
+  convertToModelMessages,
+  stepCountIs,
+  streamText,
+  tool,
+  type UIMessage,
+} from "ai";
 import { and, asc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -70,7 +78,43 @@ export const chatRouter = new Hono<{
       if (!messages.length) return c.json({ error: "Project not found" }, 404);
       return c.json(messages as (AnyMessage & { status: MessageStatus })[]);
     }
-  );
+  )
+  .post("", async (c) => {
+    const { messages }: { messages: UIMessage[] } = await c.req.json();
+
+    const result = streamText({
+      model: google("gemini-2.5-flash"),
+      system: "You are a helpful assistant.",
+      messages: convertToModelMessages(messages),
+      tools: {
+        getWeather: tool({
+          description: "Get the weather for a location",
+          inputSchema: z.object({ location: z.string() }),
+          outputSchema: z.object({
+            weather: z.string(),
+            temperature: z.number(),
+          }),
+          execute: async ({ location }) => {
+            return {
+              weather: `Weather in ${location}: sunny, 72°F`,
+              temperature: 72,
+            };
+          },
+        }),
+      },
+      stopWhen: [stepCountIs(10)],
+    });
+
+    return result.toUIMessageStreamResponse({
+      originalMessages: messages,
+      onFinish: ({ messages, responseMessage }) => {
+        console.log(
+          "ON FINISH...",
+          JSON.stringify({ messages, responseMessage }, null, 2)
+        );
+      },
+    });
+  });
 // .post(
 //   "/projects/:projectId/page",
 //   zValidator("param", z.object({ projectId: z.string().uuid() })),

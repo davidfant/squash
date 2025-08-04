@@ -1,4 +1,3 @@
-import { useChat } from "@/components/layout/chat/context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -15,7 +14,6 @@ export function PreviewAddressBar() {
   const { t } = useTranslation("branch");
   const { previewPath, setPreviewPath, screenSize, setScreenSize, branch } =
     useBranchContext();
-  const { sendMessage } = useChat();
   const [inputValue, setInputValue] = useState(previewPath || "/");
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

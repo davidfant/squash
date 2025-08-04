@@ -1,6 +1,5 @@
 import { authClient } from "@/auth";
 import { ChatThread } from "@/components/layout/chat/ChatThread";
-import { ChatProvider } from "@/components/layout/chat/context";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { api, useQuery } from "@/hooks/api";
 import { useParams } from "react-router";
@@ -8,8 +7,15 @@ import { BranchPreview } from "./BranchPreview";
 import { BranchContextProvider, useBranchContext } from "./context";
 import { BranchHeader } from "./header/BranchHeader";
 
-function Component() {
+function Component({ branchId }: { branchId: string }) {
   const { branch } = useBranchContext();
+
+  const session = authClient.useSession();
+  const threadMessages = useQuery(api.chat.branches[":branchId"].$get, {
+    params: { branchId },
+    enabled: !!session.data?.user,
+  });
+
   const handleHistoryToggle = (enabled: boolean) => {
     console.log("History toggle:", enabled);
   };
@@ -45,13 +51,16 @@ function Component() {
         onHideChatSidebar={handleHideChatSidebar}
         onRefresh={handleRefresh}
         onOpenInNewTab={handleOpenInNewTab}
-        userName="John Doe"
         onInvite={handleInvite}
         onUpgrade={handleUpgrade}
         publicUrl="https://my-awesome-landing-page.com"
       />
       <div className="flex-1 flex">
-        <ChatThread className="p-2 flex-shrink-0" />
+        <ChatThread
+          endpoint={`${import.meta.env.VITE_API_URL}/chat/branches/${branchId}`}
+          className="p-2 flex-shrink-0"
+          initialMessages={threadMessages.data}
+        />
         <main className="flex-1">
           <BranchPreview />
         </main>
@@ -62,21 +71,9 @@ function Component() {
 
 export function BranchPage() {
   const { branchId } = useParams();
-  const threadMessages = useQuery(
-    api.chat.messages.branches[":branchId"].$get,
-    { params: { branchId } }
-  );
-  const session = authClient.useSession();
-
   return (
-    <ChatProvider
-      ready={!session.isPending}
-      endpoint={`chat/messages/branches/${branchId}`}
-      initialMessages={threadMessages.data}
-    >
-      <BranchContextProvider branchId={branchId!}>
-        <Component />
-      </BranchContextProvider>
-    </ChatProvider>
+    <BranchContextProvider branchId={branchId!}>
+      <Component branchId={branchId!} />
+    </BranchContextProvider>
   );
 }

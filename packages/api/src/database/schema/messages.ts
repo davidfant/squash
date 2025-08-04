@@ -1,9 +1,5 @@
-import type {
-  AssistantMessagePart,
-  ToolMessagePart,
-  UserMessagePart,
-} from "@/types";
-import { relations, type InferEnum } from "drizzle-orm";
+import type { ChatMessage } from "@/agent/types";
+import { relations } from "drizzle-orm";
 import {
   index,
   jsonb,
@@ -15,21 +11,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { repoBranch } from "./repos";
 
-export const messageRole = pgEnum("message_role", [
-  "user",
-  "assistant",
-  "tool",
-  // "data",
-]);
-
-export const messageStatus = pgEnum("message_status", [
-  "pending",
-  "loading",
-  "done",
-  "error",
-]);
-
-export type MessageStatus = InferEnum<typeof messageStatus>;
+export const messageRole = pgEnum("message_role", ["user", "assistant"]);
 
 export const messageThread = pgTable("message_thread", {
   id: uuid().primaryKey().defaultRandom(),
@@ -38,21 +20,22 @@ export const messageThread = pgTable("message_thread", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export interface MessageUsage {
+  modelId: string;
+  inputTokens: number | undefined;
+  outputTokens: number | undefined;
+  totalTokens: number | undefined;
+  reasoningTokens?: number | undefined;
+  cachedInputTokens?: number | undefined;
+}
+
 export const message = pgTable(
   "message",
   {
     id: uuid().primaryKey().defaultRandom(),
     role: messageRole().notNull(),
-    content: jsonb()
-      .$type<Array<UserMessagePart | AssistantMessagePart | ToolMessagePart>>()
-      .notNull(),
-    status: messageStatus().default("pending").notNull(),
-    usage: jsonb().$type<{
-      modelId: string;
-      promptTokens: number;
-      completionTokens: number;
-      totalTokens: number;
-    }>(),
+    parts: jsonb().$type<ChatMessage["parts"]>().notNull(),
+    usage: jsonb().$type<MessageUsage[]>(),
     createdAt: timestamp("created_at", { mode: "string" })
       .defaultNow()
       .notNull(),

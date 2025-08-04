@@ -5,10 +5,8 @@ import { requestId } from "hono/request-id";
 import { authMiddleware } from "./auth/middleware";
 import { databaseMiddleware } from "./database/middleware";
 import { chatRouter } from "./routers/chat";
-// import { projectsRouter } from "./routers/projects";
 import { githubRouter } from "./routers/integrations/github";
 import { reposRouter } from "./routers/repos";
-import { threadsRouter } from "./routers/threads";
 
 const app = new Hono<{ Bindings: CloudflareBindings }>()
   .use(requestId())
@@ -17,9 +15,7 @@ const app = new Hono<{ Bindings: CloudflareBindings }>()
   .use(authMiddleware)
   .use("*", cors({ origin: process.env.APP_URL, credentials: true }))
   .on(["GET", "POST"], "/auth/*", (c) => c.get("auth").handler(c.req.raw))
-  // .route("/projects", projectsRouter)
   .route("/repos", reposRouter)
-  .route("/threads", threadsRouter)
   .route("/chat", chatRouter)
   .route("/integrations/github", githubRouter);
 

@@ -9,4 +9,11 @@ export interface SandboxRuntimeContext {
 
 export type ChatTools = InferUITools<ReturnType<typeof tools>>;
 
-export type ChatMessage = UIMessage<never, UIDataTypes, ChatTools>;
+export interface ChatMessageMetadata {
+  createdAt: string;
+}
+export type ChatMessage = UIMessage<
+  ChatMessageMetadata,
+  UIDataTypes,
+  ChatTools
+>;

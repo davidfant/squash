@@ -29,20 +29,15 @@ const MemoizedMarkdownBlock = memo(
 
 MemoizedMarkdownBlock.displayName = "MemoizedMarkdownBlock";
 
-export const Markdown = memo(
-  ({ content, id }: { content: string; id: string }) => {
-    const blocks = useMemo(() => parseMarkdownIntoBlocks(content), [content]);
-    return (
-      <>
-        <div className="prose-sm prose-ul:list-disc prose-ol:list-decimal break-words">
-          {blocks.map((block, index) => (
-            <MemoizedMarkdownBlock
-              content={block}
-              key={`${id}-block_${index}`}
-            />
-          ))}
-        </div>
-      </>
-    );
-  }
-);
+export const Markdown = memo(({ children }: { children: string }) => {
+  const blocks = useMemo(() => parseMarkdownIntoBlocks(children), [children]);
+  return (
+    <>
+      <div className="prose-sm prose-ul:list-disc prose-ol:list-decimal break-words">
+        {blocks.map((block, index) => (
+          <MemoizedMarkdownBlock content={block} key={index} />
+        ))}
+      </div>
+    </>
+  );
+});

@@ -1,9 +1,8 @@
 import { toast } from "@/components/ui/sonner";
-// import { api, useMutation } from "@/hooks/api";
-import type { FilePart } from "@hypershape-ai/api/types";
+import type { FileUIPart } from "ai";
 import { useCallback, useMemo, useRef, useState } from "react";
 
-export interface ChatInputFile extends FilePart {
+export interface ChatInputFile extends FileUIPart {
   id: string;
   status: "uploading" | "uploaded"; // | "error";
 }
@@ -48,7 +47,7 @@ export function useFileUpload(initialFiles?: ChatInputFile[]) {
           method: "PUT",
           body: file,
         });
-        patchUpload(id, { status: "uploaded", data: signed.publicUrl });
+        patchUpload(id, { status: "uploaded", url: signed.publicUrl });
       } catch (e) {
         console.error("Failed uploading file", upload, e);
         toast.error(`Failed uploading ${file.name} - please try again!`);
@@ -67,9 +66,9 @@ export function useFileUpload(initialFiles?: ChatInputFile[]) {
           (file): ChatInputFile => ({
             id: Math.random().toString(36).substring(2, 15),
             type: "file",
-            data: URL.createObjectURL(file),
+            url: URL.createObjectURL(file),
             filename: file.name,
-            mimeType: file.type,
+            mediaType: file.type,
             status: "uploading",
           })
         );

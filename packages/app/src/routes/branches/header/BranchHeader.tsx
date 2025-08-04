@@ -36,8 +36,6 @@ interface BranchHeaderProps {
   onHideChatSidebar?: () => void;
   onRefresh?: () => void;
   onOpenInNewTab?: () => void;
-  userName?: string;
-  userAvatar?: string;
   onInvite?: () => void;
   onUpgrade?: () => void;
   publicUrl?: string;
@@ -53,8 +51,6 @@ export function BranchHeader({
   onHideChatSidebar,
   onRefresh,
   onOpenInNewTab,
-  userName = "User",
-  userAvatar,
   onInvite,
   onUpgrade,
   publicUrl = "https://myproject.com",

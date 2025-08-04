@@ -10,7 +10,7 @@ interface FlyMachineCheck {
 interface FlyMachine {
   id: string;
   name: string;
-  state: string;
+  state: "created" | "stopped" | "suspended" | string;
   region: string;
   instance_id: string;
   checks: FlyMachineCheck[];
@@ -177,9 +177,11 @@ export async function waitForMachineHealthy(
   );
   if (isHealthy(machine)) return machine;
 
-  await flyFetch(`/apps/${appId}/machines/${machineId}/start`, apiKey, {
-    method: "POST",
-  });
+  if (["stopped", "suspended"].includes(machine.state)) {
+    await flyFetch(`/apps/${appId}/machines/${machineId}/start`, apiKey, {
+      method: "POST",
+    });
+  }
 
   const startTime = Date.now();
   while (true) {

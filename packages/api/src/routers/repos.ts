@@ -23,7 +23,7 @@ import { Hono } from "hono";
 import { createMiddleware } from "hono/factory";
 import kebabCase from "lodash.kebabcase";
 import z from "zod";
-import { zMessageInput } from "./threads";
+import { zUserMessagePart } from "./chat";
 
 export const requireRepoProvider = createMiddleware<
   {
@@ -434,11 +434,16 @@ export const reposRouter = new Hono<{
   .post(
     "/:repoId/branches",
     zValidator("param", z.object({ repoId: z.string().uuid() })),
-    zValidator("json", zMessageInput),
+    zValidator(
+      "json",
+      z.object({
+        message: z.object({ parts: zUserMessagePart.array().min(1) }),
+      })
+    ),
     requireRepo,
     async (c) => {
       const { repoId } = c.req.valid("param");
-      const messageInput = c.req.valid("json");
+      const { message } = c.req.valid("json");
       const organizationId = c.get("organizationId");
       const user = c.get("user");
       const db = c.get("db");
@@ -457,14 +462,12 @@ export const reposRouter = new Hono<{
           .then(([thread]) => thread!);
 
         await db.insert(schema.message).values({
-          id: messageInput.id,
           role: "user",
-          content: messageInput.content,
+          parts: message.parts,
           threadId: thread.id,
-          status: "pending",
         });
 
-        const textContent = messageInput.content
+        const textContent = message.parts
           .filter((part) => part.type === "text")
           .map((part) => part.text)
           .join(" ");

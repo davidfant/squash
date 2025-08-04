@@ -10,7 +10,6 @@ import resources from "./locales/default";
 import { BranchPage } from "./routes/branches";
 import { LandingPage } from "./routes/landing";
 import { NewRepoFromProvider, NewRepoPage } from "./routes/new/repo";
-import { ThreadPage } from "./routes/thread";
 
 i18n.use(initReactI18next).init({
   lng: "default",
@@ -27,7 +26,6 @@ createRoot(document.getElementById("root")!).render(
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<LandingPage />} />
-          <Route path="/threads/:threadId" element={<ThreadPage />} />
           <Route path="/branches/:branchId" element={<BranchPage />} />
           <Route path="/new/repo" element={<NewRepoPage />} />
           <Route

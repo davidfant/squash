@@ -3,7 +3,7 @@ import { useFileUpload } from "@/components/layout/file/useFileUpload";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import type { FilePart, ImagePart, TextPart } from "@hypershape-ai/api/types";
+import type { FileUIPart } from "ai";
 import { useState } from "react";
 import {
   ChatInputAttachButton,
@@ -15,6 +15,11 @@ import {
 import { DictationOverlay } from "./DictationOverlay";
 import { useDictation } from "./useDictation";
 
+export interface ChatInputValue {
+  text: string;
+  files: FileUIPart[];
+}
+
 export function ChatInput({
   initialValue,
   submitting,
@@ -22,47 +27,36 @@ export function ChatInput({
   minRows,
   maxRows,
   placeholder,
+  disabled,
   Textarea: TextareaComponent = Textarea,
   onSubmit,
 }: {
-  initialValue?: Array<TextPart | ImagePart | FilePart>;
+  initialValue?: ChatInputValue;
   submitting: boolean;
   autoFocus?: boolean;
   minRows?: number;
   maxRows?: number;
   placeholder?: string;
+  disabled?: boolean;
   Textarea?: typeof Textarea;
-  onSubmit(content: Array<TextPart | ImagePart | FilePart>): unknown;
+  onSubmit(value: ChatInputValue): unknown;
 }) {
-  const [value, setValue] = useState(
-    initialValue
-      ?.filter((p) => p.type === "text")
-      .map((p) => p.text)
-      .join("\n\n") ?? ""
-  );
+  const [value, setValue] = useState(initialValue?.text ?? "");
   const uploads = useFileUpload(
-    initialValue
-      ?.filter((p) => p.type === "file")
-      .map((p) => ({
-        ...p,
-        id: Math.random().toString(36).substring(2, 15),
-        status: "uploaded",
-      }))
+    initialValue?.files.map((f) => ({
+      ...f,
+      id: Math.random().toString(36).substring(2, 15),
+      status: "uploaded",
+    }))
   );
   const dictation = useDictation((t) => setValue((v) => (v ? `${v} ${t}` : t)));
 
   const handleSubmit = async () => {
-    const content: Array<TextPart | ImagePart | FilePart> = [];
-    if (!!value) {
-      content.push({ type: "text", text: value });
-    }
-    content.push(...uploads.files.map(({ id, status, ...file }) => file));
-
-    if (!content.length) return;
+    if (!value.length && !uploads.files.length) return;
     try {
       setValue("");
       uploads.set([]);
-      await onSubmit(content);
+      await onSubmit({ text: value, files: uploads.files });
     } catch {
       setValue(value);
       uploads.set(uploads.files);
@@ -126,7 +120,9 @@ export function ChatInput({
                 onClick={dictation.start}
               />
               <ChatInputSubmitButton
-                disabled={submitting || uploads.isUploading || !value}
+                disabled={
+                  submitting || uploads.isUploading || !value || !!disabled
+                }
                 loading={submitting || uploads.isUploading}
                 onClick={handleSubmit}
               />

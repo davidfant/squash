@@ -2,11 +2,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import type { FilePart, ImagePart } from "ai";
+import type { FileUIPart } from "ai";
 import { Loader2, X } from "lucide-react";
 
 interface FilePreviewProps {
-  file: ImagePart | FilePart;
+  file: FileUIPart;
   loading?: boolean;
   className?: string;
   onRemove?(): void;
@@ -19,20 +19,16 @@ export function FilePreview({
   onRemove,
 }: FilePreviewProps) {
   const content = (() => {
-    if (file.type === "image") {
-      return (
-        <img src={file.image} className="object-cover w-auto h-full max-h-24" />
-      );
-    } else if (file.mimeType?.startsWith("image/")) {
+    if (file.mediaType.startsWith("image/")) {
       return (
         <img
-          src={file.data}
+          src={file.url}
           alt={file.filename}
           className="object-cover w-auto h-full max-h-24"
         />
       );
     } else {
-      const extension = file.mimeType.split("/").pop()?.toUpperCase();
+      const extension = file.mediaType.split("/").pop()?.toUpperCase();
       return (
         <div className="p-2 h-full flex flex-col justify-between aspect-square">
           <div className="text-xs font-medium text-ellipsis mb-1">

@@ -216,6 +216,6 @@ export async function gitCommit(
   if (result.exit_code === 0 && result.stdout) {
     return result.stdout.trim();
   } else {
-    throw new Error(result.stderr ?? "Failed to commit");
+    throw new Error(result.stderr ?? "Failed to commit1");
   }
 }

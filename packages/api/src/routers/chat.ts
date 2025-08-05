@@ -3,7 +3,8 @@ import { requireAuth } from "@/auth/middleware";
 import type { Database } from "@/database";
 import type { MessageUsage } from "@/database/schema";
 import * as schema from "@/database/schema";
-import { google } from "@ai-sdk/google";
+import { withCacheBreakpoints } from "@/lib/withCacheBreakpoints";
+import { anthropic } from "@ai-sdk/anthropic";
 import { zValidator } from "@hono/zod-validator";
 import { convertToModelMessages, stepCountIs, streamText, tool } from "ai";
 import { and, asc, eq } from "drizzle-orm";
@@ -113,9 +114,23 @@ export const chatRouter = new Hono<{
       }
 
       const result = streamText({
-        model: google("gemini-2.5-flash"),
-        system: "You are a helpful assistant.",
-        messages: convertToModelMessages(messages),
+        // model: google("gemini-2.5-flash"),
+        // model: anthropic("claude-3-5-haiku-20241022"),
+        model: anthropic("claude-sonnet-4-20250514"),
+        messages: [
+          ...withCacheBreakpoints([
+            {
+              role: "system",
+              content: "You are a helpful assistant.",
+            },
+          ]),
+          {
+            role: "system",
+            content:
+              "this is a more specific system message which could e.g. contain the ls",
+          },
+          ...withCacheBreakpoints(convertToModelMessages(messages), 3),
+        ],
         tools: {
           getWeather: tool({
             description: "Get the weather for a location",
@@ -140,6 +155,7 @@ export const chatRouter = new Hono<{
         originalMessages: messages,
         generateMessageId: randomUUID,
         onFinish: async ({ responseMessage }) => {
+          console.log("usage...", usage);
           await db.insert(schema.message).values({
             id: responseMessage.id,
             role: responseMessage.role as "user" | "assistant",

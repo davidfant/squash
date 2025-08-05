@@ -3,7 +3,7 @@ import { Loader2 } from "lucide-react";
 import { useRef } from "react";
 import { useBranchContext } from "./context";
 
-export function BranchPreview() {
+export function BranchPreview({ className }: { className?: string }) {
   const { screenSize, branch, previewPath, previewUrl, setPreviewPath } =
     useBranchContext();
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -48,7 +48,7 @@ export function BranchPreview() {
   };
 
   return (
-    <div className="relative h-full">
+    <div className={cn("relative h-full", className)}>
       {previewUrl ? (
         <iframe
           ref={iframeRef}

@@ -52,3 +52,5 @@ Use this tool to run fast, exact regex searches over text files using \`git grep
     ]),
     execute: ({ query, ...options }) => gitGrep(query, ctx.context, options),
   });
+
+throw new Error("list dir + cap list files");

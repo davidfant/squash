@@ -55,15 +55,12 @@ function Component({ branchId }: { branchId: string }) {
         onUpgrade={handleUpgrade}
         publicUrl="https://my-awesome-landing-page.com"
       />
-      <div className="flex-1 flex">
+      <div className="flex-1 flex overflow-hidden">
         <ChatThread
           endpoint={`${import.meta.env.VITE_API_URL}/chat/branches/${branchId}`}
-          className="p-2 flex-shrink-0"
           initialMessages={threadMessages.data}
         />
-        <main className="flex-1">
-          <BranchPreview />
-        </main>
+        <BranchPreview className="flex-1" />
       </div>
     </SidebarProvider>
   );

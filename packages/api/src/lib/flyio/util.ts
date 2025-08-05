@@ -3,17 +3,15 @@ export class FlyAPIError extends Error {}
 export async function flyFetch<T>(
   path: string,
   apiKey: string,
-  init: RequestInit = {}
+  { json = true, ...init }: RequestInit & { json?: boolean } = {}
 ): Promise<T> {
   const res = await fetch(`https://api.machines.dev/v1${path}`, {
     ...init,
-    headers: Object.assign(
-      {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      init.headers
-    ),
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      ...(json ? { "Content-Type": "application/json" } : {}),
+      ...init.headers,
+    },
   });
   if (!res.ok) {
     const text = await res.text().catch(() => "");

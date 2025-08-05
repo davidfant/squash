@@ -12,7 +12,11 @@ export function MessageParts({ parts }: { parts: ChatMessage["parts"] }) {
         case "step-start":
           return null;
         default:
-          return "TODO: render " + JSON.stringify(c);
+          return (
+            <div key={index}>
+              <pre>{JSON.stringify(c, null, 2)}</pre>
+            </div>
+          );
       }
     })
     .filter((p) => !!p);

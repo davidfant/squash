@@ -66,10 +66,7 @@ export async function createApp(
 }
 
 export const deleteApp = (appName: string, apiKey: string) =>
-  flyFetch(`/apps/${appName}`, apiKey, {
-    method: "DELETE",
-    headers: { "Content-Type": undefined as any },
-  });
+  flyFetch(`/apps/${appName}`, apiKey, { method: "DELETE", json: false });
 
 export const createMachine = ({
   appId,

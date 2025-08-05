@@ -126,6 +126,7 @@ export const chatRouter = new Hono<{
           },
         },
         {
+          morphApiKey: c.env.MORPH_API_KEY,
           onFinish: async ({ responseMessage }) => {
             await db.insert(schema.message).values({
               id: responseMessage.id,

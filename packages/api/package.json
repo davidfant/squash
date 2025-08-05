@@ -21,6 +21,7 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^2.0.0",
     "@ai-sdk/google": "^2.0.0",
+    "@ai-sdk/openai": "^2.0.3",
     "@daytonaio/sdk": "^0.24.2",
     "@hono/zod-validator": "^0.7.1",
     "@neondatabase/serverless": "^1.0.1",

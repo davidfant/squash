@@ -1,6 +1,6 @@
 import * as FlyioExec from "@/lib/flyio/exec";
 import { waitForMachineHealthy } from "@/lib/flyio/sandbox";
-import { relaceMerge } from "@/lib/relace";
+import { morphMerge } from "@/lib/morph";
 import { anthropic } from "@ai-sdk/anthropic";
 import { google } from "@ai-sdk/google";
 import {
@@ -56,7 +56,7 @@ export async function streamAgent(
   opts: Pick<
     UIMessageStreamOptions<ChatMessage>,
     "onFinish" | "messageMetadata"
-  > = {}
+  > & { morphApiKey: string }
 ) {
   await waitForMachineHealthy(
     runtimeContext.sandbox.appId,
@@ -81,7 +81,6 @@ export async function streamAgent(
     generateId: randomUUID,
     onFinish: opts.onFinish,
     execute: async ({ writer }) => {
-      const agentTools = createAgentTools(runtimeContext);
       const agentStream = streamText({
         model: anthropic("claude-sonnet-4-20250514"),
         messages: [
@@ -106,13 +105,19 @@ export async function streamAgent(
           step.toolCalls.forEach((tc) => {
             if (tc.dynamic) return;
             if (tc.toolName === "writeFile") {
-              const edit = tc.input.codeEdit;
               const sbx = runtimeContext.sandbox;
               changes.push({
                 op: "write",
                 path: tc.input.path,
                 content: FlyioExec.readFile(tc.input.path, sbx).then((r) =>
-                  r.success ? relaceMerge({ original: r.content, edit }) : edit
+                  r.success
+                    ? morphMerge({
+                        original: r.content,
+                        instructions: tc.input.instruction,
+                        update: tc.input.codeEdit,
+                        apiKey: opts.morphApiKey,
+                      })
+                    : tc.input.codeEdit
                 ),
               });
             }

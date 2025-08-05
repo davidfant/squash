@@ -109,7 +109,7 @@ function WriteFileToolAlert({ part }: { part: ToolPart<"writeFile"> }) {
       return (
         <ToolAlert
           icon={<CheckCircle2Icon />}
-          title={`Write ${part.input.path}`}
+          title={`Updated ${part.input.path}`}
           description={part.input.explanation ?? part.input.instruction}
           details={
             <pre className="whitespace-pre-wrap max-h-[60vh] overflow-y-auto">
@@ -121,7 +121,7 @@ function WriteFileToolAlert({ part }: { part: ToolPart<"writeFile"> }) {
     case "output-error":
       return (
         <ToolErrorAlert
-          title={`Failed writing ${part.input.path}`}
+          title={`Failed updating ${part.input.path}`}
           description={part.errorText}
         />
       );
@@ -130,7 +130,7 @@ function WriteFileToolAlert({ part }: { part: ToolPart<"writeFile"> }) {
       return (
         <ToolAlert
           icon={<Loader2 className="animate-spin" />}
-          title={`Writing ${part.input?.path ?? ""}`}
+          title={`Updating ${part.input?.path ?? ""}`}
           description={part.input?.explanation ?? part.input?.instruction}
         />
       );

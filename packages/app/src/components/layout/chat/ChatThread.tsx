@@ -25,23 +25,18 @@ export function ChatThread({
   initialValue?: ChatInputValue;
   initialMessages?: ChatMessage[];
 }) {
-  const { messages, status, sendMessage, setMessages } = useChat<ChatMessage>({
-    messages: initialMessages,
-    // TODO: look into how to resume a chat stream
-    resume: true,
-    transport: new DefaultChatTransport({
-      api: endpoint,
-      credentials: "include",
-      prepareSendMessagesRequest: ({ messages }) => ({
-        body: { message: messages[messages.length - 1] },
+  const { messages, status, sendMessage, setMessages, resumeStream } =
+    useChat<ChatMessage>({
+      messages: initialMessages,
+      transport: new DefaultChatTransport({
+        api: endpoint,
+        credentials: "include",
+        prepareSendMessagesRequest: ({ messages }) => ({
+          body: { message: messages[messages.length - 1] },
+        }),
       }),
-    }),
-    generateId: uuid,
-    sendAutomaticallyWhen: ({ messages }) => {
-      const last = messages[messages.length - 1];
-      return last?.role === "user" && last?.parts.length > 0;
-    },
-  });
+      generateId: uuid,
+    });
 
   const hasInitialMessages = !!initialMessages;
   const hadInitialMessages = usePrevious(hasInitialMessages);
@@ -51,6 +46,13 @@ export function ChatThread({
     }
   }, [!!initialMessages]);
   const sticky = useStickToBottom({ resize: "smooth", initial: "instant" });
+
+  useEffect(() => {
+    const last = messages[messages.length - 1];
+    if (last?.role === "user" && !!last.parts.length) {
+      sendMessage(undefined);
+    }
+  }, [!!messages.length]);
 
   return (
     <div className="w-sm flex flex-col">
@@ -118,7 +120,10 @@ export function ChatThread({
           placeholder="Type a message..."
           submitting={status === "submitted" || status === "streaming"}
           maxRows={10}
-          onSubmit={sendMessage}
+          onSubmit={(value) => {
+            sendMessage(value);
+            sticky.scrollToBottom();
+          }}
         />
       </div>
     </div>

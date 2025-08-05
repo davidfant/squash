@@ -29,6 +29,7 @@ export function ChatInput({
   placeholder,
   disabled,
   Textarea: TextareaComponent = Textarea,
+  repoPicker,
   onSubmit,
 }: {
   initialValue?: ChatInputValue;
@@ -39,6 +40,7 @@ export function ChatInput({
   placeholder?: string;
   disabled?: boolean;
   Textarea?: typeof Textarea;
+  repoPicker?: React.ReactNode;
   onSubmit(value: ChatInputValue): unknown;
 }) {
   const [value, setValue] = useState(initialValue?.text ?? "");
@@ -112,6 +114,7 @@ export function ChatInput({
             disabled={submitting}
             onClick={uploads.select}
           />
+          {repoPicker}
           <div className="flex-1" />
           {dictation.status === "idle" ? (
             <>

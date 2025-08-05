@@ -1,8 +1,7 @@
-import { ChatInput } from "@/components/layout/chat/input/ChatInput";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { api, useMutation, useQuery } from "@/hooks/api";
-import { Link, useNavigate } from "react-router";
+import {
+  ChatInput,
+  type ChatInputValue,
+} from "@/components/layout/chat/input/ChatInput";
 import { AppSidebar } from "@/components/layout/sidebar/app-sidebar";
 import {
   Breadcrumb,
@@ -10,37 +9,65 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
 } from "@/components/ui/breadcrumb";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Filter, GitBranch, MapPin, MoreHorizontal, Search, Trash2, User, Sparkles, Bug, Palette, Zap, FolderGit2 } from "lucide-react";
+import { api, useMutation, useQuery } from "@/hooks/api";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuCheckboxItem,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { useState } from "react";
+  Bug,
+  Filter,
+  FolderGit2,
+  GitBranch,
+  MapPin,
+  MoreHorizontal,
+  Palette,
+  Search,
+  Sparkles,
+  Trash2,
+  User,
+  Zap,
+} from "lucide-react";
+import { useState, type ElementType } from "react";
+import { Link, useNavigate } from "react-router";
 import { useSelectedRepoId } from "../landing";
+
+interface Suggestion {
+  text: string;
+  icon: ElementType;
+  prompt: string;
+}
 
 export function BranchFeed() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterByMe, setFilterByMe] = useState(false);
+  const [chatInitialValue, setChatInitialValue] =
+    useLocalStorage<ChatInputValue>("BranchFeed.chatInitialValue", {
+      text: "",
+      files: [],
+    });
   const [chatInputKey, setChatInputKey] = useState(0);
-  const [chatInitialValue, setChatInitialValue] = useState<Array<{ type: "text"; text: string }>>([]);
   const [selectedRepoId, setSelectedRepoId] = useSelectedRepoId();
-  
+
   const repos = useQuery(api.repos.$get, { params: {} });
-  const selectedRepo = repos.data?.find(repo => repo.id === selectedRepoId);
-  
+  const selectedRepo = repos.data?.find((repo) => repo.id === selectedRepoId);
+
   const branches = useQuery(api.repos[":repoId"].branches.$get, {
     params: { repoId: selectedRepoId || "" },
     enabled: !!selectedRepoId,
@@ -55,38 +82,35 @@ export function BranchFeed() {
   });
 
   // Suggestions for non-technical users with example prompts
-  const suggestions = [
-    { 
-      text: "Build a feature", 
+  const suggestions: Suggestion[] = [
+    {
+      text: "Build a feature",
       icon: Sparkles,
-      prompt: "Help me create a feature that..."
+      prompt: "Help me create a feature that...",
     },
-    { 
-      text: "Fix a bug", 
+    {
+      text: "Fix a bug",
       icon: Bug,
-      prompt: "Help me fix a bug where..."
+      prompt: "Help me fix a bug where...",
     },
-    { 
-      text: "Update design", 
+    {
+      text: "Update design",
       icon: Palette,
-      prompt: "Help me update the design to..."
+      prompt: "Help me update the design to...",
     },
-    { 
-      text: "Improve performance", 
+    {
+      text: "Improve performance",
       icon: Zap,
-      prompt: "Help me improve performance by..."
+      prompt: "Help me improve performance by...",
     },
   ];
 
-  const handleSuggestionClick = (suggestion: typeof suggestions[0]) => {
-    setChatInitialValue([{ type: "text", text: suggestion.prompt }]);
-    setChatInputKey(prev => prev + 1); // Force remount to update the value
-  };
-
   // Filter branches based on search query
-  const filteredBranches = branches.data?.filter(branch => {
+  const filteredBranches = branches.data?.filter((branch) => {
     if (!branch.id) return false;
-    const matchesSearch = branch.name?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = branch.name
+      ?.toLowerCase()
+      .includes(searchQuery.toLowerCase());
     return matchesSearch;
   });
 
@@ -110,7 +134,7 @@ export function BranchFeed() {
             </Breadcrumb>
           </div>
         </header>
-        
+
         <div className="flex-1 overflow-auto">
           <div className="mx-auto max-w-[1000px] p-6">
             {/* Quick Actions */}
@@ -119,11 +143,18 @@ export function BranchFeed() {
                 key={chatInputKey}
                 initialValue={chatInitialValue}
                 onSubmit={(content) => {
-                  setChatInitialValue([]); // Clear after submit
+                  setChatInitialValue({ text: "", files: [] });
                   if (selectedRepoId) {
                     createBranch.mutate({
                       param: { repoId: selectedRepoId },
-                      json: { content },
+                      json: {
+                        message: {
+                          parts: [
+                            { type: "text", text: content.text },
+                            ...content.files,
+                          ],
+                        },
+                      },
                     });
                   }
                 }}
@@ -147,7 +178,9 @@ export function BranchFeed() {
                           <DropdownMenuItem
                             key={repo.id}
                             onClick={() => setSelectedRepoId(repo.id)}
-                            className={repo.id === selectedRepoId ? "bg-accent" : ""}
+                            className={
+                              repo.id === selectedRepoId ? "bg-accent" : ""
+                            }
                           >
                             {repo.name}
                           </DropdownMenuItem>
@@ -157,19 +190,22 @@ export function BranchFeed() {
                   ) : null
                 }
               />
-              
+
               {/* Suggestion Pills */}
               <div className="flex flex-wrap gap-3 mt-4">
-                {suggestions.map((suggestion) => (
+                {suggestions.map((s) => (
                   <Button
-                    key={suggestion.text}
+                    key={s.text}
                     variant="outline"
                     size="default"
                     className="h-10 px-5 gap-2.5 font-normal text-muted-foreground hover:text-foreground"
-                    onClick={() => handleSuggestionClick(suggestion)}
+                    onClick={() => {
+                      setChatInitialValue({ text: s.prompt, files: [] });
+                      setChatInputKey((prev) => prev + 1);
+                    }}
                   >
-                    <suggestion.icon className="h-4 w-4" />
-                    {suggestion.text}
+                    <s.icon className="h-4 w-4" />
+                    {s.text}
                   </Button>
                 ))}
               </div>
@@ -183,7 +219,7 @@ export function BranchFeed() {
               {/* Feed Header with Filters */}
               <div className="flex items-center justify-between gap-4">
                 <h2 className="text-lg font-semibold">Feed</h2>
-                
+
                 <div className="flex items-center gap-2">
                   {/* Search Input */}
                   <div className="relative">
@@ -195,7 +231,7 @@ export function BranchFeed() {
                       className="pl-9 w-[200px] h-9"
                     />
                   </div>
-                  
+
                   {/* Filter Dropdown */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -220,7 +256,7 @@ export function BranchFeed() {
                   </DropdownMenu>
                 </div>
               </div>
-              
+
               {/* Branches List */}
               {filteredBranches && filteredBranches.length > 0 ? (
                 <div className="space-y-4">
@@ -230,17 +266,14 @@ export function BranchFeed() {
                         !!branch.id
                     )
                     .map((branch) => (
-                                            <Card
+                      <Card
                         key={branch.id}
                         className="group relative border border-border/50 bg-card hover:bg-accent/5 transition-colors shadow-none overflow-hidden py-0"
                       >
-                        <Link
-                          to={`/branches/${branch.id}`}
-                          className="flex"
-                        >
+                        <Link to={`/branches/${branch.id}`} className="flex">
                           {/* Screenshot Placeholder - Full Height */}
                           <div className="shrink-0 w-80 bg-muted" />
-                          
+
                           {/* Content */}
                           <div className="flex-1 px-6 py-4">
                             <div className="mb-3">
@@ -248,46 +281,59 @@ export function BranchFeed() {
                               <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary mb-3">
                                 In progress
                               </div>
-                              
+
                               {/* Title */}
                               <h3 className="font-semibold text-lg truncate">
                                 {(branch as any).title || branch.name}
                               </h3>
-                              
+
                               {/* Description */}
                               <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                                A modern web application with responsive design and real-time features. Built with the latest technologies for optimal performance.
+                                A modern web application with responsive design
+                                and real-time features. Built with the latest
+                                technologies for optimal performance.
                               </p>
                             </div>
-                            
+
                             {/* Separator */}
                             <div className="border-t border-border/50 mb-3" />
-                            
+
                             {/* Metadata */}
                             <div className="flex items-center gap-2 text-xs overflow-x-auto whitespace-nowrap [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] -mx-2 px-2">
                               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/50 shrink-0">
                                 <GitBranch className="h-3 w-3 text-muted-foreground shrink-0" />
-                                <span className="text-muted-foreground truncate max-w-[200px]">{branch.name}</span>
+                                <span className="text-muted-foreground truncate max-w-[200px]">
+                                  {branch.name}
+                                </span>
                               </div>
                               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/50 shrink-0">
                                 <MapPin className="h-3 w-3 text-muted-foreground shrink-0" />
-                                <span className="text-muted-foreground truncate max-w-[200px]">{selectedRepo?.name || 'Repository'}</span>
+                                <span className="text-muted-foreground truncate max-w-[200px]">
+                                  {selectedRepo?.name || "Repository"}
+                                </span>
                               </div>
                               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/50 shrink-0">
                                 <User className="h-3 w-3 text-muted-foreground shrink-0" />
-                                <span className="text-muted-foreground truncate max-w-[200px]">{branch.createdBy?.name || 'Unknown'}</span>
+                                <span className="text-muted-foreground truncate max-w-[200px]">
+                                  {branch.createdBy?.name || "Unknown"}
+                                </span>
                               </div>
                               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/50 shrink-0">
                                 <span className="text-muted-foreground whitespace-nowrap">
-                                  Updated {branch.updatedAt ? new Date(branch.updatedAt).toLocaleDateString('en-US', { 
-                                    month: 'short', 
-                                    day: 'numeric'
-                                  }) : 'recently'}
+                                  Updated{" "}
+                                  {branch.updatedAt
+                                    ? new Date(
+                                        branch.updatedAt
+                                      ).toLocaleDateString("en-US", {
+                                        month: "short",
+                                        day: "numeric",
+                                      })
+                                    : "recently"}
                                 </span>
                               </div>
                             </div>
                           </div>
-                          
+
                           {/* Hover Actions */}
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -325,37 +371,46 @@ export function BranchFeed() {
               ) : (
                 <div className="text-center py-12">
                   <p className="text-sm text-muted-foreground">
-                    {searchQuery 
-                      ? "No branches found matching your search." 
+                    {searchQuery
+                      ? "No branches found matching your search."
                       : "No branches yet. Start by creating your first branch above."}
                   </p>
                 </div>
               )}
 
               {/* Getting Started Section */}
-              {(!branches.data || branches.data.length === 0) && !searchQuery && (
-                <Card className="border-dashed border-border/50 bg-muted/20 p-6 mt-8 shadow-none">
-                  <h3 className="font-medium text-sm mb-3">Getting started</h3>
-                  <div className="space-y-3">
-                    <div>
-                      <h4 className="font-medium text-sm mb-1">Create your first branch</h4>
-                      <p className="text-xs text-muted-foreground">
-                        Describe what you want to build in the input above, and hypershape will help you create it.
-                      </p>
+              {(!branches.data || branches.data.length === 0) &&
+                !searchQuery && (
+                  <Card className="border-dashed border-border/50 bg-muted/20 p-6 mt-8 shadow-none">
+                    <h3 className="font-medium text-sm mb-3">
+                      Getting started
+                    </h3>
+                    <div className="space-y-3">
+                      <div>
+                        <h4 className="font-medium text-sm mb-1">
+                          Create your first branch
+                        </h4>
+                        <p className="text-xs text-muted-foreground">
+                          Describe what you want to build in the input above,
+                          and hypershape will help you create it.
+                        </p>
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-sm mb-1">
+                          Explore templates
+                        </h4>
+                        <p className="text-xs text-muted-foreground">
+                          Browse our collection of templates to get started
+                          quickly.
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="font-medium text-sm mb-1">Explore templates</h4>
-                      <p className="text-xs text-muted-foreground">
-                        Browse our collection of templates to get started quickly.
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-              )}
+                  </Card>
+                )}
             </div>
           </div>
         </div>
       </SidebarInset>
     </SidebarProvider>
   );
-} 
+}

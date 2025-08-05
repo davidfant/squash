@@ -133,6 +133,8 @@ export const createMachine = ({
                 apk update;
                 apk add --no-cache git;
 
+                git config --global user.name "Hive Mind";
+                git config --global user.email "agent@hivemind.io";
                 git config --global credential.helper store;
                 printf "protocol=https\nhost=github.com\nusername=$GITHUB_USERNAME\npassword=$GITHUB_PASSWORD\n" | git credential approve;
 

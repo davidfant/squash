@@ -52,6 +52,7 @@
     "react-dom": "^19.1.0",
     "react-i18next": "^15.6.1",
     "react-markdown": "^10.1.0",
+    "react-resizable-panels": "^3.0.4",
     "react-router": "^7.6.3",
     "react-textarea-autosize": "^8.5.9",
     "sonner": "^2.0.6",

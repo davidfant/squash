@@ -105,14 +105,6 @@ function ReadFileToolAlert({ part }: { part: ToolPart<"readFile"> }) {
 function WriteFileToolAlert({ part }: { part: ToolPart<"writeFile"> }) {
   switch (part.state) {
     case "output-available":
-      if (!part.output.success) {
-        return (
-          <ToolErrorAlert
-            title={`Failed writing ${part.input.path}`}
-            description={part.output.message}
-          />
-        );
-      }
       return (
         <ToolAlert
           icon={<CheckCircle2Icon />}

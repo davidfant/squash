@@ -28,7 +28,6 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { api, useMutation, useQuery } from "@/hooks/api";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
 import {
   Bug,
   Filter,
@@ -57,11 +56,15 @@ export function BranchFeed() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterByMe, setFilterByMe] = useState(false);
-  const [chatInitialValue, setChatInitialValue] =
-    useLocalStorage<ChatInputValue>("BranchFeed.chatInitialValue", {
-      text: "",
-      files: [],
-    });
+  // const [chatInitialValue, setChatInitialValue] =
+  //   useLocalStorage<ChatInputValue>("BranchFeed.chatInitialValue", {
+  //     text: "",
+  //     files: [],
+  //   });
+  const [chatInitialValue, setChatInitialValue] = useState<ChatInputValue>({
+    text: "",
+    files: [],
+  });
   const [chatInputKey, setChatInputKey] = useState(0);
   const [selectedRepoId, setSelectedRepoId] = useSelectedRepoId();
 

@@ -266,14 +266,15 @@ export const reposRouter = new Hono<{
 
       try {
         // Use RepoService to detect framework without updating
-        const { framework, snapshot } = await RepoService.detectAndApplyFramework({
-          repo: {
-            url: repo.url,
-            defaultBranch: repo.defaultBranch,
-          },
-          provider: repo.provider,
-          env: c.env,
-        });
+        const { framework, snapshot } =
+          await RepoService.detectAndApplyFramework({
+            repo: {
+              url: repo.url,
+              defaultBranch: repo.defaultBranch,
+            },
+            provider: repo.provider,
+            env: c.env,
+          });
 
         return c.json({
           framework: framework,
@@ -282,10 +283,7 @@ export const reposRouter = new Hono<{
         });
       } catch (error) {
         console.error("Error detecting framework:", error);
-        return c.json(
-          { error: "Failed to detect framework" },
-          500
-        );
+        return c.json({ error: "Failed to detect framework" }, 500);
       }
     }
   )
@@ -307,24 +305,24 @@ export const reposRouter = new Hono<{
         return c.json({ success: true });
       } catch (error) {
         console.error("Error deleting repository:", error);
-        return c.json(
-          { error: "Failed to delete repository" },
-          500
-        );
+        return c.json({ error: "Failed to delete repository" }, 500);
       }
     }
   )
   .put(
     "/:repoId/snapshot",
     zValidator("param", z.object({ repoId: z.string() })),
-    zValidator("json", z.object({ 
-      snapshot: z.object({
-        type: z.literal("docker"),
-        port: z.number(),
-        image: z.string(),
-        entrypoint: z.string(),
+    zValidator(
+      "json",
+      z.object({
+        snapshot: z.object({
+          type: z.literal("docker"),
+          port: z.number(),
+          image: z.string(),
+          entrypoint: z.string(),
+        }),
       })
-    })),
+    ),
     requireRepo,
     async (c) => {
       const repo = c.get("repo");
@@ -335,9 +333,9 @@ export const reposRouter = new Hono<{
         // Update the repo with new snapshot
         await db
           .update(schema.repo)
-          .set({ 
+          .set({
             snapshot: snapshot,
-            updatedAt: new Date()
+            updatedAt: new Date(),
           })
           .where(eq(schema.repo.id, repo.id));
 
@@ -347,10 +345,7 @@ export const reposRouter = new Hono<{
         });
       } catch (error) {
         console.error("Error updating snapshot:", error);
-        return c.json(
-          { error: "Failed to update snapshot" },
-          500
-        );
+        return c.json({ error: "Failed to update snapshot" }, 500);
       }
     }
   )
@@ -406,14 +401,15 @@ export const reposRouter = new Hono<{
         }
 
         // Use RepoService to detect framework
-        const { framework, snapshot } = await RepoService.detectAndApplyFramework({
-          repo: {
-            url: targetRepo.clone_url,
-            defaultBranch: targetRepo.default_branch,
-          },
-          provider: provider,
-          env: c.env,
-        });
+        const { framework, snapshot } =
+          await RepoService.detectAndApplyFramework({
+            repo: {
+              url: targetRepo.clone_url,
+              defaultBranch: targetRepo.default_branch,
+            },
+            provider: provider,
+            env: c.env,
+          });
 
         return c.json({
           framework: framework,
@@ -509,15 +505,20 @@ export const reposRouter = new Hono<{
   .post(
     "/providers/:providerId/repos",
     zValidator("param", z.object({ providerId: z.string() })),
-    zValidator("json", z.object({ 
-      repoId: z.string(),
-      snapshot: z.object({
-        type: z.literal("docker"),
-        port: z.number(),
-        image: z.string(),
-        entrypoint: z.string(),
-      }).optional()
-    })),
+    zValidator(
+      "json",
+      z.object({
+        repoId: z.string(),
+        snapshot: z
+          .object({
+            type: z.literal("docker"),
+            port: z.number(),
+            image: z.string(),
+            entrypoint: z.string(),
+          })
+          .optional(),
+      })
+    ),
     requireRepoProvider,
     async (c) => {
       const { providerId } = c.req.valid("param");
@@ -555,7 +556,7 @@ export const reposRouter = new Hono<{
         }
 
         let snapshot = providedSnapshot;
-        
+
         // If no snapshot provided, detect framework
         if (!snapshot) {
           const detection = await RepoService.detectAndApplyFramework({
@@ -706,7 +707,9 @@ export const reposRouter = new Hono<{
 
           return c.json(repoBranch!);
         } catch (error) {
-          await FlyioSandbox.deleteApp(branchName, c.env.FLY_API_KEY);
+          await FlyioSandbox.deleteApp(branchName, c.env.FLY_API_KEY).catch(
+            () => {}
+          );
           throw error;
         }
       } catch (error) {

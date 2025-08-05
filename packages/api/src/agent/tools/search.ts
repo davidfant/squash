@@ -50,5 +50,5 @@ Use this tool to run fast, exact regex searches over text files using \`git grep
       }),
       z.object({ success: z.literal(false), message: z.string() }),
     ]),
-    execute: ({ query, ...options }) => gitGrep(query, ctx.context, options),
+    execute: ({ query, ...options }) => gitGrep(query, ctx.sandbox, options),
   });

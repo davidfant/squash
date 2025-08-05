@@ -1,15 +1,15 @@
 export class FlyAPIError extends Error {}
 
-export async function flyFetch<T>(
+export async function flyFetch(
   path: string,
   apiKey: string,
-  { json = true, ...init }: RequestInit & { json?: boolean } = {}
-): Promise<T> {
+  init: RequestInit = {}
+) {
   const res = await fetch(`https://api.machines.dev/v1${path}`, {
     ...init,
     headers: {
       Authorization: `Bearer ${apiKey}`,
-      ...(json ? { "Content-Type": "application/json" } : {}),
+      "Content-Type": "application/json",
       ...init.headers,
     },
   });
@@ -19,5 +19,14 @@ export async function flyFetch<T>(
       `Request failed with status ${res.status} ${res.statusText}: ${text}`
     );
   }
+  return res;
+}
+
+export async function flyFetchJson<T>(
+  path: string,
+  apiKey: string,
+  init: RequestInit = {}
+): Promise<T> {
+  const res = await flyFetch(path, apiKey, init);
   return (await res.json()) as T;
 }

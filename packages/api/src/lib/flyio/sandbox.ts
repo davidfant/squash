@@ -1,4 +1,4 @@
-import { flyFetch } from "./util";
+import { flyFetch, flyFetchJson } from "./util";
 
 interface FlyMachineCheck {
   name: string;
@@ -25,7 +25,7 @@ export async function createApp(
   apiKey: string,
   orgSlug: string
 ) {
-  await flyFetch("/apps", apiKey, {
+  await flyFetchJson("/apps", apiKey, {
     method: "POST",
     body: JSON.stringify({ app_name: appId, org_slug: orgSlug }),
   });
@@ -66,7 +66,7 @@ export async function createApp(
 }
 
 export const deleteApp = (appName: string, apiKey: string) =>
-  flyFetch(`/apps/${appName}`, apiKey, { method: "DELETE", json: false });
+  flyFetch(`/apps/${appName}?force=true`, apiKey, { method: "DELETE" });
 
 export const createMachine = ({
   appId,
@@ -83,7 +83,7 @@ export const createMachine = ({
   port: number;
   apiKey: string;
 }) =>
-  flyFetch<FlyMachine>(`/apps/${appId}/machines`, apiKey, {
+  flyFetchJson<FlyMachine>(`/apps/${appId}/machines`, apiKey, {
     method: "POST",
     body: JSON.stringify({
       config: {
@@ -168,14 +168,14 @@ export async function waitForMachineHealthy(
   timeoutMs = 5 * 60_000,
   pollMs = 2_000
 ) {
-  const machine = await flyFetch<FlyMachine>(
+  const machine = await flyFetchJson<FlyMachine>(
     `/apps/${appId}/machines/${machineId}`,
     apiKey
   );
   if (isHealthy(machine)) return machine;
 
   if (["stopped", "suspended"].includes(machine.state)) {
-    await flyFetch(`/apps/${appId}/machines/${machineId}/start`, apiKey, {
+    await flyFetchJson(`/apps/${appId}/machines/${machineId}/start`, apiKey, {
       method: "POST",
     });
   }
@@ -184,7 +184,7 @@ export async function waitForMachineHealthy(
   while (true) {
     let machine: FlyMachine | undefined;
     try {
-      machine = await flyFetch<FlyMachine>(
+      machine = await flyFetchJson<FlyMachine>(
         `/apps/${appId}/machines/${machineId}`,
         apiKey
       );

@@ -7,7 +7,6 @@ import * as schema from "@/database/schema";
 import { zValidator } from "@hono/zod-validator";
 import { and, asc, eq } from "drizzle-orm";
 import { Hono } from "hono";
-import { randomUUID } from "node:crypto";
 import { z } from "zod";
 
 export const zUserMessagePart = z.union([
@@ -114,40 +113,40 @@ export const chatRouter = new Hono<{
         messages.push(message!);
       }
 
-      const stream = await streamAgent(messages, {
-        type: "flyio",
-        context: {
-          appId: branch.sandbox.appId,
-          machineId: branch.sandbox.machineId,
-          workdir: branch.sandbox.workdir,
-          apiKey: c.env.FLY_API_KEY,
-        },
-      });
-
       const usage: MessageUsage[] = [];
-      return stream.toUIMessageStreamResponse<ChatMessage>({
-        originalMessages: messages,
-        generateMessageId: randomUUID,
-        onFinish: async ({ responseMessage }) => {
-          await db.insert(schema.message).values({
-            id: responseMessage.id,
-            role: responseMessage.role as "user" | "assistant",
-            parts: responseMessage.parts,
-            usage,
-            threadId,
-          });
+      return streamAgent(
+        messages,
+        {
+          type: "flyio",
+          sandbox: {
+            appId: branch.sandbox.appId,
+            machineId: branch.sandbox.machineId,
+            workdir: branch.sandbox.workdir,
+            apiKey: c.env.FLY_API_KEY,
+          },
         },
-        messageMetadata(opts) {
-          if (opts.part.type === "start") {
-            return { createdAt: new Date().toISOString() };
-          }
-          if (opts.part.type === "finish-step") {
-            usage.push({
-              ...opts.part.usage,
-              modelId: opts.part.response.modelId,
+        {
+          onFinish: async ({ responseMessage }) => {
+            await db.insert(schema.message).values({
+              id: responseMessage.id,
+              role: responseMessage.role as "user" | "assistant",
+              parts: responseMessage.parts,
+              usage,
+              threadId,
             });
-          }
-        },
-      });
+          },
+          messageMetadata(opts) {
+            if (opts.part.type === "start") {
+              return { createdAt: new Date().toISOString() };
+            }
+            if (opts.part.type === "finish-step") {
+              usage.push({
+                ...opts.part.usage,
+                modelId: opts.part.response.modelId,
+              });
+            }
+          },
+        }
+      );
     }
   );

@@ -48,7 +48,7 @@ IMPORTANT GUIDELINES:
       const start = Math.max(lines?.start ?? 1, 1);
       const end = Math.min(lines?.end ?? 500, start + 500);
 
-      const result = await FlyioExec.readFile(path, ctx.context, {
+      const result = await FlyioExec.readFile(path, ctx.sandbox, {
         start,
         end,
       });
@@ -61,9 +61,8 @@ IMPORTANT GUIDELINES:
     },
   });
 
-export const writeFile = (ctx: SandboxRuntimeContext) =>
-  tool({
-    description: `
+export const writeFile = tool({
+  description: `
 Use this tool to propose an edit to an existing file or create a new file.
 
 This will be read by a less intelligent model, which will quickly apply the edit. You should make it clear what the edit is, while also minimizing the unchanged code you write.
@@ -89,47 +88,45 @@ Make sure it is clear what the edit should be, and where it should be applied.To
 
 You should specify the following arguments before the others: [path]
 `.trim(),
-    inputSchema: z.object({
-      path: z
-        .string()
-        .describe(
-          "The relative path of the target file to modify. Always specify the path as the first argument."
-        ),
-      instruction: z
-        .string()
-        .describe(
-          "A single sentence instruction describing what you are going to do for the sketched edit. This is used to assist the less intelligent model in applying the edit. Please use the first person to describe what you are going to do. Don't repeat what you have said previously in normal messages. And use it to disambiguate uncertainty in the edit."
-        ),
-      codeEdit: z
-        .string()
-        .describe(
-          "Specify ONLY the precise lines of code that you wish to edit. **NEVER specify or write out unchanged code**. Instead, represent all unchanged code using the comment of the language you're editing in - example: `// ... existing code ...`"
-        ),
-      explanation: zExplanation,
-    }),
-    outputSchema: z.object({ success: z.boolean(), message: z.string() }),
-    execute: async ({ path, instruction, codeEdit }) => {
-      // TODO: read file, relace merge, then write file. if file doesn't exist, create it.
-      return FlyioExec.writeFile(path, codeEdit, ctx.context);
-    },
-  });
+  inputSchema: z.object({
+    path: z
+      .string()
+      .describe(
+        "The relative path of the target file to modify. Always specify the path as the first argument."
+      ),
+    instruction: z
+      .string()
+      .describe(
+        "A single sentence instruction describing what you are going to do for the sketched edit. This is used to assist the less intelligent model in applying the edit. Please use the first person to describe what you are going to do. Don't repeat what you have said previously in normal messages. And use it to disambiguate uncertainty in the edit."
+      ),
+    codeEdit: z
+      .string()
+      .describe(
+        "Specify ONLY the precise lines of code that you wish to edit. **NEVER specify or write out unchanged code**. Instead, represent all unchanged code using the comment of the language you're editing in - example: `// ... existing code ...`"
+      ),
+    explanation: zExplanation,
+  }),
+  // outputSchema: z.object({ success: z.boolean(), message: z.string() }),
+  // execute: async ({ path, codeEdit }) => FlyioExec.writeFile(path, codeEdit, ctx.context),
+  execute: async ({ path }) => ({ status: "staged", path }),
+});
 
-export const deleteFile = (ctx: SandboxRuntimeContext) =>
-  tool({
-    description: `
+export const deleteFile = tool({
+  description: `
 Deletes a file at the specified path. The operation will fail gracefully if:
 - The file doesn't exist
 - The operation is rejected for security reasons
 - The file cannot be deleted
 `.trim(),
-    inputSchema: z.object({
-      path: z
-        .string()
-        .describe(
-          "The path of the file to delete, relative to the workspace root."
-        ),
-      explanation: zExplanation,
-    }),
-    outputSchema: z.object({ success: z.boolean(), message: z.string() }),
-    execute: ({ path }) => FlyioExec.deleteFile(path, ctx.context),
-  });
+  inputSchema: z.object({
+    path: z
+      .string()
+      .describe(
+        "The path of the file to delete, relative to the workspace root."
+      ),
+    explanation: zExplanation,
+  }),
+  // outputSchema: z.object({ success: z.boolean(), message: z.string() }),
+  // execute: ({ path }) => FlyioExec.deleteFile(path, ctx.context),
+  execute: ({ path }) => ({ status: "staged", path }),
+});

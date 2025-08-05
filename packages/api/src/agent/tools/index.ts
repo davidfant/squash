@@ -4,11 +4,11 @@ import { grepSearch } from "./search";
 import { todoWrite } from "./todoWrite";
 import { webSearch } from "./webSearch";
 
-export const tools = (ctx: SandboxRuntimeContext) => ({
-  readFile: readFile(ctx),
-  writeFile: writeFile(ctx),
-  deleteFile: deleteFile(ctx),
-  grepSearch: grepSearch(ctx),
-  todoWrite: todoWrite(ctx),
+export const createAgentTools = (runtimeContext: SandboxRuntimeContext) => ({
+  readFile: readFile(runtimeContext),
+  writeFile,
+  deleteFile,
+  grepSearch: grepSearch(runtimeContext),
+  todoWrite: todoWrite(runtimeContext),
   webSearch,
 });

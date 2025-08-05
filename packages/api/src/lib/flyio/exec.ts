@@ -1,6 +1,6 @@
-import { flyFetch } from "./util";
+import { flyFetchJson } from "./util";
 
-export interface FlyioExecContext {
+export interface FlyioExecSandboxContext {
   appId: string;
   machineId: string;
   apiKey: string;
@@ -13,12 +13,14 @@ interface ExecResult {
   stderr?: string;
 }
 
+const escape = (str: string) => `'${str.replace(/'/g, "'\\''")}'`;
+
 const execCommand = (
-  context: FlyioExecContext,
+  context: FlyioExecSandboxContext,
   command: string,
   { timeout = 30 }: { timeout?: number } = {}
 ): Promise<ExecResult> =>
-  flyFetch<ExecResult>(
+  flyFetchJson<ExecResult>(
     `/apps/${context.appId}/machines/${context.machineId}/exec`,
     context.apiKey,
     {
@@ -34,7 +36,7 @@ const execCommand = (
 
 export async function deleteFile(
   filePath: string,
-  context: FlyioExecContext
+  context: FlyioExecSandboxContext
 ): Promise<{ success: boolean; message: string }> {
   try {
     const result = await execCommand(context, `rm -f "${filePath}"`);
@@ -59,7 +61,7 @@ export async function deleteFile(
 export async function writeFile(
   filePath: string,
   content: string,
-  context: FlyioExecContext
+  context: FlyioExecSandboxContext
 ): Promise<{ success: boolean; message: string }> {
   try {
     const base64Content = Buffer.from(content, "utf8").toString("base64");
@@ -88,7 +90,7 @@ export async function writeFile(
 
 export async function readFile(
   filePath: string,
-  context: FlyioExecContext,
+  context: FlyioExecSandboxContext,
   lines?: { start: number; end: number }
 ): Promise<
   | { success: true; content: string; totalLines: number }
@@ -122,7 +124,7 @@ export async function readFile(
 
 export async function gitGrep(
   query: string,
-  context: FlyioExecContext,
+  context: FlyioExecSandboxContext,
   opts: {
     caseSensitive?: boolean;
     includePattern?: string;
@@ -169,7 +171,7 @@ export async function gitGrep(
   }
 }
 
-export async function gitLsFiles(context: FlyioExecContext) {
+export async function gitLsFiles(context: FlyioExecSandboxContext) {
   const result = await execCommand(
     context,
     "git ls-files | xargs wc -l | awk '!/total$/ { printf \"%s\\t%s\\n\", $1, $2 }'"
@@ -193,5 +195,25 @@ export async function gitLsFiles(context: FlyioExecContext) {
       success: false as const,
       message: result.stderr || "Unknown error",
     };
+  }
+}
+
+export async function gitCommit(
+  context: FlyioExecSandboxContext,
+  title: string,
+  body: string
+) {
+  const result = await execCommand(
+    context,
+    [
+      "git add -A",
+      `git commit -m ${escape(title)} -m ${escape(body)} --quiet`,
+      "git rev-parse HEAD",
+    ].join(" && ")
+  );
+  if (result.exit_code === 0 && result.stdout) {
+    return result.stdout.trim();
+  } else {
+    throw new Error(result.stderr ?? "Failed to commit");
   }
 }

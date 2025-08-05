@@ -144,21 +144,6 @@ function WriteFileToolAlert({ part }: { part: ToolPart<"writeFile"> }) {
   }
 }
 
-// const toolCallIconByState = (
-//   state: ToolUIPart["state"],
-//   fallback: ReactNode
-// ) => {
-//   switch (state) {
-//     case "input-streaming":
-//     case "input-available":
-//       return <Loader2 className="animate-spin" />;
-//     case "output-error":
-//       return <CircleX />;
-//     case "output-available":
-//       return fallback;
-//   }
-// };
-
 export function MessageParts({ parts }: { parts: ChatMessage["parts"] }) {
   const renderedParts = parts
     .map((c, index) => {

@@ -95,9 +95,6 @@ You should specify the following arguments before the others: [path]
         .describe(
           "The relative path of the target file to modify. Always specify the path as the first argument."
         ),
-      content: z
-        .string()
-        .describe("UTF-8 text content to write into the file."),
       instruction: z
         .string()
         .describe(
@@ -111,9 +108,9 @@ You should specify the following arguments before the others: [path]
       explanation: zExplanation,
     }),
     outputSchema: z.object({ success: z.boolean(), message: z.string() }),
-    execute: async ({ path, content, instruction, codeEdit }) => {
+    execute: async ({ path, instruction, codeEdit }) => {
       // TODO: read file, relace merge, then write file. if file doesn't exist, create it.
-      return FlyioExec.writeFile(path, content, ctx.context);
+      return FlyioExec.writeFile(path, codeEdit, ctx.context);
     },
   });
 

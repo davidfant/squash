@@ -1,12 +1,10 @@
+import { streamAgent } from "@/agent";
 import type { ChatMessage } from "@/agent/types";
 import { requireAuth } from "@/auth/middleware";
 import type { Database } from "@/database";
 import type { MessageUsage } from "@/database/schema";
 import * as schema from "@/database/schema";
-import { withCacheBreakpoints } from "@/lib/withCacheBreakpoints";
-import { anthropic } from "@ai-sdk/anthropic";
 import { zValidator } from "@hono/zod-validator";
-import { convertToModelMessages, stepCountIs, streamText, tool } from "ai";
 import { and, asc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { randomUUID } from "node:crypto";
@@ -94,68 +92,43 @@ export const chatRouter = new Hono<{
       const params = c.req.valid("param");
       const user = c.get("user");
 
-      const messages = await loadMessages(db, params.branchId, user.id);
+      const [messages, branch] = await Promise.all([
+        loadMessages(db, params.branchId, user.id),
+        db
+          .select()
+          .from(schema.repoBranch)
+          .where(eq(schema.repoBranch.id, params.branchId))
+          .then((r) => r[0]!),
+      ]);
       if (!messages.length) {
         return c.json({ error: "Message thread not found" }, 404);
       }
       const lastMessage = messages[messages.length - 1]!;
       const threadId = lastMessage.threadId;
       if (lastMessage.id !== body.message.id) {
+        const { id, parts } = body.message;
         const [message] = await db
           .insert(schema.message)
-          .values({
-            id: body.message.id,
-            role: "user",
-            parts: body.message.parts,
-            threadId,
-          })
+          .values({ id, role: "user", parts, threadId })
           .returning();
         messages.push(message!);
       }
 
-      const result = streamText({
-        // model: google("gemini-2.5-flash"),
-        // model: anthropic("claude-3-5-haiku-20241022"),
-        model: anthropic("claude-sonnet-4-20250514"),
-        messages: [
-          ...withCacheBreakpoints([
-            {
-              role: "system",
-              content: "You are a helpful assistant.",
-            },
-          ]),
-          {
-            role: "system",
-            content:
-              "this is a more specific system message which could e.g. contain the ls",
-          },
-          ...withCacheBreakpoints(convertToModelMessages(messages), 3),
-        ],
-        tools: {
-          getWeather: tool({
-            description: "Get the weather for a location",
-            inputSchema: z.object({ location: z.string() }),
-            outputSchema: z.object({
-              weather: z.string(),
-              temperature: z.number(),
-            }),
-            execute: async ({ location }) => {
-              return {
-                weather: `Weather in ${location}: sunny, 72°F`,
-                temperature: 72,
-              };
-            },
-          }),
+      const stream = await streamAgent(messages, {
+        type: "flyio",
+        context: {
+          appId: branch.sandbox.appId,
+          machineId: branch.sandbox.machineId,
+          workdir: branch.sandbox.workdir,
+          apiKey: c.env.FLY_API_KEY,
         },
-        stopWhen: [stepCountIs(10)],
       });
 
       const usage: MessageUsage[] = [];
-      return result.toUIMessageStreamResponse<ChatMessage>({
+      return stream.toUIMessageStreamResponse<ChatMessage>({
         originalMessages: messages,
         generateMessageId: randomUUID,
         onFinish: async ({ responseMessage }) => {
-          console.log("usage...", usage);
           await db.insert(schema.message).values({
             id: responseMessage.id,
             role: responseMessage.role as "user" | "assistant",

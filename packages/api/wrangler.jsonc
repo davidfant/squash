@@ -12,5 +12,6 @@
     "GOOGLE_GENERATIVE_AI_API_KEY": "",
     "BETTER_AUTH_SECRET": "",
     "DATABASE_URL": ""
-  }
+  },
+  "rules": [{ "type": "Text", "globs": ["**/*.md"], "fallthrough": true }]
 }

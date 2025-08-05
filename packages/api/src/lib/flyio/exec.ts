@@ -4,7 +4,7 @@ export interface FlyioExecContext {
   appId: string;
   machineId: string;
   apiKey: string;
-  cwd: string;
+  workdir: string;
 }
 
 interface ExecResult {
@@ -15,8 +15,8 @@ interface ExecResult {
 
 const execCommand = (
   context: FlyioExecContext,
-  command: string[],
-  { timeout = 30000 }: { timeout?: number } = {}
+  command: string,
+  { timeout = 30 }: { timeout?: number } = {}
 ): Promise<ExecResult> =>
   flyFetch<ExecResult>(
     `/apps/${context.appId}/machines/${context.machineId}/exec`,
@@ -24,8 +24,8 @@ const execCommand = (
     {
       method: "POST",
       body: JSON.stringify({
-        command: !!context.cwd
-          ? ["cd", context.cwd, "&&", ...command]
+        command: !!context.workdir
+          ? ["sh", "-c", `cd ${context.workdir} && ${command}`]
           : command,
         timeout,
       }),
@@ -37,7 +37,7 @@ export async function deleteFile(
   context: FlyioExecContext
 ): Promise<{ success: boolean; message: string }> {
   try {
-    const result = await execCommand(context, ["rm", "-f", filePath]);
+    const result = await execCommand(context, `rm -f "${filePath}"`);
     if (result.exit_code === 0) {
       return {
         success: true,
@@ -63,11 +63,10 @@ export async function writeFile(
 ): Promise<{ success: boolean; message: string }> {
   try {
     const base64Content = Buffer.from(content, "utf8").toString("base64");
-    const result = await execCommand(context, [
-      "sh",
-      "-c",
-      `echo "${base64Content}" | base64 -d > "${filePath}"`,
-    ]);
+    const result = await execCommand(
+      context,
+      `echo "${base64Content}" | base64 -d > "${filePath}"`
+    );
 
     if (result.exit_code === 0) {
       return {
@@ -97,13 +96,12 @@ export async function readFile(
 > {
   const countLines = `(wc -l < ${filePath} | awk '{print $1}')`;
   try {
-    const result = await execCommand(context, [
-      "sh",
-      "-c",
+    const result = await execCommand(
+      context,
       lines
         ? `awk "NR >= ${lines.start} && NR <= ${lines.end}" ${filePath} && ${countLines}`
-        : `cat ${filePath} && ${countLines}`,
-    ]);
+        : `cat ${filePath} && ${countLines}`
+    );
     if (result.exit_code === 0) {
       const lines = (result.stdout ?? "").split("\n");
       const content = lines?.slice(0, -1).join("\n");
@@ -152,12 +150,12 @@ export async function gitGrep(
   }
   cmd.push("--");
   if (opts.includePattern) {
-    cmd.push(opts.includePattern);
+    cmd.push(`"${opts.includePattern}"`);
   }
   if (opts.excludePattern) {
-    cmd.push(`:(exclude)${opts.excludePattern}`);
+    cmd.push(`":(exclude)${opts.excludePattern}"`);
   }
-  const result = await execCommand(context, cmd);
+  const result = await execCommand(context, cmd.join(" "));
   if (result.exit_code === 0) {
     const matches = (result.stdout ?? "").split("\n\n\n").map((line) => {
       const [path, snippet] = line.split("\n");
@@ -172,18 +170,27 @@ export async function gitGrep(
 }
 
 export async function gitLsFiles(context: FlyioExecContext) {
-  const result = await execCommand(context, [
-    "git",
-    "ls-files",
-    "|",
-    "xargs",
-    "wc",
-    "-l",
-  ]);
+  const result = await execCommand(
+    context,
+    "git ls-files | xargs wc -l | awk '!/total$/ { printf \"%s\\t%s\\n\", $1, $2 }'"
+  );
   if (result.exit_code === 0) {
-    const lines = (result.stdout ?? "").split("\n").slice(0, -1);
-    return { success: true, files: lines };
+    if (!result.stdout?.trim()) {
+      return { success: true as const, files: [] };
+    }
+
+    const files = result.stdout
+      .split("\n")
+      .filter((line) => !!line.trim())
+      .map((line) => {
+        const [linesStr, ...pathParts] = line.split("\t");
+        return { path: pathParts.join("\t"), lines: Number(linesStr) };
+      });
+    return { success: true as const, files };
   } else {
-    return { success: false, message: result.stderr || "Unknown error" };
+    return {
+      success: false as const,
+      message: result.stderr || "Unknown error",
+    };
   }
 }

@@ -62,7 +62,7 @@ export function ChatThread({
           key={String(!!initialMessages)}
           className="h-full overflow-y-auto overflow-x-hidden space-y-2 p-2 pb-8"
         >
-          <div ref={sticky.contentRef}>
+          <div ref={sticky.contentRef} className="space-y-2">
             {messages.map((m) => {
               switch (m.role) {
                 case "user":

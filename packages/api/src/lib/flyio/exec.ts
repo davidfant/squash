@@ -105,7 +105,7 @@ export async function readFile(
         : `cat ${filePath} && ${countLines}`
     );
     if (result.exit_code === 0) {
-      const lines = (result.stdout ?? "").split("\n");
+      const lines = (result.stdout ?? "").trimEnd().split("\n");
       const content = lines?.slice(0, -1).join("\n");
       const totalLines = Number(lines?.[lines.length - 1]);
       return { success: true, content, totalLines };
@@ -207,6 +207,8 @@ export async function gitCommit(
     context,
     [
       "git add -A",
+      "git config --global user.name 'Hive Mind'",
+      "git config --global user.email 'agent@hivemind.io'",
       `git commit -m ${escape(title)} -m ${escape(body)} --quiet`,
       "git rev-parse HEAD",
     ].join(" && ")

@@ -143,9 +143,9 @@ export function MessageParts({ parts }: { parts: ChatMessage["parts"] }) {
         case "text":
           return <Markdown key={index}>{c.text}</Markdown>;
         case "tool-readFile":
-          return <ReadFileToolAlert part={c} />;
+          return <ReadFileToolAlert key={index} part={c} />;
         case "tool-writeFile":
-          return <WriteFileToolAlert part={c} />;
+          return <WriteFileToolAlert key={index} part={c} />;
         case "tool-deleteFile":
         case "tool-grepSearch":
         case "tool-todoWrite":

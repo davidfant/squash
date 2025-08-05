@@ -180,6 +180,7 @@ export async function gitLsFiles(context: FlyioExecContext) {
     }
 
     const files = result.stdout
+      .trimEnd()
       .split("\n")
       .filter((line) => !!line.trim())
       .map((line) => {

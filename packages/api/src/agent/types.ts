@@ -7,7 +7,7 @@ export interface SandboxRuntimeContext {
   context: FlyioExecContext;
 }
 
-export type ChatTools = InferUITools<ReturnType<typeof tools>>;
+export type AgentTools = InferUITools<ReturnType<typeof tools>>;
 
 export interface ChatMessageMetadata {
   createdAt: string;
@@ -15,5 +15,5 @@ export interface ChatMessageMetadata {
 export type ChatMessage = UIMessage<
   ChatMessageMetadata,
   UIDataTypes,
-  ChatTools
+  AgentTools
 >;

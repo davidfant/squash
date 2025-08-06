@@ -17,7 +17,7 @@
     }
   },
   "scripts": {
-    "dev": "pnpm typegen && wrangler dev",
+    "dev": "pnpm typegen && concurrently \"wrangler dev\" \"pnpm tsc --watch --preserveWatchOutput\"",
     "deploy": "wrangler deploy --minify",
     "build": "tsc -b",
     "typegen": "wrangler types --env-interface CloudflareBindings"
@@ -44,6 +44,7 @@
     "@types/lodash.camelcase": "^4.3.9",
     "@types/lodash.kebabcase": "^4.1.9",
     "@types/lodash.upperfirst": "^4.3.9",
+    "concurrently": "^9.2.0",
     "dotenv": "^17.2.0",
     "drizzle-kit": "^0.31.4",
     "wrangler": "^4.26.0"

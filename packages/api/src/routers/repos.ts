@@ -619,8 +619,7 @@ export const reposRouter = new Hono<{
               branch: branchName,
               workdir,
             },
-            image: "node:20-alpine",
-            port: 3000,
+            snapshot: repo.snapshot,
             auth: {
               github:
                 repo.provider.type === "github"

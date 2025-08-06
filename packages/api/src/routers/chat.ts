@@ -147,7 +147,6 @@ export const chatRouter = new Hono<{
       ]);
 
       await checkoutLatestCommit(messages, runtimeContext, db);
-
       const messagesWithoutRoot = messages.filter((m) => m.role !== "system");
 
       const nextParentId = messages[messages.length - 1]!.id;

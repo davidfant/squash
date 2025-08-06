@@ -1,19 +1,7 @@
+import { GitBranch, Home, Moon, Settings, Sun } from "lucide-react";
 import * as React from "react";
-import {
-  GitBranch,
-  Home,
-  Settings,
-  Moon,
-  Sun,
-} from "lucide-react";
 
-
-
-import { NavMain } from "./nav-main";
-import { NavProjects } from "./nav-projects";
-import { NavUser } from "./nav-user";
-import { RepoSwitcher } from "./repo-switcher";
-import { ThemeToggle } from "./theme-toggle";
+import { authClient } from "@/auth";
 import {
   Sidebar,
   SidebarContent,
@@ -25,12 +13,13 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-  SidebarSeparator,
 } from "@/components/ui/sidebar";
-import { api, useQuery, useMutation } from "@/hooks/api";
-import { authClient } from "@/auth";
-import { useNavigate, Link } from "react-router";
+import { api, useQuery } from "@/hooks/api";
 import { useSelectedRepoId } from "@/routes/landing";
+import { Link, useNavigate } from "react-router";
+import { NavMain } from "./nav-main";
+import { NavUser } from "./nav-user";
+import { RepoSwitcher } from "./repo-switcher";
 
 const navMainItems = [
   {
@@ -62,44 +51,47 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const navigate = useNavigate();
   const repos = useQuery(api.repos.$get, { params: {} });
   const [selectedRepoId] = useSelectedRepoId();
-  
+
   // Get branches for the selected repo
   const branches = useQuery(api.repos[":repoId"].branches.$get, {
     params: { repoId: selectedRepoId || "" },
     enabled: !!selectedRepoId,
   });
 
-  const userData = session.data?.user ? {
-    name: session.data.user.name || "User",
-    email: session.data.user.email || "",
-    avatar: session.data.user.image || "",
-  } : null;
+  const userData = session.data?.user
+    ? {
+        name: session.data.user.name || "User",
+        email: session.data.user.email || "",
+        avatar: session.data.user.image || "",
+      }
+    : null;
 
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         {repos.data && (
-          <RepoSwitcher repos={repos.data.map(repo => ({
-            id: repo.id,
-            name: repo.name,
-          }))} />
+          <RepoSwitcher
+            repos={repos.data.map((repo) => ({
+              id: repo.id,
+              name: repo.name,
+            }))}
+          />
         )}
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={navMainItems} />
-        
+
         {/* Branches Section */}
         <SidebarGroup>
           <SidebarGroupLabel>Branches</SidebarGroupLabel>
-          
+
           {selectedRepoId && branches.data ? (
             <SidebarMenu>
               {branches.data.length > 0 ? (
                 branches.data
-                  .filter((branch): branch is NonNullable<typeof branch> => 
-                    branch != null && 
-                    branch.id != null && 
-                    branch.name != null
+                  .filter(
+                    (branch): branch is NonNullable<typeof branch> =>
+                      branch != null && branch.id != null && branch.name != null
                   )
                   .map((branch) => (
                     <SidebarMenuItem key={branch.id}>
@@ -134,32 +126,36 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenuButton
               tooltip="Toggle theme"
               onClick={() => {
-                const isDark = document.documentElement.classList.contains('dark');
-                const newTheme = isDark ? 'light' : 'dark';
-                localStorage.setItem('theme', newTheme);
-                if (newTheme === 'dark') {
-                  document.documentElement.classList.add('dark');
+                const isDark =
+                  document.documentElement.classList.contains("dark");
+                const newTheme = isDark ? "light" : "dark";
+                localStorage.setItem("theme", newTheme);
+                if (newTheme === "dark") {
+                  document.documentElement.classList.add("dark");
                 } else {
-                  document.documentElement.classList.remove('dark');
+                  document.documentElement.classList.remove("dark");
                 }
               }}
             >
               {(() => {
-                const [theme, setTheme] = React.useState<'light' | 'dark'>('light');
+                const [theme, setTheme] = React.useState<"light" | "dark">(
+                  "light"
+                );
                 React.useEffect(() => {
                   const checkTheme = () => {
-                    const isDark = document.documentElement.classList.contains('dark');
-                    setTheme(isDark ? 'dark' : 'light');
+                    const isDark =
+                      document.documentElement.classList.contains("dark");
+                    setTheme(isDark ? "dark" : "light");
                   };
                   checkTheme();
                   const observer = new MutationObserver(checkTheme);
-                  observer.observe(document.documentElement, { 
-                    attributes: true, 
-                    attributeFilter: ['class'] 
+                  observer.observe(document.documentElement, {
+                    attributes: true,
+                    attributeFilter: ["class"],
                   });
                   return () => observer.disconnect();
                 }, []);
-                return theme === 'light' ? <Moon /> : <Sun />;
+                return theme === "light" ? <Sun /> : <Moon />;
               })()}
               <span>Appearance</span>
             </SidebarMenuButton>
@@ -170,4 +166,4 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarRail />
     </Sidebar>
   );
-} 
+}

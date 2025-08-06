@@ -1,3 +1,4 @@
+import type { RepoSnapshot } from "@/database/schema/repos";
 import { flyFetch, flyFetchJson } from "./util";
 
 interface FlyMachineCheck {
@@ -73,29 +74,31 @@ export const createMachine = ({
   git,
   auth,
   apiKey,
-  image,
-  port,
+  snapshot,
 }: {
   appId: string;
   git: { url: string; defaultBranch: string; branch: string; workdir: string };
   auth: { github?: { username: string; password: string } };
-  image: string;
-  port: number;
   apiKey: string;
+  snapshot: RepoSnapshot;
 }) =>
   flyFetchJson<FlyMachine>(`/apps/${appId}/machines`, apiKey, {
     method: "POST",
     body: JSON.stringify({
       config: {
-        image,
-        size: "shared-cpu-2x",
-        memory: 1024,
+        image: snapshot.image,
+        guest: {
+          cpu_kind: "shared",
+          cpus: 2,
+          memory_mb: 1024,
+        },
+        // size: "performance-1x",
         auto_destroy: false,
         restart: { policy: "no" },
         services: [
           {
             protocol: "tcp",
-            internal_port: port,
+            internal_port: snapshot.port,
             ports: [
               { port: 80, handlers: ["http"] },
               { port: 443, handlers: ["tls", "http"] },
@@ -107,7 +110,7 @@ export const createMachine = ({
         checks: {
           health: {
             type: "http",
-            port: port,
+            port: snapshot.port,
             method: "GET",
             path: "/",
             interval: "5s",
@@ -116,7 +119,7 @@ export const createMachine = ({
           },
         },
         env: {
-          PORT: port.toString(),
+          PORT: snapshot.port.toString(),
           GIT_REPO_DIR: git.workdir,
           GIT_URL: git.url,
           GIT_BRANCH: git.branch,
@@ -125,8 +128,6 @@ export const createMachine = ({
           GITHUB_PASSWORD: auth.github?.password,
         },
         init: {
-          // install and run basic hello world http server
-          // entrypoint: ["/bin/sh", "-c", "npx -y http-server -p 3000"],
           entrypoint: [
             "/bin/sh",
             "-c",
@@ -135,6 +136,9 @@ export const createMachine = ({
 
                 apk update;
                 apk add --no-cache git;
+
+                corepack enable;
+                corepack prepare pnpm@10.0.0 --activate;
 
                 git config --global credential.helper store;
                 printf "protocol=https\nhost=github.com\nusername=$GITHUB_USERNAME\npassword=$GITHUB_PASSWORD\n" | git credential approve;
@@ -146,8 +150,7 @@ export const createMachine = ({
                   git clone $GIT_URL $GIT_REPO_DIR;
                   cd $GIT_REPO_DIR;
                 fi
-                npm install;
-                npx vite --host 0.0.0.0 --port 3000;
+                ${snapshot.entrypoint};
               `,
           ],
         },

@@ -75,7 +75,7 @@ function Component({ branchId }: { branchId: string }) {
             maxSize={35}
             className="flex"
           >
-            <ChatThread ready={!!threadMessages.data} />
+            <ChatThread ready={!!threadMessages.data} id={branchId} />
           </ResizablePanel>
           <ResizableHandle />
           <ResizablePanel defaultSize={75} className="flex">

@@ -1,6 +1,7 @@
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 import type { ChatMessage } from "@hypershape-ai/api/agent/types";
 import { resolveMessageThreadHistory } from "@hypershape-ai/api/lib/resolveMessageThreadHistory";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 
 interface Leaf {
   id: string;
@@ -241,11 +242,10 @@ export function variantsAlongPath(
   return variantMap;
 }
 
-export function useMessageLineage(messages: ChatMessage[]) {
-  // TODO: consider storing in local storage
-  const [preferredLeafId, setPreferredLeafId] = useState<string | undefined>(
-    undefined
-  );
+export function useMessageLineage(messages: ChatMessage[], id: string) {
+  const [preferredLeafId, setPreferredLeafId] = useLocalStorage<
+    string | undefined
+  >(`ChatThread.${id}.preferredLeafId`, undefined);
 
   const activePath = useMemo(
     () => getActivePathFromNode(messages, preferredLeafId),
@@ -263,6 +263,7 @@ export function useMessageLineage(messages: ChatMessage[]) {
     ) => {
       const newPath = switchVariant(allMessages, parentId, chosenChildId);
       setPreferredLeafId(newPath[newPath.length - 1]!.id);
+      return newPath;
     },
     [messages]
   );

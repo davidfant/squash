@@ -4,7 +4,7 @@ import { useRef } from "react";
 import { useBranchContext } from "./context";
 
 export function BranchPreview({ className }: { className?: string }) {
-  const { screenSize, branch, previewPath, previewUrl, setPreviewPath } =
+  const { screenSize, branch, previewPath, preview, setPreviewPath } =
     useBranchContext();
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
@@ -49,10 +49,10 @@ export function BranchPreview({ className }: { className?: string }) {
 
   return (
     <div className={cn("relative h-full", className)}>
-      {previewUrl ? (
+      {preview ? (
         <iframe
           ref={iframeRef}
-          src={`${previewUrl}${previewPath}`}
+          src={`${preview.url}${previewPath}`}
           className={cn(
             "h-full mx-auto transition-all duration-300",
             getPreviewWidth()

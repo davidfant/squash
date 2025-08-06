@@ -3,6 +3,7 @@ import {
   type ChatInputValue,
 } from "@/components/layout/chat/input/ChatInput";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useBranchContext } from "@/routes/branches/context";
 import type { ChatMessage } from "@hypershape-ai/api/agent/types";
 import { AlertCircle } from "lucide-react";
 import { useEffect } from "react";
@@ -17,14 +18,17 @@ import { useMessageLineage } from "./messageLineage";
 import { ScrollToBottomButton } from "./ScrollToBottomButton";
 
 export function ChatThread({
+  id,
   initialValue,
   ready,
 }: {
+  id: string;
   ready: boolean;
   initialValue?: ChatInputValue;
 }) {
+  const { setPreview } = useBranchContext();
   const { messages: allMessages, status, sendMessage } = useChatContext();
-  const messages = useMessageLineage(allMessages);
+  const messages = useMessageLineage(allMessages, id);
   const sticky = useStickToBottom({ resize: "smooth", initial: "instant" });
 
   useEffect(() => {
@@ -52,6 +56,14 @@ export function ChatThread({
 
     sendMessage(resent);
     messages.switchVariant(parentId, resent.id, [...allMessages, resent]);
+  };
+
+  const handleVariantChange = (parentId: string, chosenChildId: string) => {
+    const newActivePath = messages.switchVariant(parentId, chosenChildId);
+    const lastSha = newActivePath
+      .flatMap((m) => m.parts)
+      .findLast((p) => p.type === "data-gitSha");
+    if (lastSha) setPreview(lastSha.data.sha);
   };
 
   return (
@@ -86,7 +98,7 @@ export function ChatThread({
                           // TODO: Implement edit functionality
                           console.log("Edit message:", m.id);
                         }}
-                        onVariantChange={messages.switchVariant}
+                        onVariantChange={handleVariantChange}
                       />
                     </div>
                   );

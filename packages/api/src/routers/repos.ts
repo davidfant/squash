@@ -11,6 +11,7 @@ import type {
   RepoSnapshot,
 } from "@/database/schema";
 import * as schema from "@/database/schema";
+import * as FlyioExec from "@/lib/flyio/exec";
 import * as FlyioSandbox from "@/lib/flyio/sandbox";
 import { RepoService } from "@/services/repoService";
 import { google } from "@ai-sdk/google";
@@ -730,6 +731,7 @@ export const reposRouter = new Hono<{
   .post(
     "/branches/:branchId/preview",
     zValidator("param", z.object({ branchId: z.string().uuid() })),
+    zValidator("json", z.object({ sha: z.string().optional() })),
     requireRepoBranch,
     async (c) => {
       const branch = c.get("branch");
@@ -738,8 +740,18 @@ export const reposRouter = new Hono<{
         branch.sandbox.machineId,
         c.env.FLY_API_KEY
       );
-
-      return c.json({ url: branch.sandbox.url });
+      const { sha } = c.req.valid("json");
+      const context: FlyioExec.FlyioExecSandboxContext = {
+        ...branch.sandbox,
+        apiKey: c.env.FLY_API_KEY,
+      };
+      if (sha) {
+        await FlyioExec.gitReset(context, sha);
+        return c.json({ url: branch.sandbox.url, sha });
+      } else {
+        const sha = await FlyioExec.gitCurrentCommit(context);
+        return c.json({ url: branch.sandbox.url, sha });
+      }
     }
   )
   .delete(

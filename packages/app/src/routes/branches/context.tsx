@@ -1,4 +1,5 @@
 import { api, useQuery } from "@/hooks/api";
+import { keepPreviousData } from "@tanstack/react-query";
 import { createContext, useContext, useState, type ReactNode } from "react";
 import type { Branch } from "./types";
 
@@ -10,7 +11,8 @@ export interface BranchContextValue {
   setScreenSize(size: ScreenSize): void;
   toggleScreenSize(): void;
 
-  previewUrl: string | null;
+  preview: { url: string; sha: string } | null;
+  setPreview(sha: string): void;
   previewPath: string;
   setPreviewPath(path: string): void;
 }
@@ -20,8 +22,9 @@ const BranchContext = createContext<BranchContextValue>({
   screenSize: "desktop",
   setScreenSize: () => {},
   toggleScreenSize: () => {},
-  previewUrl: null,
+  preview: null,
   previewPath: "",
+  setPreview: () => {},
   setPreviewPath: () => {},
 });
 
@@ -43,9 +46,18 @@ export const BranchContextProvider = ({
   const [screenSize, setScreenSize] = useState<ScreenSize>("desktop");
   const [previewPath, setPreviewPath] = useState("");
 
-  const preview = useQuery(api.repos.branches[":branchId"].preview.$post, {
-    params: { branchId },
-  });
+  const [currentSha, setCurrentSha] = useState<string>();
+  const preview = useQuery(
+    ({ param }) =>
+      api.repos.branches[":branchId"].preview.$post({
+        param,
+        json: { sha: currentSha },
+      }),
+    {
+      params: { branchId, sha: currentSha },
+      ...({ placeholderData: keepPreviousData } as any),
+    }
+  );
 
   const toggleScreenSize = () => setScreenSize(getNextScreenSize(screenSize));
 
@@ -58,7 +70,8 @@ export const BranchContextProvider = ({
         setScreenSize,
         toggleScreenSize,
         previewPath,
-        previewUrl: preview.data?.url ?? null,
+        preview: preview.data ?? null,
+        setPreview: setCurrentSha,
         setPreviewPath,
       }}
     >

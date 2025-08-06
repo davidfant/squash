@@ -88,7 +88,8 @@ export const createMachine = ({
     body: JSON.stringify({
       config: {
         image,
-        size: "performance-2x",
+        size: "shared-cpu-2x",
+        memory: 1024,
         auto_destroy: false,
         restart: { policy: "no" },
         services: [

@@ -2,7 +2,6 @@ import {
   ChatInput,
   type ChatInputValue,
 } from "@/components/layout/chat/input/ChatInput";
-import { AppSidebar } from "@/components/layout/sidebar/app-sidebar";
 import {
   BranchCard,
   EmptyState,
@@ -11,6 +10,7 @@ import {
   SuggestionPills,
   defaultSuggestions,
 } from "@/components/layout/feed";
+import { AppSidebar } from "@/components/layout/sidebar/app-sidebar";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -31,6 +31,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { api, useMutation, useQuery } from "@/hooks/api";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { FolderGit2 } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
@@ -40,15 +41,11 @@ export function BranchFeed() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterByMe, setFilterByMe] = useState(false);
-  // const [chatInitialValue, setChatInitialValue] =
-  //   useLocalStorage<ChatInputValue>("BranchFeed.chatInitialValue", {
-  //     text: "",
-  //     files: [],
-  //   });
-  const [chatInitialValue, setChatInitialValue] = useState<ChatInputValue>({
-    text: "",
-    files: [],
-  });
+  const [chatInitialValue, setChatInitialValue] =
+    useLocalStorage<ChatInputValue>("BranchFeed.chatInitialValue", {
+      text: "",
+      files: [],
+    });
   const [chatInputKey, setChatInputKey] = useState(0);
   const [selectedRepoId, setSelectedRepoId] = useSelectedRepoId();
 

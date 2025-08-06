@@ -106,29 +106,55 @@ function computeGlobalLeaf(
   return globalLeaf;
 }
 
-/**
- * Default active path for a thread.
- * If preferredLeafId is given, we return its root->leaf path.
- * Otherwise, we select the path from (one of) the root(s) to the **newest leaf** in the *entire* tree.
- *
- * At each variant when walking downward from the root, choose the child whose subtree’s
- * latest-leaf timestamp is maximal (ties broken by child id for stability).
- */
-export function getActivePath(
-  messages: ChatMessage[],
-  preferredLeafId?: string
+function descendGreedyFrom(
+  start: ChatMessage,
+  children: Map<string | null, ChatMessage[]>,
+  latestLeaf: Map<string, Leaf>
 ): ChatMessage[] {
-  if (messages.length === 0) return [];
-  const messageAt = getMessageAt(messages);
-  const { isLeaf } = computeLatestLeafIndex(messages, messageAt);
+  const path: ChatMessage[] = [start];
+  let curr = start;
 
-  if (preferredLeafId) {
-    return resolveHistory(messages, preferredLeafId);
+  while (true) {
+    const kids = children.get(curr.id) ?? [];
+    if (kids.length === 0) break;
+
+    // Choose the child whose subtree has the latest leaf (tie-break by larger leaf id).
+    const next = kids.reduce((best, kid) => {
+      const bestLeaf = latestLeaf.get(best.id)!;
+      const kidLeaf = latestLeaf.get(kid.id)!;
+      return isAfter(kidLeaf, bestLeaf) ? kid : best;
+    });
+
+    path.push(next);
+    curr = next;
   }
 
-  const globalLeaf = computeGlobalLeaf(messages, isLeaf, messageAt);
-  if (!globalLeaf) return [];
-  return resolveHistory(messages, globalLeaf.id);
+  return path;
+}
+
+export function getActivePathFromNode(
+  messages: ChatMessage[],
+  startId: string | undefined
+): ChatMessage[] {
+  if (messages.length === 0) return [];
+
+  const messageAt = getMessageAt(messages);
+  const { byId, children, latestLeaf, isLeaf } = computeLatestLeafIndex(
+    messages,
+    messageAt
+  );
+
+  if (!startId) {
+    const globalLeaf = computeGlobalLeaf(messages, isLeaf, messageAt);
+    if (!globalLeaf) return [];
+    return resolveHistory(messages, globalLeaf.id);
+  }
+
+  const up = resolveHistory(messages, startId);
+  const start = byId.get(startId);
+  if (!start) return up;
+  const down = descendGreedyFrom(start, children, latestLeaf);
+  return [...up, ...down.slice(1)];
 }
 
 /**
@@ -222,7 +248,7 @@ export function useMessageLineage(messages: ChatMessage[]) {
   );
 
   const activePath = useMemo(
-    () => getActivePath(messages, preferredLeafId),
+    () => getActivePathFromNode(messages, preferredLeafId),
     [messages, preferredLeafId]
   );
   const variants = useMemo(

@@ -80,9 +80,8 @@ export function ChatThread({
       metadata: { parentId, createdAt: new Date().toISOString() },
     };
 
-    const newMessages = [...allMessages, resent];
-    setMessages(newMessages);
-    messages.switchVariant(parentId, resent.id, newMessages);
+    sendMessage(resent);
+    messages.switchVariant(parentId, resent.id, [...allMessages, resent]);
   };
 
   return (

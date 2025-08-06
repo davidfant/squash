@@ -3,15 +3,13 @@ import {
   type ChatInputValue,
 } from "@/components/layout/chat/input/ChatInput";
 import { Skeleton } from "@/components/ui/skeleton";
-import { usePrevious } from "@/hooks/usePrevious";
-import { useChat } from "@ai-sdk/react";
 import type { ChatMessage } from "@hypershape-ai/api/agent/types";
-import { DefaultChatTransport } from "ai";
 import { AlertCircle } from "lucide-react";
 import { useEffect } from "react";
 import { useStickToBottom } from "use-stick-to-bottom";
 import { v4 as uuid } from "uuid";
 import { FilePreview } from "../file/FilePreview";
+import { useChatContext } from "./context";
 import { MessageHeader } from "./message/MessageHeader";
 import { MessageParts } from "./message/MessageParts";
 import { UserMessageFooter } from "./message/UserMessageFooter";
@@ -19,42 +17,14 @@ import { useMessageLineage } from "./messageLineage";
 import { ScrollToBottomButton } from "./ScrollToBottomButton";
 
 export function ChatThread({
-  endpoint,
   initialValue,
-  initialMessages,
+  ready,
 }: {
-  endpoint: string;
+  ready: boolean;
   initialValue?: ChatInputValue;
-  initialMessages?: ChatMessage[];
 }) {
-  const {
-    messages: allMessages,
-    status,
-    sendMessage,
-    setMessages,
-  } = useChat<ChatMessage>({
-    messages: initialMessages,
-    transport: new DefaultChatTransport({
-      api: endpoint,
-      credentials: "include",
-      prepareSendMessagesRequest: ({ messages }) => {
-        const l = messages[messages.length - 1]!;
-        const parentId = l.metadata!.parentId;
-        const message = { id: l.id, parts: l.parts, parentId };
-        return { body: { message } };
-      },
-    }),
-    generateId: uuid,
-  });
+  const { messages: allMessages, status, sendMessage } = useChatContext();
   const messages = useMessageLineage(allMessages);
-
-  const hasInitialMessages = !!initialMessages;
-  const hadInitialMessages = usePrevious(hasInitialMessages);
-  useEffect(() => {
-    if (!hadInitialMessages && hasInitialMessages) {
-      setMessages(initialMessages);
-    }
-  }, [!!initialMessages]);
   const sticky = useStickToBottom({ resize: "smooth", initial: "instant" });
 
   useEffect(() => {
@@ -89,7 +59,7 @@ export function ChatThread({
       <div className="flex-1 relative overflow-hidden">
         <div
           ref={sticky.scrollRef}
-          key={String(!!initialMessages)}
+          key={String(ready)}
           className="h-full overflow-y-auto overflow-x-hidden space-y-2 px-4 py-2 pb-8"
         >
           <div ref={sticky.contentRef}>
@@ -158,7 +128,7 @@ export function ChatThread({
 
       <div className="px-4 py-2 pt-0">
         <ChatInput
-          disabled={!initialMessages}
+          disabled={!ready}
           initialValue={initialValue}
           autoFocus
           placeholder="Type a message..."

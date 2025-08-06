@@ -1,3 +1,4 @@
+import { useChatContext } from "@/components/layout/chat/context";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -56,6 +57,7 @@ export function BranchHeader({
   publicUrl = "https://myproject.com",
   className,
 }: BranchHeaderProps) {
+  const { messages } = useChatContext();
   const copyPublicUrl = () => {
     navigator.clipboard.writeText(publicUrl);
   };
@@ -121,6 +123,15 @@ export function BranchHeader({
               onPressedChange={onHistoryToggle}
               variant="default"
               size="sm"
+              onClick={() =>
+                alert(
+                  messages
+                    .flatMap((m) => m.parts)
+                    .filter((p) => p.type === "tool-gitCommit")
+                    .map((p) => `${p.input?.title}: ${p.output?.commitSha}`)
+                    .join("\n")
+                )
+              }
             >
               <History />
             </Toggle>

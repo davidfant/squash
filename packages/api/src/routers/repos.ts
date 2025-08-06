@@ -621,11 +621,11 @@ export const reposRouter = new Hono<{
           .returning()
           .then(([thread]) => thread!);
 
-        await db.insert(schema.message).values({
-          role: "user",
-          parts: message.parts,
-          threadId: thread.id,
-        });
+        const parentId = randomUUID();
+        await db.insert(schema.message).values([
+          { id: parentId, role: "system", threadId: thread.id, parts: [] },
+          { role: "user", parts: message.parts, threadId: thread.id, parentId },
+        ]);
 
         const textContent = message.parts
           .filter((part) => part.type === "text")

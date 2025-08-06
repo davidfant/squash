@@ -8,10 +8,15 @@ import {
   text,
   timestamp,
   uuid,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { repoBranch } from "./repos";
 
-export const messageRole = pgEnum("message_role", ["user", "assistant"]);
+export const messageRole = pgEnum("message_role", [
+  "system",
+  "user",
+  "assistant",
+]);
 
 export const messageThread = pgTable("message_thread", {
   id: uuid().primaryKey().defaultRandom(),
@@ -36,19 +41,15 @@ export const message = pgTable(
     role: messageRole().notNull(),
     parts: jsonb().$type<ChatMessage["parts"]>().notNull(),
     usage: jsonb().$type<MessageUsage[]>(),
-    createdAt: timestamp("created_at", { mode: "string" })
-      .defaultNow()
-      .notNull(),
-    updatedAt: timestamp("updated_at", { mode: "string" })
-      .defaultNow()
-      .notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
     threadId: uuid("thread_id")
       .notNull()
       .references(() => messageThread.id),
-    // parentId: uuid("parent_id").references((): AnyPgColumn => messages.id),
+    parentId: uuid("parent_id").references((): AnyPgColumn => message.id),
   },
   (table) => [
-    // index("message_parent_id_index").on(table.parentId),
+    index("message_parent_id_index").on(table.parentId),
     index("message_thread_id_index").on(table.threadId),
   ]
 );

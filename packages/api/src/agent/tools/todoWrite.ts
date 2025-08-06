@@ -159,6 +159,14 @@ When in doubt, use this tool. Proactive task management demonstrates attentivene
     execute: async ({ merge, todos }) => {
       // TODO: keep track of the todos in the context and return the full list of todos...
       // return { todos: [] };
-      throw new Error("Not implemented");
+      return {
+        todos: todos.map((t, index) => ({
+          ...t,
+          id: String(index),
+          dependencies: t.dependencies ?? [],
+          status: t.status ?? "pending",
+          content: t.content ?? "",
+        })),
+      };
     },
   });

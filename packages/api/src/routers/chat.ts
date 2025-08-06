@@ -4,8 +4,9 @@ import { requireAuth } from "@/auth/middleware";
 import type { Database } from "@/database";
 import type { MessageUsage } from "@/database/schema";
 import * as schema from "@/database/schema";
+import { resolveMessageThreadHistory } from "@/lib/resolveMessageThreadHistory";
 import { zValidator } from "@hono/zod-validator";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull, not } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 
@@ -30,6 +31,7 @@ const loadMessages = (db: Database, branchId: string, userId: string) =>
       parts: schema.message.parts,
       createdAt: schema.message.createdAt,
       threadId: schema.message.threadId,
+      parentId: schema.message.parentId,
     })
     .from(schema.repoBranch)
     .innerJoin(
@@ -42,9 +44,16 @@ const loadMessages = (db: Database, branchId: string, userId: string) =>
       eq(schema.repo.organizationId, schema.member.organizationId)
     )
     .where(
-      and(eq(schema.repoBranch.id, branchId), eq(schema.member.userId, userId))
+      and(
+        eq(schema.repoBranch.id, branchId),
+        eq(schema.member.userId, userId),
+        // exclude the root message
+        not(eq(schema.message.role, "system")),
+        not(isNull(schema.message.parentId))
+      )
     )
-    .orderBy(asc(schema.message.createdAt));
+    .orderBy(asc(schema.message.createdAt))
+    .then((msgs) => msgs.map((m) => ({ ...m, parentId: m.parentId! })));
 
 export const chatRouter = new Hono<{
   Bindings: CloudflareBindings;
@@ -66,7 +75,10 @@ export const chatRouter = new Hono<{
             id: m.id,
             role: m.role,
             parts: m.parts,
-            metadata: { createdAt: m.createdAt },
+            metadata: {
+              createdAt: m.createdAt.toISOString(),
+              parentId: m.parentId ?? undefined,
+            },
           })
         )
       );
@@ -81,6 +93,7 @@ export const chatRouter = new Hono<{
         message: z.object({
           id: z.string().uuid(),
           parts: z.array(zUserMessagePart),
+          parentId: z.string().uuid(),
         }),
       })
     ),
@@ -91,7 +104,7 @@ export const chatRouter = new Hono<{
       const params = c.req.valid("param");
       const user = c.get("user");
 
-      const [messages, branch] = await Promise.all([
+      const [allMessages, branch] = await Promise.all([
         loadMessages(db, params.branchId, user.id),
         db
           .select()
@@ -99,19 +112,28 @@ export const chatRouter = new Hono<{
           .where(eq(schema.repoBranch.id, params.branchId))
           .then((r) => r[0]!),
       ]);
-      if (!messages.length) {
+      if (!allMessages.length) {
         return c.json({ error: "Message thread not found" }, 404);
       }
-      const lastMessage = messages[messages.length - 1]!;
-      const threadId = lastMessage.threadId;
-      if (lastMessage.id !== body.message.id) {
-        const { id, parts } = body.message;
-        const [message] = await db
-          .insert(schema.message)
-          .values({ id, role: "user", parts, threadId })
-          .returning();
-        messages.push(message!);
-      }
+      const threadId = allMessages[0]!.threadId;
+
+      const messages = await (async () => {
+        if (allMessages.some((m) => m.id === body.message.id)) {
+          return resolveMessageThreadHistory(allMessages, body.message.id);
+        } else {
+          const { id, parts, parentId } = body.message;
+          const [message] = await db
+            .insert(schema.message)
+            .values({ id, role: "user", parts, threadId, parentId })
+            .returning();
+          return [
+            ...resolveMessageThreadHistory(allMessages, parentId),
+            { ...message!, parentId },
+          ];
+        }
+      })();
+
+      const nextParentId = messages[messages.length - 1]!.id;
 
       const usage: MessageUsage[] = [];
       return streamAgent(
@@ -134,11 +156,15 @@ export const chatRouter = new Hono<{
               parts: responseMessage.parts,
               usage,
               threadId,
+              parentId: nextParentId,
             });
           },
           messageMetadata(opts) {
             if (opts.part.type === "start") {
-              return { createdAt: new Date().toISOString() };
+              return {
+                createdAt: new Date().toISOString(),
+                parentId: nextParentId,
+              };
             }
             if (opts.part.type === "finish-step") {
               usage.push({

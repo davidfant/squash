@@ -11,6 +11,7 @@ export type AgentTools = InferUITools<ReturnType<typeof createAgentTools>>;
 
 export interface ChatMessageMetadata {
   createdAt: string;
+  parentId: string;
 }
 export type ChatMessage = UIMessage<
   ChatMessageMetadata,

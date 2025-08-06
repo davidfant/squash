@@ -8,15 +8,20 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
-import type { AgentTools, ChatMessage } from "@hypershape-ai/api/agent/types";
+import type { AllTools, ChatMessage } from "@hypershape-ai/api/agent/types";
 import type { ToolUIPart } from "ai";
-import { CheckCircle2Icon, CircleX, Eye, GitCommit, Loader2 } from "lucide-react";
+import {
+  CheckCircle2Icon,
+  CircleX,
+  Eye,
+  GitCommit,
+  Loader2,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { Markdown } from "../../Markdown";
 
-export type ToolPart<T extends keyof AgentTools> = ToolUIPart<{
-  [K in T]: AgentTools[K];
+export type ToolPart<T extends keyof AllTools> = ToolUIPart<{
+  [K in T]: AllTools[K];
 }>;
 
 const ToolAlert = ({
@@ -159,7 +164,9 @@ function GitCommitToolAlert({ part }: { part: ToolPart<"gitCommit"> }) {
               )}
               <div>
                 <span className="font-semibold">Commit SHA:</span>
-                <p className="mt-1 font-mono text-sm">{part.output.commitSha}</p>
+                <p className="mt-1 font-mono text-sm">
+                  {part.output.commitSha}
+                </p>
               </div>
             </div>
           }

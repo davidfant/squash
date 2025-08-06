@@ -1,4 +1,4 @@
-import type { SandboxRuntimeContext } from "@/agent/types";
+import type { AgentRuntimeContext } from "@/agent/types";
 import { gitGrep } from "@/lib/flyio/exec";
 import { tool } from "ai";
 import { z } from "zod";
@@ -6,7 +6,7 @@ import { zExplanation } from "./common";
 
 // TODO: semantic search...
 
-export const grepSearch = (ctx: SandboxRuntimeContext) =>
+export const grepSearch = (ctx: AgentRuntimeContext) =>
   tool({
     description: `
 Search the codebase for exact text matches or regex patterns.

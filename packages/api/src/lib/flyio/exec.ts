@@ -178,7 +178,7 @@ export async function gitLsFiles(context: FlyioExecSandboxContext) {
   );
   if (result.exit_code === 0) {
     if (!result.stdout?.trim()) {
-      return { success: true as const, files: [] };
+      return [];
     }
 
     const files = result.stdout
@@ -189,12 +189,9 @@ export async function gitLsFiles(context: FlyioExecSandboxContext) {
         const [linesStr, ...pathParts] = line.split("\t");
         return { path: pathParts.join("\t"), lines: Number(linesStr) };
       });
-    return { success: true as const, files };
+    return files;
   } else {
-    return {
-      success: false as const,
-      message: result.stderr || "Unknown error",
-    };
+    throw new Error(result.stderr || "Unknown error");
   }
 }
 
@@ -220,5 +217,23 @@ export async function gitCommit(
   }
 }
 
-export const gitReset = (context: FlyioExecSandboxContext, commitSha: string) =>
-  execCommand(context, `git reset --hard ${commitSha}`);
+export async function gitCurrentCommit(context: FlyioExecSandboxContext) {
+  const result = await execCommand(context, `git rev-parse HEAD`);
+  if (result.exit_code === 0 && result.stdout) {
+    return result.stdout.trim();
+  } else {
+    throw new Error(result.stderr ?? "Failed to get current commit");
+  }
+}
+
+export async function gitReset(
+  context: FlyioExecSandboxContext,
+  commitSha: string
+) {
+  const result = await execCommand(context, `git reset --hard ${commitSha}`);
+  if (result.exit_code === 0) {
+    return { success: true };
+  } else {
+    throw new Error(result.stderr ?? "Failed to reset to commit");
+  }
+}

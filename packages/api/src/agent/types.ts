@@ -3,7 +3,7 @@ import type { InferUITools, UIMessage } from "ai";
 import type { createAgentTools } from "./tools";
 import type { gitCommit } from "./tools/git";
 
-export interface SandboxRuntimeContext {
+export interface AgentRuntimeContext {
   type: "flyio";
   sandbox: FlyioExecSandboxContext;
 }
@@ -16,7 +16,7 @@ export type AllTools = InferUITools<
 >;
 
 export type ChatMessageData = {
-  // gitSha: { sha: string; title: string; description: string };
+  gitSha: { sha: string; title: string; description: string };
 };
 export interface ChatMessageMetadata {
   createdAt: string;

@@ -1,10 +1,10 @@
 import * as FlyioExec from "@/lib/flyio/exec";
 import { tool } from "ai";
 import z from "zod";
-import type { SandboxRuntimeContext } from "../types";
+import type { AgentRuntimeContext } from "../types";
 
 export const gitCommit = (
-  ctx: SandboxRuntimeContext,
+  ctx: AgentRuntimeContext,
   applyChanges: () => Promise<unknown>
 ) =>
   tool({

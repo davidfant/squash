@@ -219,6 +219,7 @@ export function MessageParts({ parts }: { parts: ChatMessage["parts"] }) {
         case "tool-gitCommit":
           return <GitCommitToolAlert key={index} part={c} />;
         case "step-start":
+        case "data-gitSha":
         case "file":
           return null;
         default:

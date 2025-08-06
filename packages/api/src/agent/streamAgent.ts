@@ -1,5 +1,4 @@
 import * as FlyioExec from "@/lib/flyio/exec";
-import { waitForMachineHealthy } from "@/lib/flyio/sandbox";
 import { morphMerge } from "@/lib/morph";
 import { anthropic } from "@ai-sdk/anthropic";
 import { google } from "@ai-sdk/google";
@@ -17,7 +16,7 @@ import EnvPrompt from "./prompts/env.md";
 import SystemPrompt from "./prompts/system.md";
 import { createAgentTools } from "./tools";
 import { gitCommit } from "./tools/git";
-import type { ChatMessage, SandboxRuntimeContext } from "./types";
+import type { AgentRuntimeContext, ChatMessage } from "./types";
 
 function withCacheBreakpoints(
   msgs: ModelMessage[],
@@ -52,21 +51,13 @@ const renderPrompt = (prompt: string, vars: Record<string, string>) =>
 
 export async function streamAgent(
   messages: ChatMessage[],
-  runtimeContext: SandboxRuntimeContext,
+  runtimeContext: AgentRuntimeContext,
   opts: Pick<
     UIMessageStreamOptions<ChatMessage>,
     "onFinish" | "messageMetadata"
   > & { morphApiKey: string }
 ) {
-  await waitForMachineHealthy(
-    runtimeContext.sandbox.appId,
-    runtimeContext.sandbox.machineId,
-    runtimeContext.sandbox.apiKey
-  );
-  const ls = await FlyioExec.gitLsFiles(runtimeContext.sandbox);
-  if (!ls.success) {
-    throw new Error(ls.message);
-  }
+  const files = await FlyioExec.gitLsFiles(runtimeContext.sandbox);
   console.warn(
     "TODO: cap the file list somehow + add a listDir tool that can show the contents of a directory"
   );
@@ -92,9 +83,7 @@ export async function streamAgent(
               PLATFORM: "linux",
               OS_VERSION: "node alpine",
               TODAY: new Date().toISOString().split("T")[0]!,
-              FILE_LIST: ls.files
-                .map((f) => `${f.lines}\t${f.path}`)
-                .join("\n"),
+              FILE_LIST: files.map((f) => `${f.lines}\t${f.path}`).join("\n"),
             }),
           },
           ...withCacheBreakpoints(convertToModelMessages(messages), 3),
@@ -174,22 +163,22 @@ export async function streamAgent(
           ),
         },
         toolChoice: { type: "tool", toolName: "gitCommit" },
-        // onStepFinish: (step) => {
-        //   step.toolResults.forEach((tc) => {
-        //     if (tc.dynamic) return;
-        //     if (tc.toolName === "gitCommit") {
-        //       writer.write({
-        //         type: "data-gitSha",
-        //         id: tc.toolCallId,
-        //         data: {
-        //           sha: tc.output.commitSha,
-        //           title: tc.input.title,
-        //           description: tc.input.body,
-        //         },
-        //       });
-        //     }
-        //   });
-        // },
+        onStepFinish: (step) => {
+          step.toolResults.forEach((tc) => {
+            if (tc.dynamic) return;
+            if (tc.toolName === "gitCommit") {
+              writer.write({
+                type: "data-gitSha",
+                id: tc.toolCallId,
+                data: {
+                  sha: tc.output.commitSha,
+                  title: tc.input.title,
+                  description: tc.input.body,
+                },
+              });
+            }
+          });
+        },
       });
       writer.merge(
         commitStream.toUIMessageStream({

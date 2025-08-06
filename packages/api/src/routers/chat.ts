@@ -1,12 +1,14 @@
+import { checkoutLatestCommit } from "@/agent/checkoutLatestCommit";
 import { streamAgent } from "@/agent/streamAgent";
-import type { ChatMessage } from "@/agent/types";
+import type { AgentRuntimeContext, ChatMessage } from "@/agent/types";
 import { requireAuth } from "@/auth/middleware";
 import type { Database } from "@/database";
 import type { MessageUsage } from "@/database/schema";
 import * as schema from "@/database/schema";
+import { waitForMachineHealthy } from "@/lib/flyio/sandbox";
 import { resolveMessageThreadHistory } from "@/lib/resolveMessageThreadHistory";
 import { zValidator } from "@hono/zod-validator";
-import { and, asc, eq, isNull, not } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 
@@ -44,16 +46,9 @@ const loadMessages = (db: Database, branchId: string, userId: string) =>
       eq(schema.repo.organizationId, schema.member.organizationId)
     )
     .where(
-      and(
-        eq(schema.repoBranch.id, branchId),
-        eq(schema.member.userId, userId),
-        // exclude the root message
-        not(eq(schema.message.role, "system")),
-        not(isNull(schema.message.parentId))
-      )
+      and(eq(schema.repoBranch.id, branchId), eq(schema.member.userId, userId))
     )
-    .orderBy(asc(schema.message.createdAt))
-    .then((msgs) => msgs.map((m) => ({ ...m, parentId: m.parentId! })));
+    .orderBy(asc(schema.message.createdAt));
 
 export const chatRouter = new Hono<{
   Bindings: CloudflareBindings;
@@ -70,17 +65,19 @@ export const chatRouter = new Hono<{
 
       if (!messages.length) return c.json({ error: "Project not found" }, 404);
       return c.json(
-        messages.map(
-          (m): ChatMessage => ({
-            id: m.id,
-            role: m.role,
-            parts: m.parts,
-            metadata: {
-              createdAt: m.createdAt.toISOString(),
-              parentId: m.parentId ?? undefined,
-            },
-          })
-        )
+        messages
+          .filter((m) => !!m.parentId)
+          .map(
+            (m): ChatMessage => ({
+              id: m.id,
+              role: m.role,
+              parts: m.parts,
+              metadata: {
+                createdAt: m.createdAt.toISOString(),
+                parentId: m.parentId!,
+              },
+            })
+          )
       );
     }
   )
@@ -117,63 +114,70 @@ export const chatRouter = new Hono<{
       }
       const threadId = allMessages[0]!.threadId;
 
-      const messages = await (async () => {
-        if (allMessages.some((m) => m.id === body.message.id)) {
-          return resolveMessageThreadHistory(allMessages, body.message.id);
-        } else {
-          const { id, parts, parentId } = body.message;
-          const [message] = await db
-            .insert(schema.message)
-            .values({ id, role: "user", parts, threadId, parentId })
-            .returning();
-          return [
-            ...resolveMessageThreadHistory(allMessages, parentId),
-            { ...message!, parentId },
-          ];
-        }
-      })();
+      const runtimeContext: AgentRuntimeContext = {
+        type: "flyio",
+        sandbox: {
+          appId: branch.sandbox.appId,
+          machineId: branch.sandbox.machineId,
+          workdir: branch.sandbox.workdir,
+          apiKey: c.env.FLY_API_KEY,
+        },
+      };
+      const [messages] = await Promise.all([
+        await (async () => {
+          if (allMessages.some((m) => m.id === body.message.id)) {
+            return resolveMessageThreadHistory(allMessages, body.message.id);
+          } else {
+            const { id, parts, parentId } = body.message;
+            const [message] = await db
+              .insert(schema.message)
+              .values({ id, role: "user", parts, threadId, parentId })
+              .returning();
+            return [
+              ...resolveMessageThreadHistory(allMessages, parentId),
+              { ...message!, parentId },
+            ];
+          }
+        })(),
+        waitForMachineHealthy(
+          runtimeContext.sandbox.appId,
+          runtimeContext.sandbox.machineId,
+          runtimeContext.sandbox.apiKey
+        ),
+      ]);
+
+      await checkoutLatestCommit(messages, runtimeContext, db);
+
+      const messagesWithoutRoot = messages.filter((m) => m.role !== "system");
 
       const nextParentId = messages[messages.length - 1]!.id;
-
       const usage: MessageUsage[] = [];
-      return streamAgent(
-        messages,
-        {
-          type: "flyio",
-          sandbox: {
-            appId: branch.sandbox.appId,
-            machineId: branch.sandbox.machineId,
-            workdir: branch.sandbox.workdir,
-            apiKey: c.env.FLY_API_KEY,
-          },
+      return streamAgent(messagesWithoutRoot, runtimeContext, {
+        morphApiKey: c.env.MORPH_API_KEY,
+        onFinish: async ({ responseMessage }) => {
+          await db.insert(schema.message).values({
+            id: responseMessage.id,
+            role: responseMessage.role as "user" | "assistant",
+            parts: responseMessage.parts,
+            usage,
+            threadId,
+            parentId: nextParentId,
+          });
         },
-        {
-          morphApiKey: c.env.MORPH_API_KEY,
-          onFinish: async ({ responseMessage }) => {
-            await db.insert(schema.message).values({
-              id: responseMessage.id,
-              role: responseMessage.role as "user" | "assistant",
-              parts: responseMessage.parts,
-              usage,
-              threadId,
+        messageMetadata(opts) {
+          if (opts.part.type === "start") {
+            return {
+              createdAt: new Date().toISOString(),
               parentId: nextParentId,
+            };
+          }
+          if (opts.part.type === "finish-step") {
+            usage.push({
+              ...opts.part.usage,
+              modelId: opts.part.response.modelId,
             });
-          },
-          messageMetadata(opts) {
-            if (opts.part.type === "start") {
-              return {
-                createdAt: new Date().toISOString(),
-                parentId: nextParentId,
-              };
-            }
-            if (opts.part.type === "finish-step") {
-              usage.push({
-                ...opts.part.usage,
-                modelId: opts.part.response.modelId,
-              });
-            }
-          },
-        }
-      );
+          }
+        },
+      });
     }
   );

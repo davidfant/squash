@@ -127,8 +127,8 @@ export function BranchHeader({
                 alert(
                   messages
                     .flatMap((m) => m.parts)
-                    .filter((p) => p.type === "tool-gitCommit")
-                    .map((p) => `${p.input?.title}: ${p.output?.commitSha}`)
+                    .filter((p) => p.type === "data-gitSha")
+                    .map((p) => `${p.data.title}: ${p.data.sha}`)
                     .join("\n")
                 )
               }

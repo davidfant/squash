@@ -1,4 +1,4 @@
-import type { SandboxRuntimeContext } from "@/agent/types";
+import type { AgentRuntimeContext } from "@/agent/types";
 import { tool } from "ai";
 import { z } from "zod";
 import { zExplanation } from "./common";
@@ -10,7 +10,7 @@ const zTodo = z.object({
   dependencies: z.array(z.string()),
 });
 
-export const todoWrite = (ctx: SandboxRuntimeContext) =>
+export const todoWrite = (ctx: AgentRuntimeContext) =>
   tool({
     description: `
 Use this tool to create and manage a structured task list for your current coding session. This helps track progress, organize complex tasks, and demonstrate thoroughness. Use these tools VERY frequently to ensure that you are tracking your tasks and giving the user visibility into your progress.

@@ -65,3 +65,5 @@ export const messagesRelations = relations(message, ({ one }) => ({
     references: [messageThread.id],
   }),
 }));
+
+export type Message = typeof message.$inferSelect;

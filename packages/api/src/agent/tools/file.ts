@@ -1,4 +1,4 @@
-import type { SandboxRuntimeContext } from "@/agent/types";
+import type { AgentRuntimeContext } from "@/agent/types";
 import * as FlyioExec from "@/lib/flyio/exec";
 import { tool } from "ai";
 import { z } from "zod";
@@ -7,7 +7,7 @@ import { zExplanation } from "./common";
 // TODO: download tool?
 
 // - Do NOT use this tool if the file contents have already been provided in <useful-context>
-export const readFile = (ctx: SandboxRuntimeContext) =>
+export const readFile = (ctx: AgentRuntimeContext) =>
   tool({
     description: `
 Use this tool to read the contents of a file. The output of this tool will be the 1-indexed file contents from the start line index to the end line index inclusive, together with a summary of the lines outside the line range. The file path should be relative to the project root. You can optionally specify line ranges to read using the lines parameter (e.g., "301-700, 1001-1500"). By default, the first 500 lines are read if lines is not specified.

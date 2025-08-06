@@ -1,10 +1,10 @@
-import type { SandboxRuntimeContext } from "../types";
+import type { AgentRuntimeContext } from "../types";
 import { deleteFile, readFile, writeFile } from "./file";
 import { grepSearch } from "./search";
 import { todoWrite } from "./todoWrite";
 import { webSearch } from "./webSearch";
 
-export const createAgentTools = (runtimeContext: SandboxRuntimeContext) => ({
+export const createAgentTools = (runtimeContext: AgentRuntimeContext) => ({
   readFile: readFile(runtimeContext),
   writeFile,
   deleteFile,

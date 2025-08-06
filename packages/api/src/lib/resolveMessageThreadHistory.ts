@@ -1,6 +1,6 @@
 interface Message {
   id: string;
-  parentId: string;
+  parentId: string | null;
 }
 
 export function resolveMessageThreadHistory<M extends Message>(

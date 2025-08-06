@@ -103,6 +103,7 @@ function ReadFileToolAlert({ part }: { part: ToolPart<"readFile"> }) {
         <ToolAlert
           icon={<Loader2 className="animate-spin" />}
           title={`Reading ${part.input?.path ?? ""}`}
+          description={part.input?.explanation}
         />
       );
   }

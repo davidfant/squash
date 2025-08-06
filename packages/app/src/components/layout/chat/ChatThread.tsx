@@ -85,7 +85,9 @@ export function ChatThread({
                   return (
                     <div key={m.id} className="space-y-1">
                       <MessageHeader author="Hive Mind" />
-                      <MessageParts parts={m.parts} indent />
+                      <div className="pl-7">
+                        <MessageParts parts={m.parts} />
+                      </div>
                     </div>
                   );
                 // default:

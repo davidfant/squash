@@ -19,14 +19,6 @@ export type ToolPart<T extends keyof AgentTools> = ToolUIPart<{
   [K in T]: AgentTools[K];
 }>;
 
-//  ToDo: Where should we define this? Seems odd to put it here. Should this be in createAgentTools? 
-type GitCommitPart = ToolUIPart<{
-  gitCommit: {
-    input: { title: string; body: string };
-    output: { commitSha: string };
-  };
-}>;
-
 const ToolAlert = ({
   icon,
   title,
@@ -145,7 +137,7 @@ function WriteFileToolAlert({ part }: { part: ToolPart<"writeFile"> }) {
   }
 }
 
-function GitCommitToolAlert({ part }: { part: GitCommitPart }) {
+function GitCommitToolAlert({ part }: { part: ToolPart<"gitCommit"> }) {
   switch (part.state) {
     case "output-available":
       return (
@@ -198,7 +190,7 @@ function GitCommitToolAlert({ part }: { part: GitCommitPart }) {
   }
 }
 
-export function MessageParts({ parts, indent = false }: { parts: ChatMessage["parts"]; indent?: boolean }) {
+export function MessageParts({ parts }: { parts: ChatMessage["parts"] }) {
   const renderedParts = parts
     .map((c, index) => {
       switch (c.type) {
@@ -217,14 +209,12 @@ export function MessageParts({ parts, indent = false }: { parts: ChatMessage["pa
               <pre>{JSON.stringify(c, null, 2)}</pre>
             </div>
           );
-
+        case "tool-gitCommit":
+          return <GitCommitToolAlert key={index} part={c} />;
         case "step-start":
         case "file":
           return null;
         default:
-          if ((c as any).type === "tool-gitCommit") {
-            return <GitCommitToolAlert key={index} part={c as unknown as GitCommitPart} />;
-          }
           return (
             <Card key={index}>
               <CardHeader>
@@ -240,8 +230,8 @@ export function MessageParts({ parts, indent = false }: { parts: ChatMessage["pa
     .filter((p) => !!p);
 
   return renderedParts.length ? (
-    <div className={cn("space-y-3", indent && "pl-7")}>{renderedParts}</div>
+    <div className="space-y-3">{renderedParts}</div>
   ) : (
-    <Skeleton className={cn("h-4 w-48 mb-4", indent && "ml-7")} />
+    <Skeleton className="h-4 w-48 mb-4" />
   );
 }

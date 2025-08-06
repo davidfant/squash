@@ -216,6 +216,9 @@ export async function gitCommit(
   if (result.exit_code === 0 && result.stdout) {
     return result.stdout.trim();
   } else {
-    throw new Error(result.stderr ?? "Failed to commit2");
+    throw new Error(result.stderr ?? "Failed to commit");
   }
 }
+
+export const gitReset = (context: FlyioExecSandboxContext, commitSha: string) =>
+  execCommand(context, `git reset --hard ${commitSha}`);

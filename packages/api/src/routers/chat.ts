@@ -1,4 +1,4 @@
-import { streamAgent } from "@/agent";
+import { streamAgent } from "@/agent/streamAgent";
 import type { ChatMessage } from "@/agent/types";
 import { requireAuth } from "@/auth/middleware";
 import type { Database } from "@/database";

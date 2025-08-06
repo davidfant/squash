@@ -174,6 +174,22 @@ export async function streamAgent(
           ),
         },
         toolChoice: { type: "tool", toolName: "gitCommit" },
+        // onStepFinish: (step) => {
+        //   step.toolResults.forEach((tc) => {
+        //     if (tc.dynamic) return;
+        //     if (tc.toolName === "gitCommit") {
+        //       writer.write({
+        //         type: "data-gitSha",
+        //         id: tc.toolCallId,
+        //         data: {
+        //           sha: tc.output.commitSha,
+        //           title: tc.input.title,
+        //           description: tc.input.body,
+        //         },
+        //       });
+        //     }
+        //   });
+        // },
       });
       writer.merge(
         commitStream.toUIMessageStream({

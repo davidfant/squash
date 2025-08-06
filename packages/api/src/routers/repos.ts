@@ -577,7 +577,21 @@ export const reposRouter = new Hono<{
         const parentId = randomUUID();
         await db.insert(schema.message).values([
           { id: parentId, role: "system", threadId: thread.id, parts: [] },
-          { role: "user", parts: message.parts, threadId: thread.id, parentId },
+          {
+            role: "user",
+            // {
+            //   type: "data-gitSha",
+            //   data: {
+            //     sha: "123",
+            //     title: "Starting point",
+            //     description:
+            //       "This is the starting point before any changes have been made.",
+            //   },
+            // },
+            parts: message.parts,
+            threadId: thread.id,
+            parentId,
+          },
         ]);
 
         const textContent = message.parts

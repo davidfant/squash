@@ -1,5 +1,5 @@
 import type { FlyioExecSandboxContext } from "@/lib/flyio/exec";
-import type { InferUITools, UIDataTypes, UIMessage } from "ai";
+import type { InferUITools, UIMessage } from "ai";
 import type { createAgentTools } from "./tools";
 import type { gitCommit } from "./tools/git";
 
@@ -15,8 +15,15 @@ export type AllTools = InferUITools<
   }
 >;
 
+export type ChatMessageData = {
+  // gitSha: { sha: string; title: string; description: string };
+};
 export interface ChatMessageMetadata {
   createdAt: string;
   parentId: string;
 }
-export type ChatMessage = UIMessage<ChatMessageMetadata, UIDataTypes, AllTools>;
+export type ChatMessage = UIMessage<
+  ChatMessageMetadata,
+  ChatMessageData,
+  AllTools
+>;

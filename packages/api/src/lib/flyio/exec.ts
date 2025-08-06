@@ -102,7 +102,7 @@ export async function readFile(
       context,
       lines
         ? `awk "NR >= ${lines.start} && NR <= ${lines.end}" ${filePath} && ${countLines}`
-        : `cat ${filePath} && ${countLines}`
+        : `cat ${filePath} && printf '\\n' && ${countLines}`
     );
     if (result.exit_code === 0) {
       const lines = (result.stdout ?? "").trimEnd().split("\n");

@@ -147,7 +147,14 @@ export function ChatThread({
           submitting={status === "submitted" || status === "streaming"}
           maxRows={10}
           onSubmit={(value) => {
-            sendMessage(value);
+            sendMessage({
+              ...value,
+              metadata: {
+                createdAt: new Date().toISOString(),
+                parentId:
+                  messages.activePath[messages.activePath.length - 1]!.id,
+              },
+            });
             sticky.scrollToBottom();
           }}
         />

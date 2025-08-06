@@ -9,7 +9,7 @@ import "./index.css";
 import resources from "./locales/default";
 import { BranchPage } from "./routes/branches";
 import { LandingPage } from "./routes/landing";
-import LoginPage from "./routes/login";
+import { LoginPage } from "./routes/login";
 import { NewRepoFromProvider, NewRepoPage } from "./routes/new/repo";
 
 i18n.use(initReactI18next).init({

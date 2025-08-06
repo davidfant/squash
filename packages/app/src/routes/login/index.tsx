@@ -1,9 +1,9 @@
-import { LoginForm } from "@/components/layout/auth/login-form"
+import { LoginForm } from "@/components/layout/auth/login-form" 
 import { authClient } from "@/auth"
 import { Navigate } from "react-router"
 import { ThemeToggle } from "@/components/layout/sidebar/theme-toggle"
 
-export default function LoginPage() {
+export function LoginPage() {
   const session = authClient.useSession();
 
   // If already authenticated, redirect to landing page

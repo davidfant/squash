@@ -27,7 +27,6 @@ import { Button } from "@/components/ui/button";
 interface Repo {
   id: string;
   name: string;
-  fullName: string;
 }
 
 export function RepoSwitcher({

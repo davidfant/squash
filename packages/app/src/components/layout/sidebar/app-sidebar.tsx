@@ -5,18 +5,10 @@ import {
   Settings,
   Moon,
   Sun,
-  MoreHorizontal,
-  FlaskConical,
 } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { FrameworkDetectionModal } from "@/components/layout/repo/FrameworkDetectionModal";
+
+
 import { NavMain } from "./nav-main";
 import { NavProjects } from "./nav-projects";
 import { NavUser } from "./nav-user";
@@ -66,8 +58,7 @@ const navMainItems = [
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const session = authClient.useSession();
-  const [frameworkModalOpen, setFrameworkModalOpen] = React.useState(false);
-  const [selectedRepoForFramework, setSelectedRepoForFramework] = React.useState<{ id: string; name: string } | null>(null);
+
   const navigate = useNavigate();
   const repos = useQuery(api.repos.$get, { params: {} });
   const [selectedRepoId] = useSelectedRepoId();
@@ -77,8 +68,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     params: { repoId: selectedRepoId || "" },
     enabled: !!selectedRepoId,
   });
-
-  const selectedRepo = repos.data?.find(repo => repo.id === selectedRepoId);
 
   const userData = session.data?.user ? {
     name: session.data.user.name || "User",
@@ -93,7 +82,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <RepoSwitcher repos={repos.data.map(repo => ({
             id: repo.id,
             name: repo.name,
-            fullName: repo.name,  // Using name as fullName since fullName doesn't exist
           }))} />
         )}
       </SidebarHeader>
@@ -102,34 +90,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         
         {/* Branches Section */}
         <SidebarGroup>
-          <div className="flex items-center justify-between mb-2">
-            <SidebarGroupLabel>Branches</SidebarGroupLabel>
-            {selectedRepo && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                  >
-                    <MoreHorizontal className="h-4 w-4" />
-                    <span className="sr-only">Repository options</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem 
-                    onClick={() => {
-                      setSelectedRepoForFramework(selectedRepo);
-                      setFrameworkModalOpen(true);
-                    }}
-                  >
-                    <FlaskConical className="mr-2 h-4 w-4" />
-                    Detect Framework
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          </div>
+          <SidebarGroupLabel>Branches</SidebarGroupLabel>
           
           {selectedRepoId && branches.data ? (
             <SidebarMenu>
@@ -207,20 +168,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         {userData && <NavUser user={userData} />}
       </SidebarFooter>
       <SidebarRail />
-      
-      {selectedRepoForFramework && (
-        <FrameworkDetectionModal
-          open={frameworkModalOpen}
-          onOpenChange={setFrameworkModalOpen}
-          repoId={selectedRepoForFramework.id}
-          repoName={selectedRepoForFramework.name}
-          onSave={(framework) => {
-            // TODO: Handle saving the framework configuration
-            console.log("Saving framework config:", framework);
-            repos.refetch();
-          }}
-        />
-      )}
     </Sidebar>
   );
 } 

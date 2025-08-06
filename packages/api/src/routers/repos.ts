@@ -257,36 +257,6 @@ export const reposRouter = new Hono<{
 
     return c.json(repos);
   })
-  .get(
-    "/:repoId/detect-framework",
-    zValidator("param", z.object({ repoId: z.string() })),
-    requireRepo,
-    async (c) => {
-      const repo = c.get("repo");
-
-      try {
-        // Use RepoService to detect framework without updating
-        const { framework, snapshot } =
-          await RepoService.detectAndApplyFramework({
-            repo: {
-              url: repo.url,
-              defaultBranch: repo.defaultBranch,
-            },
-            provider: repo.provider,
-            env: c.env,
-          });
-
-        return c.json({
-          framework: framework,
-          snapshot: snapshot,
-          currentSnapshot: repo.snapshot,
-        });
-      } catch (error) {
-        console.error("Error detecting framework:", error);
-        return c.json({ error: "Failed to detect framework" }, 500);
-      }
-    }
-  )
   .delete(
     "/:repoId",
     zValidator("param", z.object({ repoId: z.string() })),
@@ -509,20 +479,18 @@ export const reposRouter = new Hono<{
       "json",
       z.object({
         repoId: z.string(),
-        snapshot: z
-          .object({
-            type: z.literal("docker"),
-            port: z.number(),
-            image: z.string(),
-            entrypoint: z.string(),
-          })
-          .optional(),
+        snapshot: z.object({
+          type: z.literal("docker"),
+          port: z.number(),
+          image: z.string(),
+          entrypoint: z.string(),
+        }),
       })
     ),
     requireRepoProvider,
     async (c) => {
       const { providerId } = c.req.valid("param");
-      const { repoId, snapshot: providedSnapshot } = c.req.valid("json");
+      const { repoId, snapshot } = c.req.valid("json");
       const organizationId = c.get("organizationId");
       const db = c.get("db");
       const provider = c.get("provider");
@@ -553,21 +521,6 @@ export const reposRouter = new Hono<{
 
         if (existing) {
           return c.json({ error: "Repository already imported" }, 409);
-        }
-
-        let snapshot = providedSnapshot;
-
-        // If no snapshot provided, detect framework
-        if (!snapshot) {
-          const detection = await RepoService.detectAndApplyFramework({
-            repo: {
-              url: targetRepo.clone_url,
-              defaultBranch: targetRepo.default_branch,
-            },
-            provider: provider,
-            env: c.env,
-          });
-          snapshot = detection.snapshot;
         }
 
         const [newRepo] = await db

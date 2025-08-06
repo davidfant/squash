@@ -5,7 +5,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreVertical, RotateCcw } from "lucide-react";
+import { MoreHorizontal, RotateCcw } from "lucide-react";
 
 export const MessageHeader = ({ author }: { author: string }) => (
   <div className="relative flex w-full gap-2 rounded-lg py-1">
@@ -15,7 +15,7 @@ export const MessageHeader = ({ author }: { author: string }) => (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="h-6 w-6">
-          <MoreVertical className="h-4 w-4" />
+          <MoreHorizontal className="h-4 w-4" />
           <span className="sr-only">Open message actions</span>
         </Button>
       </DropdownMenuTrigger>

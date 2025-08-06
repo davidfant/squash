@@ -1,6 +1,11 @@
 import { authClient } from "@/auth";
 import { ChatThread } from "@/components/layout/chat/ChatThread";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "@/components/ui/resizable";
 import { api, useQuery } from "@/hooks/api";
 import { useParams } from "react-router";
 import { BranchPreview } from "./BranchPreview";
@@ -55,13 +60,26 @@ function Component({ branchId }: { branchId: string }) {
         onUpgrade={handleUpgrade}
         publicUrl="https://my-awesome-landing-page.com"
       />
-      <div className="flex-1 flex overflow-hidden">
-        <ChatThread
-          endpoint={`${import.meta.env.VITE_API_URL}/chat/branches/${branchId}`}
-          initialMessages={threadMessages.data}
-        />
-        <BranchPreview className="flex-1" />
-      </div>
+      <ResizablePanelGroup
+        direction="horizontal"
+        className="flex-1 overflow-hidden"
+      >
+        <ResizablePanel
+          defaultSize={30}
+          minSize={25}
+          maxSize={35}
+          className="flex"
+        >
+          <ChatThread
+            endpoint={`${import.meta.env.VITE_API_URL}/chat/branches/${branchId}`}
+            initialMessages={threadMessages.data}
+          />
+        </ResizablePanel>
+        <ResizableHandle />
+        <ResizablePanel defaultSize={75} className="flex">
+          <BranchPreview className="flex-1" />
+        </ResizablePanel>
+      </ResizablePanelGroup>
     </SidebarProvider>
   );
 }

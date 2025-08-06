@@ -8,9 +8,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import type { AgentTools, ChatMessage } from "@hypershape-ai/api/agent/types";
 import type { ToolUIPart } from "ai";
-import { CheckCircle2Icon, CircleX, Eye, Loader2 } from "lucide-react";
+import { CheckCircle2Icon, CircleX, Eye, GitCommit, Loader2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { Markdown } from "../../Markdown";
 
@@ -136,6 +137,59 @@ function WriteFileToolAlert({ part }: { part: ToolPart<"writeFile"> }) {
   }
 }
 
+function GitCommitToolAlert({ part }: { part: ToolPart<"gitCommit"> }) {
+  switch (part.state) {
+    case "output-available":
+      return (
+        <ToolAlert
+          icon={<GitCommit />}
+          title="Git Commit"
+          description={`Created commit ${part.output.commitSha.slice(0, 7)}`}
+          details={
+            <div className="space-y-2">
+              <div>
+                <span className="font-semibold">Title:</span>
+                <p className="mt-1">{part.input.title}</p>
+              </div>
+              {part.input.body && (
+                <div>
+                  <span className="font-semibold">Body:</span>
+                  <p className="mt-1 whitespace-pre-wrap">{part.input.body}</p>
+                </div>
+              )}
+              <div>
+                <span className="font-semibold">Commit SHA:</span>
+                <p className="mt-1 font-mono text-sm">{part.output.commitSha}</p>
+              </div>
+            </div>
+          }
+        />
+      );
+    case "output-error":
+      return (
+        <ToolAlert
+          icon={<CircleX />}
+          title="Git Commit Error"
+          description="Failed to create git commit"
+          details={
+            <pre className="whitespace-pre-wrap max-h-[60vh] overflow-y-auto text-destructive">
+              {part.errorText}
+            </pre>
+          }
+        />
+      );
+    case "input-streaming":
+    case "input-available":
+      return (
+        <ToolAlert
+          icon={<Loader2 className="animate-spin" />}
+          title="Creating git commit..."
+          description={part.input?.title}
+        />
+      );
+  }
+}
+
 export function MessageParts({ parts }: { parts: ChatMessage["parts"] }) {
   const renderedParts = parts
     .map((c, index) => {
@@ -155,7 +209,8 @@ export function MessageParts({ parts }: { parts: ChatMessage["parts"] }) {
               <pre>{JSON.stringify(c, null, 2)}</pre>
             </div>
           );
-
+        case "tool-gitCommit":
+          return <GitCommitToolAlert key={index} part={c} />;
         case "step-start":
         case "file":
           return null;
@@ -175,7 +230,7 @@ export function MessageParts({ parts }: { parts: ChatMessage["parts"] }) {
     .filter((p) => !!p);
 
   return renderedParts.length ? (
-    <div className="space-y-2">{renderedParts}</div>
+    <div className="space-y-3">{renderedParts}</div>
   ) : (
     <Skeleton className="h-4 w-48 mb-4" />
   );

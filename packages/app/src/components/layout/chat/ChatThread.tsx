@@ -55,14 +55,14 @@ export function ChatThread({
   }, [!!messages.length]);
 
   return (
-    <div className="w-sm flex flex-col">
+    <div className="flex flex-col w-full h-full">
       <div className="flex-1 relative overflow-hidden">
         <div
           ref={sticky.scrollRef}
           key={String(!!initialMessages)}
-          className="h-full overflow-y-auto overflow-x-hidden space-y-2 p-2 pb-8"
+          className="h-full overflow-y-auto overflow-x-hidden space-y-2 px-4 py-2 pb-8"
         >
-          <div ref={sticky.contentRef} className="space-y-2">
+          <div ref={sticky.contentRef} className="space-y-4">
             {messages.map((m) => {
               switch (m.role) {
                 case "user":
@@ -76,16 +76,18 @@ export function ChatThread({
                           {files}
                         </div>
                       )}
-                      <div className="w-max max-w-[75%] rounded-xl px-3 py-2 bg-muted">
+                      <div className="w-max max-w-[75%] rounded-xl px-4 py-3 bg-muted">
                         <MessageParts parts={m.parts} />
                       </div>
                     </div>
                   );
                 case "assistant":
                   return (
-                    <div key={m.id}>
+                    <div key={m.id} className="space-y-1">
                       <MessageHeader author="Hive Mind" />
-                      <MessageParts parts={m.parts} />
+                      <div className="pl-7">
+                        <MessageParts parts={m.parts} />
+                      </div>
                     </div>
                   );
                 // default:
@@ -93,9 +95,9 @@ export function ChatThread({
               }
             })}
             {status === "submitted" && (
-              <div>
+              <div className="space-y-1">
                 <MessageHeader author="LP" />
-                <Skeleton className="h-4 w-48 mb-4" />
+                <Skeleton className="h-4 w-48 mb-4 ml-7" />
               </div>
             )}
 
@@ -112,7 +114,7 @@ export function ChatThread({
         />
       </div>
 
-      <div className="p-2 pt-0">
+      <div className="px-4 py-2 pt-0">
         <ChatInput
           disabled={!initialMessages}
           initialValue={initialValue}

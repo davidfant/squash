@@ -13,7 +13,7 @@
     }
   },
   "scripts": {
-    "dev": "wrangler dev",
+    "dev": "pnpm typegen &&wrangler dev",
     "deploy": "wrangler deploy --minify",
     "build": "tsc -b",
     "typegen": "wrangler types --env-interface CloudflareBindings"

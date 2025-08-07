@@ -12,6 +12,7 @@ import { recmaExtractJSXComponents } from "./lib/recmaExtractJSXComponents";
 import { rehypeExtractBase64Images } from "./lib/rehypeExtractBase64Images";
 // import { rehypeExtractBlocks } from "./lib/rehypeExtractBlocks";
 import { rehypeExtractBodyAttributes } from "./lib/rehypeExtractBodyAttributes";
+import { rehypeExtractLandmarks } from "./lib/rehypeExtractLandmarks";
 import { rehypeExtractLinksAndScripts } from "./lib/rehypeExtractLinksAndScripts";
 import { rehypeExtractNearDuplicateBlocks } from "./lib/rehypeExtractNearDuplicateBlocks";
 import { rehypeExtractSVGs } from "./lib/rehypeExtractSVGs";
@@ -77,6 +78,7 @@ const body = await unified()
   .use(rehypeExtractLinksAndScripts(ctx))
   .use(rehypeExtractBase64Images(stats, PATH_TO_TEMPLATE))
   .use(rehypeExtractSVGs(PATH_TO_TEMPLATE))
+  .use(rehypeExtractLandmarks(PATH_TO_TEMPLATE))
   .use(rehypeExtractNearDuplicateBlocks(PATH_TO_TEMPLATE, stats))
   .use(rehypeRecma)
   .use(recmaJsx)

@@ -5,5 +5,6 @@ export interface Context {
 }
 
 export interface Stats {
+  b64Images: { total: number; unique: number };
   svgs: { total: number; unique: number };
 }

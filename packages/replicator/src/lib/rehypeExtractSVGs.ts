@@ -50,18 +50,6 @@ export function rehypeExtractSVGs(templatePath: string) {
         });
         fs.writeFileSync(componentPath, componentCode);
         cache[hash] = componentName;
-
-        // // 1️⃣ inject an ES import into the ESTree that rehype-recma creates
-        // (tree.data.estree.body ||= []).unshift({
-        //   type: "ImportDeclaration",
-        //   specifiers: [
-        //     {
-        //       type: "ImportDefaultSpecifier",
-        //       local: { type: "Identifier", name: componentName },
-        //     },
-        //   ],
-        //   source: { type: "Literal", value: `../icons/${componentName}.jsx` },
-        // });
       }
 
       parent!.children[index!] = {

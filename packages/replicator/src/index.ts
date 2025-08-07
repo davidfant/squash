@@ -9,6 +9,7 @@ import rehypeRemoveComments from "rehype-remove-comments";
 import rehypeStringify from "rehype-stringify";
 import { unified } from "unified";
 import { recmaExtractJSXComponents } from "./lib/recmaExtractJSXComponents";
+import { rehypeExtractBase64Images } from "./lib/rehypeExtractBase64Images";
 import { rehypeExtractBodyAttributes } from "./lib/rehypeExtractBodyAttributes";
 import { rehypeExtractLinksAndScripts } from "./lib/rehypeExtractLinksAndScripts";
 import { rehypeExtractSVGs } from "./lib/rehypeExtractSVGs";
@@ -34,6 +35,7 @@ const ctx: Context = {
 };
 const stats: Stats = {
   svgs: { total: 0, unique: 0 },
+  b64Images: { total: 0, unique: 0 },
 };
 
 const capture = JSON.parse(await fs.readFile(PATH_TO_CAPTURE, "utf-8")) as {
@@ -69,8 +71,9 @@ await unified()
 const body = await unified()
   .use(rehypeParse, { fragment: true })
   .use(rehypeRemoveComments)
-  .use(rehypeExtractLinksAndScripts(ctx)) // Extract and remove <link> elements
-  .use(rehypeExtractSVGs(PATH_TO_TEMPLATE)) // our plugin
+  .use(rehypeExtractLinksAndScripts(ctx))
+  .use(rehypeExtractBase64Images(stats, PATH_TO_TEMPLATE))
+  .use(rehypeExtractSVGs(PATH_TO_TEMPLATE))
   .use(rehypeRecma)
   .use(recmaJsx)
   .use(recmaExtractJSXComponents(stats)) // Extract JSX components and add imports

@@ -10,9 +10,10 @@ import rehypeStringify from "rehype-stringify";
 import { unified } from "unified";
 import { recmaExtractJSXComponents } from "./lib/recmaExtractJSXComponents";
 import { rehypeExtractBase64Images } from "./lib/rehypeExtractBase64Images";
-import { rehypeExtractBlocks } from "./lib/rehypeExtractBlocks";
+// import { rehypeExtractBlocks } from "./lib/rehypeExtractBlocks";
 import { rehypeExtractBodyAttributes } from "./lib/rehypeExtractBodyAttributes";
 import { rehypeExtractLinksAndScripts } from "./lib/rehypeExtractLinksAndScripts";
+import { rehypeExtractNearDuplicateBlocks } from "./lib/rehypeExtractNearDuplicateBlocks";
 import { rehypeExtractSVGs } from "./lib/rehypeExtractSVGs";
 import { rehypeIdentifyRelativeDeps } from "./lib/rehypeIdentifyRelativeDeps";
 import type { Context, Stats } from "./types";
@@ -76,7 +77,7 @@ const body = await unified()
   .use(rehypeExtractLinksAndScripts(ctx))
   .use(rehypeExtractBase64Images(stats, PATH_TO_TEMPLATE))
   .use(rehypeExtractSVGs(PATH_TO_TEMPLATE))
-  .use(rehypeExtractBlocks(PATH_TO_TEMPLATE))
+  .use(rehypeExtractNearDuplicateBlocks(PATH_TO_TEMPLATE, stats))
   .use(rehypeRecma)
   .use(recmaJsx)
   .use(recmaExtractJSXComponents(stats)) // Extract JSX components and add imports

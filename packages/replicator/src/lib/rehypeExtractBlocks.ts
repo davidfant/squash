@@ -127,7 +127,7 @@ export function rehypeExtractBlocks(templatePath: string): Plugin<[], Root> {
 
     // Select candidates: repeated and above size threshold
     const MIN_OCCURRENCES = 2;
-    const MIN_NODE_COUNT = 2;
+    const MIN_NODE_COUNT = 4;
     const candidates = Array.from(table.entries())
       .filter(
         ([, occs]) =>

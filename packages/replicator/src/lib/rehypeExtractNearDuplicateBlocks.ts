@@ -69,17 +69,24 @@ function flattenNodesPreorder(
 }
 
 function isParamAttr(key: string): boolean {
-  return (
-    key === "href" ||
-    key === "src" ||
-    key === "alt" ||
-    key === "title" ||
-    key === "value" ||
-    key === "placeholder" ||
-    key === "content" ||
-    key === "aria-label" ||
-    key.startsWith("data-")
-  );
+  // Consider all attributes except class/className for parameterization when they differ
+  return key !== "class" && key !== "className";
+}
+
+function normalizeForCompare(value: unknown): string {
+  if (value == null) return "__undefined__";
+  if (Array.isArray(value)) return JSON.stringify(value.map(String));
+  if (typeof value === "object") {
+    try {
+      return JSON.stringify(
+        value,
+        Object.keys(value as Record<string, unknown>).sort()
+      );
+    } catch {
+      return String(value);
+    }
+  }
+  return String(value);
 }
 
 // Convert HAST root with one child into a JS module, then we will postprocess to inject props
@@ -131,7 +138,6 @@ export function rehypeExtractNearDuplicateBlocks(
 
     const MIN_OCCURRENCES = 2;
     const MIN_NODE_COUNT = 5;
-    const MAX_PROPS = 6;
 
     const candidates = Array.from(table.entries())
       .filter(
@@ -205,15 +211,11 @@ export function rehypeExtractNearDuplicateBlocks(
         const n0 = ref[i]!;
         if (n0.type === "element") {
           const props0 = n0.properties || {};
-          // attributes to consider
+          // attributes to consider (expand: any attribute except class/className)
           for (const key of Object.keys(props0)) {
             if (!isParamAttr(key)) continue;
-            const values = flatLists
-              .map((list) => list[i]?.properties?.[key])
-              .map((v) => (Array.isArray(v) ? v.join(" ") : v));
-            const uniq = new Set(
-              values.map((v) => (v == null ? "" : String(v)))
-            );
+            const values = flatLists.map((list) => list[i]?.properties?.[key]);
+            const uniq = new Set(values.map(normalizeForCompare));
             if (uniq.size > 1) {
               const base = key
                 .replace(/^data-/, "data")
@@ -237,7 +239,7 @@ export function rehypeExtractNearDuplicateBlocks(
             paramPoints.push({ atIndex: i, kind: "text", propName });
           }
         }
-        if (paramPoints.length >= MAX_PROPS) break;
+        // no cap: allow all differing attributes/text to become props
       }
 
       if (paramPoints.length === 0) continue; // nothing to parameterize
@@ -249,7 +251,14 @@ export function rehypeExtractNearDuplicateBlocks(
         const target = flatComp[p.atIndex]!;
         if (p.kind === "attr") {
           target.properties ||= {};
-          target.properties[p.attrName!] = `__PROP_${p.propName}__`;
+          if (p.attrName === "style") {
+            // Avoid invalid inline CSS during codegen; store placeholder on a data-prop attribute
+            delete target.properties.style;
+            target.properties[`data-prop-${p.propName}`] =
+              `__PROP_${p.propName}__`;
+          } else {
+            target.properties[p.attrName!] = `__PROP_${p.propName}__`;
+          }
         } else {
           target.value = `__PROP_${p.propName}__`;
         }
@@ -296,6 +305,16 @@ export function rehypeExtractNearDuplicateBlocks(
           `{${p.propName}}`
         );
       }
+      // Turn style placeholders into JSX bindings: data-prop-<prop>={prop} -> style={prop}
+      for (const p of paramPoints) {
+        if (p.kind === "attr" && p.attrName === "style") {
+          // After previous replacements, the placeholder should be an expression
+          moduleCode = moduleCode.replace(
+            new RegExp(`\\sdata-prop-${p.propName}=\\{${p.propName}\\}`, "g"),
+            ` style={${p.propName}}`
+          );
+        }
+      }
       // Collapse any accidental double braces like {{prop}} -> {prop}
       moduleCode = moduleCode.replace(
         /\{\s*\{\s*([a-zA-Z_$][\w$]*)\s*\}\s*\}/g,
@@ -340,9 +359,15 @@ export function rehypeExtractNearDuplicateBlocks(
         for (const p of paramPoints) {
           if (p.kind === "attr") {
             const value = flat[p.atIndex]?.properties?.[p.attrName!];
-            propsObj[p.propName] = Array.isArray(value)
-              ? value.join(" ")
-              : (value ?? "");
+            // Preserve original types: arrays/objects as-is, primitives stringified if needed
+            if (p.attrName === "style" && typeof value === "string") {
+              // Convert inline CSS string to a style object as-is if parsable later by React;
+              // leave as string to be bound as style={string} (React accepts object only; consumers can adjust).
+              // To avoid breaking, pass the raw string; the component will set style={prop} which should be an object.
+              propsObj[p.propName] = value;
+            } else {
+              propsObj[p.propName] = value as any;
+            }
           } else {
             const value = flat[p.atIndex]?.value ?? "";
             propsObj[p.propName] = String(value).trim();

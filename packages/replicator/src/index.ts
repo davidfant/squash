@@ -10,6 +10,7 @@ import rehypeStringify from "rehype-stringify";
 import { unified } from "unified";
 import { recmaExtractJSXComponents } from "./lib/recmaExtractJSXComponents";
 import { rehypeExtractBase64Images } from "./lib/rehypeExtractBase64Images";
+import { rehypeExtractBlocks } from "./lib/rehypeExtractBlocks";
 import { rehypeExtractBodyAttributes } from "./lib/rehypeExtractBodyAttributes";
 import { rehypeExtractLinksAndScripts } from "./lib/rehypeExtractLinksAndScripts";
 import { rehypeExtractSVGs } from "./lib/rehypeExtractSVGs";
@@ -19,13 +20,13 @@ import type { Context, Stats } from "./types";
 const PATH_TO_CAPTURE = "./captures/linklime.json";
 const PATH_TO_TEMPLATE = "./template";
 
-// await Promise.all(
-//   ["src/components", "public"].map((dir) =>
-//     fs.rmdir(path.join(PATH_TO_TEMPLATE, dir), {
-//       recursive: true,
-//     })
-//   )
-// ).catch(() => {});
+await Promise.all(
+  ["src/components", "public"].map((dir) =>
+    fs.rmdir(path.join(PATH_TO_TEMPLATE, dir), {
+      recursive: true,
+    })
+  )
+).catch(() => {});
 await fs.mkdir(path.join(PATH_TO_TEMPLATE, "public"), { recursive: true });
 
 const ctx: Context = {
@@ -36,6 +37,7 @@ const ctx: Context = {
 const stats: Stats = {
   svgs: { total: 0, unique: 0 },
   b64Images: { total: 0, unique: 0 },
+  blocks: { total: 0, unique: 0 },
 };
 
 const capture = JSON.parse(await fs.readFile(PATH_TO_CAPTURE, "utf-8")) as {
@@ -74,6 +76,7 @@ const body = await unified()
   .use(rehypeExtractLinksAndScripts(ctx))
   .use(rehypeExtractBase64Images(stats, PATH_TO_TEMPLATE))
   .use(rehypeExtractSVGs(PATH_TO_TEMPLATE))
+  .use(rehypeExtractBlocks(PATH_TO_TEMPLATE))
   .use(rehypeRecma)
   .use(recmaJsx)
   .use(recmaExtractJSXComponents(stats)) // Extract JSX components and add imports

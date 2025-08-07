@@ -21,6 +21,7 @@ const LANDMARK_TAGS = new Set([
   "aside",
   "footer",
   "dialog",
+  "table",
 ]);
 
 function deepClone<T>(obj: T): T {
@@ -55,14 +56,10 @@ interface Occurrence {
 }
 
 export function rehypeExtractLandmarks(templatePath: string): Plugin<[], Root> {
-  const outDir = path.join(templatePath, "src/components/landmarks");
-
   return () => async (tree: Root) => {
-    await fs.mkdir(outDir, { recursive: true });
-
     const occs: Occurrence[] = [];
 
-    // Manual DFS to track depth and prevent extracting nested landmarks inside another landmark
+    // Manual DFS to track depth (we DO allow extracting nested landmarks)
     function walk(node: HastNode, parent: HastNode | null, depth: number) {
       const children: HastNode[] = (node as any).children || [];
       for (let i = 0; i < children.length; i++) {
@@ -71,8 +68,6 @@ export function rehypeExtractLandmarks(templatePath: string): Plugin<[], Root> {
         const tag = child.tagName;
         if (typeof tag === "string" && LANDMARK_TAGS.has(tag)) {
           occs.push({ parent: node, index: i, node: child, depth });
-          // Skip walking into this landmark so we only extract top-most landmarks
-          continue;
         }
         walk(child, node, depth + 1);
       }
@@ -80,8 +75,8 @@ export function rehypeExtractLandmarks(templatePath: string): Plugin<[], Root> {
 
     walk(tree as any, null, 0);
 
-    // Sort by shallowest first to avoid overlapping replacements
-    occs.sort((a, b) => a.depth - b.depth);
+    // Sort by deepest first so that nested landmarks are replaced before parents
+    occs.sort((a, b) => b.depth - a.depth);
 
     const replaced = new WeakSet<HastNode>();
     for (const { parent, index, node } of occs) {
@@ -94,6 +89,8 @@ export function rehypeExtractLandmarks(templatePath: string): Plugin<[], Root> {
         .update(pretty)
         .digest("hex")
         .slice(0, 8);
+      const outDir = path.join(templatePath, "src/components/layout", tag);
+      await fs.mkdir(outDir, { recursive: true });
       const componentName = `${capitalize(tag)}_${hash}`;
       const componentPath = path.join(outDir, `${componentName}.jsx`);
       const componentTagName = `Components$${path

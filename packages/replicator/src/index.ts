@@ -19,7 +19,8 @@ import { rehypeExtractSVGs } from "./lib/rehypeExtractSVGs";
 import { rehypeIdentifyRelativeDeps } from "./lib/rehypeIdentifyRelativeDeps";
 import type { Context, Stats } from "./types";
 
-const PATH_TO_CAPTURE = "./captures/linklime.json";
+// const PATH_TO_CAPTURE = "./captures/linklime.json";
+const PATH_TO_CAPTURE = "./captures/posthog.json";
 const PATH_TO_TEMPLATE = "./template";
 
 await Promise.all(
@@ -61,10 +62,10 @@ await write(
   "public/styles.css",
   await prettier.format(capture.captureData.css, { parser: "css" })
 );
-await write(
-  "public/script.js",
-  await prettier.format(capture.captureData.js, { parser: "babel" })
-);
+// await write(
+//   "public/script.js",
+//   await prettier.format(capture.captureData.js, { parser: "babel" })
+// );
 
 await unified()
   .use(rehypeParse, { fragment: false })
@@ -78,8 +79,8 @@ const body = await unified()
   .use(rehypeExtractLinksAndScripts(ctx))
   .use(rehypeExtractBase64Images(stats, PATH_TO_TEMPLATE))
   .use(rehypeExtractSVGs(PATH_TO_TEMPLATE))
-  .use(rehypeExtractLandmarks(PATH_TO_TEMPLATE))
   .use(rehypeExtractNearDuplicateBlocks(PATH_TO_TEMPLATE, stats))
+  .use(rehypeExtractLandmarks(PATH_TO_TEMPLATE))
   .use(rehypeRecma)
   .use(recmaJsx)
   .use(recmaExtractJSXComponents(stats)) // Extract JSX components and add imports

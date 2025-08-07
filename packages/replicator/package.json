@@ -8,8 +8,27 @@
     "dev:template": "cd template && pnpm dev"
   },
   "devDependencies": {
+    "@types/node": "^24.2.0",
     "concurrently": "^9.2.0",
     "tsx": "^4.20.3",
     "typescript": "~5.8.3"
+  },
+  "dependencies": {
+    "@prettier/sync": "^0.6.1",
+    "@svgr/core": "^8.1.0",
+    "@svgr/plugin-jsx": "^8.1.0",
+    "@svgr/plugin-prettier": "^8.1.0",
+    "@svgr/plugin-svgo": "^8.1.0",
+    "hast": "^1.0.0",
+    "hast-util-to-html": "^9.0.5",
+    "prettier": "^3.0.0",
+    "recma-jsx": "^1.0.1",
+    "recma-stringify": "^1.0.0",
+    "rehype-parse": "^9.0.1",
+    "rehype-recma": "^1.0.0",
+    "rehype-remove-comments": "^6.1.1",
+    "rehype-stringify": "^10.0.1",
+    "unified": "^11.0.5",
+    "unist-util-visit": "^5.0.0"
   }
 }

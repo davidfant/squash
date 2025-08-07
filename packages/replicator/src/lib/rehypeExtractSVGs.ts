@@ -14,7 +14,21 @@ export function rehypeExtractSVGs(templatePath: string) {
     visit(tree, "element", (node, index, parent) => {
       if (node.tagName !== "svg") return;
 
-      const raw = toHtml(node);
+      // Extract and store the original classes
+      const className: string[] = node.properties?.className || [];
+
+      // Create a copy of the node without classes for hashing and component generation
+      const classlessNode = {
+        ...node,
+        properties: { ...node.properties },
+      };
+
+      // Remove classes from the copied node
+      delete classlessNode.properties.className;
+      delete classlessNode.properties.class;
+
+      // Stringify the node without classes
+      const raw = toHtml(classlessNode);
       const pretty = prettier.format(raw, { parser: "html" });
       const hash = crypto
         .createHash("sha256")
@@ -50,11 +64,10 @@ export function rehypeExtractSVGs(templatePath: string) {
         // });
       }
 
-      // 2️⃣ swap the node → <Svg_ab12cd34 />
       parent!.children[index!] = {
         type: "element",
         tagName: componentTagName,
-        properties: {},
+        properties: className.length ? { className } : {},
         children: [],
       };
     });

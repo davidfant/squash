@@ -6,23 +6,31 @@ import recmaStringify from "recma-stringify";
 import rehypeParse from "rehype-parse";
 import rehypeRecma from "rehype-recma";
 import rehypeRemoveComments from "rehype-remove-comments";
+import rehypeStringify from "rehype-stringify";
 import { unified } from "unified";
 import { recmaExtractJSXComponents } from "./lib/recmaExtractJSXComponents";
-import { rehypeExtractLinks } from "./lib/rehypeExtractLinks";
+import { rehypeExtractBodyAttributes } from "./lib/rehypeExtractBodyAttributes";
+import { rehypeExtractLinksAndScripts } from "./lib/rehypeExtractLinksAndScripts";
 import { rehypeExtractSVGs } from "./lib/rehypeExtractSVGs";
+import { rehypeIdentifyRelativeDeps } from "./lib/rehypeIdentifyRelativeDeps";
 import type { Context, Stats } from "./types";
 
 const PATH_TO_CAPTURE = "./captures/linklime.json";
 const PATH_TO_TEMPLATE = "./template";
 
-await fs
-  .rmdir(path.join(PATH_TO_TEMPLATE, "src/components"), {
-    recursive: true,
-  })
-  .catch(() => {});
+// await Promise.all(
+//   ["src/components", "public"].map((dir) =>
+//     fs.rmdir(path.join(PATH_TO_TEMPLATE, dir), {
+//       recursive: true,
+//     })
+//   )
+// ).catch(() => {});
+await fs.mkdir(path.join(PATH_TO_TEMPLATE, "public"), { recursive: true });
 
 const ctx: Context = {
-  extractedLinks: [],
+  tagsToMoveToHead: [],
+  urlsToDownload: new Set(),
+  bodyAttributes: {},
 };
 const stats: Stats = {
   svgs: { total: 0, unique: 0 },
@@ -45,68 +53,81 @@ const write = (filePath: string, content: string) =>
 
 await write(
   "public/styles.css",
-  await prettier.format(capture.captureData.css, {
-    parser: "css",
-    tabWidth: 2,
-    useTabs: false,
-  })
+  await prettier.format(capture.captureData.css, { parser: "css" })
 );
 await write(
   "public/script.js",
-  await prettier.format(capture.captureData.js, {
-    parser: "babel",
-    tabWidth: 2,
-    useTabs: false,
-  })
+  await prettier.format(capture.captureData.js, { parser: "babel" })
 );
+
+await unified()
+  .use(rehypeParse, { fragment: false })
+  .use(rehypeExtractBodyAttributes(ctx))
+  .use(rehypeStringify)
+  .process(capture.captureData.bodyContent);
 
 const body = await unified()
   .use(rehypeParse, { fragment: true })
   .use(rehypeRemoveComments)
-  .use(rehypeExtractLinks(ctx)) // Extract and remove <link> elements
+  .use(rehypeExtractLinksAndScripts(ctx)) // Extract and remove <link> elements
   .use(rehypeExtractSVGs(PATH_TO_TEMPLATE)) // our plugin
   .use(rehypeRecma)
-  // .use(rehypeStringify) // HAST → HTML
   .use(recmaJsx)
   .use(recmaExtractJSXComponents(stats)) // Extract JSX components and add imports
   .use(recmaStringify)
   .process(capture.captureData.bodyContent);
 
-// console.log("damn...", body);
+const head = await unified()
+  .use(rehypeParse, { fragment: true })
+  .use(rehypeRemoveComments)
+  .use(rehypeIdentifyRelativeDeps(ctx))
+  .use(rehypeStringify)
+  .process(
+    [capture.captureData.headContent, ...ctx.tagsToMoveToHead].join("\n")
+  );
+
+await Promise.all(
+  Array.from(ctx.urlsToDownload).map(async (relativeUrl) => {
+    const fullUrl = new URL(relativeUrl, capture.currentUrl).href;
+    const response = await fetch(fullUrl);
+    if (!response.ok) {
+      throw new Error(
+        `Failed to download ${fullUrl}: ${response.status} ${response.statusText}`
+      );
+    }
+
+    const filePath = path.join(PATH_TO_TEMPLATE, "public", relativeUrl);
+    const parentDir = path.dirname(filePath);
+
+    // Recursively create parent directories
+    await fs.mkdir(parentDir, { recursive: true });
+
+    // Download and save the file
+    const buffer = Buffer.from(await response.arrayBuffer());
+    await fs.writeFile(filePath, buffer);
+  })
+);
 
 const html = `
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    ${capture.captureData.headContent}
+    ${head}
     <link rel="stylesheet" href="/styles.css" />
-    ${ctx.extractedLinks.join("\n    ")}
   </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-    <script type="module" src="/script.js"></script>
+  <body ${Object.entries(ctx.bodyAttributes)
+    .map(([key, value]) => `${key}="${value}"`)
+    .join(" ")}>
   </body>
+  <script type="module" src="/src/main.jsx"></script>
+  <script type="module" src="/script.js"></script>
 </html>
 `.trim();
-await write(
-  "index.html",
-  await prettier.format(html, {
-    parser: "html",
-    tabWidth: 2,
-    useTabs: false,
-    printWidth: 80,
-    htmlWhitespaceSensitivity: "css",
-  })
-);
+await write("index.html", await prettier.format(html, { parser: "html" }));
 
 await write(
   "src/App.jsx",
-  await prettier.format(String(body), {
-    parser: "babel",
-    tabWidth: 2,
-    useTabs: false,
-    printWidth: 80,
-    htmlWhitespaceSensitivity: "css",
-  })
+  await prettier.format(String(body), { parser: "babel" })
 );
+
+console.log(stats);

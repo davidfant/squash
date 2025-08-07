@@ -1,5 +1,7 @@
 export interface Context {
-  extractedLinks: string[];
+  tagsToMoveToHead: string[];
+  urlsToDownload: Set<string>;
+  bodyAttributes: Record<string, unknown>;
 }
 
 export interface Stats {

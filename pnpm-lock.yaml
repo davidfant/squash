@@ -304,6 +304,18 @@ importers:
 
   packages/dev-server: {}
 
+  packages/replicator:
+    devDependencies:
+      concurrently:
+        specifier: ^9.2.0
+        version: 9.2.0
+      tsx:
+        specifier: ^4.20.3
+        version: 4.20.3
+      typescript:
+        specifier: ~5.8.3
+        version: 5.8.3
+
   packages/utils:
     dependencies:
       '@babel/types':
@@ -8716,7 +8728,6 @@ snapshots:
       '@esbuild/win32-arm64': 0.25.8
       '@esbuild/win32-ia32': 0.25.8
       '@esbuild/win32-x64': 0.25.8
-    optional: true
 
   escalade@3.2.0: {}
 
@@ -10183,7 +10194,6 @@ snapshots:
       get-tsconfig: 4.10.1
     optionalDependencies:
       fsevents: 2.3.3
-    optional: true
 
   turbo-darwin-64@2.5.4:
     optional: true

@@ -1,0 +1,15 @@
+{
+  "name": "@hypershape-ai/replicator",
+  "type": "module",
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "concurrently \"pnpm dev:convert\" \"pnpm dev:template\"",
+    "dev:convert": "tsx watch src/index.ts",
+    "dev:template": "cd template && pnpm dev"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.0",
+    "tsx": "^4.20.3",
+    "typescript": "~5.8.3"
+  }
+}

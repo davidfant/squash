@@ -25,4 +25,5 @@ dist-ssr
 
 public
 src/components
+src/svgs
 src/App.jsx

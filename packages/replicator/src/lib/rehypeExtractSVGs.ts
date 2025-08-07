@@ -7,7 +7,7 @@ import path from "path";
 import { visit } from "unist-util-visit";
 
 export function rehypeExtractSVGs(templatePath: string) {
-  const svgsDir = path.join(templatePath, "src/components/svgs");
+  const svgsDir = path.join(templatePath, "src/svgs");
   fs.mkdirSync(svgsDir, { recursive: true });
   const cache: Record<string, string> = {};
   return () => (tree: any) => {

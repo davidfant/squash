@@ -16,8 +16,10 @@ import { rehypeExtractBodyAttributes } from "./lib/rehypeExtractBodyAttributes";
 import { rehypeExtractButtons } from "./lib/rehypeExtractButtons";
 import { rehypeExtractLandmarks } from "./lib/rehypeExtractLandmarks";
 import { rehypeExtractLinksAndScripts } from "./lib/rehypeExtractLinksAndScripts";
+import { rehypeExtractRoles } from "./lib/rehypeExtractRoles";
 import { rehypeExtractSVGs } from "./lib/rehypeExtractSVGs";
 import { rehypeIdentifyRelativeDeps } from "./lib/rehypeIdentifyRelativeDeps";
+import { logFileTree } from "./logFileTree";
 import type { Context, Stats } from "./types";
 
 // const PATH_TO_CAPTURE = "./captures/linklime.json";
@@ -81,6 +83,7 @@ const body = await unified()
   .use(rehypeExtractBase64Images(stats, PATH_TO_TEMPLATE))
   .use(rehypeExtractSVGs(PATH_TO_TEMPLATE))
   .use(rehypeExtractButtons(PATH_TO_TEMPLATE))
+  .use(rehypeExtractRoles(PATH_TO_TEMPLATE))
   // .use(rehypeExtractNearDuplicateBlocks(PATH_TO_TEMPLATE, stats))
   .use(rehypeExtractBlocks(PATH_TO_TEMPLATE))
   .use(rehypeExtractLandmarks(PATH_TO_TEMPLATE))
@@ -133,9 +136,9 @@ const html = `
     .join(" ")}>
   </body>
   <script type="module" src="/src/main.jsx"></script>
-  <script type="module" src="/script.js"></script>
-</html>
-`.trim();
+  </html>
+  `.trim();
+// <script type="module" src="/script.js"></script>
 await write("index.html", await prettier.format(html, { parser: "html" }));
 
 await write(
@@ -143,4 +146,4 @@ await write(
   await prettier.format(String(body), { parser: "babel" })
 );
 
-console.log(stats);
+logFileTree(PATH_TO_TEMPLATE);

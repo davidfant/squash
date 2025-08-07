@@ -6,7 +6,7 @@ import fs from "node:fs";
 import path from "path";
 import { visit } from "unist-util-visit";
 
-export function rehypeReplaceSVGs(templatePath: string) {
+export function rehypeExtractSVGs(templatePath: string) {
   const svgsDir = path.join(templatePath, "src/components/svgs");
   fs.mkdirSync(svgsDir, { recursive: true });
   const cache: Record<string, string> = {};
@@ -24,6 +24,7 @@ export function rehypeReplaceSVGs(templatePath: string) {
 
       const componentName = `Svg_${hash}`;
       const componentPath = path.join(svgsDir, `${componentName}.jsx`);
+      const componentTagName = `Components$${path.relative(templatePath, path.join(svgsDir, componentName)).replaceAll("/", "$")}`;
       if (!cache[hash]) {
         const componentCode = transform.sync(pretty, {
           icon: true,
@@ -52,7 +53,7 @@ export function rehypeReplaceSVGs(templatePath: string) {
       // 2️⃣ swap the node → <Svg_ab12cd34 />
       parent!.children[index!] = {
         type: "element",
-        tagName: `Components.${Buffer.from(componentPath).toString("base64")}`,
+        tagName: componentTagName,
         properties: {},
         children: [],
       };

@@ -7,9 +7,10 @@ import rehypeParse from "rehype-parse";
 import rehypeRecma from "rehype-recma";
 import rehypeRemoveComments from "rehype-remove-comments";
 import { unified } from "unified";
+import { recmaExtractJSXComponents } from "./lib/recmaExtractJSXComponents";
 import { rehypeExtractLinks } from "./lib/rehypeExtractLinks";
-import { rehypeReplaceSVGs } from "./lib/rehypeReplaceSVGs";
-import type { Context } from "./types";
+import { rehypeExtractSVGs } from "./lib/rehypeExtractSVGs";
+import type { Context, Stats } from "./types";
 
 const PATH_TO_CAPTURE = "./captures/linklime.json";
 const PATH_TO_TEMPLATE = "./template";
@@ -22,6 +23,9 @@ await fs
 
 const ctx: Context = {
   extractedLinks: [],
+};
+const stats: Stats = {
+  svgs: { total: 0, unique: 0 },
 };
 
 const capture = JSON.parse(await fs.readFile(PATH_TO_CAPTURE, "utf-8")) as {
@@ -60,10 +64,11 @@ const body = await unified()
   .use(rehypeParse, { fragment: true })
   .use(rehypeRemoveComments)
   .use(rehypeExtractLinks(ctx)) // Extract and remove <link> elements
-  .use(rehypeReplaceSVGs(PATH_TO_TEMPLATE)) // our plugin
+  .use(rehypeExtractSVGs(PATH_TO_TEMPLATE)) // our plugin
   .use(rehypeRecma)
   // .use(rehypeStringify) // HAST → HTML
   .use(recmaJsx)
+  .use(recmaExtractJSXComponents(stats)) // Extract JSX components and add imports
   .use(recmaStringify)
   .process(capture.captureData.bodyContent);
 
@@ -95,15 +100,9 @@ await write(
   })
 );
 
-// console.log("Rehype stats", body.data);
-
-const appJsx = `
-import React from "react";
-export default () => ${String(body)};
-`.trim();
 await write(
   "src/App.jsx",
-  await prettier.format(appJsx, {
+  await prettier.format(String(body), {
     parser: "babel",
     tabWidth: 2,
     useTabs: false,

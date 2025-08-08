@@ -1,8 +1,8 @@
-import { spawn } from "node:child_process";
 import fs from "node:fs/promises";
 // import { rehypeExtractBlocks } from "./lib/rehypeExtractBlocks";
+import { spawn } from "node:child_process";
 import { replicate } from ".";
-import { FileSystemSink } from "./lib/sinks/fs";
+import { TarSink } from "./lib/sinks/tar";
 import { logFileTree } from "./logFileTree";
 
 const TEMPLATE_NAME = "posthog";
@@ -21,6 +21,8 @@ const capture = JSON.parse(await fs.readFile(PATH_TO_CAPTURE, "utf-8")) as {
   sessionId: string;
 };
 
+const sink = new TarSink();
+// const sink = new FileSystemSink(PATH_TO_TEMPLATE)
 await replicate(
   {
     pages: [
@@ -35,8 +37,12 @@ await replicate(
       },
     ],
   },
-  new FileSystemSink(PATH_TO_TEMPLATE)
+  sink
 );
+
+// const out = await sink.finalize();
+// const file = createWriteStream("replicated.tar.gz");
+// await out.pipeTo(Writable.toWeb(file));
 
 logFileTree(PATH_TO_TEMPLATE);
 

@@ -21,7 +21,7 @@ import { rehypeIdentifyUrlsToDownload } from "./lib/rehype/identifyUrlsToDownloa
 import type { FileSink } from "./lib/sinks/base";
 import type { Capture, Context } from "./types";
 
-export async function replicate(capture: Capture, sink: FileSink) {
+export async function replicate(capture: Capture, sink: FileSink<any>) {
   const page = capture.pages[0]!;
   const ctx: Context = {
     tagsToMoveToHead: [],

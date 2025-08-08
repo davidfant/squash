@@ -1,4 +1,4 @@
-import { rehypeExtractByMatch } from "./rehypeExtractByMatch";
+import { rehypeExtractByMatch } from "./byMatch";
 
 export const rehypeExtractRoles = (templatePath: string) =>
   rehypeExtractByMatch(templatePath, (node) => {

@@ -1,4 +1,4 @@
-import { rehypeExtractByMatch } from "./rehypeExtractByMatch";
+import { rehypeExtractByMatch } from "./byMatch";
 
 const LANDMARK_TAGS = new Set([
   "header",
@@ -11,7 +11,7 @@ const LANDMARK_TAGS = new Set([
   "table",
 ]);
 
-export const rehypeExtractLandmarks = (templatePath: string) =>
+export const rehypeExtractTags = (templatePath: string) =>
   rehypeExtractByMatch(templatePath, (node) => {
     const tag = node.tagName as string;
     if (typeof tag === "string" && LANDMARK_TAGS.has(tag)) {

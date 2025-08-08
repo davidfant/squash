@@ -9,18 +9,18 @@ import rehypeRemoveComments from "rehype-remove-comments";
 import rehypeStringify from "rehype-stringify";
 import { unified } from "unified";
 import { recmaExtractJSXComponents } from "./lib/recmaExtractJSXComponents";
-import { rehypeExtractBase64Images } from "./lib/rehypeExtractBase64Images";
+import { rehypeExtractBase64Images } from "./lib/rehype/extract/base64Images";
 // import { rehypeExtractBlocks } from "./lib/rehypeExtractBlocks";
-import { rehypeExtractBlocks } from "./lib/rehypeExtractBlocks";
-import { rehypeExtractBodyAttributes } from "./lib/rehypeExtractBodyAttributes";
-import { rehypeExtractButtons } from "./lib/rehypeExtractButtons";
-import { rehypeExtractLandmarks } from "./lib/rehypeExtractLandmarks";
-import { rehypeExtractLinksAndScripts } from "./lib/rehypeExtractLinksAndScripts";
-import { rehypeExtractRoles } from "./lib/rehypeExtractRoles";
-import { rehypeExtractSVGs } from "./lib/rehypeExtractSVGs";
-import { rehypeIdentifyRelativeDeps } from "./lib/rehypeIdentifyRelativeDeps";
+import { rehypeExtractBlocks } from "./lib/rehype/extract/blocks";
+import { rehypeExtractBodyAttributes } from "./lib/rehype/extract/bodyAttributes";
+import { rehypeExtractButtons } from "./lib/rehype/extract/buttons";
+import { rehypeExtractLinksAndScripts } from "./lib/rehype/extract/linksAndScripts";
+import { rehypeExtractRoles } from "./lib/rehype/extract/roles";
+import { rehypeExtractSVGs } from "./lib/rehype/extract/svgs";
+import { rehypeExtractTags } from "./lib/rehype/extract/tags";
+import { rehypeIdentifyRelativeDeps } from "./lib/rehype/identifyRelativeDeps";
 import { logFileTree } from "./logFileTree";
-import type { Context, Stats } from "./types";
+import type { Context } from "./types";
 
 // const PATH_TO_CAPTURE = "./captures/linklime.json";
 const PATH_TO_CAPTURE = "./captures/posthog.json";
@@ -38,11 +38,6 @@ const ctx: Context = {
   urlsToDownload: new Set(),
   bodyAttributes: {},
 };
-const stats: Stats = {
-  svgs: { total: 0, unique: 0 },
-  b64Images: { total: 0, unique: 0 },
-  blocks: { total: 0, unique: 0 },
-};
 
 const capture = JSON.parse(await fs.readFile(PATH_TO_CAPTURE, "utf-8")) as {
   captureData: {
@@ -56,8 +51,10 @@ const capture = JSON.parse(await fs.readFile(PATH_TO_CAPTURE, "utf-8")) as {
   sessionId: string;
 };
 
-const write = (filePath: string, content: string) =>
-  fs.writeFile(path.join(PATH_TO_TEMPLATE, filePath), content);
+async function write(filePath: string, content: string) {
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  await fs.writeFile(path.join(PATH_TO_TEMPLATE, filePath), content);
+}
 
 await write(
   "public/styles.css",
@@ -78,16 +75,16 @@ const body = await unified()
   .use(rehypeParse, { fragment: true })
   .use(rehypeRemoveComments)
   .use(rehypeExtractLinksAndScripts(ctx))
-  .use(rehypeExtractBase64Images(stats, PATH_TO_TEMPLATE))
+  .use(rehypeExtractBase64Images(PATH_TO_TEMPLATE))
   .use(rehypeExtractSVGs(PATH_TO_TEMPLATE))
   .use(rehypeExtractButtons(PATH_TO_TEMPLATE))
   .use(rehypeExtractRoles(PATH_TO_TEMPLATE))
   // .use(rehypeExtractNearDuplicateBlocks(PATH_TO_TEMPLATE, stats))
   .use(rehypeExtractBlocks(PATH_TO_TEMPLATE))
-  .use(rehypeExtractLandmarks(PATH_TO_TEMPLATE))
+  .use(rehypeExtractTags(PATH_TO_TEMPLATE))
   .use(rehypeRecma)
   .use(recmaJsx)
-  .use(recmaExtractJSXComponents(stats)) // Extract JSX components and add imports
+  .use(recmaExtractJSXComponents) // Extract JSX components and add imports
   .use(recmaStringify)
   .process(capture.captureData.bodyContent);
 

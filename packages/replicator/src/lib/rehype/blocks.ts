@@ -4,12 +4,8 @@ import type { Root } from "hast";
 import { toHtml } from "hast-util-to-html";
 import fs from "node:fs/promises";
 import path from "path";
-import recmaJsx from "recma-jsx";
-import recmaStringify from "recma-stringify";
-import rehypeRecma from "rehype-recma";
-import { unified, type Plugin } from "unified";
+import { type Plugin } from "unified";
 import { visit } from "unist-util-visit";
-import { recmaExtractJSXComponents } from "./recmaExtractJSXComponents";
 
 type HastNode = any;
 
@@ -73,25 +69,6 @@ function normalizeForSignature(node: HastNode): HastNode {
 
   normalize(clone);
   return clone;
-}
-
-async function hastToComponentModule(hastRoot: HastNode): Promise<string> {
-  // Produce a JS module that default-exports a component rendering the HAST
-  // Reuse the same recma pipeline so Components$... tags get proper imports
-  const localStats = {
-    svgs: { total: 0, unique: 0 },
-    b64Images: { total: 0, unique: 0 },
-    blocks: { total: 0, unique: 0 },
-  } as const;
-  const processor = unified()
-    .use(rehypeRecma)
-    .use(recmaJsx)
-    .use(recmaExtractJSXComponents(localStats))
-    .use(recmaStringify);
-
-  const estree = await processor.run(hastRoot as any);
-  const js = String(processor.stringify(estree as any));
-  return prettier.format(js, { parser: "babel" });
 }
 
 export function rehypeExtractBlocks(templatePath: string): Plugin<[], Root> {
@@ -166,7 +143,7 @@ export function rehypeExtractBlocks(templatePath: string): Plugin<[], Root> {
         } catch {
           const firstNode = viable[0]!.node;
           const hastRoot = { type: "root", children: [deepClone(firstNode)] };
-          const moduleCode = await hastToComponentModule(hastRoot);
+          const moduleCode = await hastToStaticModule(hastRoot);
           await fs.writeFile(componentPath, moduleCode, "utf8");
         }
 

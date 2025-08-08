@@ -2,7 +2,7 @@ import type { Element, Root } from "hast";
 import rehypeStringify from "rehype-stringify";
 import { unified } from "unified";
 import { visit } from "unist-util-visit";
-import type { Context } from "../types";
+import type { Context } from "../../../types";
 
 export const rehypeExtractLinksAndScripts =
   (ctx: Context) => () => (tree: Root) => {

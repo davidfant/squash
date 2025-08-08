@@ -1,6 +1,6 @@
 import type { Element, Root } from "hast";
 import { visit } from "unist-util-visit";
-import type { Context } from "../types";
+import type { Context } from "../../types";
 
 /**
  * Rehype plugin that identifies relative URLs in HTML head content

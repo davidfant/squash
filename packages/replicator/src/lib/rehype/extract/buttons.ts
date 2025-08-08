@@ -5,9 +5,8 @@ import type { Root } from "hast";
 import fs from "node:fs/promises";
 import path from "path";
 import { visit } from "unist-util-visit";
-import { nameComponents, type ComponentSignature } from "./nameComponents";
-
-type HastNode = any;
+import type { HastNode } from "../../hastToStaticModule";
+import { nameComponents, type ComponentSignature } from "../../nameComponents";
 
 function toClassTokens(props: Record<string, any> | undefined): string[] {
   if (!props) return [];
@@ -43,10 +42,9 @@ export default function ${componentName}({ className = "", children, ...props })
   return prettier.format(code, { parser: "babel" });
 }
 
-export function rehypeExtractButtons(templatePath: string) {
-  const outDir = path.join(templatePath, "src/components/ui/buttons");
-
-  return () => async (tree: Root) => {
+export const rehypeExtractButtons =
+  (templatePath: string) => () => async (tree: Root) => {
+    const outDir = path.join(templatePath, "src/components/ui/buttons");
     await fs.mkdir(outDir, { recursive: true });
 
     // First pass: collect button-like nodes and signatures
@@ -180,4 +178,3 @@ export function rehypeExtractButtons(templatePath: string) {
 
     return tree;
   };
-}

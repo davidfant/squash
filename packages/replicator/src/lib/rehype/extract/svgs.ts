@@ -6,12 +6,12 @@ import fs from "node:fs";
 import path from "path";
 import { visit } from "unist-util-visit";
 
-export function rehypeExtractSVGs(templatePath: string) {
-  const svgsDir = path.join(templatePath, "src/svgs");
-  fs.mkdirSync(svgsDir, { recursive: true });
-  const cache: Record<string, string> = {};
-  let nextIndex = 1;
-  return () => (tree: any) => {
+export const rehypeExtractSVGs =
+  (templatePath: string) => () => (tree: any) => {
+    const svgsDir = path.join(templatePath, "src/svgs");
+    fs.mkdirSync(svgsDir, { recursive: true });
+    const cache: Record<string, string> = {};
+    let nextIndex = 1;
     visit(tree, "element", (node, index, parent) => {
       if (node.tagName !== "svg") return;
 
@@ -64,4 +64,3 @@ export function rehypeExtractSVGs(templatePath: string) {
       };
     });
   };
-}

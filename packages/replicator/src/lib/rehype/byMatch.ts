@@ -1,38 +1,16 @@
 import { config } from "@/config";
-import type { Stats } from "@/types";
 import prettier from "@prettier/sync";
 import crypto from "crypto";
 import type { Root } from "hast";
 import { toHtml } from "hast-util-to-html";
 import fs from "node:fs/promises";
 import path from "path";
-import recmaJsx from "recma-jsx";
-import recmaStringify from "recma-stringify";
-import rehypeRecma from "rehype-recma";
-import { unified, type Plugin } from "unified";
-import { nameComponents, type ComponentSignature } from "./nameComponents";
-import { recmaExtractJSXComponents } from "./recmaExtractJSXComponents";
-
-type HastNode = any;
+import { type Plugin } from "unified";
+import { hastToStaticModule, type HastNode } from "../hastToStaticModule";
+import { nameComponents, type ComponentSignature } from "../nameComponents";
 
 function deepClone<T>(obj: T): T {
   return JSON.parse(JSON.stringify(obj));
-}
-
-async function hastToStaticModule(hastRoot: HastNode): Promise<string> {
-  const tmpStats: Stats = {
-    svgs: { total: 0, unique: 0 },
-    b64Images: { total: 0, unique: 0 },
-    blocks: { total: 0, unique: 0 },
-  };
-  const processor = unified()
-    .use(rehypeRecma)
-    .use(recmaJsx)
-    .use(recmaExtractJSXComponents(tmpStats))
-    .use(recmaStringify);
-  const estree = await processor.run(hastRoot as any);
-  const js = String(processor.stringify(estree as any));
-  return prettier.format(js, { parser: "babel" });
 }
 
 function capitalize(input: string): string {

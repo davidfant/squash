@@ -2,9 +2,8 @@ import crypto from "crypto";
 import fs from "node:fs";
 import path from "path";
 import { visit } from "unist-util-visit";
-import type { Stats } from "../types";
 
-export function rehypeExtractBase64Images(stats: Stats, templatePath: string) {
+export function rehypeExtractBase64Images(templatePath: string) {
   const imagesDir = path.join(templatePath, "public/images");
   fs.mkdirSync(imagesDir, { recursive: true });
   const cache: Record<string, string> = {};
@@ -49,9 +48,7 @@ export function rehypeExtractBase64Images(stats: Stats, templatePath: string) {
         const buffer = Buffer.from(base64Data!, "base64");
         fs.writeFileSync(filepath, buffer);
         cache[hash] = filename;
-        stats.b64Images.unique++;
       }
-      stats.b64Images.total++;
 
       // Update the src attribute to point to the file
       node.properties.src = `/images/${filename}`;

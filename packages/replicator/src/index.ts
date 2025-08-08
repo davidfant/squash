@@ -28,9 +28,7 @@ const PATH_TO_TEMPLATE = "./template";
 
 await Promise.all(
   ["src/components", "public"].map((dir) =>
-    fs.rmdir(path.join(PATH_TO_TEMPLATE, dir), {
-      recursive: true,
-    })
+    fs.rmdir(path.join(PATH_TO_TEMPLATE, dir), { recursive: true })
   )
 ).catch(() => {});
 await fs.mkdir(path.join(PATH_TO_TEMPLATE, "public"), { recursive: true });

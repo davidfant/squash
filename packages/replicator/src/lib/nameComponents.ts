@@ -1,0 +1,58 @@
+import { openai } from "@ai-sdk/openai";
+import prettier from "@prettier/sync";
+import { generateObject, wrapLanguageModel } from "ai";
+import z from "zod";
+import { filesystemCacheMiddleware } from "./filesystemCacheMiddleware";
+
+export interface ComponentSignature {
+  id: string;
+  jsx: string;
+}
+
+const systemPrompt = `
+You are a React component naming assistant.
+Given a batch of React function components declared as constants (BUTTON1, BUTTON2, ...),
+propose concise, idiomatic, PascalCase component names describing their role and style.
+The output MUST be a strict JSON object mapping the constant identifiers to names.
+Rules:
+- Use PascalCase; no spaces or special characters.
+- Prefer descriptive names like PrimaryButton, GhostButton, CTAButton, IconButton, etc.
+- If multiple are similar, differentiate with Clear, Subtle, Destructive, Outline, etc.
+- Avoid duplicates. Ensure all keys in input are present in output.
+- Do not include explanations — only return the JSON object.
+`;
+
+export async function nameComponents(opts: {
+  model: string;
+  components: ComponentSignature[];
+}): Promise<Record<string, string>> {
+  if (opts.components.length === 0) return {};
+
+  const components = prettier.format(
+    opts.components.map((b) => `const ${b.id} = () => (${b.jsx});`).join("\n"),
+    { parser: "babel" }
+  );
+
+  const model = wrapLanguageModel({
+    model: openai(opts.model),
+    middleware: filesystemCacheMiddleware(),
+  });
+
+  const { object } = await generateObject({
+    model,
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: components },
+    ],
+    schema: z.object({
+      componentNames: z
+        .object({
+          id: z.enum(opts.components.map((b) => b.id) as [string, ...string[]]),
+          name: z.string().regex(/^[A-Z][A-Za-z0-9_]*$/, "must be PascalCase"),
+        })
+        .array(),
+    }),
+    providerOptions: { openai: { reasoningEffort: "low" } },
+  });
+  return Object.fromEntries(object.componentNames.map((c) => [c.id, c.name]));
+}

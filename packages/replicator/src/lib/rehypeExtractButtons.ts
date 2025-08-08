@@ -1,9 +1,11 @@
+import { config } from "@/config";
 import prettier from "@prettier/sync";
 import crypto from "crypto";
 import type { Root } from "hast";
 import fs from "node:fs/promises";
 import path from "path";
 import { visit } from "unist-util-visit";
+import { nameComponents, type ComponentSignature } from "./nameComponents";
 
 type HastNode = any;
 
@@ -47,7 +49,20 @@ export function rehypeExtractButtons(templatePath: string) {
   return () => async (tree: Root) => {
     await fs.mkdir(outDir, { recursive: true });
 
-    const cache = new Map<string, { componentName: string; tagName: string }>();
+    // First pass: collect button-like nodes and signatures
+    const occurrences: Array<{
+      parent: HastNode;
+      index: number;
+      node: HastNode;
+      tagName: string;
+      baseClasses: string;
+      signature: string; // tag|classes signature
+    }> = [];
+
+    const signatureToMeta = new Map<
+      string,
+      { tagName: string; baseClasses: string }
+    >();
 
     visit(
       tree as any,
@@ -72,43 +87,93 @@ export function rehypeExtractButtons(templatePath: string) {
 
         const baseSig = tokensSignature(classTokens);
         const sig = `${tag}|${baseSig}`;
-        let record = cache.get(sig);
-        if (!record) {
-          const hash = computeHash(sig);
-          const componentName = `Button_${hash}`;
-          record = { componentName, tagName: tag };
-          cache.set(sig, record);
-        }
-
-        const { componentName } = record;
-        const componentRelBase = path.join(
-          "src/components/ui/buttons",
-          componentName
-        );
-        const componentTagName = `Components$${componentRelBase.replaceAll(path.sep, "$")}`;
-
-        // Replace node with component tag, preserving all original props except class/className
-        const newProps: Record<string, any> = { ...props };
-        delete (newProps as any).className;
-        delete (newProps as any).class;
-
-        parent.children[index] = {
-          type: "element",
-          tagName: componentTagName,
-          properties: newProps,
-          children: node.children || [],
-        } as any;
+        signatureToMeta.set(sig, { tagName: tag, baseClasses: baseSig });
+        occurrences.push({
+          parent: parent as any,
+          index: index as number,
+          node,
+          tagName: tag,
+          baseClasses: baseSig,
+          signature: sig,
+        });
       }
     );
 
-    // Write components after traversal to avoid duplicate writes per signature
-    for (const [sig, { componentName, tagName }] of cache.entries()) {
-      const baseClasses = sig.split("|")[1] || "";
+    if (signatureToMeta.size === 0) return tree;
+
+    // Derive default names per signature
+    const defaultNameBySig = new Map<string, string>();
+    for (const sig of signatureToMeta.keys()) {
+      const hash = computeHash(sig);
+      defaultNameBySig.set(sig, `Button_${hash}`);
+    }
+
+    // Optionally call AI to rename components in batch
+    let finalNameBySig = new Map(defaultNameBySig);
+    if (config.aiComponentNaming.buttons.enabled) {
+      const sortedSigs = Array.from(signatureToMeta.keys()).sort();
+      const keys = sortedSigs.map((_, i) => `BUTTON${i + 1}`);
+      const components: ComponentSignature[] = sortedSigs.map((sig, i) => {
+        const meta = signatureToMeta.get(sig)!;
+        const jsx = `<${meta.tagName} className="${meta.baseClasses}">...</${meta.tagName}>`;
+        return { id: keys[i]!, jsx };
+      });
+
+      const named = await nameComponents({
+        model: config.aiComponentNaming.buttons.model,
+        components,
+      });
+
+      // Build mapping sig -> AI name, ensuring sanitized and unique
+      const used = new Set<string>();
+      const sanitize = (s: string) => {
+        let candidate = s;
+        let n = 2;
+        while (used.has(candidate)) candidate = `${s}${n++}`;
+        used.add(candidate);
+        return candidate;
+      };
+
+      sortedSigs.forEach((sig, i) => {
+        const raw = named[keys[i]!]!;
+        if (raw) finalNameBySig.set(sig, sanitize(raw));
+      });
+    }
+
+    // Second pass: replace nodes with final names
+    for (const occ of occurrences) {
+      const componentName = finalNameBySig.get(occ.signature)!;
+      const componentRelBase = path.join(
+        "src/components/ui/buttons",
+        componentName
+      );
+      const componentTagName = `Components$${componentRelBase.replaceAll(path.sep, "$")}`;
+
+      // Replace node with component tag, preserving all original props except class/className
+      const newProps: Record<string, any> = { ...(occ.node.properties || {}) };
+      delete newProps.className;
+      delete newProps.class;
+
+      occ.parent.children[occ.index] = {
+        type: "element",
+        tagName: componentTagName,
+        properties: newProps,
+        children: occ.node.children || [],
+      } as any;
+    }
+
+    // Write components for each signature
+    for (const [sig, meta] of signatureToMeta.entries()) {
+      const componentName = finalNameBySig.get(sig)!;
       const filePath = path.join(outDir, `${componentName}.jsx`);
       try {
         await fs.access(filePath);
       } catch {
-        const code = createComponentCode(componentName, tagName, baseClasses);
+        const code = createComponentCode(
+          componentName,
+          meta.tagName,
+          meta.baseClasses
+        );
         await fs.writeFile(filePath, code, "utf8");
       }
     }

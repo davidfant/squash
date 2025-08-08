@@ -10,6 +10,7 @@ export function rehypeExtractSVGs(templatePath: string) {
   const svgsDir = path.join(templatePath, "src/svgs");
   fs.mkdirSync(svgsDir, { recursive: true });
   const cache: Record<string, string> = {};
+  let nextIndex = 1;
   return () => (tree: any) => {
     visit(tree, "element", (node, index, parent) => {
       if (node.tagName !== "svg") return;
@@ -36,9 +37,12 @@ export function rehypeExtractSVGs(templatePath: string) {
         .digest("hex")
         .slice(0, 8);
 
-      const componentName = `Svg_${hash}`;
+      // Use incremental names Svg1, Svg2, ... while deduplicating by hash
+      const componentName = cache[hash] ?? `Svg${nextIndex++}`;
       const componentPath = path.join(svgsDir, `${componentName}.jsx`);
-      const componentTagName = `Components$${path.relative(templatePath, path.join(svgsDir, componentName)).replaceAll("/", "$")}`;
+      const componentTagName = `Components$${path
+        .relative(templatePath, path.join(svgsDir, componentName))
+        .replaceAll("/", "$")}`;
       if (!cache[hash]) {
         const componentCode = transform.sync(pretty, {
           icon: true,

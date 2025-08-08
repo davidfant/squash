@@ -6,7 +6,7 @@ import type { Context } from "../../types";
  * Rehype plugin that identifies relative URLs in HTML head content
  * and adds them to Context.filesToDownload for later processing
  */
-export const rehypeIdentifyRelativeDeps =
+export const rehypeIdentifyUrlsToDownload =
   (ctx: Context) => () => (tree: Root) => {
     visit(tree, "element", (node: Element) => {
       // Check different types of elements that can contain relative URLs

@@ -1,14 +1,12 @@
+import type { FileSink } from "@/lib/sinks/base";
 import crypto from "crypto";
-import fs from "node:fs";
 import path from "path";
 import { visit } from "unist-util-visit";
 
-export function rehypeExtractBase64Images(templatePath: string) {
-  const imagesDir = path.join(templatePath, "public/images");
-  fs.mkdirSync(imagesDir, { recursive: true });
+export function rehypeExtractBase64Images(sink: FileSink) {
   const cache: Record<string, string> = {};
-
-  return () => (tree: any) => {
+  return () => async (tree: any) => {
+    const promises: Promise<unknown>[] = [];
     visit(tree, "element", (node, index, parent) => {
       if (node.tagName !== "img") return;
 
@@ -41,17 +39,19 @@ export function rehypeExtractBase64Images(templatePath: string) {
         .slice(0, 16);
 
       const filename = `${hash}.${extension}`;
-      const filepath = path.join(imagesDir, filename);
+      const filepath = path.join("public/images", filename);
 
       // Write file if not already cached
       if (!cache[hash]) {
         const buffer = Buffer.from(base64Data!, "base64");
-        fs.writeFileSync(filepath, buffer);
+        promises.push(sink.writeBytes(filepath, buffer));
         cache[hash] = filename;
       }
 
       // Update the src attribute to point to the file
       node.properties.src = `/images/${filename}`;
     });
+
+    await Promise.all(promises);
   };
 }

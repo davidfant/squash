@@ -3,14 +3,11 @@
   "type": "module",
   "version": "0.0.0",
   "scripts": {
-    "dev": "concurrently \"pnpm dev:replicator\" \"pnpm dev:template\"",
-    "dev:replicator": "tsx watch --env-file .env src/index.ts",
-    "dev:template": "cd template && pnpm dev"
+    "dev": "tsx watch --env-file .env src/playground.ts"
   },
   "devDependencies": {
     "@types/estree": "^1.0.5",
     "@types/node": "^24.2.0",
-    "concurrently": "^9.2.0",
     "tsx": "^4.20.3",
     "typescript": "~5.8.3"
   },
@@ -22,8 +19,6 @@
     "@svgr/plugin-prettier": "^8.1.0",
     "@svgr/plugin-svgo": "^8.1.0",
     "ai": "^5.0.5",
-    "astring": "^1.9.0",
-    "estree-jsx": "^0.0.1",
     "estree-util-visit": "^2.0.0",
     "hast": "^1.0.0",
     "hast-util-to-html": "^9.0.5",
@@ -36,7 +31,6 @@
     "rehype-stringify": "^10.0.1",
     "unified": "^11.0.5",
     "unist-util-visit": "^5.0.0",
-    "zod": "^3.25.76",
-    "zod-to-json-schema": "^3.24.6"
+    "zod": "^3.25.76"
   }
 }

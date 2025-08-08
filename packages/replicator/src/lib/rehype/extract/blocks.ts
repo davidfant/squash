@@ -1,8 +1,8 @@
+import type { FileSink } from "@/lib/sinks/base";
 import prettier from "@prettier/sync";
 import crypto from "crypto";
 import type { Root } from "hast";
 import { toHtml } from "hast-util-to-html";
-import fs from "node:fs/promises";
 import path from "path";
 import { type Plugin } from "unified";
 import { visit } from "unist-util-visit";
@@ -72,11 +72,10 @@ function normalizeForSignature(node: HastNode): HastNode {
 }
 
 export const rehypeExtractBlocks =
-  (templatePath: string): Plugin<[], Root> =>
+  (sink: FileSink): Plugin<[], Root> =>
   () =>
   async (tree: Root) => {
-    const blocksDir = path.join(templatePath, "src/components/blocks");
-    await fs.mkdir(blocksDir, { recursive: true });
+    const blocksDir = "src/components/blocks";
 
     const table = new Map<string, Occurrence[]>();
 
@@ -134,19 +133,14 @@ export const rehypeExtractBlocks =
       const componentName = `Block_${hash}`;
       const componentPath = path.join(blocksDir, `${componentName}.jsx`);
       const componentTagName = `Components$${path
-        .relative(templatePath, path.join(blocksDir, componentName))
+        .join(blocksDir, componentName)
         .replaceAll(path.sep, "$")}`;
 
       try {
-        // Write component file if not present
-        try {
-          await fs.access(componentPath);
-        } catch {
-          const firstNode = viable[0]!.node;
-          const hastRoot = { type: "root", children: [deepClone(firstNode)] };
-          const moduleCode = await hastToStaticModule(hastRoot);
-          await fs.writeFile(componentPath, moduleCode, "utf8");
-        }
+        const firstNode = viable[0]!.node;
+        const hastRoot = { type: "root", children: [deepClone(firstNode)] };
+        const moduleCode = await hastToStaticModule(hastRoot);
+        await sink.writeText(componentPath, moduleCode);
 
         // Replace all viable occurrences with the component tag
         for (const { parent, index, node } of viable) {

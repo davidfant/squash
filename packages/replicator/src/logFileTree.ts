@@ -1,20 +1,20 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-type FileNode = {
+interface FileNode {
   name: string;
   path: string;
   type: "file";
   lineCount: number;
-};
+}
 
-type DirNode = {
+interface DirNode {
   name: string;
   path: string;
   type: "dir";
   totalLines: number;
   children: Array<DirNode | FileNode>;
-};
+}
 
 const countFileLines = async (absoluteFilePath: string): Promise<number> => {
   const content = await fs.readFile(absoluteFilePath, "utf-8");

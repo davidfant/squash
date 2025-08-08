@@ -1,8 +1,8 @@
 import { config } from "@/config";
+import type { FileSink } from "@/lib/sinks/base";
 import prettier from "@prettier/sync";
 import crypto from "crypto";
 import type { Root } from "hast";
-import fs from "node:fs/promises";
 import path from "path";
 import { visit } from "unist-util-visit";
 import type { HastNode } from "../../hastToStaticModule";
@@ -43,9 +43,8 @@ export default function ${componentName}({ className = "", children, ...props })
 }
 
 export const rehypeExtractButtons =
-  (templatePath: string) => () => async (tree: Root) => {
-    const outDir = path.join(templatePath, "src/components/ui/buttons");
-    await fs.mkdir(outDir, { recursive: true });
+  (sink: FileSink) => () => async (tree: Root) => {
+    const promises: Promise<unknown>[] = [];
 
     // First pass: collect button-like nodes and signatures
     const occurrences: Array<{
@@ -160,21 +159,13 @@ export const rehypeExtractButtons =
       } as any;
     }
 
-    // Write components for each signature
-    for (const [sig, meta] of signatureToMeta.entries()) {
-      const componentName = finalNameBySig.get(sig)!;
-      const filePath = path.join(outDir, `${componentName}.jsx`);
-      try {
-        await fs.access(filePath);
-      } catch {
-        const code = createComponentCode(
-          componentName,
-          meta.tagName,
-          meta.baseClasses
-        );
-        await fs.writeFile(filePath, code, "utf8");
-      }
-    }
-
-    return tree;
+    const buttonsDir = "src/components/ui/buttons";
+    await Promise.all([
+      Array.from(signatureToMeta.entries()).map(async ([sig, meta]) => {
+        const cName = finalNameBySig.get(sig)!;
+        const filePath = path.join(buttonsDir, `${cName}.jsx`);
+        const code = createComponentCode(cName, meta.tagName, meta.baseClasses);
+        await sink.writeText(filePath, code);
+      }),
+    ]);
   };

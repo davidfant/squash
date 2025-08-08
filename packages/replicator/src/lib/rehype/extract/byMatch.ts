@@ -1,9 +1,9 @@
 import { config } from "@/config";
+import type { FileSink } from "@/lib/sinks/base";
 import prettier from "@prettier/sync";
 import crypto from "crypto";
 import type { Root } from "hast";
 import { toHtml } from "hast-util-to-html";
-import fs from "node:fs/promises";
 import path from "path";
 import { type Plugin } from "unified";
 import { hastToStaticModule, type HastNode } from "../../hastToStaticModule";
@@ -30,7 +30,7 @@ interface MatchResult {
 /** The higher-order factory */
 export const rehypeExtractByMatch =
   (
-    templatePath: string,
+    sink: FileSink,
     match: (node: HastNode) => MatchResult | null
   ): Plugin<[], Root> =>
   () =>
@@ -128,17 +128,17 @@ export const rehypeExtractByMatch =
             const pretty = prettier.format(raw, { parser: "html" });
             const hash = computeHash(pretty);
             const componentName = `${capitalize(m.name)}_${hash}`;
-            const outDir = path.join(templatePath, "src/components", m.dir);
+            const outDir = path.join("src/components", m.dir);
             const rel = path
-              .relative(templatePath, path.join(outDir, componentName))
+              .join(outDir, componentName)
               .replaceAll(path.sep, "$");
             const componentTagName = `Components$${rel}`;
-            (node as any).children[i] = {
+            node.children[i] = {
               type: "element",
               tagName: componentTagName,
               properties: {},
               children: [],
-            } as any;
+            };
             // Do not recurse into replaced child
             continue;
           }
@@ -192,39 +192,28 @@ export const rehypeExtractByMatch =
       }
     }
 
-    // Write files and replace nodes
-    const written = new Set<string>();
+    const promises: Record<string, Promise<unknown>> = {};
     for (const occ of occs) {
-      const outDir = path.join(templatePath, "src/components", occ.dir);
-      await fs.mkdir(outDir, { recursive: true });
-
-      const componentName = finalNameByOccId.get(occ.id)!;
-      const componentPath = path.join(outDir, `${componentName}.jsx`);
-
-      const rel = path
-        .relative(templatePath, path.join(outDir, componentName))
-        .replaceAll(path.sep, "$");
+      const outDir = path.join("src/components", occ.dir);
+      const cName = finalNameByOccId.get(occ.id)!;
+      const rel = path.join(outDir, cName).replaceAll(path.sep, "$");
       const componentTagName = `Components$${rel}`;
-
-      if (!written.has(componentPath)) {
-        const hastRoot = { type: "root", children: [deepClone(occ.node)] };
-        const code = await hastToStaticModule(hastRoot);
-        try {
-          await fs.access(componentPath);
-        } catch {
-          await fs.writeFile(componentPath, code, "utf8");
-        }
-        written.add(componentPath);
-      }
-
-      // Replace original with our component tag
-      (occ.parent as any).children[occ.index] = {
+      occ.parent.children[occ.index] = {
         type: "element",
         tagName: componentTagName,
         properties: {},
         children: [],
-      } as any;
+      };
+
+      if (!promises[occ.id]) {
+        const cPath = path.join(outDir, `${cName}.jsx`);
+        promises[occ.id] = hastToStaticModule(occ.node).then((code) =>
+          sink.writeText(cPath, code)
+        );
+      }
     }
+
+    await Promise.all(Object.values(promises));
 
     return tree;
   };

@@ -6,6 +6,7 @@ import fs from "node:fs/promises";
 import path from "path";
 import { type Plugin } from "unified";
 import { visit } from "unist-util-visit";
+import { hastToStaticModule } from "../hastToStaticModule";
 
 type HastNode = any;
 

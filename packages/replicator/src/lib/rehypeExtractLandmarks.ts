@@ -15,7 +15,7 @@ export const rehypeExtractLandmarks = (templatePath: string) =>
   rehypeExtractByMatch(templatePath, (node) => {
     const tag = node.tagName as string;
     if (typeof tag === "string" && LANDMARK_TAGS.has(tag)) {
-      return { outParts: ["layout", tag], nameHint: tag };
+      return { dir: `layout/${tag}`, name: tag };
     }
     return null;
   });

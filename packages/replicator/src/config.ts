@@ -5,13 +5,11 @@ export type AIComponentNamingConfig = {
 };
 
 export const config = {
-  aiComponentNaming: {
-    buttons: {
-      enabled: true,
-      provider: "openai",
-      model: "gpt-5-nano",
-    } as AIComponentNamingConfig,
-  },
+  componentNaming: {
+    enabled: true,
+    provider: "openai",
+    model: "gpt-5-nano",
+  } as AIComponentNamingConfig,
 };
 
 export type AppConfig = typeof config;

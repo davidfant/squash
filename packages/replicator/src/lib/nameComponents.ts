@@ -13,8 +13,7 @@ const systemPrompt = `
 You are a React component naming assistant.
 Given a batch of React function components declared as constants (BUTTON1, BUTTON2, ...),
 propose concise, idiomatic, PascalCase component names describing their role and style.
-The output MUST be a strict JSON object mapping the constant identifiers to names.
-Rules:
+The output MUST contain a mapping of component id to name, where the name needs to follow the rules below:
 - Use PascalCase; no spaces or special characters.
 - Prefer descriptive names like PrimaryButton, GhostButton, CTAButton, IconButton, etc.
 - If multiple are similar, differentiate with Clear, Subtle, Destructive, Outline, etc.
@@ -52,7 +51,9 @@ export async function nameComponents(opts: {
         })
         .array(),
     }),
-    providerOptions: { openai: { reasoningEffort: "low" } },
+    providerOptions: {
+      openai: { reasoningEffort: "low", strictJsonSchema: true },
+    },
   });
   return Object.fromEntries(object.componentNames.map((c) => [c.id, c.name]));
 }

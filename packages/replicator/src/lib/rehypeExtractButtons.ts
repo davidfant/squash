@@ -110,7 +110,7 @@ export function rehypeExtractButtons(templatePath: string) {
 
     // Optionally call AI to rename components in batch
     let finalNameBySig = new Map(defaultNameBySig);
-    if (config.aiComponentNaming.buttons.enabled) {
+    if (config.componentNaming.enabled) {
       const sortedSigs = Array.from(signatureToMeta.keys()).sort();
       const keys = sortedSigs.map((_, i) => `BUTTON${i + 1}`);
       const components: ComponentSignature[] = sortedSigs.map((sig, i) => {
@@ -120,7 +120,7 @@ export function rehypeExtractButtons(templatePath: string) {
       });
 
       const named = await nameComponents({
-        model: config.aiComponentNaming.buttons.model,
+        model: config.componentNaming.model,
         components,
       });
 

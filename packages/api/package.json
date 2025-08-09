@@ -48,6 +48,6 @@
     "concurrently": "^9.2.0",
     "dotenv": "^17.2.0",
     "drizzle-kit": "^0.31.4",
-    "wrangler": "^4.26.0"
+    "wrangler": "^4.28.1"
   }
 }

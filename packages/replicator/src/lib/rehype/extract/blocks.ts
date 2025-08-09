@@ -1,9 +1,10 @@
 import type { FileSink } from "@/lib/sinks/base";
-import prettier from "@prettier/sync";
 import crypto from "crypto";
 import type { Root } from "hast";
 import { toHtml } from "hast-util-to-html";
 import path from "path";
+import parserHtml from "prettier/plugins/html";
+import prettier from "prettier/standalone";
 import { type Plugin } from "unified";
 import { visit } from "unist-util-visit";
 import { hastToStaticModule } from "../../hastToStaticModule";
@@ -76,8 +77,7 @@ export const rehypeExtractBlocks =
   () =>
   async (tree: Root) => {
     const blocksDir = "src/components/blocks";
-
-    const table = new Map<string, Occurrence[]>();
+    const occs: Occurrence[] = [];
 
     // Pass 1: collect signatures for all element subtrees (excluding svg; already handled)
     visit(
@@ -93,13 +93,20 @@ export const rehypeExtractBlocks =
 
         const normalized = normalizeForSignature(node);
         const html = toHtml(normalized);
-        const pretty = prettier.format(html, { parser: "html" });
-        const sig = pretty;
-
-        const occs = table.get(sig) || [];
         occs.push({ parent, index, node });
-        table.set(sig, occs);
       }
+    );
+
+    const table = new Map<string, Occurrence[]>();
+    await Promise.all(
+      occs.map(async (occ) => {
+        const pretty = await prettier.format(
+          toHtml(normalizeForSignature(occ.node)),
+          { parser: "html", plugins: [parserHtml] }
+        );
+        const occs = table.get(pretty) || [];
+        table.set(pretty, occs);
+      })
     );
 
     // Select candidates: repeated and above size threshold

@@ -6,6 +6,7 @@ import { authMiddleware } from "./auth/middleware";
 import { databaseMiddleware } from "./database/middleware";
 import { chatRouter } from "./routers/chat";
 import { githubRouter } from "./routers/integrations/github";
+import { replicatorRouter } from "./routers/replicator";
 import { reposRouter } from "./routers/repos";
 
 const app = new Hono<{ Bindings: CloudflareBindings }>()
@@ -15,8 +16,9 @@ const app = new Hono<{ Bindings: CloudflareBindings }>()
   .use(authMiddleware)
   .use("*", cors({ origin: process.env.APP_URL, credentials: true }))
   .on(["GET", "POST"], "/auth/*", (c) => c.get("auth").handler(c.req.raw))
-  .route("/repos", reposRouter)
   .route("/chat", chatRouter)
+  .route("/replicator", replicatorRouter)
+  .route("/repos", reposRouter)
   .route("/integrations/github", githubRouter);
 
 export default app;

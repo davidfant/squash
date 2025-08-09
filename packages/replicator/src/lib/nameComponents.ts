@@ -1,6 +1,8 @@
 import { openai } from "@ai-sdk/openai";
-import prettier from "@prettier/sync";
 import { generateObject, wrapLanguageModel } from "ai";
+import parserBabel from "prettier/plugins/babel";
+import parserEstree from "prettier/plugins/estree";
+import prettier from "prettier/standalone";
 import z from "zod";
 import { filesystemCacheMiddleware } from "./filesystemCacheMiddleware";
 
@@ -27,9 +29,9 @@ export async function nameComponents(opts: {
 }): Promise<Record<string, string>> {
   if (opts.components.length === 0) return {};
 
-  const components = prettier.format(
+  const components = await prettier.format(
     opts.components.map((b) => `const ${b.id} = () => (${b.jsx});`).join("\n"),
-    { parser: "babel" }
+    { parser: "babel", plugins: [parserBabel, parserEstree] }
   );
 
   const model = wrapLanguageModel({

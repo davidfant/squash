@@ -1,17 +1,29 @@
 import type { FileSink } from "@/lib/sinks/base";
-import prettier from "@prettier/sync";
 import { transform } from "@svgr/core";
+import svgrPluginJsx from "@svgr/plugin-jsx";
+import svgrPluginPrettier from "@svgr/plugin-prettier";
+import svgrPluginSvgo from "@svgr/plugin-svgo";
 import crypto from "crypto";
 import { toHtml } from "hast-util-to-html";
 import path from "path";
+import parserHtml from "prettier/plugins/html";
+import prettier from "prettier/standalone";
 import { visit } from "unist-util-visit";
 
 export const rehypeExtractSVGs =
   (sink: FileSink) => () => async (tree: any) => {
-    const promises: Promise<unknown>[] = [];
-    const cache: Record<string, string> = {};
-    let nextIndex = 1;
+    type Occurrence = {
+      parent: any;
+      index: number;
+      className: string[];
+      raw: string;
+    };
+
+    const occs: Occurrence[] = [];
+
+    // Collect SVGs synchronously
     visit(tree, "element", (node, index, parent) => {
+      if (!parent || index == null) return;
       if (node.tagName !== "svg") return;
 
       const className: string[] = node.properties?.className || [];
@@ -26,40 +38,58 @@ export const rehypeExtractSVGs =
       delete classlessNode.properties.className;
       delete classlessNode.properties.class;
 
-      // Stringify the node without classes
+      // Stringify the node without classes; postpone expensive work to async phase
       const raw = toHtml(classlessNode);
-      const pretty = prettier.format(raw, { parser: "html" });
+      occs.push({ parent, index, className, raw });
+    });
+
+    if (occs.length === 0) return;
+
+    const prettyList = await Promise.all(
+      occs.map((o) =>
+        prettier.format(o.raw, { parser: "html", plugins: [parserHtml] })
+      )
+    );
+
+    const hashToComponentName = new Map<string, string>();
+
+    let nextIndex = 1;
+    await Promise.all(
+      prettyList.map(async (pretty) => {
+        const hash = crypto
+          .createHash("sha256")
+          .update(pretty)
+          .digest("hex")
+          .slice(0, 8);
+        if (!hashToComponentName.has(hash)) {
+          const componentName = `Svg${nextIndex++}`;
+          hashToComponentName.set(hash, componentName);
+          const componentPath = path.join("src/svgs", `${componentName}.jsx`);
+          const code = await transform(pretty, {
+            icon: true,
+            plugins: [svgrPluginSvgo, svgrPluginJsx, svgrPluginPrettier],
+          });
+          sink.writeText(componentPath, code);
+        }
+      })
+    );
+
+    prettyList.forEach((pretty, i) => {
       const hash = crypto
         .createHash("sha256")
         .update(pretty)
         .digest("hex")
         .slice(0, 8);
-
-      // Use incremental names Svg1, Svg2, ... while deduplicating by hash
-      const componentName = cache[hash] ?? `Svg${nextIndex++}`;
-      const componentPath = path.join("src/svgs", `${componentName}.jsx`);
-      const componentTagName = `Components$${path.join("src/svgs", componentName).replaceAll("/", "$")}`;
-      if (!cache[hash]) {
-        const componentCode = transform.sync(pretty, {
-          icon: true,
-          plugins: [
-            "@svgr/plugin-svgo",
-            "@svgr/plugin-jsx",
-            "@svgr/plugin-prettier",
-          ],
-        });
-
-        promises.push(sink.writeText(componentPath, componentCode));
-        cache[hash] = componentName;
-      }
-
-      parent!.children[index!] = {
+      const componentName = hashToComponentName.get(hash)!;
+      const componentTagName = `Components$${path
+        .join("src/svgs", componentName)
+        .replaceAll("/", "$")}`;
+      const { parent, index, className } = occs[i]!;
+      parent.children[index] = {
         type: "element",
         tagName: componentTagName,
         properties: className.length ? { className } : {},
         children: [],
       };
     });
-
-    await Promise.all(promises);
   };

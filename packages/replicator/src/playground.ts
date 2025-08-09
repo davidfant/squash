@@ -1,9 +1,8 @@
-import fs from "node:fs/promises";
-// import { rehypeExtractBlocks } from "./lib/rehypeExtractBlocks";
 import { spawn } from "node:child_process";
-import { replicate } from ".";
-import { TarSink } from "./lib/sinks/tar";
+import fs from "node:fs/promises";
+import { FileSystemSink } from "./lib/sinks/fs";
 import { logFileTree } from "./logFileTree";
+import { replicate } from "./replicate";
 
 const TEMPLATE_NAME = "posthog";
 const PATH_TO_CAPTURE = `./captures/${TEMPLATE_NAME}.json`;
@@ -21,8 +20,8 @@ const capture = JSON.parse(await fs.readFile(PATH_TO_CAPTURE, "utf-8")) as {
   sessionId: string;
 };
 
-const sink = new TarSink();
-// const sink = new FileSystemSink(PATH_TO_TEMPLATE)
+// const sink = new TarSink();
+const sink = new FileSystemSink(PATH_TO_TEMPLATE);
 await replicate(
   {
     pages: [

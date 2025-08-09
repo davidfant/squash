@@ -1,4 +1,6 @@
-import prettier from "@prettier/sync";
+import parserBabel from "prettier/plugins/babel";
+import parserEstree from "prettier/plugins/estree";
+import prettier from "prettier/standalone";
 import recmaJsx from "recma-jsx";
 import recmaStringify from "recma-stringify";
 import rehypeRecma from "rehype-recma";
@@ -15,5 +17,8 @@ export async function hastToStaticModule(hastRoot: HastNode): Promise<string> {
     .use(recmaStringify);
   const estree = await processor.run(hastRoot as any);
   const js = String(processor.stringify(estree as any));
-  return prettier.format(js, { parser: "babel" });
+  return await prettier.format(js, {
+    parser: "babel",
+    plugins: [parserBabel, parserEstree],
+  });
 }

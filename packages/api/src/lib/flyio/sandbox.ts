@@ -128,28 +128,39 @@ export const createMachine = ({
           GITHUB_PASSWORD: auth.github?.password,
         },
         init: {
+          // entrypoint: [
+          //   "/bin/sh",
+          //   "-c",
+          //   `
+          //       set -e;
+
+          //       apk update;
+          //       apk add --no-cache git;
+
+          //       corepack enable;
+          //       corepack prepare pnpm@10.0.0 --activate;
+
+          //       git config --global credential.helper store;
+          //       printf "protocol=https\nhost=github.com\nusername=$GITHUB_USERNAME\npassword=$GITHUB_PASSWORD\n" | git credential approve;
+
+          //       if [ -d $GIT_REPO_DIR ]; then
+          //         cd $GIT_REPO_DIR;
+          //         # git pull origin $GIT_BRANCH;
+          //       else
+          //         git clone $GIT_URL $GIT_REPO_DIR;
+          //         cd $GIT_REPO_DIR;
+          //       fi
+          //       ${snapshot.entrypoint};
+          //     `,
+          // ],
           entrypoint: [
             "/bin/sh",
             "-c",
             `
                 set -e;
 
-                apk update;
-                apk add --no-cache git;
-
-                corepack enable;
-                corepack prepare pnpm@10.0.0 --activate;
-
-                git config --global credential.helper store;
-                printf "protocol=https\nhost=github.com\nusername=$GITHUB_USERNAME\npassword=$GITHUB_PASSWORD\n" | git credential approve;
-
-                if [ -d $GIT_REPO_DIR ]; then
-                  cd $GIT_REPO_DIR;
-                  # git pull origin $GIT_BRANCH;
-                else
-                  git clone $GIT_URL $GIT_REPO_DIR;
-                  cd $GIT_REPO_DIR;
-                fi
+                git remote set-url origin $GIT_URL;
+                git pull;
                 ${snapshot.entrypoint};
               `,
           ],

@@ -1,9 +1,11 @@
 import { config } from "@/config";
 import type { FileSink } from "@/lib/sinks/base";
-import prettier from "@prettier/sync";
 import crypto from "crypto";
 import type { Root } from "hast";
 import path from "path";
+import parserBabel from "prettier/plugins/babel";
+import parserEstree from "prettier/plugins/estree";
+import prettier from "prettier/standalone";
 import { visit } from "unist-util-visit";
 import type { HastNode } from "../../hastToStaticModule";
 import { nameComponents, type ComponentSignature } from "../../nameComponents";
@@ -27,11 +29,11 @@ function computeHash(input: string): string {
   return crypto.createHash("sha256").update(input).digest("hex").slice(0, 8);
 }
 
-function createComponentCode(
+async function createComponentCode(
   componentName: string,
   tagName: string,
   baseClasses: string
-): string {
+) {
   const code = `
 export default function ${componentName}({ className = "", children, ...props }) {
   return (
@@ -39,13 +41,14 @@ export default function ${componentName}({ className = "", children, ...props })
   );
 }
 `;
-  return prettier.format(code, { parser: "babel" });
+  return prettier.format(code, {
+    parser: "babel",
+    plugins: [parserBabel, parserEstree],
+  });
 }
 
 export const rehypeExtractButtons =
   (sink: FileSink) => () => async (tree: Root) => {
-    const promises: Promise<unknown>[] = [];
-
     // First pass: collect button-like nodes and signatures
     const occurrences: Array<{
       parent: HastNode;
@@ -96,7 +99,7 @@ export const rehypeExtractButtons =
       }
     );
 
-    if (signatureToMeta.size === 0) return tree;
+    if (signatureToMeta.size === 0) return;
 
     // Derive default names per signature
     const defaultNameBySig = new Map<string, string>();
@@ -164,7 +167,11 @@ export const rehypeExtractButtons =
       Array.from(signatureToMeta.entries()).map(async ([sig, meta]) => {
         const cName = finalNameBySig.get(sig)!;
         const filePath = path.join(buttonsDir, `${cName}.jsx`);
-        const code = createComponentCode(cName, meta.tagName, meta.baseClasses);
+        const code = await createComponentCode(
+          cName,
+          meta.tagName,
+          meta.baseClasses
+        );
         await sink.writeText(filePath, code);
       }),
     ]);

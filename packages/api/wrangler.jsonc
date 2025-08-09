@@ -13,5 +13,8 @@
     "BETTER_AUTH_SECRET": "",
     "DATABASE_URL": ""
   },
+  "r2_buckets": [
+    { "binding": "R2_FILE_TRANSFER_BUCKET", "bucket_name": "file-transfer" }
+  ],
   "rules": [{ "type": "Text", "globs": ["**/*.md"], "fallthrough": true }]
 }

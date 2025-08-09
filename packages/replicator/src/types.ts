@@ -6,9 +6,9 @@ export interface Context {
 
 export interface Capture {
   pages: Array<{
-    css: string;
-    js: string;
-    html: { head: string; body: string };
     url: string;
+    js: string;
+    css: string;
+    html: { head: string; body: string };
   }>;
 }

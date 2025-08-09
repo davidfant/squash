@@ -2,8 +2,16 @@
   "name": "@hypershape-ai/replicator",
   "type": "module",
   "version": "0.0.0",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
   "scripts": {
-    "dev": "tsx watch --env-file .env src/playground.ts"
+    "dev": "tsc --watch",
+    "build": "tsc",
+    "replicate": "tsx watch --env-file .env src/playground.ts"
   },
   "devDependencies": {
     "@types/estree": "^1.0.5",
@@ -13,7 +21,6 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "^2.0.3",
-    "@prettier/sync": "^0.6.1",
     "@svgr/core": "^8.1.0",
     "@svgr/plugin-jsx": "^8.1.0",
     "@svgr/plugin-prettier": "^8.1.0",

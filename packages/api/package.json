@@ -23,6 +23,7 @@
     "typegen": "wrangler types --env-interface CloudflareBindings"
   },
   "dependencies": {
+    "@hypershape-ai/replicator": "workspace:*",
     "@ai-sdk/anthropic": "^2.0.0",
     "@ai-sdk/google": "^2.0.0",
     "@ai-sdk/openai": "^2.0.3",

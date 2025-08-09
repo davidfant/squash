@@ -1,13 +1,14 @@
 import { config } from "@/config";
 import type { FileSink } from "@/lib/sinks/base";
-import prettier from "@prettier/sync";
 import crypto from "crypto";
 import type { Root } from "hast";
 import { toHtml } from "hast-util-to-html";
 import path from "path";
+import parserHtml from "prettier/plugins/html";
+import prettier from "prettier/standalone";
 import { type Plugin } from "unified";
 import { hastToStaticModule, type HastNode } from "../../hastToStaticModule";
-import { nameComponents, type ComponentSignature } from "../../nameComponents";
+import { nameComponents } from "../../nameComponents";
 
 function deepClone<T>(obj: T): T {
   return JSON.parse(JSON.stringify(obj));
@@ -91,13 +92,19 @@ export const rehypeExtractByMatch =
     }
 
     // Precompute pretty HTML and fallback hashed names
-    const prettyHtmlByOccId = new Map<number, string>();
     const fallbackNameByOccId = new Map<number, string>();
-    for (const occ of occs) {
-      const raw = toHtml(occ.node as any);
-      const pretty = prettier.format(raw, { parser: "html" });
-      prettyHtmlByOccId.set(occ.id, pretty);
-    }
+    const prettyList = await Promise.all(
+      occs.map((occ) =>
+        prettier.format(toHtml(occ.node), {
+          parser: "html",
+          plugins: [parserHtml],
+        })
+      )
+    );
+    const prettyHtmlByOccId = new Map<number, string>(
+      occs.map((occ, idx) => [occ.id, prettyList[idx]!])
+    );
+
     for (const list of occsByDir.values()) {
       const isSingle = list.length === 1;
       for (const occ of list) {
@@ -114,9 +121,11 @@ export const rehypeExtractByMatch =
     }
 
     // Helper: clone a node and replace inner matches with placeholder hashed Components$ tags
-    function cloneWithInnerPlaceholders(root: HastNode): HastNode {
+    async function cloneWithInnerPlaceholders(
+      root: HastNode
+    ): Promise<HastNode> {
       const clone = deepClone(root);
-      const replace = (node: HastNode, depth = 0) => {
+      const replace = async (node: HastNode, depth = 0) => {
         const children: HastNode[] = (node as any).children || [];
         for (let i = 0; i < children.length; i++) {
           const child = children[i];
@@ -125,7 +134,10 @@ export const rehypeExtractByMatch =
           const m = match(child);
           if (m) {
             const raw = toHtml(child as any);
-            const pretty = prettier.format(raw, { parser: "html" });
+            const pretty = await prettier.format(raw, {
+              parser: "html",
+              plugins: [parserHtml],
+            });
             const hash = computeHash(pretty);
             const componentName = `${capitalize(m.name)}_${hash}`;
             const outDir = path.join("src/components", m.dir);
@@ -142,10 +154,10 @@ export const rehypeExtractByMatch =
             // Do not recurse into replaced child
             continue;
           }
-          replace(child, depth + 1);
+          await replace(child, depth + 1);
         }
       };
-      replace(clone, 0);
+      await replace(clone, 0);
       return clone;
     }
 
@@ -159,16 +171,13 @@ export const rehypeExtractByMatch =
         if (list.length <= 1) continue;
 
         // Build components for naming based on match.name and rendered JSX with inner placeholders
-        const components: ComponentSignature[] = [];
-        const keys: string[] = [];
         const base = list[0]!.name.toUpperCase();
-        list.forEach((occ, idx) => {
-          const key = `${base}${idx + 1}`;
-          keys.push(key);
-          const cloned = cloneWithInnerPlaceholders(occ.node);
-          const jsx = toHtml(cloned as any);
-          components.push({ id: key, jsx });
-        });
+        const components = await Promise.all(
+          list.map(async (occ, idx) => ({
+            id: `${base}${idx + 1}`,
+            jsx: toHtml(await cloneWithInnerPlaceholders(occ.node)),
+          }))
+        );
 
         const named = await nameComponents({
           model: config.componentNaming.model,
@@ -186,7 +195,8 @@ export const rehypeExtractByMatch =
         };
 
         list.forEach((occ, idx) => {
-          const raw = named[keys[idx]!] || fallbackNameByOccId.get(occ.id)!;
+          const raw =
+            named[components[idx]!.id] || fallbackNameByOccId.get(occ.id)!;
           finalNameByOccId.set(occ.id, uniquify(raw));
         });
       }
@@ -214,6 +224,5 @@ export const rehypeExtractByMatch =
     }
 
     await Promise.all(Object.values(promises));
-
     return tree;
   };

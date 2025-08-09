@@ -6,17 +6,41 @@ import parserBabel from "prettier/plugins/babel";
 import parserEstree from "prettier/plugins/estree";
 import parserHtml from "prettier/plugins/html";
 import prettier from "prettier/standalone";
+import recmaJsx from "recma-jsx";
+import recmaStringify from "recma-stringify";
+import rehypeParse from "rehype-parse";
+import rehypeRecma from "rehype-recma";
+import { unified } from "unified";
 import { visit } from "unist-util-visit";
+import { recmaExtractJSXComponents } from "../../recmaExtractJSXComponents";
 
-function svgToComponent(name: string, rawSvg: string) {
-  const jsx = rawSvg.replace(/\sclass=/g, " className="); // minimal JSX fix
-  const code = `
-    import * as React from "react";
-    export default function ${name}(props) {
-      return (${jsx.replace("<svg", "<svg {...props}")});
-    }
-  `;
-  return prettier.format(code, {
+// SVGR-free: reuse the same HAST -> JSX pipeline used elsewhere, then wrap with a named component and inject {...props}
+async function svgToComponent(
+  componentName: string,
+  rawSvg: string
+): Promise<string> {
+  const vfile = await unified()
+    .use(rehypeParse, { fragment: true })
+    .use(rehypeRecma)
+    .use(recmaJsx)
+    .use(recmaExtractJSXComponents)
+    .use(recmaStringify)
+    .process(rawSvg);
+
+  const moduleJs = String(vfile);
+
+  // Extract the JSX expression from `export default () => <svg ... />;`
+  const match = moduleJs.match(/export default \(\) => ([\s\S]*);\s*$/);
+  const jsx: string = match?.[1] ?? moduleJs;
+
+  // Inject props spread into root <svg>
+  const jsxWithProps = jsx
+    .replace(/<svg(\b[^>]*)\/>/s, (_m, attrs) => `<svg${attrs} {...props} />`)
+    .replace(/<svg(\b[^>]*)>/s, (_m, attrs) => `<svg${attrs} {...props}>`);
+
+  const wrapped = `export default function ${componentName}(props) { return ${jsxWithProps}; }`;
+
+  return prettier.format(wrapped, {
     parser: "babel",
     plugins: [parserBabel, parserEstree],
   });

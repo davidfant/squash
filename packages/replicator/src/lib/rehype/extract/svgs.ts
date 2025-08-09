@@ -1,14 +1,26 @@
 import type { FileSink } from "@/lib/sinks/base";
-import { transform } from "@svgr/core";
-import svgrPluginJsx from "@svgr/plugin-jsx";
-import svgrPluginPrettier from "@svgr/plugin-prettier";
-import svgrPluginSvgo from "@svgr/plugin-svgo";
 import crypto from "crypto";
 import { toHtml } from "hast-util-to-html";
 import path from "path";
+import parserBabel from "prettier/plugins/babel";
+import parserEstree from "prettier/plugins/estree";
 import parserHtml from "prettier/plugins/html";
 import prettier from "prettier/standalone";
 import { visit } from "unist-util-visit";
+
+function svgToComponent(name: string, rawSvg: string) {
+  const jsx = rawSvg.replace(/\sclass=/g, " className="); // minimal JSX fix
+  const code = `
+    import * as React from "react";
+    export default function ${name}(props) {
+      return (${jsx.replace("<svg", "<svg {...props}")});
+    }
+  `;
+  return prettier.format(code, {
+    parser: "babel",
+    plugins: [parserBabel, parserEstree],
+  });
+}
 
 export const rehypeExtractSVGs =
   (sink: FileSink) => () => async (tree: any) => {
@@ -65,10 +77,7 @@ export const rehypeExtractSVGs =
           const componentName = `Svg${nextIndex++}`;
           hashToComponentName.set(hash, componentName);
           const componentPath = path.join("src/svgs", `${componentName}.jsx`);
-          const code = await transform(pretty, {
-            icon: true,
-            plugins: [svgrPluginSvgo, svgrPluginJsx, svgrPluginPrettier],
-          });
+          const code = await svgToComponent(componentName, pretty);
           sink.writeText(componentPath, code);
         }
       })

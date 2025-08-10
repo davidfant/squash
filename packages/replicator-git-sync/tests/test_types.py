@@ -1,17 +1,14 @@
-from src.types import parse_commit_request
+from src.worker_types import CommitRequest, RepoRef, Person
 
 
-def test_parse_commit_request_minimal():
-    data = {
-        "job_id": "ulid-1",
-        "base_repo": {"bucket": "git", "prefix": "repos/base/.git/"},
-        "new_repo": {"bucket": "git", "prefix": "repos/new/.git/"},
-        "tar": {"bucket": "git", "key": "imports/x.tar"},
-        "branch": "main",
-        "author": {"name": "a", "email": "a@x"},
-        "committer": {"name": "c", "email": "c@x"},
-        "message": "m",
-    }
-    req = parse_commit_request(data)
-    assert req.job_id == "ulid-1"
-    assert req.branch == "main"
+def test_commit_request_minimal():
+    req = CommitRequest(
+        base_repo=RepoRef(prefix="repos/base/.git/", ref="v1.0.0"),
+        new_repo=RepoRef(prefix="repos/new/.git/", ref="main"),
+        tar="imports/x.tar",
+        author=Person(name="a", email="a@x"),
+        message="m",
+    )
+    assert req.base_repo.prefix == "repos/base/.git/"
+    assert req.new_repo.ref == "main"
+    assert req.author.name == "a"

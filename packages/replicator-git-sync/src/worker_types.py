@@ -19,9 +19,9 @@ class CommitRequest(BaseModel):
 
 
 class CommitResponse(BaseModel):
-    branch: str
     parent_commit_oid: Optional[str]
     new_commit_oid: str
     new_repo_prefix: str
+    new_repo_ref: str
     touched: Dict[str, List[str]]
 

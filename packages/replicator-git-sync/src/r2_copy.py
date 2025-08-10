@@ -31,7 +31,7 @@ async def iter_list(env_bucket, prefix: str) -> AsyncIterator[str]:
             keys = list(resp.keys)
         for k in keys:
             yield k
-        if not getattr(resp, "truncated", False) and not getattr(resp, "truncated", False):
+        if not getattr(resp, "truncated", False):
             break
         cursor = getattr(resp, "cursor", None)
         if not cursor:
@@ -39,19 +39,24 @@ async def iter_list(env_bucket, prefix: str) -> AsyncIterator[str]:
 
 
 async def copy_prefix(bucket, src_prefix: str, dst_prefix: str) -> int:
+    """Copy all objects from src_prefix to dst_prefix within the same bucket."""
     count = 0
     async for key in iter_list(bucket, src_prefix):
         suffix = key[len(src_prefix) :]
         dst_key = f"{dst_prefix}{suffix}"
-        await dst_bucket.copy(src_bucket=src_bucket, src_key=key, key=dst_key)  # type: ignore[func-returns-value]
-        # Prefer server-side copy to avoid data egress
-        # if hasattr(bucket, "copy"):
-        # else:
-        #     # Fallback: download & re-upload (not ideal, but keeps logic testable)
-        #     obj = await bucket.get(key)
-        #     if obj is None:
-        #         continue
-        #     body = await obj.read()
-        #     await bucket.put(dst_key, body)
-        count += 1
+        
+        try:
+            # Try server-side copy first (more efficient)
+            if hasattr(bucket, "copy"):
+                await bucket.copy(src_bucket=bucket, src_key=key, key=dst_key)
+            else:
+                # Fallback: download & re-upload (not ideal, but keeps logic testable)
+                obj = await bucket.get(key)
+                if obj is None:
+                    continue
+                body = await obj.arrayBuffer()
+                await bucket.put(dst_key, body)
+            count += 1
+        except Exception as e:
+            raise R2Error(f"Failed to copy {key} to {dst_key}: {str(e)}")
     return count

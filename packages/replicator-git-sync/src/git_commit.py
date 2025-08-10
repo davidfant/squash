@@ -10,81 +10,113 @@ class RepoLike:
         self.refs = refs
 
 
-def build_tree_from_edits(
+async def build_tree_from_edits(
     repo: RepoLike,
     base_tree_id: Optional[bytes],
     edits: List[PathEdit],
 ) -> bytes:
-    # Naive implementation: reconstruct by walking existing tree lazily and applying edits
-    # For v1: only file inserts/updates and deletions of files
-    from dulwich.objects import Tree
-    from dulwich.object_store import tree_lookup_path
-
-    # Helper to get subtree
-    def get_tree(tree_id: Optional[bytes]) -> Tree:
-        if tree_id is None:
-            return Tree()
-        return repo.object_store[tree_id]
-
-    # Build a dict of path->(mode, sha)
-    paths: Dict[str, Tuple[int, bytes]] = {}
-
-    # If base tree exists, recursively enumerate
-    def walk_tree(prefix: str, tree_id: bytes) -> None:
-        t: Tree = repo.object_store[tree_id]
-        for name, mode, sha in t.iteritems():
-            name_str = name.decode("utf-8") if isinstance(name, bytes) else name
-            full = f"{prefix}{name_str}" if prefix == "" else f"{prefix}/{name_str}"
-            if mode & 0o40000:  # dir
-                walk_tree(full, sha)
-            else:
-                paths[full] = (mode, sha)
-
-    if base_tree_id is not None:
-        walk_tree("", base_tree_id)
-
-    # Apply edits
-    for e in edits:
-        blob = Blob.from_string(e.data)
-        repo.object_store.add_object(blob)
-        paths[e.path] = (e.mode, blob.id)
-
-    # Rebuild trees bottom-up
-    # Group by directory
+    """Build a git tree by applying edits to a base tree."""
+    from dulwich.objects import Tree, Blob
     from collections import defaultdict
+    
+    # Step 1: Build a flat map of all files (path -> (mode, sha))
+    file_map: Dict[str, Tuple[int, bytes]] = {}
+    
+    # Load existing files from base tree if it exists
+    if base_tree_id is not None:
+        await _load_tree_recursive(repo, base_tree_id, "", file_map)
+    
+    # Apply edits (overwrites existing files or adds new ones)
+    for edit in edits:
+        # Create blob for the file content
+        blob = Blob.from_string(edit.data)
+        repo.object_store.add_object(blob)
+        file_map[edit.path] = (edit.mode, blob.id)
+    
+    # Step 2: Build tree structure bottom-up
+    return _build_tree_from_file_map(repo, file_map)
 
-    children: Dict[str, Dict[str, Tuple[int, bytes]]] = defaultdict(dict)
-    for p, (mode, sha) in paths.items():
-        if "/" in p:
-            parent, name = p.rsplit("/", 1)
+
+async def _load_tree_recursive(
+    repo: RepoLike, 
+    tree_id: bytes, 
+    prefix: str, 
+    file_map: Dict[str, Tuple[int, bytes]]
+) -> None:
+    """Recursively load all files from a git tree into file_map."""
+    from dulwich.objects import Tree
+    
+    # Load tree object (handle async loading if needed)
+    if hasattr(repo.object_store, '_get_object_async'):
+        tree_obj = await repo.object_store._get_object_async(tree_id)
+        if not tree_obj:
+            return
+    else:
+        tree_obj = repo.object_store[tree_id]
+    
+    if not isinstance(tree_obj, Tree):
+        return
+        
+    for name, mode, sha in tree_obj.iteritems():
+        name_str = name.decode("utf-8") if isinstance(name, bytes) else name
+        full_path = f"{prefix}/{name_str}" if prefix else name_str
+        
+        if mode & 0o40000:  # Directory
+            await _load_tree_recursive(repo, sha, full_path, file_map)
+        else:  # Regular file
+            file_map[full_path] = (mode, sha)
+
+
+def _build_tree_from_file_map(repo: RepoLike, file_map: Dict[str, Tuple[int, bytes]]) -> bytes:
+    """Build git tree objects from a flat file map."""
+    from dulwich.objects import Tree
+    from collections import defaultdict
+    
+    # Group files by directory
+    dir_contents: Dict[str, Dict[str, Tuple[int, bytes]]] = defaultdict(dict)
+    
+    for file_path, (mode, sha) in file_map.items():
+        if "/" in file_path:
+            dir_path, filename = file_path.rsplit("/", 1)
+            dir_contents[dir_path][filename] = (mode, sha)
         else:
-            parent, name = "", p
-        children[parent][name] = (mode, sha)
-
-    built: Dict[str, bytes] = {}
-
-    def ensure_tree_for_dir(dirpath: str) -> bytes:
-        if dirpath in built:
-            return built[dirpath]
-        entries = children.get(dirpath, {})
+            # Root level file
+            dir_contents[""][file_path] = (mode, sha)
+    
+    # Build trees bottom-up (deepest directories first)
+    built_trees: Dict[str, bytes] = {}
+    
+    # Sort directories by depth (deepest first)
+    sorted_dirs = sorted(dir_contents.keys(), key=lambda x: x.count("/"), reverse=True)
+    
+    for dir_path in sorted_dirs:
         tree = Tree()
-        for name in sorted(entries.keys()):
-            mode, sha = entries[name]
+        contents = dir_contents[dir_path]
+        
+        # Add files in this directory
+        for name, (mode, sha) in sorted(contents.items()):
             tree.add(name.encode("utf-8"), mode, sha)
-        # Add subtrees
-        subdirs = [d for d in children.keys() if d.startswith(dirpath + "/")] if dirpath != "" else [d for d in children.keys() if "/" not in d]
-        for subdir in sorted(set(d for d in children.keys() if (d == "" and dirpath == "") or (d.startswith(dirpath + "/") and d.count("/") == dirpath.count("/") + 1))):
-            if subdir == dirpath:
-                continue
-            name = subdir.split("/")[-1] if dirpath != "" else subdir
-            subtree_id = ensure_tree_for_dir(subdir)
-            tree.add(name.encode("utf-8"), 0o040000, subtree_id)
+        
+        # Add subdirectories that we've already built
+        if dir_path == "":
+            # Root directory - check for top-level subdirs
+            subdirs = [d for d in built_trees.keys() if "/" not in d and d != ""]
+        else:
+            # Non-root directory - check for immediate children
+            prefix = dir_path + "/"
+            subdirs = [d for d in built_trees.keys() 
+                      if d.startswith(prefix) and d.count("/") == dir_path.count("/") + 1]
+        
+        for subdir in sorted(subdirs):
+            subdir_name = subdir.split("/")[-1] if dir_path != "" else subdir
+            tree.add(subdir_name.encode("utf-8"), 0o040000, built_trees[subdir])
+        
+        # Store the tree object
         repo.object_store.add_object(tree)
-        built[dirpath] = tree.id
-        return tree.id
-
-    root_id = ensure_tree_for_dir("")
-    return root_id
+        built_trees[dir_path] = tree.id
+    
+    # Return root tree ID
+    return built_trees.get("", built_trees[sorted(built_trees.keys())[0]])
 
 
 def create_commit(

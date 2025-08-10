@@ -3,7 +3,9 @@ import type { Database } from "@/database";
 import * as schema from "@/database/schema";
 import { zValidator } from "@hono/zod-validator";
 import { replicate, TarSink } from "@hypershape-ai/replicator";
+import type { AppType as ReplicatorGitSyncAppType } from "@hypershape-ai/replicator-git-sync";
 import { Hono } from "hono";
+import { hc } from "hono/client";
 import { randomUUID } from "node:crypto";
 import z from "zod";
 
@@ -42,8 +44,28 @@ export const replicatorRouter = new Hono<{
 
       await c.env.R2_FILE_TRANSFER_BUCKET.put(filePath, tar);
 
+      const api = hc<ReplicatorGitSyncAppType>(
+        c.env.REPLICATOR_GIT_SYNC_API_URL
+      );
+      const res = await api.index
+        .$post({
+          json: {
+            source: { prefix: "templates/replicator-vite-js", tag: "v0.0.1" },
+            tarFilePath: filePath,
+            commitMessage: "Initial commit",
+            author: { name: "Replicator", email: "replicator@hypershape.ai" },
+          },
+        })
+        .then((res) => res.json());
+
       // TODO: generate repo summary and name
-      // call the git service to create the repo
+
+      // stuff to add to branch system message
+      //   const data = { sha: currentSha, title, description };
+      // await db
+      //   .update(schema.message)
+      //   .set({ parts: [{ type: "data-gitSha", data }] })
+      //   .where(eq(schema.message.id, rootMessage.id));
 
       const repo = await db
         .insert(schema.repo)
@@ -56,7 +78,7 @@ export const replicatorRouter = new Hono<{
             port: 5173,
             entrypoint: "pnpm dev",
           },
-          defaultBranch: "master",
+          defaultBranch: res.branch,
           private: true,
           organizationId,
         })

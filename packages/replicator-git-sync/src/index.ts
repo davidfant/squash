@@ -6,6 +6,7 @@ import { Hono } from "hono";
 import { createMiddleware } from "hono/factory";
 import { logger } from "hono/logger";
 import { execFile } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import os from "node:os";
 import { promisify } from "node:util";
 import simpleGit from "simple-git";
@@ -58,10 +59,6 @@ export const app = new Hono().use("*", logger()).post(
     "json",
     z.object({
       source: z.object({ prefix: z.string(), tag: z.string() }),
-      target: z.object({
-        prefix: z.string(),
-        branch: z.string().default("master"),
-      }),
       tarFilePath: z.string(),
       commitMessage: z.string(),
       author: z.object({ name: z.string(), email: z.string() }),
@@ -69,8 +66,9 @@ export const app = new Hono().use("*", logger()).post(
   ),
   async (c) => {
     const body = c.req.valid("json");
+    const targetPrefix = `replicator/${randomUUID()}`;
     const sourceGitOrigin = `s3://${REPOS_BUCKET}/${body.source.prefix}`;
-    const targetGitOrigin = `s3://${REPOS_BUCKET}/${body.target.prefix}`;
+    const targetGitOrigin = `s3://${REPOS_BUCKET}/${targetPrefix}`;
 
     const repoDir = await fs.mkdtemp(os.tmpdir());
     try {
@@ -114,16 +112,17 @@ export const app = new Hono().use("*", logger()).post(
       );
 
       console.log("Committing changes", body.commitMessage);
+      const branch = "master";
       const commit = await git.commit(body.commitMessage, ["./"]);
-      await git.checkoutLocalBranch("master");
+      await git.checkoutLocalBranch(branch);
       await git.raw(["remote", "set-url", "origin", targetGitOrigin]);
-      console.log("Pushing changes to", targetGitOrigin, body.target.branch);
-      await execFileAsync("git", ["push", "origin", body.target.branch], {
+      console.log("Pushing changes to", targetGitOrigin);
+      await execFileAsync("git", ["push", "origin", branch], {
         cwd: repoDir,
         env: process.env,
       });
 
-      return c.json({ commit: commit.commit });
+      return c.json({ commit: commit.commit, branch });
     } finally {
       await fs.rm(repoDir, { recursive: true, force: true });
     }

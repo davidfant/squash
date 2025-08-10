@@ -14,7 +14,6 @@ def build_tree_from_edits(
     repo: RepoLike,
     base_tree_id: Optional[bytes],
     edits: List[PathEdit],
-    delete_paths: Optional[List[str]] = None,
 ) -> bytes:
     # Naive implementation: reconstruct by walking existing tree lazily and applying edits
     # For v1: only file inserts/updates and deletions of files
@@ -43,11 +42,6 @@ def build_tree_from_edits(
 
     if base_tree_id is not None:
         walk_tree("", base_tree_id)
-
-    # Apply deletes
-    if delete_paths:
-        for p in delete_paths:
-            paths.pop(p, None)
 
     # Apply edits
     for e in edits:
@@ -99,18 +93,15 @@ def create_commit(
     parent_commit: Optional[bytes],
     root_tree: bytes,
     author: str,
-    committer: str,
     message: str,
-    timestamp: Optional[int] = None,
 ) -> bytes:
-    if timestamp is None:
-        timestamp = int(time.time())
+    timestamp = int(time.time())
 
     commit = Commit()
     commit.tree = root_tree
     commit.parents = [parent_commit] if parent_commit else []
     commit.author = author.encode("utf-8")
-    commit.committer = committer.encode("utf-8")
+    commit.committer = author.encode("utf-8")
     commit.commit_time = timestamp
     commit.author_time = timestamp
     commit.commit_timezone = 0

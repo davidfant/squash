@@ -1,3 +1,0 @@
-dulwich>=0.24.1
-fastapi[standard]>=0.116.1
-pydantic>=2.11.7

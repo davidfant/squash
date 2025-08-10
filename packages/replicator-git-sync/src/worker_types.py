@@ -1,12 +1,9 @@
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 
-
-class BucketRef(BaseModel):
-    bucket: str
-    prefix: Optional[str] = None
-    key: Optional[str] = None
-
+class RepoRef(BaseModel):
+    prefix: str
+    ref: str
 
 class Person(BaseModel):
     name: str
@@ -14,16 +11,11 @@ class Person(BaseModel):
 
 
 class CommitRequest(BaseModel):
-    base_repo: BucketRef
-    new_repo: BucketRef
-    tar: BucketRef
-    branch: str
+    base_repo: RepoRef
+    new_repo: RepoRef
+    tar: str
     author: Person
-    committer: Person
     message: str
-    delete_paths: Optional[List[str]] = None
-    allow_empty_commit: bool = False
-    timestamp: Optional[int] = None
 
 
 class CommitResponse(BaseModel):

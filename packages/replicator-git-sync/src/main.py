@@ -35,12 +35,12 @@ async def create_commit_endpoint(req: CommitRequest, request: Request):
         repo = GitR2Repo(bucket_binding=repos_bucket, repo_prefix=req.new_repo.prefix)
         await repo.load_refs_from_r2()
 
-        branch_ref = f"refs/heads/{req.branch}".encode("utf-8")
-        parent_commit: Optional[bytes] = repo.refs.get(branch_ref)
-        parent_tree: Optional[bytes] = None
-        if parent_commit is not None:
-            parent_obj = repo.object_store[parent_commit]
-            parent_tree = parent_obj.tree
+        tag_ref = f"refs/tags/{req.base_repo.ref}".encode("utf-8")
+        parent_commit: Optional[bytes] = repo.refs.get(tag_ref)
+        if not parent_commit:
+            return JSONResponse(status_code=404, content={"error": "base_repo_tag_not_found"})
+        parent_obj = repo.object_store[parent_commit]
+        parent_tree = parent_obj.tree
 
         # Stream tar from R2
         tar_obj = await file_transfer_bucket.get(req.tar.key)
@@ -58,16 +58,13 @@ async def create_commit_endpoint(req: CommitRequest, request: Request):
         )
 
         author = f"{req.author.name} <{req.author.email}>"
-        committer = f"{req.committer.name} <{req.committer.email}>"
         new_commit_id = create_commit(
             RepoLike(object_store=repo.object_store, refs=repo.refs),
             branch_ref=branch_ref,
             parent_commit=parent_commit,
             root_tree=root_tree,
             author=author,
-            committer=committer,
             message=req.message,
-            timestamp=req.timestamp,
         )
 
         await repo.write_refs_to_r2()

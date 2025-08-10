@@ -2,7 +2,7 @@
   "name": "replicator-git-sync",
   "main": "src/main.py",
   "compatibility_flags": ["python_workers"],
-  "compatibility_date": "2024-08-06",
+  "compatibility_date": "2025-08-08",
   "observability": { "enabled": true },
   "r2_buckets": [
     { "binding": "R2_REPOS_BUCKET", "bucket_name": "repos" },

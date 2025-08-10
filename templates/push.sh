@@ -4,6 +4,8 @@ set -e
 source ./.env
 fly auth docker
 
+APP_NAME="squash-template"
+
 function build() {
   TEMPLATE_NAME=$1
   echo "Building $TEMPLATE_NAME"
@@ -15,7 +17,9 @@ function build() {
     git remote set-url origin $GIT_URL
     git push --tags
 
-    DOCKER_TAG=registry.fly.io/$TEMPLATE_NAME:$TEMPLATE_VERSION
+
+    DOCKER_TAG="registry.fly.io/$APP_NAME:$TEMPLATE_NAME-v$TEMPLATE_VERSION"
+    echo "DOCKER TAG: $DOCKER_TAG"
     docker build \
       --platform linux/amd64 \
       --build-arg AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
@@ -25,12 +29,12 @@ function build() {
       --file ../Dockerfile.$TEMPLATE_NAME \
       .
     
-    if ! flyctl apps list | grep -q $TEMPLATE_NAME; then
-      flyctl apps create $TEMPLATE_NAME
-    fi
-
     docker push $DOCKER_TAG
   popd
 }
+
+if ! flyctl apps list | grep -q $APP_NAME; then
+  flyctl apps create $APP_NAME
+fi
 
 build replicator-vite-js

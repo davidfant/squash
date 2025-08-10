@@ -16,6 +16,7 @@ export interface RepoSnapshot {
   type: "docker";
   port: number;
   image: string;
+  workdir: string;
   entrypoint: string;
 }
 

@@ -77,8 +77,16 @@ export const createMachine = ({
   snapshot,
 }: {
   appId: string;
-  git: { url: string; defaultBranch: string; branch: string; workdir: string };
-  auth: { github?: { username: string; password: string } };
+  git: { url: string; branch: string; workdir: string };
+  auth: {
+    github?: { username: string; password: string };
+    aws?: {
+      accessKeyId: string;
+      secretAccessKey: string;
+      endpointUrl: string;
+      region: "auto";
+    };
+  };
   apiKey: string;
   snapshot: RepoSnapshot;
 }) =>
@@ -87,11 +95,7 @@ export const createMachine = ({
     body: JSON.stringify({
       config: {
         image: snapshot.image,
-        guest: {
-          cpu_kind: "shared",
-          cpus: 2,
-          memory_mb: 1024,
-        },
+        guest: { cpu_kind: "shared", cpus: 2, memory_mb: 1024 },
         // size: "performance-1x",
         auto_destroy: false,
         restart: { policy: "no" },
@@ -113,19 +117,23 @@ export const createMachine = ({
             port: snapshot.port,
             method: "GET",
             path: "/",
-            interval: "5s",
-            timeout: "5s",
-            grace_period: "10s",
+            interval: "2s",
+            timeout: "2s",
+            // grace_period: "1s",
           },
         },
         env: {
           PORT: snapshot.port.toString(),
           GIT_REPO_DIR: git.workdir,
-          GIT_URL: git.url,
+          GIT_REPO_URL: git.url,
           GIT_BRANCH: git.branch,
-          GIT_DEFAULT_BRANCH: git.defaultBranch,
           GITHUB_USERNAME: auth.github?.username,
           GITHUB_PASSWORD: auth.github?.password,
+
+          AWS_ACCESS_KEY_ID: auth.aws?.accessKeyId,
+          AWS_SECRET_ACCESS_KEY: auth.aws?.secretAccessKey,
+          AWS_ENDPOINT_URL_S3: auth.aws?.endpointUrl,
+          AWS_REGION: auth.aws?.region,
         },
         init: {
           // entrypoint: [
@@ -154,16 +162,34 @@ export const createMachine = ({
           //     `,
           // ],
           entrypoint: [
-            "/bin/sh",
-            "-c",
+            "sh",
+            "-lc",
             `
-                set -e;
+              cd "$GIT_REPO_DIR"
 
-                git remote set-url origin $GIT_URL;
-                git pull;
-                ${snapshot.entrypoint};
-              `,
+              if [ ! -d ".git" ]; then
+                echo "Initializing git repo in $GIT_REPO_DIR..."
+                git init
+                git remote add origin "$GIT_REPO_URL"
+
+                # Get the default branch from the remote (works for main/master or others)
+                DEFAULT_BRANCH=$(git ls-remote --symref origin HEAD | awk '/^ref:/ {print $2}' | sed 's|refs/heads/||')
+
+                echo "Pulling default branch ($DEFAULT_BRANCH) from $GIT_REPO_URL..."
+                git fetch origin "$DEFAULT_BRANCH"
+                git reset --hard "origin/$DEFAULT_BRANCH"
+
+                echo "Creating new branch $GIT_BRANCH..."
+                git checkout -b "$GIT_BRANCH"
+              else
+                echo "Repo already initialized. Pulling latest changes..."
+                git pull --ff-only
+              fi
+
+              ${snapshot.entrypoint};
+            `,
           ],
+          // entrypoint: ["/bin/sh", "-c", snapshot.entrypoint],
         },
         stop_config: { timeout: 10, signal: "SIGTERM" },
       },
@@ -209,7 +235,7 @@ export async function waitForMachineHealthy(
       if (isHealthy(machine)) return machine;
     } catch (e) {
       console.warn(
-        `Failed to fetch machine ${machineId} after start: ${
+        `Failed to fetch machine ${appId}/${machineId} after start: ${
           (e as Error).message
         }`
       );

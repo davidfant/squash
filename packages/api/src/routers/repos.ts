@@ -107,7 +107,7 @@ export const requireRepo = createMiddleware<
           id: string;
           type: RepoProviderType;
           data: RepoProviderData;
-        };
+        } | null;
       };
     };
   },
@@ -133,18 +133,18 @@ export const requireRepo = createMiddleware<
       },
     })
     .from(schema.repo)
-    .innerJoin(
+    .leftJoin(
       schema.repoProvider,
       eq(schema.repo.providerId, schema.repoProvider.id)
     )
     .innerJoin(
       schema.member,
-      eq(schema.repoProvider.organizationId, schema.member.organizationId)
+      eq(schema.repo.organizationId, schema.member.organizationId)
     )
     .where(
       and(
         eq(schema.repo.id, repoId),
-        eq(schema.repoProvider.organizationId, organizationId),
+        eq(schema.repo.organizationId, organizationId),
         isNull(schema.repo.deletedAt),
         eq(schema.member.userId, user.id)
       )
@@ -291,6 +291,7 @@ export const reposRouter = new Hono<{
           port: z.number(),
           image: z.string(),
           entrypoint: z.string(),
+          workdir: z.string(),
         }),
       })
     ),
@@ -485,6 +486,7 @@ export const reposRouter = new Hono<{
           port: z.number(),
           image: z.string(),
           entrypoint: z.string(),
+          workdir: z.string(),
         }),
       })
     ),
@@ -604,7 +606,6 @@ export const reposRouter = new Hono<{
         ].join("-");
 
         try {
-          const workdir = "/app";
           await FlyioSandbox.createApp(
             flyioAppId,
             c.env.FLY_API_KEY,
@@ -615,14 +616,13 @@ export const reposRouter = new Hono<{
             appId: flyioAppId,
             git: {
               url: repo.url,
-              defaultBranch: repo.defaultBranch,
               branch: branchName,
-              workdir,
+              workdir: repo.snapshot.workdir,
             },
             snapshot: repo.snapshot,
             auth: {
               github:
-                repo.provider.type === "github"
+                repo.provider?.type === "github"
                   ? {
                       username: "x-access-token",
                       password: await createAppAuth({
@@ -634,6 +634,14 @@ export const reposRouter = new Hono<{
                       ),
                     }
                   : undefined,
+              aws: !repo.provider
+                ? {
+                    accessKeyId: c.env.R2_REPOS_ACCESS_KEY_ID,
+                    secretAccessKey: c.env.R2_REPOS_SECRET_ACCESS_KEY,
+                    endpointUrl: c.env.R2_REPOS_ENDPOINT_URL_S3,
+                    region: "auto",
+                  }
+                : undefined,
             },
             apiKey: c.env.FLY_API_KEY,
           });
@@ -650,7 +658,7 @@ export const reposRouter = new Hono<{
                 appId: flyioAppId,
                 machineId: flyMachine.id,
                 url: `https://${flyioAppId}.fly.dev`,
-                workdir: workdir,
+                workdir: repo.snapshot.workdir,
               },
               threadId: thread.id,
               repoId: repoId,

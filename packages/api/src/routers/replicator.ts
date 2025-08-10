@@ -47,9 +47,7 @@ export const replicatorRouter = new Hono<{
       const tar = await sink.finalize();
 
       console.log("Uploading tar to R2...", Date.now() - startedAt);
-      const res = await c.env.R2_FILE_TRANSFER_BUCKET.put(filePath, tar);
-      await c.env.R2_FILE_TRANSFER_BUCKET.put("test", "dayum...");
-      console.log("PUT....", res);
+      await c.env.R2_FILE_TRANSFER_BUCKET.put(filePath, tar);
 
       const api = hc<ReplicatorGitSyncAppType>(
         c.env.REPLICATOR_GIT_SYNC_API_URL
@@ -60,7 +58,7 @@ export const replicatorRouter = new Hono<{
         .$post(
           {
             json: {
-              source: { prefix: "templates/replicator-vite-js", tag: "v0.0.1" },
+              source: { prefix: "templates/replicator-vite-js", tag: "v0.0.2" },
               tarFilePath: filePath,
               commitMessage: "Initial commit",
               author: { name: "Replicator", email: "replicator@hypershape.ai" },
@@ -69,7 +67,6 @@ export const replicatorRouter = new Hono<{
           { headers: { authorization } }
         )
         .then((res) => res.json());
-      console.log("wowza...", git);
 
       // TODO: generate repo summary and name
 
@@ -88,9 +85,10 @@ export const replicatorRouter = new Hono<{
           url: git.remote,
           snapshot: {
             type: "docker",
-            image: "registry.fly.dev/replicator-vite-js:0.0.1",
+            image: "registry.fly.io/squash-template:replicator-vite-js-v0.0.2",
             port: 5173,
-            entrypoint: "pnpm dev",
+            entrypoint: "pnpm dev --host 0.0.0.0 --port $PORT",
+            workdir: "/root/repo",
           },
           defaultBranch: git.branch,
           private: true,
@@ -102,13 +100,13 @@ export const replicatorRouter = new Hono<{
       return c.json({ repoId: repo.id });
     } finally {
       console.log("Deleting tar from R2...", Date.now() - startedAt);
-      // await c.env.R2_FILE_TRANSFER_BUCKET.delete(filePath).catch((e) =>
-      //   console.warn(
-      //     "Failed to delete file in c.env.R2_FILE_TRANSFER_BUCKET",
-      //     filePath,
-      //     e
-      //   )
-      // );
+      await c.env.R2_FILE_TRANSFER_BUCKET.delete(filePath).catch((e) =>
+        console.warn(
+          "Failed to delete file in c.env.R2_FILE_TRANSFER_BUCKET",
+          filePath,
+          e
+        )
+      );
       console.log("Done!", Date.now() - startedAt);
     }
   }

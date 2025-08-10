@@ -116,7 +116,8 @@ export const app = new Hono().use("*", logger()).post(
 
       console.log("Committing changes", body.commitMessage);
       const branch = "master";
-      const commit = await git.commit(body.commitMessage, ["./"]);
+      await git.add(["."]);
+      const commit = await git.commit(body.commitMessage);
       await git.checkoutLocalBranch(branch);
       await git.raw(["remote", "set-url", "origin", targetGitOrigin]);
       console.log("Pushing changes to", targetGitOrigin);

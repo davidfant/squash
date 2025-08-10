@@ -1,5 +1,5 @@
-import type { Octokit } from "@octokit/rest";
 import type { RepoSnapshot } from "@/database/schema/repos";
+import type { Octokit } from "@octokit/rest";
 
 interface PackageJson {
   name?: string;
@@ -41,7 +41,9 @@ export async function detectFramework(
     }
 
     // Decode and parse package.json
-    const packageJsonContent = Buffer.from(data.content, "base64").toString("utf-8");
+    const packageJsonContent = Buffer.from(data.content, "base64").toString(
+      "utf-8"
+    );
     const packageJson: PackageJson = JSON.parse(packageJsonContent);
 
     console.log(`Analyzing package.json for ${owner}/${repo}:`, {
@@ -147,7 +149,7 @@ export async function detectFramework(
 
     // Check scripts for framework clues if no dependency match
     const scripts = packageJson.scripts || {};
-    
+
     if (scripts.dev?.includes("vite") || scripts.serve?.includes("vite")) {
       detectedScripts.push("vite in scripts");
       return {
@@ -215,11 +217,14 @@ function getDefaultFramework(): FrameworkInfo {
   };
 }
 
-export function createSnapshotFromFramework(framework: FrameworkInfo): RepoSnapshot {
+export function createSnapshotFromFramework(
+  framework: FrameworkInfo
+): RepoSnapshot {
   return {
     type: "docker",
     port: framework.port,
     image: "node:20-alpine",
     entrypoint: framework.entrypoint,
+    workdir: "/app",
   };
-} 
+}

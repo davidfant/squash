@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "_dev": "uv run pywrangler dev --port 8888 --show-interactive-dev-session=false",
+    "_dev": "uv run pywrangler dev --port 8888 --show-interactive-dev-session=false --x-remote-bindings",
     "postinstall": "uv sync",
     "deploy": "wrangler deploy"
   }

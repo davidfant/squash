@@ -1,4 +1,3 @@
-from typing import List, Optional, Dict, Any
 from pydantic import BaseModel
 
 class RepoRef(BaseModel):
@@ -19,9 +18,6 @@ class CommitRequest(BaseModel):
 
 
 class CommitResponse(BaseModel):
-    parent_commit_oid: Optional[str]
-    new_commit_oid: str
-    new_repo_prefix: str
-    new_repo_ref: str
-    touched: Dict[str, List[str]]
+    new_repo: RepoRef
+    commit_oid: str
 

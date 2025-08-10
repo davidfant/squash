@@ -76,20 +76,15 @@ function makeTar(assets: { path: string; bytes: Uint8Array }[]): Uint8Array {
   return out;
 }
 
-function gzipBytes(bytes: Uint8Array): ReadableStream<Uint8Array> {
-  // Workers support CompressionStream
-  const rs = new ReadableStream<Uint8Array>({
-    start(controller) {
-      controller.enqueue(bytes);
-      controller.close();
-    },
-  });
-  return rs.pipeThrough(
-    new CompressionStream("gzip")
-  ) as ReadableStream<Uint8Array>;
+async function gzipBytes(bytes: Uint8Array): Promise<Uint8Array> {
+  const stream = new Blob([bytes])
+    .stream()
+    .pipeThrough(new CompressionStream("gzip"));
+  const ab = await new Response(stream).arrayBuffer();
+  return new Uint8Array(ab);
 }
 
-export class TarSink implements FileSink<ReadableStream<Uint8Array>> {
+export class TarSink implements FileSink<Uint8Array> {
   private assets: Asset[] = [];
   async writeText(path: string, text: string) {
     this.assets.push({ path, bytes: new TextEncoder().encode(text) });

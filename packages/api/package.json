@@ -17,7 +17,9 @@
     }
   },
   "scripts": {
-    "dev": "pnpm typegen && concurrently \"wrangler dev\" \"pnpm tsc --watch --preserveWatchOutput\"",
+    "dev": "pnpm typegen && concurrently \"pnpm dev:wrangler\" \"pnpm dev:tsc\"",
+    "dev:wrangler": "wrangler dev --x-remote-bindings",
+    "dev:tsc": "pnpm tsc --watch --preserveWatchOutput",
     "deploy": "wrangler deploy --minify",
     "build": "tsc -b",
     "typegen": "wrangler types --env-interface CloudflareBindings"
@@ -39,7 +41,7 @@
     "lodash.camelcase": "^4.3.0",
     "lodash.kebabcase": "^4.1.1",
     "lodash.upperfirst": "^4.3.1",
-    "zod": "^3.25.76"
+    "zod": "^4.0.16"
   },
   "devDependencies": {
     "@types/lodash.camelcase": "^4.3.9",

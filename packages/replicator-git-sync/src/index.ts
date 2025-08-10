@@ -8,6 +8,7 @@ import { logger } from "hono/logger";
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import os from "node:os";
+import path from "node:path";
 import { promisify } from "node:util";
 import simpleGit from "simple-git";
 import * as tar from "tar";
@@ -70,7 +71,9 @@ export const app = new Hono().use("*", logger()).post(
     const sourceGitOrigin = `s3://${REPOS_BUCKET}/${body.source.prefix}`;
     const targetGitOrigin = `s3://${REPOS_BUCKET}/${targetPrefix}`;
 
-    const repoDir = await fs.mkdtemp(os.tmpdir());
+    const repoDir = await fs.mkdtemp(
+      path.join(os.tmpdir(), "replicator-git-sync-")
+    );
     try {
       const git = simpleGit(repoDir);
       git.env({
@@ -122,7 +125,13 @@ export const app = new Hono().use("*", logger()).post(
         env: process.env,
       });
 
-      return c.json({ commit: commit.commit, branch });
+      return c.json({ remote: targetGitOrigin, commit: commit.commit, branch });
+    } catch (error) {
+      console.error(error);
+      return c.text(
+        `Error: ${(error as Error).message}\n${(error as Error).stack}`,
+        500
+      );
     } finally {
       await fs.rm(repoDir, { recursive: true, force: true });
     }

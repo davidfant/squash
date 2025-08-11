@@ -125,6 +125,12 @@ export async function streamAgent(
               changes.push({ op: "delete", path: tc.input.path });
             }
           });
+          step.toolResults.forEach((tr) => {
+            if (tr.dynamic) return;
+            if (tr.toolName === "todoWrite") {
+              runtimeContext.todos = tr.output.todos;
+            }
+          });
         },
       });
 

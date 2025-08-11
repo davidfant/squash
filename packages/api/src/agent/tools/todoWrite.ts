@@ -1,6 +1,7 @@
-import type { AgentRuntimeContext } from "@/agent/types";
 import { tool } from "ai";
+import { randomUUID } from "crypto";
 import { z } from "zod";
+import type { AgentRuntimeContext } from "../types";
 import { zExplanation } from "./common";
 
 const zTodo = z.object({
@@ -9,6 +10,16 @@ const zTodo = z.object({
   id: z.string(),
   dependencies: z.array(z.string()),
 });
+
+export type Todo = z.infer<typeof zTodo>;
+
+const defaultTodo: Todo = {
+  id: "",
+  content: "",
+  status: "pending",
+  dependencies: [],
+};
+const genId = () => randomUUID().split("-")[0]!;
 
 export const todoWrite = (ctx: AgentRuntimeContext) =>
   tool({
@@ -152,21 +163,29 @@ When in doubt, use this tool. Proactive task management demonstrates attentivene
         .describe(
           "Whether to merge the todos with the existing todos. If true, the todos will be merged into the existing todos based on the id field. You can leave unchanged properties undefined. If false, the new todos will replace the existing todos."
         ),
-      todos: zTodo.partial().array().min(2),
+      todos: zTodo.partial().array(),
       explanation: zExplanation,
     }),
     outputSchema: z.object({ todos: zTodo.array() }),
     execute: async ({ merge, todos }) => {
-      // TODO: keep track of the todos in the context and return the full list of todos...
-      // return { todos: [] };
-      return {
-        todos: todos.map((t, index) => ({
-          ...t,
-          id: String(index),
-          dependencies: t.dependencies ?? [],
-          status: t.status ?? "pending",
-          content: t.content ?? "",
-        })),
-      };
+      if (merge) {
+        const existing = [...ctx.todos];
+        const id2idx = new Map(existing.map((t, idx) => [t.id, idx]));
+
+        todos
+          .filter((t) => !!t.id && id2idx.has(t.id))
+          .forEach((t) => {
+            const idx = id2idx.get(t.id!)!;
+            existing[idx] = { ...existing[idx]!, ...t, id: t.id! };
+          });
+
+        existing.push(
+          ...todos
+            .filter((t) => !t.id || !id2idx.has(t.id))
+            .map((t) => ({ ...defaultTodo, id: genId(), ...t }))
+        );
+      } else {
+        return { todos: todos.map((t) => ({ ...defaultTodo, ...t })) };
+      }
     },
   });

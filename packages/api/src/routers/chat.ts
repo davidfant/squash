@@ -114,15 +114,6 @@ export const chatRouter = new Hono<{
       }
       const threadId = allMessages[0]!.threadId;
 
-      const runtimeContext: AgentRuntimeContext = {
-        type: "flyio",
-        sandbox: {
-          appId: branch.sandbox.appId,
-          machineId: branch.sandbox.machineId,
-          workdir: branch.sandbox.workdir,
-          apiKey: c.env.FLY_API_KEY,
-        },
-      };
       const [messages] = await Promise.all([
         await (async () => {
           if (allMessages.some((m) => m.id === body.message.id)) {
@@ -140,11 +131,26 @@ export const chatRouter = new Hono<{
           }
         })(),
         waitForMachineHealthy(
-          runtimeContext.sandbox.appId,
-          runtimeContext.sandbox.machineId,
-          runtimeContext.sandbox.apiKey
+          branch.sandbox.appId,
+          branch.sandbox.machineId,
+          c.env.FLY_API_KEY
         ),
       ]);
+      const runtimeContext: AgentRuntimeContext = {
+        type: "flyio",
+        sandbox: {
+          appId: branch.sandbox.appId,
+          machineId: branch.sandbox.machineId,
+          workdir: branch.sandbox.workdir,
+          apiKey: c.env.FLY_API_KEY,
+        },
+        todos:
+          messages
+            .flatMap((m) => m.parts)
+            .filter((p) => p.type === "tool-todoWrite")
+            .findLast((p) => p.state === "output-available")?.output?.todos ??
+          [],
+      };
 
       await checkoutLatestCommit(messages, runtimeContext, db);
       const messagesWithoutRoot = messages.filter((m) => m.role !== "system");

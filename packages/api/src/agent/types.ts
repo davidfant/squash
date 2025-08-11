@@ -2,10 +2,12 @@ import type { FlyioExecSandboxContext } from "@/lib/flyio/exec";
 import type { InferUITools, UIMessage } from "ai";
 import type { createAgentTools } from "./tools";
 import type { gitCommit } from "./tools/git";
+import type { Todo } from "./tools/todoWrite";
 
 export interface AgentRuntimeContext {
   type: "flyio";
   sandbox: FlyioExecSandboxContext;
+  todos: Todo[];
 }
 
 export type AgentTools = InferUITools<ReturnType<typeof createAgentTools>>;

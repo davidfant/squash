@@ -153,6 +153,13 @@ export const chatRouter = new Hono<{
       const usage: MessageUsage[] = [];
       return streamAgent(messagesWithoutRoot, runtimeContext, {
         morphApiKey: c.env.MORPH_API_KEY,
+        fileTransfer: {
+          bucket: c.env.R2_FILE_TRANSFER_BUCKET,
+          bucketName: c.env.R2_FILE_TRANSFER_BUCKET_NAME,
+          url: c.env.R2_FILE_TRANSFER_ENDPOINT_URL_S3,
+          accessKeyId: c.env.R2_FILE_TRANSFER_ACCESS_KEY_ID,
+          secretAccessKey: c.env.R2_FILE_TRANSFER_SECRET_ACCESS_KEY,
+        },
         onFinish: async ({ responseMessage }) => {
           await db.insert(schema.message).values({
             id: responseMessage.id,

@@ -77,7 +77,7 @@ function Component({ branchId }: { branchId: string }) {
           >
             <ChatThread ready={!!threadMessages.data} id={branchId} />
           </ResizablePanel>
-          <ResizableHandle />
+          <ResizableHandle className="bg-transparent w-[3px] data-[resize-handle-state=hover]:bg-primary/20 data-[resize-handle-state=drag]:bg-primary/20 transition-colors" />
           <ResizablePanel defaultSize={75} className="flex">
             <BranchPreview className="flex-1" />
           </ResizablePanel>

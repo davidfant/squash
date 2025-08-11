@@ -58,8 +58,7 @@ await replicate(
 );
 
 // const out = await sink.finalize();
-// const file = createWriteStream("replicated.tar.gz");
-// await out.pipeTo(Writable.toWeb(file));
+// await fs.writeFile("replicated.tar.gz", out);
 
 await new Promise((resolve) => setTimeout(resolve, 10));
 logFileTree(PATH_TO_TEMPLATE);

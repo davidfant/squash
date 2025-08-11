@@ -12,7 +12,8 @@
     "dev:tsx": "tsx --watch --env-file=.env src/index.ts",
     "dev:tsc": "pnpm tsc --watch --preserveWatchOutput",
     "deploy": "wrangler deploy",
-    "build": "tsc -b"
+    "build": "tsc -b",
+    "postinstall": "pip install git-remote-s3"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.864.0",

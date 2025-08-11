@@ -37,10 +37,14 @@ Use this tool to run fast, exact regex searches over text files using \`git grep
         .describe("Whether the search should be case sensitive"),
       includePattern: z
         .string()
+        .optional()
         .describe(
           "Glob pattern for files to include (e.g. '*.ts' for TypeScript files)"
         ),
-      excludePattern: z.string().describe("Glob pattern for files to exclude"),
+      excludePattern: z
+        .string()
+        .optional()
+        .describe("Glob pattern for files to exclude"),
       explanation: zExplanation,
     }),
     outputSchema: z.union([

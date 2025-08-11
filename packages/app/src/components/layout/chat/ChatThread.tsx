@@ -106,7 +106,7 @@ export function ChatThread({
                   return (
                     <div className="group space-y-1" key={m.id}>
                       <MessageHeader
-                        author="hivemind"
+                        author="Squash"
                         onRetry={() => handleRetry(m.id)}
                       />
                       <div className="pl-7">
@@ -120,7 +120,7 @@ export function ChatThread({
             })}
             {status === "submitted" && (
               <div className="space-y-1">
-                <MessageHeader author="hivemind" />
+                <MessageHeader author="Squash" />
                 <Skeleton className="h-4 w-48 mb-4 ml-7" />
               </div>
             )}

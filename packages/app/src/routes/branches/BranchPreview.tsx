@@ -1,3 +1,4 @@
+import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import { useRef } from "react";
@@ -48,21 +49,23 @@ export function BranchPreview({ className }: { className?: string }) {
   };
 
   return (
-    <div className={cn("relative h-full", className)}>
-      {preview ? (
-        <iframe
-          ref={iframeRef}
-          src={`${preview.url}${previewPath}`}
-          className={cn(
-            "h-full mx-auto transition-all duration-300",
-            getPreviewWidth()
-          )}
-        />
-      ) : (
-        <div className="flex h-full items-center justify-center">
-          <Loader2 className="size-8 animate-spin opacity-30" />
-        </div>
-      )}
+    <div className={cn("relative h-full p-2", className)}>
+      <Card className="p-0 h-full overflow-hidden">
+        {preview ? (
+          <iframe
+            ref={iframeRef}
+            src={`${preview.url}${previewPath}`}
+            className={cn(
+              "h-full mx-auto transition-all duration-300",
+              getPreviewWidth()
+            )}
+          />
+        ) : (
+          <div className="flex h-full items-center justify-center">
+            <Loader2 className="size-8 animate-spin opacity-30" />
+          </div>
+        )}
+      </Card>
       {/* <AnimatePresence mode="wait">
         {comment && (
           <motion.div

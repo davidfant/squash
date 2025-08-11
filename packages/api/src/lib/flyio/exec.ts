@@ -34,57 +34,25 @@ const execCommand = (
     }
   );
 
-export async function deleteFile(
-  filePath: string,
+export async function deleteFiles(
+  filePaths: string[],
   context: FlyioExecSandboxContext
-): Promise<{ success: boolean; message: string }> {
-  try {
-    const result = await execCommand(context, `rm -f "${filePath}"`);
-    if (result.exit_code === 0) {
-      return {
-        success: true,
-        message: `File deleted successfully: ${filePath}`,
-      };
-    } else {
-      return {
-        success: false,
-        message: `Failed to delete file with exit code ${result.exit_code}: ${
-          result.stderr || "Unknown error"
-        }`,
-      };
-    }
-  } catch (error: any) {
-    return { success: false, message: error.message };
+) {
+  const cmd = `rm -f ${filePaths.map((f) => `"${f}"`).join(" ")}`;
+  const result = await execCommand(context, cmd);
+  if (result.exit_code !== 0) {
+    throw new Error(result.stderr || "Failed to delete files");
   }
 }
 
-export async function writeFile(
-  filePath: string,
-  content: string,
+export async function writeFiles(
+  tarPath: string,
   context: FlyioExecSandboxContext
-): Promise<{ success: boolean; message: string }> {
-  try {
-    const base64Content = Buffer.from(content, "utf8").toString("base64");
-    const result = await execCommand(
-      context,
-      `echo "${base64Content}" | base64 -d > "${filePath}"`
-    );
-
-    if (result.exit_code === 0) {
-      return {
-        success: true,
-        message: `File written successfully: ${filePath}`,
-      };
-    } else {
-      return {
-        success: false,
-        message: `Failed to write file with exit code ${result.exit_code}: ${
-          result.stderr || "Unknown error"
-        }`,
-      };
-    }
-  } catch (error: any) {
-    return { success: false, message: error.message };
+) {
+  const cmd = `wget -qO- "${tarPath}" | tar -xzf - -C .`;
+  const result = await execCommand(context, cmd);
+  if (result.exit_code !== 0) {
+    throw new Error(result.stderr || "Failed to write files");
   }
 }
 

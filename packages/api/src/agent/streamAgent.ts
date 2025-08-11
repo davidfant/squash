@@ -11,7 +11,9 @@ import {
   type ModelMessage,
   type UIMessageStreamOptions,
 } from "ai";
+import { AwsClient } from "aws4fetch";
 import { randomUUID } from "crypto";
+import { createTarGzip } from "nanotar";
 import EnvPrompt from "./prompts/env.md";
 import SystemPrompt from "./prompts/system.md";
 import { createAgentTools } from "./tools";
@@ -55,7 +57,16 @@ export async function streamAgent(
   opts: Pick<
     UIMessageStreamOptions<ChatMessage>,
     "onFinish" | "messageMetadata"
-  > & { morphApiKey: string }
+  > & {
+    morphApiKey: string;
+    fileTransfer: {
+      bucket: R2Bucket;
+      bucketName: string;
+      url: string;
+      accessKeyId: string;
+      secretAccessKey: string;
+    };
+  }
 ) {
   const files = await FlyioExec.gitLsFiles(runtimeContext.sandbox);
   console.warn(
@@ -149,18 +160,53 @@ export async function streamAgent(
           ...(await agentStream.response).messages,
         ],
         tools: {
-          gitCommit: gitCommit(runtimeContext, () =>
-            Promise.all(
-              changes.map(async (c) => {
-                const sbx = runtimeContext.sandbox;
-                if (c.op === "write") {
-                  await FlyioExec.writeFile(c.path, await c.content, sbx);
-                } else if (c.op === "delete") {
-                  await FlyioExec.deleteFile(c.path, sbx);
-                }
-              })
-            )
-          ),
+          gitCommit: gitCommit(runtimeContext, () => {
+            const deletes = changes.filter((c) => c.op === "delete");
+            const deleteP =
+              deletes.length &&
+              FlyioExec.deleteFiles(
+                deletes.map((c) => c.path),
+                runtimeContext.sandbox
+              );
+
+            const writes = changes.filter((c) => c.op === "write");
+            const writeP = (async () => {
+              if (!writes.length) return;
+              const tarPath = `${randomUUID()}.tar.gz`;
+              try {
+                const preUrl = `${opts.fileTransfer.url}/${
+                  opts.fileTransfer.bucketName
+                }/${tarPath}?X-Amz-Expires=${15 * 60}`;
+                const [presigned] = await Promise.all([
+                  new AwsClient({
+                    accessKeyId: opts.fileTransfer.accessKeyId,
+                    secretAccessKey: opts.fileTransfer.secretAccessKey,
+                    service: "s3",
+                    region: "auto",
+                  })
+                    .sign(new Request(preUrl), { aws: { signQuery: true } })
+                    .then((presigned) => presigned.url.toString()),
+                  Promise.all(
+                    writes.map(async (w) => ({
+                      name: w.path,
+                      data: await w.content,
+                    }))
+                  )
+                    .then(createTarGzip)
+                    .then((tar) => opts.fileTransfer.bucket.put(tarPath, tar)),
+                ]);
+
+                console.log("PATH: ", preUrl);
+                console.log("PRESIGNED: ", presigned);
+
+                await FlyioExec.writeFiles(presigned, runtimeContext.sandbox);
+              } finally {
+                await opts.fileTransfer.bucket.delete(tarPath);
+              }
+            })();
+
+            return Promise.all([deleteP, writeP]);
+          }),
         },
         toolChoice: { type: "tool", toolName: "gitCommit" },
         onStepFinish: (step) => {

@@ -22,30 +22,22 @@ function computeHash(input: string): string {
   return crypto.createHash("sha256").update(input).digest("hex").slice(0, 8);
 }
 
-/** Describe how to group & name a matched node */
-interface MatchResult {
-  dir: string;
-  name: string;
-}
-
 /** The higher-order factory */
 export const rehypeExtractByMatch =
   (
     sink: FileSink,
-    match: (node: HastNode) => MatchResult | null
+    match: (node: HastNode) => string | null
   ): Plugin<[], Root> =>
   () =>
   async (tree: Root) => {
-    type Occ = {
-      id: number;
+    interface Match {
       parent: HastNode;
       index: number;
       node: HastNode;
       depth: number;
-      dir: string;
-      name: string;
-    };
-    const occs: Occ[] = [];
+      path: string;
+    }
+    const matches: Match[] = [];
 
     // DFS collect candidates with depth
     (function walk(node: HastNode, depth = 0) {
@@ -63,14 +55,12 @@ export const rehypeExtractByMatch =
 
         const m = match(child);
         if (m) {
-          occs.push({
-            id: occs.length,
+          matches.push({
             parent: node,
             index: i,
             node: child,
             depth: depth + 1,
-            dir: m.dir,
-            name: m.name,
+            path: m,
           });
         }
 
@@ -78,153 +68,86 @@ export const rehypeExtractByMatch =
       }
     })(tree as any);
 
-    // deepest-first so inners are replaced before outers
-    occs.sort((a, b) => b.depth - a.depth);
-
-    if (occs.length === 0) return tree;
-
-    // Group occurrences by directory
-    const occsByDir = new Map<string, Occ[]>();
-    for (const occ of occs) {
-      const list = occsByDir.get(occ.dir) || [];
-      list.push(occ);
-      occsByDir.set(occ.dir, list);
-    }
-
-    // Precompute pretty HTML and fallback hashed names
-    const fallbackNameByOccId = new Map<number, string>();
-    const prettyList = await Promise.all(
-      occs.map((occ) =>
+    const html = await Promise.all(
+      matches.map((occ) =>
         prettier.format(toHtml(occ.node), {
           parser: "html",
           plugins: [parserHtml],
         })
       )
     );
-    const prettyHtmlByOccId = new Map<number, string>(
-      occs.map((occ, idx) => [occ.id, prettyList[idx]!])
-    );
 
-    for (const list of occsByDir.values()) {
-      const isSingle = list.length === 1;
-      for (const occ of list) {
-        if (isSingle) {
-          fallbackNameByOccId.set(occ.id, capitalize(occ.name));
-        } else {
-          const pretty = prettyHtmlByOccId.get(occ.id)!;
-          fallbackNameByOccId.set(
-            occ.id,
-            `${capitalize(occ.name)}_${computeHash(pretty)}`
-          );
-        }
-      }
+    const grouped: Record<
+      string,
+      Record<string, { html: string; name: string; matches: Match[] }>
+    > = {};
+    for (const match of matches) {
+      const matchHtml = html[match.index]!;
+      grouped[match.path] ??= {};
+      const hash = computeHash(matchHtml);
+      const name = `${capitalize(match.path.split("/").pop()!)}_${hash}`;
+      grouped[match.path]![name] ??= { html: matchHtml, name, matches: [] };
+      grouped[match.path]![name]!.matches.push(match);
     }
-
-    // Helper: clone a node and replace inner matches with placeholder hashed Components$ tags
-    async function cloneWithInnerPlaceholders(
-      root: HastNode
-    ): Promise<HastNode> {
-      const clone = deepClone(root);
-      const replace = async (node: HastNode, depth = 0) => {
-        const children: HastNode[] = (node as any).children || [];
-        for (let i = 0; i < children.length; i++) {
-          const child = children[i];
-          if (!child || child.type !== "element") continue;
-          // Only replace descendants, not the root we are naming for
-          const m = match(child);
-          if (m) {
-            const raw = toHtml(child as any);
-            const pretty = await prettier.format(raw, {
-              parser: "html",
-              plugins: [parserHtml],
-            });
-            const hash = computeHash(pretty);
-            const componentName = `${capitalize(m.name)}_${hash}`;
-            const outDir = path.join("src/components", m.dir);
-            const rel = path
-              .join(outDir, componentName)
-              .replaceAll(path.sep, "$");
-            const componentTagName = `Components$${rel}`;
-            node.children[i] = {
-              type: "element",
-              tagName: componentTagName,
-              properties: {},
-              children: [],
-            };
-            // Do not recurse into replaced child
-            continue;
-          }
-          await replace(child, depth + 1);
-        }
-      };
-      await replace(clone, 0);
-      return clone;
-    }
-
-    // Determine final names per occurrence
-    const finalNameByOccId = new Map<number, string>(
-      Array.from(fallbackNameByOccId.entries())
-    );
 
     if (config.componentNaming.enabled) {
-      for (const list of occsByDir.values()) {
-        if (list.length <= 1) continue;
+      await Promise.all(
+        Object.values(grouped).map(async (group) => {
+          // TODO: consider not naming components that just have 1 occurance
 
-        // Build components for naming based on match.name and rendered JSX with inner placeholders
-        const base = list[0]!.name.toUpperCase();
-        const components = await Promise.all(
-          list.map(async (occ, idx) => ({
-            id: `${base}${idx + 1}`,
-            jsx: toHtml(await cloneWithInnerPlaceholders(occ.node), {
-              closeSelfClosing: true,
-            }),
-          }))
-        );
+          const named = await nameComponents({
+            model: config.componentNaming.model,
+            components: Object.entries(group).map(([id, match]) => ({
+              id: id,
+              jsx: match.html,
+            })),
+          });
 
-        const named = await nameComponents({
-          model: config.componentNaming.model,
-          components,
-        });
+          const used = new Set<string>();
+          const uniquify = (s: string) => {
+            let candidate = s;
+            let n = 2;
+            while (used.has(candidate)) candidate = `${s}${n++}`;
+            used.add(candidate);
+            return candidate;
+          };
 
-        // Ensure unique names within the dir group
-        const used = new Set<string>();
-        const uniquify = (s: string) => {
-          let candidate = s;
-          let n = 2;
-          while (used.has(candidate)) candidate = `${s}${n++}`;
-          used.add(candidate);
-          return candidate;
+          Object.entries(group).forEach(
+            ([id, match]) => (match.name = uniquify(named[id]!))
+          );
+        })
+      );
+    }
+
+    const promises = new Map<string, Promise<void>>();
+    Object.entries(grouped)
+      .flatMap(([path, group]) =>
+        Object.values(group).flatMap(({ html, name, matches }) =>
+          matches.map((match) => ({ match, path, html, name }))
+        )
+      )
+      .sort((a, b) => a.match.depth - b.match.depth)
+      .forEach((n) => {
+        const outDir = path.join("src/components", n.path);
+        const rel = path.join(outDir, n.name).replaceAll(path.sep, "$");
+        const componentTagName = `Components$${rel}`;
+        n.match.parent.children[n.match.index] = {
+          type: "element",
+          tagName: componentTagName,
+          properties: {},
+          children: [],
         };
 
-        list.forEach((occ, idx) => {
-          const raw =
-            named[components[idx]!.id] || fallbackNameByOccId.get(occ.id)!;
-          finalNameByOccId.set(occ.id, uniquify(raw));
-        });
-      }
-    }
+        const outPath = path.join(outDir, `${n.name}.jsx`);
+        if (!promises.has(outPath)) {
+          promises.set(
+            outPath,
+            hastToStaticModule(n.match.node).then((code) =>
+              sink.writeText(outPath, code)
+            )
+          );
+        }
+      });
 
-    const promises: Record<string, Promise<unknown>> = {};
-    for (const occ of occs) {
-      const outDir = path.join("src/components", occ.dir);
-      const cName = finalNameByOccId.get(occ.id)!;
-      const rel = path.join(outDir, cName).replaceAll(path.sep, "$");
-      const componentTagName = `Components$${rel}`;
-      occ.parent.children[occ.index] = {
-        type: "element",
-        tagName: componentTagName,
-        properties: {},
-        children: [],
-      };
-
-      if (!promises[occ.id]) {
-        const cPath = path.join(outDir, `${cName}.jsx`);
-        promises[occ.id] = hastToStaticModule(occ.node).then((code) =>
-          sink.writeText(cPath, code)
-        );
-      }
-    }
-
-    await Promise.all(Object.values(promises));
-    return tree;
+    await Promise.all(Array.from(promises.values()));
   };

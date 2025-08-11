@@ -6,7 +6,7 @@ export const rehypeExtractRoles = (sink: FileSink) =>
     if (node.type !== "element") return null;
     const role = node.properties?.role;
     if (typeof role === "string" && !!role.length) {
-      return { dir: `roles/${role}`, name: role };
+      return `roles/${role}`;
     }
     return null;
   });

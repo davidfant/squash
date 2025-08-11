@@ -61,6 +61,7 @@ await replicate(
 // const file = createWriteStream("replicated.tar.gz");
 // await out.pipeTo(Writable.toWeb(file));
 
+await new Promise((resolve) => setTimeout(resolve, 10));
 logFileTree(PATH_TO_TEMPLATE);
 
 // Kill any existing pnpm dev process when this script restarts

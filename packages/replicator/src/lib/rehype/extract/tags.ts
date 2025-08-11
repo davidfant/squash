@@ -10,13 +10,14 @@ const LANDMARK_TAGS = new Set([
   "footer",
   "dialog",
   "table",
+  "iframe",
 ]);
 
 export const rehypeExtractTags = (sink: FileSink) =>
   rehypeExtractByMatch(sink, (node) => {
     const tag = node.tagName as string;
     if (typeof tag === "string" && LANDMARK_TAGS.has(tag)) {
-      return { dir: `layout/${tag}`, name: tag };
+      return `layout/${tag}`;
     }
     return null;
   });

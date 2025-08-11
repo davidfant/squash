@@ -40,8 +40,8 @@ export const rehypeExtractByMatch =
     const matches: Match[] = [];
 
     // DFS collect candidates with depth
-    (function walk(node: HastNode, depth = 0) {
-      const children: HastNode[] = (node as any).children || [];
+    (function walk(parent: HastNode, depth = 0) {
+      const children: HastNode[] = parent.children || [];
       for (let i = 0; i < children.length; i++) {
         const child = children[i];
         if (!child || child.type !== "element") continue;
@@ -53,14 +53,14 @@ export const rehypeExtractByMatch =
           continue;
         }
 
-        const m = match(child);
-        if (m) {
+        const path = match(child);
+        if (path) {
           matches.push({
-            parent: node,
+            parent,
             index: i,
             node: child,
             depth: depth + 1,
-            path: m,
+            path,
           });
         }
 

@@ -92,16 +92,16 @@ export async function replicate(
           .process([page.html.head, ...ctx.tagsToMoveToHead].join("\n"));
         await Promise.all(
           Array.from(ctx.urlsToDownload).map(async (relativeUrl) => {
-            const fullUrl = new URL(relativeUrl, page.url).href;
-            const response = await fetch(fullUrl);
+            const url = new URL(relativeUrl, page.url);
+            const response = await fetch(url.href);
             if (!response.ok) {
               throw new Error(
-                `Failed to download ${fullUrl}: ${response.status} ${response.statusText}`
+                `Failed to download ${url}: ${response.status} ${response.statusText}`
               );
             }
 
             const buffer = Buffer.from(await response.arrayBuffer());
-            await sink.writeBytes(path.join("public", relativeUrl), buffer);
+            await sink.writeBytes(path.join("public", url.pathname), buffer);
           })
         );
 

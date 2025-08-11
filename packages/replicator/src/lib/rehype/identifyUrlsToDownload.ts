@@ -151,5 +151,5 @@ function isRelativeUrl(url: string): boolean {
     return false;
   }
 
-  return url.startsWith("/");
+  return true;
 }

@@ -4,22 +4,38 @@ import path from "node:path";
 import { FileSystemSink } from "./lib/sinks/fs";
 import { logFileTree } from "./logFileTree";
 import { replicate } from "./replicate";
+import type { Capture } from "./types";
 
-const TEMPLATE_NAME = "asana";
-const PATH_TO_CAPTURE = `./captures/${TEMPLATE_NAME}.json`;
-const PATH_TO_TEMPLATE = `./captures/replicated/${TEMPLATE_NAME}`;
+const PATH_TO_CAPTURE = `./captures/hackernews.json`;
+const PATH_TO_TEMPLATE = `./captures/replicated`;
 
-const capture = JSON.parse(await fs.readFile(PATH_TO_CAPTURE, "utf-8")) as {
-  captureData: {
-    css: string;
-    js: string;
-    headContent: string;
-    bodyContent: string;
-  };
-  currentUrl: string;
-  timestamp: string;
-  sessionId: string;
-};
+// const captureData = JSON.parse(await fs.readFile(PATH_TO_CAPTURE, "utf-8")) as {
+//   captureData: {
+//     css: string;
+//     js: string;
+//     headContent: string;
+//     bodyContent: string;
+//   };
+//   currentUrl: string;
+//   timestamp: string;
+//   sessionId: string;
+// };
+// const capture: Capture = {
+//   pages: [
+//     {
+//       css: capture.captureData.css,
+//       js: capture.captureData.js,
+//       html: {
+//         head: capture.captureData.headContent,
+//         body: capture.captureData.bodyContent,
+//       },
+//       url: capture.currentUrl,
+//     },
+//   ],
+// }
+const capture = JSON.parse(
+  await fs.readFile(PATH_TO_CAPTURE, "utf-8")
+) as Capture;
 
 await Promise.all(
   [
@@ -31,31 +47,15 @@ await Promise.all(
 
 // const sink = new TarSink();
 const sink = new FileSystemSink(PATH_TO_TEMPLATE);
-await replicate(
-  {
-    pages: [
-      {
-        css: capture.captureData.css,
-        js: capture.captureData.js,
-        html: {
-          head: capture.captureData.headContent,
-          body: capture.captureData.bodyContent,
-        },
-        url: capture.currentUrl,
-      },
-    ],
-  },
-  sink,
-  {
-    // stylesAndScripts: false,
-    // base64Images: false,
-    // svgs: false,
-    // buttons: false,
-    // roles: false,
-    // blocks: false,
-    // tags: false,
-  }
-);
+await replicate(capture, sink, {
+  // stylesAndScripts: false,
+  // base64Images: false,
+  // svgs: false,
+  // buttons: false,
+  // roles: false,
+  // blocks: false,
+  // tags: false,
+});
 
 // const out = await sink.finalize();
 // await fs.writeFile("replicated.tar.gz", out);

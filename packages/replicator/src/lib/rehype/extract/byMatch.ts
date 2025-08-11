@@ -175,7 +175,9 @@ export const rehypeExtractByMatch =
         const components = await Promise.all(
           list.map(async (occ, idx) => ({
             id: `${base}${idx + 1}`,
-            jsx: toHtml(await cloneWithInnerPlaceholders(occ.node)),
+            jsx: toHtml(await cloneWithInnerPlaceholders(occ.node), {
+              closeSelfClosing: true,
+            }),
           }))
         );
 

@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "^2.0.3",
-    "ai": "^5.0.5",
+    "ai": "^5.0.9",
     "estree-util-visit": "^2.0.0",
     "hast": "^1.0.0",
     "hast-util-to-html": "^9.0.5",

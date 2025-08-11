@@ -4,8 +4,9 @@ import { unified } from "unified";
 import { visit } from "unist-util-visit";
 import type { Context } from "../../../types";
 
-export const rehypeExtractLinksAndScripts =
+export const rehypeExtractStylesAndScripts =
   (ctx: Context) => () => (tree: Root) => {
+    console.log("extract links and scripts");
     // First pass: collect all link elements and mark them for removal
     const toRemove: Array<{ parent: any; index: number }> = [];
     const tagProcessor = unified().use(rehypeStringify);
@@ -14,12 +15,12 @@ export const rehypeExtractLinksAndScripts =
       tree,
       "element",
       (node: Element, index: number | undefined, parent: any) => {
-        if (node.tagName === "link" || node.tagName === "script") {
+        if (["link", "script", "style"].includes(node.tagName)) {
           // Convert the link element back to HTML string for head insertion
           // Create a root node containing just this element for stringify
           const rootWithElement: Root = { type: "root", children: [node] };
-          const linkHtml = String(tagProcessor.stringify(rootWithElement));
-          ctx.tagsToMoveToHead.push(linkHtml);
+          const html = String(tagProcessor.stringify(rootWithElement));
+          ctx.tagsToMoveToHead.push(html);
 
           // Mark for removal
           if (parent && typeof index === "number") {

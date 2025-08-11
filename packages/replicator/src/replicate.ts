@@ -17,15 +17,42 @@ import { rehypeExtractBase64Images } from "./lib/rehype/extract/base64Images";
 import { rehypeExtractBlocks } from "./lib/rehype/extract/blocks";
 import { rehypeExtractBodyAttributes } from "./lib/rehype/extract/bodyAttributes";
 import { rehypeExtractButtons } from "./lib/rehype/extract/buttons";
-import { rehypeExtractLinksAndScripts } from "./lib/rehype/extract/linksAndScripts";
 import { rehypeExtractRoles } from "./lib/rehype/extract/roles";
+import { rehypeExtractStylesAndScripts } from "./lib/rehype/extract/stylesAndScripts";
 import { rehypeExtractSVGs } from "./lib/rehype/extract/svgs";
 import { rehypeExtractTags } from "./lib/rehype/extract/tags";
 import { rehypeIdentifyUrlsToDownload } from "./lib/rehype/identifyUrlsToDownload";
 import type { FileSink } from "./lib/sinks/base";
 import type { Capture, Context } from "./types";
 
-export async function replicate(capture: Capture, sink: FileSink<any>) {
+const noop = () => () => {};
+
+interface ReplicateOptions {
+  stylesAndScripts?: boolean;
+  base64Images?: boolean;
+  svgs?: boolean;
+  buttons?: boolean;
+  roles?: boolean;
+  blocks?: boolean;
+  tags?: boolean;
+}
+
+export async function replicate(
+  capture: Capture,
+  sink: FileSink<any>,
+  _options: ReplicateOptions = {}
+) {
+  const opts: Required<ReplicateOptions> = {
+    stylesAndScripts: true,
+    base64Images: true,
+    svgs: true,
+    buttons: true,
+    roles: true,
+    blocks: true,
+    tags: true,
+    ..._options,
+  };
+
   const page = capture.pages[0]!;
   const ctx: Context = {
     tagsToMoveToHead: [],
@@ -37,14 +64,14 @@ export async function replicate(capture: Capture, sink: FileSink<any>) {
     unified()
       .use(rehypeParse, { fragment: true })
       .use(rehypeRemoveComments)
-      .use(rehypeExtractLinksAndScripts(ctx))
-      .use(rehypeExtractBase64Images(sink))
-      .use(rehypeExtractSVGs(sink))
-      .use(rehypeExtractButtons(sink))
-      .use(rehypeExtractRoles(sink))
+      .use(opts.stylesAndScripts ? rehypeExtractStylesAndScripts(ctx) : noop)
+      .use(opts.base64Images ? rehypeExtractBase64Images(sink) : noop)
+      .use(opts.svgs ? rehypeExtractSVGs(sink) : noop)
+      .use(opts.buttons ? rehypeExtractButtons(sink) : noop)
+      .use(opts.roles ? rehypeExtractRoles(sink) : noop)
       // .use(rehypeExtractNearDuplicateBlocks(PATH_TO_TEMPLATE, stats))
-      .use(rehypeExtractBlocks(sink))
-      .use(rehypeExtractTags(sink))
+      .use(opts.blocks ? rehypeExtractBlocks(sink) : noop)
+      .use(opts.tags ? rehypeExtractTags(sink) : noop)
       .use(rehypeRecma)
       .use(recmaJsx)
       .use(recmaExtractJSXComponents)

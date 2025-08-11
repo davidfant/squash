@@ -6,7 +6,7 @@ export type AIComponentNamingConfig = {
 
 export const config = {
   componentNaming: {
-    enabled: false,
+    enabled: true,
     provider: "openai",
     model: "gpt-5-nano",
   } as AIComponentNamingConfig,

@@ -101,7 +101,7 @@ export const rehypeExtractBlocks =
     await Promise.all(
       occs.map(async (occ) => {
         const pretty = await prettier.format(
-          toHtml(normalizeForSignature(occ.node)),
+          toHtml(normalizeForSignature(occ.node), { closeSelfClosing: true }),
           { parser: "html", plugins: [parserHtml] }
         );
         const occs = table.get(pretty) || [];

@@ -1,9 +1,10 @@
 import { openai } from "@ai-sdk/openai";
-import { generateObject } from "ai";
+import { generateObject, wrapLanguageModel } from "ai";
 import parserBabel from "prettier/plugins/babel";
 import parserEstree from "prettier/plugins/estree";
 import prettier from "prettier/standalone";
 import z from "zod";
+import { filesystemCacheMiddleware } from "./filesystemCacheMiddleware";
 
 export interface ComponentSignature {
   id: string;
@@ -33,11 +34,11 @@ export async function nameComponents(opts: {
     { parser: "babel", plugins: [parserBabel, parserEstree] }
   );
 
-  // const model = wrapLanguageModel({
-  //   model: openai(opts.model),
-  //   middleware: filesystemCacheMiddleware(),
-  // });
-  const model = openai(opts.model);
+  const model = wrapLanguageModel({
+    model: openai(opts.model),
+    middleware: filesystemCacheMiddleware(),
+  });
+  // const model = openai(opts.model);
 
   const { object } = await generateObject({
     model,

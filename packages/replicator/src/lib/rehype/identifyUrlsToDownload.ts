@@ -3,8 +3,9 @@ import { visit } from "unist-util-visit";
 import type { Context } from "../../types";
 
 /**
- * Rehype plugin that identifies relative URLs in HTML head content
- * and adds them to Context.filesToDownload for later processing
+ * Rehype plugin that identifies relative URLs in HTML content
+ * and adds them to Context.urlsToDownload for later processing.
+ * Handles link, script, style, and img elements.
  */
 export const rehypeIdentifyUrlsToDownload =
   (ctx: Context) => () => (tree: Root) => {
@@ -23,10 +24,14 @@ export const rehypeIdentifyUrlsToDownload =
           // Handle inline <style> elements that might contain @import or url()
           handleStyleElement(node, ctx);
           break;
-        case "meta":
-          // Handle <meta> elements that might reference files (like favicons)
-          handleMetaElement(node, ctx);
+        case "img":
+          // Handle <img> elements with src and srcset attributes
+          handleImgElement(node, ctx);
           break;
+        // case "meta":
+        //   // Handle <meta> elements that might reference files (like favicons)
+        //   handleMetaElement(node, ctx);
+        //   break;
       }
     });
   };
@@ -61,6 +66,29 @@ function handleStyleElement(node: Element, ctx: Context): void {
       if (child.type === "text") {
         const cssContent = child.value;
         extractUrlsFromCss(cssContent, ctx);
+      }
+    }
+  }
+}
+
+/**
+ * Handle <img> elements and extract relative URLs from src and srcset attributes
+ */
+function handleImgElement(node: Element, ctx: Context): void {
+  // Handle src attribute
+  const src = node.properties?.src;
+
+  if (typeof src === "string" && isRelativeUrl(src)) {
+    ctx.urlsToDownload.add(src);
+  }
+
+  // Handle srcset attribute
+  const srcset = node.properties?.srcSet;
+  if (typeof srcset === "string") {
+    const urls = extractUrlsFromSrcset(srcset);
+    for (const url of urls) {
+      if (isRelativeUrl(url)) {
+        ctx.urlsToDownload.add(url);
       }
     }
   }
@@ -110,13 +138,38 @@ function extractUrlsFromCss(cssContent: string, ctx: Context): void {
   }
 
   // Match url() declarations
-  const urlRegex = /url\(['"]([^'"]+)['"]\)/g;
+  const urlRegex = /url\(['"]?([^'"]+)['"]?\)/g;
   while ((match = urlRegex.exec(cssContent)) !== null) {
     const url = match[1];
     if (url && isRelativeUrl(url)) {
       ctx.urlsToDownload.add(url);
     }
   }
+}
+
+/**
+ * Extract URLs from srcset attribute
+ * srcset format: "url1 1x, url2 2x" or "url1 100w, url2 200w"
+ */
+function extractUrlsFromSrcset(srcset: string): string[] {
+  const urls: string[] = [];
+
+  // Split by comma to get individual srcset entries
+  const entries = srcset.split(",");
+
+  for (const entry of entries) {
+    // Each entry is in format: "url descriptor" where descriptor is optional
+    // Examples: "image.jpg 1x", "image.jpg 100w", "image.jpg"
+    const trimmed = entry.trim();
+
+    // Split by whitespace and take the first part as the URL
+    const parts = trimmed.split(/\s+/);
+    if (parts.length > 0 && parts[0]) {
+      urls.push(parts[0]);
+    }
+  }
+
+  return urls;
 }
 
 /**

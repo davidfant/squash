@@ -81,8 +81,9 @@ export const rehypeExtractByMatch =
       string,
       Record<string, { html: string; name: string; matches: Match[] }>
     > = {};
-    for (const match of matches) {
-      const matchHtml = html[match.index]!;
+    for (let i = 0; i < matches.length; i++) {
+      const match = matches[i]!;
+      const matchHtml = html[i]!;
       grouped[match.path] ??= {};
       const hash = computeHash(matchHtml);
       const name = `${capitalize(match.path.split("/").pop()!)}_${hash}`;

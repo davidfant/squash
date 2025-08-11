@@ -6,7 +6,7 @@ import { logFileTree } from "./logFileTree";
 import { replicate } from "./replicate";
 import type { Capture } from "./types";
 
-const PATH_TO_CAPTURE = `./captures/hackernews.json`;
+const PATH_TO_CAPTURE = `./captures/wikipedia.json`;
 const PATH_TO_TEMPLATE = `./captures/replicated`;
 
 // const captureData = JSON.parse(await fs.readFile(PATH_TO_CAPTURE, "utf-8")) as {

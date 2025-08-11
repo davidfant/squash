@@ -6,7 +6,6 @@ import type { Context } from "../../../types";
 
 export const rehypeExtractStylesAndScripts =
   (ctx: Context) => () => (tree: Root) => {
-    console.log("extract links and scripts");
     // First pass: collect all link elements and mark them for removal
     const toRemove: Array<{ parent: any; index: number }> = [];
     const tagProcessor = unified().use(rehypeStringify);

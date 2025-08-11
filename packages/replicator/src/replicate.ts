@@ -81,6 +81,7 @@ export async function replicate(
     unified()
       .use(rehypeParse, { fragment: false })
       .use(rehypeExtractBodyAttributes(ctx))
+      .use(rehypeIdentifyUrlsToDownload(ctx))
       .use(rehypeStringify)
       .process(page.html.body)
       .then(async () => {

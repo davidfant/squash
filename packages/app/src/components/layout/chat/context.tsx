@@ -1,6 +1,6 @@
 import { usePrevious } from "@/hooks/usePrevious";
 import { useChat, type UseChatHelpers } from "@ai-sdk/react";
-import type { ChatMessage } from "@hypershape-ai/api/agent/types";
+import type { ChatMessage } from "@squash/api/agent/types";
 import { DefaultChatTransport } from "ai";
 import { createContext, useContext, useEffect, type ReactNode } from "react";
 import { v4 as uuid } from "uuid";

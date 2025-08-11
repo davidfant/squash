@@ -1,6 +1,6 @@
 import { betterAuth, type User } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { organization } from "better-auth/plugins";
+import { organization, jwt } from "better-auth/plugins";
 import { randomUUID } from "crypto";
 import { asc, eq } from "drizzle-orm";
 import { createDatabase, type Database } from "../database";
@@ -47,7 +47,7 @@ export function createAuth(env: CloudflareBindings) {
         clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       },
     },
-    plugins: [organization()],
+    plugins: [organization(), jwt()],
     advanced: { database: { generateId: () => randomUUID() } },
     databaseHooks: {
       user: {

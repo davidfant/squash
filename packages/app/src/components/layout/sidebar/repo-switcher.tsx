@@ -1,7 +1,4 @@
-import * as React from "react";
-import { ChevronsUpDown, Plus, GitBranch, Trash2, MoreHorizontal } from "lucide-react";
-import { useNavigate } from "react-router";
-
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,9 +7,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuShortcut,
   DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
   SidebarMenu,
@@ -20,9 +14,15 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { useSelectedRepoId } from "@/routes/landing";
 import { api, useMutation } from "@/hooks/api";
-import { Button } from "@/components/ui/button";
+import {
+  ChevronsUpDown,
+  GitBranch,
+  MoreHorizontal,
+  Plus,
+  Trash2,
+} from "lucide-react";
+import { Link, useNavigate } from "react-router";
 
 interface Repo {
   id: string;
@@ -31,38 +31,30 @@ interface Repo {
 
 export function RepoSwitcher({
   repos,
+  selectedId,
 }: {
   repos: Repo[];
+  selectedId: string;
 }) {
   const { isMobile } = useSidebar();
-  const [selectedRepoId, setSelectedRepoId] = useSelectedRepoId();
   const navigate = useNavigate();
-  
-  const activeRepo = repos.find(repo => repo.id === selectedRepoId) || repos[0];
 
-  // @ts-ignore - Delete endpoint was just added to the API, types need to be updated
+  const selected = repos.find((r) => r.id === selectedId);
   const deleteRepo = useMutation(api.repos[":repoId"].$delete, {
-    onSuccess: (_, variables) => {
-      // After deletion, if it's the selected repo, select another one
-      const deletedRepoId = variables.param.repoId;
-      if (deletedRepoId === selectedRepoId && repos.length > 1) {
-        const remainingRepos = repos.filter(r => r.id !== deletedRepoId);
-        setSelectedRepoId(remainingRepos[0]?.id || '');
-      }
-      // Refresh the page to update the repos list
-      window.location.reload();
-    },
+    onSuccess: () => navigate("/"),
   });
 
   const handleDeleteRepo = (repoId: string) => {
-    if (confirm("Are you sure you want to remove this repository? This action cannot be undone.")) {
-      deleteRepo.mutate({
-        param: { repoId },
-      });
+    if (
+      confirm(
+        "Are you sure you want to remove this repository? This action cannot be undone."
+      )
+    ) {
+      deleteRepo.mutate({ param: { repoId } });
     }
   };
 
-  if (!activeRepo || repos.length === 0) {
+  if (!selected || repos.length === 0) {
     return (
       <SidebarMenu>
         <SidebarMenuItem>
@@ -76,7 +68,9 @@ export function RepoSwitcher({
             </div>
             <div className="grid flex-1 text-left text-sm leading-tight">
               <span className="truncate font-medium">Add Repository</span>
-              <span className="truncate text-xs text-muted-foreground">Import from GitHub</span>
+              <span className="truncate text-xs text-muted-foreground">
+                Import from GitHub
+              </span>
             </div>
           </SidebarMenuButton>
         </SidebarMenuItem>
@@ -97,8 +91,10 @@ export function RepoSwitcher({
                 <GitBranch className="size-4" />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{activeRepo.name}</span>
-                <span className="truncate text-xs text-muted-foreground">Repository</span>
+                <span className="truncate font-medium">{selected.name}</span>
+                <span className="truncate text-xs text-muted-foreground">
+                  Repository
+                </span>
               </div>
               <ChevronsUpDown className="ml-auto" />
             </SidebarMenuButton>
@@ -114,17 +110,16 @@ export function RepoSwitcher({
             </DropdownMenuLabel>
             {repos.map((repo, index) => (
               <div key={repo.id} className="relative group">
-                <DropdownMenuItem
-                  onClick={() => setSelectedRepoId(repo.id)}
-                  className="gap-2 p-2 pr-8"
-                >
-                  <div className="flex size-6 items-center justify-center rounded-md border">
-                    <GitBranch className="size-3.5 shrink-0" />
-                  </div>
-                  <span className="flex-1">{repo.name}</span>
-                  <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut>
-                </DropdownMenuItem>
-                
+                <Link to={`/repos/${repo.id}`}>
+                  <DropdownMenuItem className="gap-2 p-2 pr-8">
+                    <div className="flex size-6 items-center justify-center rounded-md border">
+                      <GitBranch className="size-3.5 shrink-0" />
+                    </div>
+                    <span className="flex-1">{repo.name}</span>
+                    <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut>
+                  </DropdownMenuItem>
+                </Link>
+
                 {/* Delete button */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -153,18 +148,20 @@ export function RepoSwitcher({
               </div>
             ))}
             <DropdownMenuSeparator />
-            <DropdownMenuItem 
+            <DropdownMenuItem
               className="gap-2 p-2"
               onClick={() => navigate("/new/repo")}
             >
               <div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
                 <Plus className="size-4" />
               </div>
-              <div className="text-muted-foreground font-medium">Add repository</div>
+              <div className="text-muted-foreground font-medium">
+                Add repository
+              </div>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
     </SidebarMenu>
   );
-} 
+}

@@ -102,6 +102,13 @@ export const organizationRelations = relations(organization, ({ many }) => ({
   members: many(member),
 }));
 
+export const jwks = pgTable("jwks", {
+  id: uuid("id").primaryKey(),         
+  publicKey: text("public_key").notNull(),
+  privateKey: text("private_key").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const memberRelations = relations(member, ({ one }) => ({
   organization: one(organization, {
     fields: [member.organizationId],

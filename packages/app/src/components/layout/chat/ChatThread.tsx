@@ -4,7 +4,7 @@ import {
 } from "@/components/layout/chat/input/ChatInput";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useBranchContext } from "@/routes/branches/context";
-import type { ChatMessage } from "@hypershape-ai/api/agent/types";
+import type { ChatMessage } from "@squash/api/agent/types";
 import { AlertCircle } from "lucide-react";
 import { useEffect } from "react";
 import { useStickToBottom } from "use-stick-to-bottom";

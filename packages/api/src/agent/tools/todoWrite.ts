@@ -169,21 +169,22 @@ When in doubt, use this tool. Proactive task management demonstrates attentivene
     outputSchema: z.object({ todos: zTodo.array() }),
     execute: async ({ merge, todos }) => {
       if (merge) {
-        const existing = [...ctx.todos];
-        const id2idx = new Map(existing.map((t, idx) => [t.id, idx]));
+        const updated = [...ctx.todos];
+        const id2idx = new Map(updated.map((t, idx) => [t.id, idx]));
 
         todos
           .filter((t) => !!t.id && id2idx.has(t.id))
           .forEach((t) => {
             const idx = id2idx.get(t.id!)!;
-            existing[idx] = { ...existing[idx]!, ...t, id: t.id! };
+            updated[idx] = { ...updated[idx]!, ...t, id: t.id! };
           });
 
-        existing.push(
+        updated.push(
           ...todos
             .filter((t) => !t.id || !id2idx.has(t.id))
             .map((t) => ({ ...defaultTodo, id: genId(), ...t }))
         );
+        return { todos: updated };
       } else {
         return { todos: todos.map((t) => ({ ...defaultTodo, ...t })) };
       }

@@ -8,7 +8,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { AllTools, ChatMessage } from "@hypershape-ai/api/agent/types";
+import type { AllTools, ChatMessage } from "@squash/api/agent/types";
 import type { ToolUIPart } from "ai";
 import {
   CheckCircle2Icon,
@@ -93,7 +93,7 @@ function ReadFileToolAlert({ part }: { part: ToolPart<"readFile"> }) {
     case "output-error":
       return (
         <ToolErrorAlert
-          title={`Failed reading ${part.input.path}`}
+          title={`Failed reading ${part.input?.path ?? "file"}`}
           description={part.errorText}
         />
       );
@@ -127,7 +127,7 @@ function WriteFileToolAlert({ part }: { part: ToolPart<"writeFile"> }) {
     case "output-error":
       return (
         <ToolErrorAlert
-          title={`Failed updating ${part.input.path}`}
+          title={`Failed updating ${part.input?.path ?? "file"}`}
           description={part.errorText}
         />
       );

@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/resizable";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { api, useQuery } from "@/hooks/api";
+import type { ChatMessage } from "@squash/api/agent/types";
 import { useParams } from "react-router";
 import { BranchPreview } from "./BranchPreview";
 import { BranchContextProvider, useBranchContext } from "./context";
@@ -51,7 +52,7 @@ function Component({ branchId }: { branchId: string }) {
   return (
     <ChatProvider
       endpoint={`${import.meta.env.VITE_API_URL}/chat/branches/${branchId}`}
-      initialMessages={threadMessages.data}
+      initialMessages={threadMessages.data as ChatMessage[]}
     >
       <SidebarProvider className="flex flex-col h-screen">
         <BranchHeader

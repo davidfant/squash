@@ -8,9 +8,11 @@ import { BrowserRouter, Route, Routes } from "react-router";
 import "./index.css";
 import resources from "./locales/default";
 import { BranchPage } from "./routes/branches";
+import { ExtensionAuthPage } from "./routes/extension-auth";
 import { LandingPage } from "./routes/landing";
 import { LoginPage } from "./routes/login";
 import { NewRepoFromProvider, NewRepoPage } from "./routes/new/repo";
+import { RepoPage } from "./routes/repos";
 
 i18n.use(initReactI18next).init({
   lng: "default",
@@ -28,7 +30,12 @@ createRoot(document.getElementById("root")!).render(
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/branches/:branchId" element={<BranchPage />} />
+          <Route path="/extension-auth" element={<ExtensionAuthPage />} />
+          <Route path="/repos/:repoId" element={<RepoPage />} />
+          <Route
+            path="/repos/:repoId/branches/:branchId"
+            element={<BranchPage />}
+          />
           <Route path="/new/repo" element={<NewRepoPage />} />
           <Route
             path="/new/repo/:providerId"

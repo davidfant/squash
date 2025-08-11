@@ -8,9 +8,5 @@
     "@changesets/cli": "^2.29.3",
     "turbo": "^2.5.2"
   },
-  "packageManager": "pnpm@10.10.0+sha512.d615db246fe70f25dcfea6d8d73dee782ce23e2245e3c4f6f888249fb568149318637dca73c2c5c8ef2a4ca0d5657fb9567188bfab47f566d1ee6ce987815c39",
-  "scripts": {
-    "publish:utils": "pnpm --filter ./packages/utils build && pnpm changeset version && pnpm --filter ./packages/utils publish --no-git-checks",
-    "publish:template": "source .env && cd template && npm version patch && git remote set-url origin s3://repos/templates/vite && git push --tags"
-  }
+  "packageManager": "pnpm@10.10.0+sha512.d615db246fe70f25dcfea6d8d73dee782ce23e2245e3c4f6f888249fb568149318637dca73c2c5c8ef2a4ca0d5657fb9567188bfab47f566d1ee6ce987815c39"
 }

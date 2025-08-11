@@ -1,27 +1,28 @@
-import { api, useMutation, useQuery, type QueryOutput } from "@/hooks/api";
+import { FrameworkConfiguration } from "@/components/layout/repo/FrameworkConfiguration";
+import { RepositorySelector } from "@/components/layout/repo/RepositorySelector";
+import type {
+  CurrentStep,
+  FrameworkInfo,
+  ProviderData,
+  SelectedRepo,
+} from "@/components/layout/repo/types";
+import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/sonner";
+import { api, useMutation, useQuery } from "@/hooks/api";
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { useSelectedRepoId } from "../landing";
-import { toast } from "@/components/ui/sonner";
-import { Button } from "@/components/ui/button";
-import type {
-  ProviderData,
-  FrameworkInfo,
-  SelectedRepo,
-  CurrentStep,
-  EnvVariable,
-} from "@/components/layout/repo/types";
-import { RepositorySelector } from "@/components/layout/repo/RepositorySelector";
-import { FrameworkConfiguration } from "@/components/layout/repo/FrameworkConfiguration";
 
 function NewRepoForm({ provider }: { provider: ProviderData }) {
   const [selectedAccountId, setSelectedAccountId] = useState(
     provider.accounts[0]?.id
   );
-  const [selectedRepoForImport, setSelectedRepoForImport] = useState<SelectedRepo | null>(null);
+  const [selectedRepoForImport, setSelectedRepoForImport] =
+    useState<SelectedRepo | null>(null);
   const [currentStep, setCurrentStep] = useState<CurrentStep>("select-repo");
   const [isDetecting, setIsDetecting] = useState(false);
-  const [frameworkInfo, setFrameworkInfo] = useState<FrameworkInfo | null>(null);
+  const [frameworkInfo, setFrameworkInfo] = useState<FrameworkInfo | null>(
+    null
+  );
   const [editedInfo, setEditedInfo] = useState<FrameworkInfo | null>(null);
 
   const selectedAccount = provider.accounts.find(
@@ -29,14 +30,14 @@ function NewRepoForm({ provider }: { provider: ProviderData }) {
   );
 
   const navigate = useNavigate();
-  const [, setSelectedRepoId] = useSelectedRepoId();
   const importRepo = useMutation(
     api.repos.providers[":providerId"].repos.$post,
     {
       onSuccess: (repo) => {
-        setSelectedRepoId(repo.id);
-        toast.success(`Repository "${selectedRepoForImport?.name}" imported successfully`);
-        navigate(`/`);
+        toast.success(
+          `Repository "${selectedRepoForImport?.name}" imported successfully`
+        );
+        navigate(`/repos/${repo.id}`);
       },
       onError: () => {
         toast.error("Failed to import repository");
@@ -50,11 +51,11 @@ function NewRepoForm({ provider }: { provider: ProviderData }) {
       name: repo.name,
     });
     setCurrentStep("configure-framework");
-    
+
     // Start detecting framework
     setIsDetecting(true);
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8787";
+      const apiUrl = import.meta.env.VITE_API_URL;
       const response = await fetch(
         `${apiUrl}/repos/providers/${provider.id}/detect-framework`,
         {
@@ -92,13 +93,13 @@ function NewRepoForm({ provider }: { provider: ProviderData }) {
         image: "node:20-alpine",
         entrypoint: editedInfo.entrypoint,
       };
-      
+
       importRepo.mutate({
         param: { providerId: provider.id },
         // @ts-ignore - API types need to be regenerated to include required snapshot parameter
-        json: { 
+        json: {
           repoId: selectedRepoForImport.id,
-          snapshot: snapshot
+          snapshot: snapshot,
         } as any,
       });
     }

@@ -34,10 +34,13 @@ import { api, useMutation, useQuery } from "@/hooks/api";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { FolderGit2 } from "lucide-react";
 import { useState } from "react";
-import { useNavigate } from "react-router";
-import { useSelectedRepoId } from "../landing";
+import { Link, useNavigate } from "react-router";
 
-export function BranchFeed() {
+interface BranchFeedProps {
+  repoId: string;
+}
+
+export function BranchFeed({ repoId }: BranchFeedProps) {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterByMe, setFilterByMe] = useState(false);
@@ -47,18 +50,16 @@ export function BranchFeed() {
       files: [],
     });
   const [chatInputKey, setChatInputKey] = useState(0);
-  const [selectedRepoId, setSelectedRepoId] = useSelectedRepoId();
 
   const repos = useQuery(api.repos.$get, { params: {} });
-  const selectedRepo = repos.data?.find((repo) => repo.id === selectedRepoId);
+  const selectedRepo = repos.data?.find((repo) => repo.id === repoId);
 
   const branches = useQuery(api.repos[":repoId"].branches.$get, {
-    params: { repoId: selectedRepoId || "" },
-    enabled: !!selectedRepoId,
+    params: { repoId },
   });
 
   const createBranch = useMutation(api.repos[":repoId"].branches.$post, {
-    onSuccess: (data) => navigate(`/branches/${data.id}`),
+    onSuccess: (data) => navigate(`/repos/${repoId}/branches/${data.id}`),
   });
 
   const deleteBranch = useMutation(api.repos.branches[":branchId"].$delete, {
@@ -87,7 +88,7 @@ export function BranchFeed() {
 
   return (
     <SidebarProvider>
-      <AppSidebar />
+      <AppSidebar selectedRepoId={repoId} />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
           <div className="flex items-center gap-2 px-4">
@@ -99,7 +100,9 @@ export function BranchFeed() {
             <Breadcrumb>
               <BreadcrumbList>
                 <BreadcrumbItem>
-                  <BreadcrumbPage>Home</BreadcrumbPage>
+                  <BreadcrumbPage>
+                    {selectedRepo?.name || "Home"}
+                  </BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
@@ -115,19 +118,17 @@ export function BranchFeed() {
                 initialValue={chatInitialValue}
                 onSubmit={(content) => {
                   setChatInitialValue({ text: "", files: [] });
-                  if (selectedRepoId) {
-                    createBranch.mutate({
-                      param: { repoId: selectedRepoId },
-                      json: {
-                        message: {
-                          parts: [
-                            { type: "text", text: content.text },
-                            ...content.files,
-                          ],
-                        },
+                  createBranch.mutate({
+                    param: { repoId },
+                    json: {
+                      message: {
+                        parts: [
+                          { type: "text", text: content.text },
+                          ...content.files,
+                        ],
                       },
-                    });
-                  }
+                    },
+                  });
                 }}
                 placeholder="What do you want to build?"
                 submitting={createBranch.isPending}
@@ -146,15 +147,13 @@ export function BranchFeed() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="start">
                         {repos.data.map((repo) => (
-                          <DropdownMenuItem
-                            key={repo.id}
-                            onClick={() => setSelectedRepoId(repo.id)}
-                            className={
-                              repo.id === selectedRepoId ? "bg-accent" : ""
-                            }
-                          >
-                            {repo.name}
-                          </DropdownMenuItem>
+                          <Link key={repo.id} to={`/repos/${repo.id}`}>
+                            <DropdownMenuItem
+                              className={repo.id === repoId ? "bg-accent" : ""}
+                            >
+                              {repo.name}
+                            </DropdownMenuItem>
+                          </Link>
                         ))}
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -183,21 +182,15 @@ export function BranchFeed() {
               />
 
               {/* Branches List */}
-              {filteredBranches && filteredBranches.length > 0 ? (
+              {!!filteredBranches?.length ? (
                 <div className="space-y-4">
-                  {filteredBranches
-                    .filter(
-                      (branch): branch is typeof branch & { id: string } =>
-                        !!branch.id
-                    )
-                    .map((branch) => (
-                      <BranchCard
-                        key={branch.id}
-                        branch={branch}
-                        repoName={selectedRepo?.name}
-                        onDelete={handleDeleteBranch}
-                      />
-                    ))}
+                  {filteredBranches.map((branch) => (
+                    <BranchCard
+                      key={branch.id}
+                      branch={branch}
+                      onDelete={handleDeleteBranch}
+                    />
+                  ))}
                 </div>
               ) : (
                 <EmptyState searchQuery={searchQuery} />

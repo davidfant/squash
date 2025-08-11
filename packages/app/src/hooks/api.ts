@@ -1,4 +1,4 @@
-import type { AppType } from "@hypershape-ai/api";
+import type { AppType } from "@squash/api";
 import {
   type QueryKey,
   type UseMutationOptions,

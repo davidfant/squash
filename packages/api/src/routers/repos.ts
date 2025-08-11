@@ -695,6 +695,7 @@ export const reposRouter = new Hono<{
           name: schema.repoBranch.name,
           createdAt: schema.repoBranch.createdAt,
           updatedAt: schema.repoBranch.updatedAt,
+          repo: { id: schema.repo.id, name: schema.repo.name },
           createdBy: {
             id: schema.user.id,
             name: schema.user.name,
@@ -702,7 +703,7 @@ export const reposRouter = new Hono<{
           },
         })
         .from(schema.repo)
-        .leftJoin(
+        .innerJoin(
           schema.repoBranch,
           eq(schema.repo.id, schema.repoBranch.repoId)
         )

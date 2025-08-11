@@ -1,5 +1,5 @@
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,22 +12,24 @@ import { Link } from "react-router";
 interface BranchCardProps {
   branch: {
     id: string;
-    name?: string | null;
-    title?: string | null;
-    createdBy?: { name?: string | null } | null;
-    updatedAt?: string | null;
+    repo: { id: string; name: string };
+    name: string;
+    createdBy: { name: string };
+    updatedAt: string;
   };
-  repoName?: string | null;
   onDelete: (branchId: string) => void;
 }
 
-export function BranchCard({ branch, repoName, onDelete }: BranchCardProps) {
+export function BranchCard({ branch, onDelete }: BranchCardProps) {
   return (
     <Card
       key={branch.id}
       className="group relative border border-border/50 bg-card hover:bg-accent/5 transition-colors shadow-none overflow-hidden py-0"
     >
-      <Link to={`/branches/${branch.id}`} className="flex">
+      <Link
+        to={`/repos/${branch.repo.id}/branches/${branch.id}`}
+        className="flex"
+      >
         {/* Screenshot Placeholder - Full Height */}
         <div className="shrink-0 w-80 bg-muted" />
 
@@ -46,9 +48,9 @@ export function BranchCard({ branch, repoName, onDelete }: BranchCardProps) {
 
             {/* Description */}
             <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-              A modern web application with responsive design
-              and real-time features. Built with the latest
-              technologies for optimal performance.
+              A modern web application with responsive design and real-time
+              features. Built with the latest technologies for optimal
+              performance.
             </p>
           </div>
 
@@ -66,26 +68,22 @@ export function BranchCard({ branch, repoName, onDelete }: BranchCardProps) {
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/50 shrink-0">
               <MapPin className="h-3 w-3 text-muted-foreground shrink-0" />
               <span className="text-muted-foreground truncate max-w-[200px]">
-                {repoName || "Repository"}
+                {branch.repo.name}
               </span>
             </div>
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/50 shrink-0">
               <User className="h-3 w-3 text-muted-foreground shrink-0" />
               <span className="text-muted-foreground truncate max-w-[200px]">
-                {branch.createdBy?.name || "Unknown"}
+                {branch.createdBy.name}
               </span>
             </div>
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/50 shrink-0">
               <span className="text-muted-foreground whitespace-nowrap">
                 Updated{" "}
-                {branch.updatedAt
-                  ? new Date(
-                      branch.updatedAt
-                    ).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                    })
-                  : "recently"}
+                {new Date(branch.updatedAt).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                })}
               </span>
             </div>
           </div>
@@ -122,4 +120,4 @@ export function BranchCard({ branch, repoName, onDelete }: BranchCardProps) {
       </Link>
     </Card>
   );
-} 
+}

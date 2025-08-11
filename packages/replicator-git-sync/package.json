@@ -1,5 +1,5 @@
 {
-  "name": "@hypershape-ai/replicator-git-sync",
+  "name": "@squash/replicator-git-sync",
   "type": "module",
   "version": "0.0.0",
   "exports": {
@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "concurrently \"pnpm dev:tsx\" \"pnpm dev:tsc\"",
     "dev:tsx": "tsx --watch --env-file=.env src/index.ts",
-    "dev:tsc": "pnpm tsc --watch --preserveWatchOutput",
+    "dev:tsc": "tsc --watch --preserveWatchOutput",
     "deploy": "wrangler deploy",
     "build": "tsc -b",
     "postinstall": "pip install git-remote-s3"

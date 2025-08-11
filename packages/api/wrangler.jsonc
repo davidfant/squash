@@ -11,7 +11,9 @@
     "APP_URL": "",
     "GOOGLE_GENERATIVE_AI_API_KEY": "",
     "BETTER_AUTH_SECRET": "",
-    "DATABASE_URL": ""
+    "DATABASE_URL": "",
+    "REPLICATOR_GIT_SYNC_API_URL": "",
+    "REPLICATOR_GIT_SYNC_API_SECRET": ""
   },
   "r2_buckets": [
     {

@@ -15,42 +15,37 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar";
 import { api, useQuery } from "@/hooks/api";
-import { useSelectedRepoId } from "@/routes/landing";
-import { Link, useNavigate } from "react-router";
+import { Link } from "react-router";
 import { NavMain } from "./nav-main";
 import { NavUser } from "./nav-user";
 import { RepoSwitcher } from "./repo-switcher";
 
-const navMainItems = [
-  {
-    title: "Home",
-    url: "/",
-    icon: Home,
-    isActive: true,
-  },
-  {
-    title: "Settings",
-    url: "#",
-    icon: Settings,
-    items: [
-      {
-        title: "General",
-        url: "#",
-      },
-      {
-        title: "Integrations",
-        url: "#",
-      },
-    ],
-  },
-];
+// Move navMainItems inside the component so it can access selectedRepoId
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({
+  selectedRepoId,
+  ...props
+}: { selectedRepoId: string } & React.ComponentProps<typeof Sidebar>) {
   const session = authClient.useSession();
 
-  const navigate = useNavigate();
   const repos = useQuery(api.repos.$get, { params: {} });
-  const [selectedRepoId] = useSelectedRepoId();
+  const navMainItems = [
+    {
+      title: "Home",
+      url: selectedRepoId ? `/repos/${selectedRepoId}` : "/",
+      icon: Home,
+      isActive: true,
+    },
+    {
+      title: "Settings",
+      url: "#",
+      icon: Settings,
+      items: [
+        { title: "General", url: "#" },
+        { title: "Integrations", url: "#" },
+      ],
+    },
+  ];
 
   // Get branches for the selected repo
   const branches = useQuery(api.repos[":repoId"].branches.$get, {
@@ -71,6 +66,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       <SidebarHeader>
         {repos.data && (
           <RepoSwitcher
+            selectedId={selectedRepoId}
             repos={repos.data.map((repo) => ({
               id: repo.id,
               name: repo.name,

@@ -1,5 +1,5 @@
 {
-  "name": "@hypershape-ai/replicator",
+  "name": "@squash/replicator",
   "type": "module",
   "version": "0.0.0",
   "exports": {
@@ -9,7 +9,7 @@
     }
   },
   "scripts": {
-    "dev": "tsc --watch",
+    "dev": "tsc --watch --preserveWatchOutput",
     "build": "tsc",
     "replicate": "tsx watch --env-file .env src/playground.ts"
   },

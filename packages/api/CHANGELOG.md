@@ -1,4 +1,4 @@
-# @hypershape-ai/api
+# @squash/api
 
 ## 0.0.2
 

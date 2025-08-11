@@ -37,8 +37,8 @@ export interface RepoProviderData {
 
 export const repo = pgTable("repo", {
   id: uuid().primaryKey().defaultRandom(),
-  name: text().notNull(),
   url: text().notNull(),
+  name: text().notNull(),
   snapshot: json("snapshot").$type<RepoSnapshot>().notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

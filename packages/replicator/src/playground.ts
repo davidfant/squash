@@ -6,36 +6,40 @@ import { logFileTree } from "./logFileTree";
 import { replicate } from "./replicate";
 import type { Capture } from "./types";
 
-const PATH_TO_CAPTURE = `./captures/wikipedia.json`;
+const PATH_TO_CAPTURE = `./captures/posthog.json`;
 const PATH_TO_TEMPLATE = `./captures/replicated`;
 
-// const captureData = JSON.parse(await fs.readFile(PATH_TO_CAPTURE, "utf-8")) as {
-//   captureData: {
-//     css: string;
-//     js: string;
-//     headContent: string;
-//     bodyContent: string;
-//   };
-//   currentUrl: string;
-//   timestamp: string;
-//   sessionId: string;
-// };
-// const capture: Capture = {
-//   pages: [
-//     {
-//       css: capture.captureData.css,
-//       js: capture.captureData.js,
-//       html: {
-//         head: capture.captureData.headContent,
-//         body: capture.captureData.bodyContent,
-//       },
-//       url: capture.currentUrl,
-//     },
-//   ],
-// }
-const capture = JSON.parse(
-  await fs.readFile(PATH_TO_CAPTURE, "utf-8")
-) as Capture;
+const capture = await fs
+  .readFile(PATH_TO_CAPTURE, "utf-8")
+  .then(
+    (t) =>
+      JSON.parse(t) as {
+        captureData: {
+          css: string;
+          js: string;
+          headContent: string;
+          bodyContent: string;
+        };
+        currentUrl: string;
+        timestamp: string;
+        sessionId: string;
+      }
+  )
+  .then(
+    ({ captureData: d, currentUrl: url }): Capture => ({
+      pages: [
+        {
+          css: d.css,
+          js: d.js,
+          html: { head: d.headContent, body: d.bodyContent },
+          url,
+        },
+      ],
+    })
+  );
+// const capture = JSON.parse(
+//   await fs.readFile(PATH_TO_CAPTURE, "utf-8")
+// ) as Capture;
 
 await Promise.all(
   [

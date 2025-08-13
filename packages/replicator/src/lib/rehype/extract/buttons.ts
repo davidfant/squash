@@ -113,16 +113,14 @@ export const rehypeExtractButtons =
     if (config.componentNaming.enabled) {
       const sortedSigs = Array.from(signatureToMeta.keys()).sort();
       const keys = sortedSigs.map((_, i) => `BUTTON${i + 1}`);
-      const components: ComponentSignature[] = sortedSigs.map((sig, i) => {
-        const meta = signatureToMeta.get(sig)!;
-        const jsx = `<${meta.tagName} className="${meta.baseClasses}">...</${meta.tagName}>`;
-        return { id: keys[i]!, jsx };
-      });
 
-      const named = await nameComponents({
-        model: config.componentNaming.model,
-        components,
-      });
+      const named = await nameComponents(
+        sortedSigs.map((sig, i): ComponentSignature => {
+          const meta = signatureToMeta.get(sig)!;
+          const jsx = `<${meta.tagName} className="${meta.baseClasses}">...</${meta.tagName}>`;
+          return { id: keys[i]!, jsx };
+        })
+      );
 
       // Build mapping sig -> AI name, ensuring sanitized and unique
       const used = new Set<string>();

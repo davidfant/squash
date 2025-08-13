@@ -1,14 +1,22 @@
+import { openai } from "@ai-sdk/openai";
+import { wrapLanguageModel, type LanguageModel } from "ai";
+import { filesystemCacheMiddleware } from "./lib/filesystemCacheMiddleware";
+
 export type AIComponentNamingConfig = {
   enabled: boolean;
   provider: "openai";
-  model: string; // e.g., "gpt-5-nano"
+  model: LanguageModel; // e.g., "gpt-5-nano"
 };
 
 export const config = {
   componentNaming: {
-    enabled: false,
+    enabled: true,
     provider: "openai",
-    model: "gpt-5-nano",
+    model: wrapLanguageModel({
+      model: openai("gpt-5-nano"),
+      middleware: filesystemCacheMiddleware(),
+    }),
+    // model: openai("gpt-5-nano"),
   } as AIComponentNamingConfig,
 };
 

@@ -1,4 +1,4 @@
-import { openai } from "@ai-sdk/openai";
+import { config } from "@/config";
 import { generateObject } from "ai";
 import parserBabel from "prettier/plugins/babel";
 import parserEstree from "prettier/plugins/estree";
@@ -22,40 +22,34 @@ The output MUST contain a mapping of component id to name, where the name needs 
 - Do not include explanations — only return the JSON object.
 `;
 
-export async function nameComponents(opts: {
-  model: string;
-  components: ComponentSignature[];
-}): Promise<Record<string, string>> {
-  if (opts.components.length === 0) return {};
+export async function nameComponents(
+  components: ComponentSignature[]
+): Promise<Record<string, string>> {
+  if (components.length === 0) return {};
 
-  const components = await prettier.format(
-    opts.components.map((b) => `const ${b.id} = () => (${b.jsx});`).join("\n"),
+  const formattedComponents = await prettier.format(
+    components.map((b) => `const ${b.id} = () => (${b.jsx});`).join("\n"),
     { parser: "babel", plugins: [parserBabel, parserEstree] }
   );
 
-  // const model = wrapLanguageModel({
-  //   model: openai(opts.model),
-  //   middleware: filesystemCacheMiddleware(),
-  // });
-  const model = openai(opts.model);
-
   const { object } = await generateObject({
-    model,
+    model: config.componentNaming.model,
     messages: [
       { role: "system", content: systemPrompt },
-      { role: "user", content: components },
+      { role: "user", content: formattedComponents },
     ],
-    schema: z.object({
-      componentNames: z
-        .object({
-          id: z.enum(opts.components.map((b) => b.id) as [string, ...string[]]),
-          name: z.string().regex(/^[A-Z][A-Za-z0-9_]*$/, "must be PascalCase"),
-        })
-        .array(),
-    }),
+    schema: z.object(
+      Object.fromEntries(
+        components.map((b) => [
+          b.id,
+          z.string().regex(/^[A-Z][A-Za-z0-9_]*$/, "must be PascalCase"),
+        ])
+      )
+    ),
     providerOptions: {
       openai: { reasoningEffort: "low", strictJsonSchema: true },
     },
   });
-  return Object.fromEntries(object.componentNames.map((c) => [c.id, c.name]));
+  return object;
+  // return Object.fromEntries(object.componentNames.map((c) => [c.id, c.name]));
 }

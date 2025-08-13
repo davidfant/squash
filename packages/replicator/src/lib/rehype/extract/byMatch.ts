@@ -96,13 +96,12 @@ export const rehypeExtractByMatch =
         Object.values(grouped).map(async (group) => {
           // TODO: consider not naming components that just have 1 occurance
 
-          const named = await nameComponents({
-            model: config.componentNaming.model,
-            components: Object.entries(group).map(([id, match]) => ({
+          const named = await nameComponents(
+            Object.entries(group).map(([id, match]) => ({
               id: id,
               jsx: match.html,
-            })),
-          });
+            }))
+          );
 
           const used = new Set<string>();
           const uniquify = (s: string) => {

@@ -111,17 +111,18 @@ async function capturePage(tabId: number): Promise<void> {
           })),
         };
 
+        const blacklistedTypes = ["application/json", "application/ld+json"];
         const scripts = {
           linked: Array.from(document.scripts)
             .filter((script) => script.src)
-            .filter((script) => script.type !== "application/json")
+            .filter((script) => !blacklistedTypes.includes(script.type))
             .map((script) => ({
               src: absoluteUrl(script.src),
               type: script.type || "text/javascript",
             })),
           inline: Array.from(document.scripts)
             .filter((script) => script.src)
-            .filter((script) => script.type !== "application/json")
+            .filter((script) => !blacklistedTypes.includes(script.type))
             .filter((script) => !!script.textContent)
             .map((script, index) => ({
               index,

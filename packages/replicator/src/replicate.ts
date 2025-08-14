@@ -22,6 +22,7 @@ import { rehypeExtractStylesAndScripts } from "./lib/rehype/extract/stylesAndScr
 import { rehypeExtractSVGs } from "./lib/rehype/extract/svgs";
 import { rehypeExtractTags } from "./lib/rehype/extract/tags";
 import { rehypeIdentifyUrlsToDownload } from "./lib/rehype/identifyUrlsToDownload";
+import { rehypeRemoveScripts } from "./lib/rehype/removeScripts";
 import type { FileSink } from "./lib/sinks/base";
 import type { Capture, Context } from "./types";
 
@@ -64,6 +65,7 @@ export async function replicate(
     unified()
       .use(rehypeParse, { fragment: true })
       .use(rehypeRemoveComments)
+      .use(rehypeRemoveScripts)
       .use(opts.stylesAndScripts ? rehypeExtractStylesAndScripts(ctx) : noop)
       .use(opts.base64Images ? rehypeExtractBase64Images(sink) : noop)
       .use(opts.svgs ? rehypeExtractSVGs(sink) : noop)
@@ -80,6 +82,7 @@ export async function replicate(
 
     unified()
       .use(rehypeParse, { fragment: false })
+      .use(rehypeRemoveScripts)
       .use(rehypeExtractBodyAttributes(ctx))
       .use(rehypeIdentifyUrlsToDownload(ctx))
       .use(rehypeStringify)
@@ -88,12 +91,19 @@ export async function replicate(
         const head = await unified()
           .use(rehypeParse, { fragment: true })
           .use(rehypeRemoveComments)
+          .use(rehypeRemoveScripts)
           .use(rehypeIdentifyUrlsToDownload(ctx))
           .use(rehypeStringify)
           .process([page.html.head, ...ctx.tagsToMoveToHead].join("\n"));
         await Promise.all(
           Array.from(ctx.urlsToDownload).map(async (relativeUrl) => {
             const url = new URL(relativeUrl, page.url);
+            if (url.href.length > 255) {
+              // TODO: rename the urls to download to something shorter
+              console.warn(`Skipping ${url.href} because it's too long`);
+              return;
+            }
+
             const response = await fetch(url.href);
             if (!response.ok) {
               throw new Error(

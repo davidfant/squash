@@ -81,6 +81,8 @@ export const rehypeExtractButtons =
         const hasRoleButton = props.role === "button";
         const hasTypeButton = props.type === "button"; // could be input/button
         if (!isButtonTag && !hasRoleButton && !hasTypeButton) return;
+        const isInputTag = tag === "input";
+        if (isInputTag) return;
 
         const classTokens = toClassTokens(props);
         if (classTokens.length === 0) return; // nothing to unify

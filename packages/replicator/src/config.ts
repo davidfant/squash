@@ -4,14 +4,12 @@ import { filesystemCacheMiddleware } from "./lib/filesystemCacheMiddleware";
 
 export type AIComponentNamingConfig = {
   enabled: boolean;
-  provider: "openai";
-  model: LanguageModel; // e.g., "gpt-5-nano"
+  model: LanguageModel;
 };
 
 export const config = {
   componentNaming: {
     enabled: true,
-    provider: "openai",
     model: wrapLanguageModel({
       model: openai("gpt-5-nano"),
       middleware: filesystemCacheMiddleware(),

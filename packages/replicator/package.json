@@ -21,6 +21,7 @@
     "typescript": "~5.8.3"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^2.0.1",
     "@ai-sdk/openai": "^2.0.3",
     "ai": "^5.0.9",
     "estree-util-visit": "^2.0.0",

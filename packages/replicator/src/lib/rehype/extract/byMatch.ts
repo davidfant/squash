@@ -99,7 +99,7 @@ export const rehypeExtractByMatch =
           const named = await nameComponents(
             Object.entries(group).map(([id, match]) => ({
               id: id,
-              jsx: match.html,
+              tsx: match.html,
             }))
           );
 
@@ -138,7 +138,7 @@ export const rehypeExtractByMatch =
           children: [],
         };
 
-        const outPath = path.join(outDir, `${n.name}.jsx`);
+        const outPath = path.join(outDir, `${n.name}.tsx`);
         if (!promises.has(outPath)) {
           promises.set(
             outPath,

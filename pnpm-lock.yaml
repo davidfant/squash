@@ -392,6 +392,9 @@ importers:
 
   packages/replicator:
     dependencies:
+      '@ai-sdk/anthropic':
+        specifier: ^2.0.1
+        version: 2.0.1(zod@4.0.16)
       '@ai-sdk/openai':
         specifier: ^2.0.3
         version: 2.0.7(zod@4.0.16)
@@ -3170,6 +3173,7 @@ packages:
     hasBin: true
     peerDependencies:
       postcss: ^8.1.0
+
   aws4fetch@1.0.20:
     resolution: {integrity: sha512-/djoAN709iY65ETD6LKCtyyEI04XIBP5xVvfmNxsEP0uJB5tyaGBztSryRr4HqMStr9R06PisQE7m9zDTXKu6g==}
 
@@ -8809,6 +8813,7 @@ snapshots:
       picocolors: 1.1.1
       postcss: 8.5.6
       postcss-value-parser: 4.2.0
+
   aws4fetch@1.0.20: {}
 
   bail@2.0.2: {}

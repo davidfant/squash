@@ -14,9 +14,9 @@ import { unified } from "unified";
 import { recmaExtractJSXComponents } from "./lib/recmaExtractJSXComponents";
 import { rehypeExtractBase64Images } from "./lib/rehype/extract/base64Images";
 // import { rehypeExtractBlocks } from "./lib/rehypeExtractBlocks";
+import { rehypeDesignSystemButtons } from "./lib/rehype/designSystem/buttons";
 import { rehypeExtractBlocks } from "./lib/rehype/extract/blocks";
 import { rehypeExtractBodyAttributes } from "./lib/rehype/extract/bodyAttributes";
-import { rehypeExtractButtons } from "./lib/rehype/extract/buttons";
 import { rehypeExtractRoles } from "./lib/rehype/extract/roles";
 import { rehypeExtractStylesAndScripts } from "./lib/rehype/extract/stylesAndScripts";
 import { rehypeExtractSVGs } from "./lib/rehype/extract/svgs";
@@ -69,7 +69,8 @@ export async function replicate(
       .use(opts.stylesAndScripts ? rehypeExtractStylesAndScripts(ctx) : noop)
       .use(opts.base64Images ? rehypeExtractBase64Images(sink) : noop)
       .use(opts.svgs ? rehypeExtractSVGs(sink) : noop)
-      .use(opts.buttons ? rehypeExtractButtons(sink) : noop)
+      .use(opts.buttons ? rehypeDesignSystemButtons(sink) : noop)
+      // .use(opts.buttons ? rehypeExtractButtons(sink) : noop)
       .use(opts.roles ? rehypeExtractRoles(sink) : noop)
       // .use(rehypeExtractNearDuplicateBlocks(PATH_TO_TEMPLATE, stats))
       .use(opts.blocks ? rehypeExtractBlocks(sink) : noop)
@@ -140,7 +141,7 @@ export async function replicate(
         .map(([key, value]) => `${key}="${value}"`)
         .join(" ")}>
       </body>
-      <script type="module" src="/src/main.jsx"></script>
+      <script type="module" src="/src/main.tsx"></script>
     </html>
     `.trim();
   // <script type="module" src="/script.js"></script>
@@ -153,6 +154,6 @@ export async function replicate(
         parser: "babel",
         plugins: [parserBabel, parserEstree],
       })
-      .then((text) => sink.writeText("src/App.jsx", text)),
+      .then((text) => sink.writeText("src/App.tsx", text)),
   ]);
 }

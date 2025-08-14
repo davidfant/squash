@@ -7,7 +7,7 @@ import z from "zod";
 
 export interface ComponentSignature {
   id: string;
-  jsx: string;
+  tsx: string;
 }
 
 const systemPrompt = `
@@ -28,7 +28,7 @@ export async function nameComponents(
   if (components.length === 0) return {};
 
   const formattedComponents = await prettier.format(
-    components.map((b) => `const ${b.id} = () => (${b.jsx});`).join("\n"),
+    components.map((b) => `const ${b.id} = () => (${b.tsx});`).join("\n"),
     { parser: "babel", plugins: [parserBabel, parserEstree] }
   );
 

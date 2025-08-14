@@ -138,7 +138,7 @@ export const rehypeExtractBlocks =
         .digest("hex")
         .slice(0, 8);
       const componentName = `Block_${hash}`;
-      const componentPath = path.join(blocksDir, `${componentName}.jsx`);
+      const componentPath = path.join(blocksDir, `${componentName}.tsx`);
       const componentTagName = `Components$${path
         .join(blocksDir, componentName)
         .replaceAll(path.sep, "$")}`;

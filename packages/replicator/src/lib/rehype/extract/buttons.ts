@@ -65,7 +65,7 @@ export const rehypeExtractButtons =
     >();
 
     visit(
-      tree as any,
+      tree,
       "element",
       (
         node: HastNode,
@@ -120,7 +120,7 @@ export const rehypeExtractButtons =
         sortedSigs.map((sig, i): ComponentSignature => {
           const meta = signatureToMeta.get(sig)!;
           const jsx = `<${meta.tagName} className="${meta.baseClasses}">...</${meta.tagName}>`;
-          return { id: keys[i]!, jsx };
+          return { id: keys[i]!, tsx: jsx };
         })
       );
 
@@ -166,7 +166,7 @@ export const rehypeExtractButtons =
     await Promise.all([
       Array.from(signatureToMeta.entries()).map(async ([sig, meta]) => {
         const cName = finalNameBySig.get(sig)!;
-        const filePath = path.join(buttonsDir, `${cName}.jsx`);
+        const filePath = path.join(buttonsDir, `${cName}.tsx`);
         const code = await createComponentCode(
           cName,
           meta.tagName,

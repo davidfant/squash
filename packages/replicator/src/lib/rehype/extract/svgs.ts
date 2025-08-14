@@ -100,7 +100,7 @@ export const rehypeExtractSVGs =
         if (!hashToComponentName.has(hash)) {
           const componentName = `Svg${nextIndex++}`;
           hashToComponentName.set(hash, componentName);
-          const componentPath = path.join("src/svgs", `${componentName}.jsx`);
+          const componentPath = path.join("src/svgs", `${componentName}.tsx`);
           const code = await svgToComponent(componentName, pretty);
           sink.writeText(componentPath, code);
         }

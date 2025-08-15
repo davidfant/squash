@@ -9,7 +9,7 @@ export type AIComponentNamingConfig = {
 
 export const config = {
   componentNaming: {
-    enabled: true,
+    enabled: false,
     model: wrapLanguageModel({
       model: openai("gpt-5-nano"),
       middleware: filesystemCacheMiddleware(),

@@ -5,15 +5,21 @@ import recmaJsx from "recma-jsx";
 import recmaStringify from "recma-stringify";
 import rehypeRecma from "rehype-recma";
 import { unified } from "unified";
-import { recmaExtractJSXComponents } from "./recmaExtractJSXComponents";
+import {
+  recmaExtractJSXComponents,
+  type ExtractJSXComponentsOptions,
+} from "./recmaExtractJSXComponents";
 
 export type HastNode = any;
 
-export async function hastToStaticModule(hastRoot: HastNode): Promise<string> {
+export async function hastToStaticModule(
+  hastRoot: HastNode,
+  options?: ExtractJSXComponentsOptions
+): Promise<string> {
   const processor = unified()
     .use(rehypeRecma)
     .use(recmaJsx)
-    .use(recmaExtractJSXComponents)
+    .use(recmaExtractJSXComponents, options)
     .use(recmaStringify);
   const estree = await processor.run(hastRoot as any);
   const js = String(processor.stringify(estree as any));

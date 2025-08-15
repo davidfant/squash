@@ -6,10 +6,10 @@ import { logFileTree } from "./logFileTree";
 import { replicate } from "./replicate";
 import type { Capture } from "./types";
 
-const PATH_TO_CAPTURE = `./captures/google.json`;
+const PATH_TO_CAPTURE = `./captures/posthog.json`;
 const PATH_TO_TEMPLATE = `./captures/replicated`;
 
-// const capture = await fs
+// const capture2 = await fs
 //   .readFile(PATH_TO_CAPTURE, "utf-8")
 //   .then(
 //     (t) =>
@@ -37,6 +37,10 @@ const PATH_TO_TEMPLATE = `./captures/replicated`;
 //       ],
 //     })
 //   );
+// await fs.writeFile(
+//   PATH_TO_CAPTURE,
+//   JSON.stringify(capture2, null, 2)
+// );
 const capture = JSON.parse(
   await fs.readFile(PATH_TO_CAPTURE, "utf-8")
 ) as Capture;

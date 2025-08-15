@@ -4,14 +4,18 @@ import type { Plugin } from "unified";
 type Program = any;
 type ImportDeclaration = any;
 type ExportDefaultDeclaration = any;
+type ExportNamedDeclaration = any;
 type ArrowFunctionExpression = any;
 
-interface Options {
-  importPrefix?: string; // Default: "@"
+export interface ExtractJSXComponentsOptions {
+  componentName?: string; // Required for named exports, default: "Component"
 }
 
-export const recmaExtractJSXComponents: Plugin<[Options?]> =
-  () => (tree: Program) => {
+export const recmaExtractJSXComponents: Plugin<
+  [ExtractJSXComponentsOptions?]
+> =
+  (options: ExtractJSXComponentsOptions = {}) =>
+  (tree: Program) => {
     const imports = new Map<string, ImportDeclaration>();
 
     visit(tree, (node) => {
@@ -69,10 +73,31 @@ export const recmaExtractJSXComponents: Plugin<[Options?]> =
       body: returnExpr as any,
     };
 
-    const decl: ExportDefaultDeclaration = {
-      type: "ExportDefaultDeclaration",
-      declaration: fn,
-    };
+    let exportDeclaration: ExportDefaultDeclaration | ExportNamedDeclaration;
 
-    tree.body = [...Array.from(imports.values()), decl];
+    if (options.componentName) {
+      exportDeclaration = {
+        type: "ExportNamedDeclaration",
+        declaration: {
+          type: "VariableDeclaration",
+          declarations: [
+            {
+              type: "VariableDeclarator",
+              id: { type: "Identifier", name: options.componentName },
+              init: fn,
+            },
+          ],
+          kind: "const",
+        },
+        specifiers: [],
+        source: null,
+      };
+    } else {
+      exportDeclaration = {
+        type: "ExportDefaultDeclaration",
+        declaration: fn,
+      };
+    }
+
+    tree.body = [...Array.from(imports.values()), exportDeclaration];
   };

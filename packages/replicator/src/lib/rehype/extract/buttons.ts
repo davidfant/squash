@@ -9,6 +9,7 @@ import prettier from "prettier/standalone";
 import { visit } from "unist-util-visit";
 import type { HastNode } from "../../hastToStaticModule";
 import { nameComponents, type ComponentSignature } from "../../nameComponents";
+import { createSlot } from "../slot";
 
 function toClassTokens(props: Record<string, any> | undefined): string[] {
   if (!props) return [];
@@ -49,6 +50,8 @@ export default function ${componentName}({ className = "", children, ...props })
 
 export const rehypeExtractButtons =
   (sink: FileSink) => () => async (tree: Root) => {
+    const buttonsPath = "components/ui/buttons";
+
     // First pass: collect button-like nodes and signatures
     const occurrences: Array<{
       parent: HastNode;
@@ -143,30 +146,23 @@ export const rehypeExtractButtons =
     // Second pass: replace nodes with final names
     for (const occ of occurrences) {
       const componentName = finalNameBySig.get(occ.signature)!;
-      const componentRelBase = path.join(
-        "src/components/ui/buttons",
-        componentName
-      );
-      const componentTagName = `Components$${componentRelBase.replaceAll(path.sep, "$")}`;
 
       // Replace node with component tag, preserving all original props except class/className
       const newProps: Record<string, any> = { ...(occ.node.properties || {}) };
       delete newProps.className;
       delete newProps.class;
 
-      occ.parent.children[occ.index] = {
-        type: "element",
-        tagName: componentTagName,
-        properties: newProps,
-        children: occ.node.children || [],
-      } as any;
+      occ.parent.children[occ.index] = createSlot({
+        importPath: path.join("@", buttonsPath, componentName),
+        props: newProps,
+        children: occ.node.children,
+      });
     }
 
-    const buttonsDir = "src/components/ui/buttons";
     await Promise.all([
       Array.from(signatureToMeta.entries()).map(async ([sig, meta]) => {
         const cName = finalNameBySig.get(sig)!;
-        const filePath = path.join(buttonsDir, `${cName}.tsx`);
+        const filePath = path.join("src", buttonsPath, `${cName}.tsx`);
         const code = await createComponentCode(
           cName,
           meta.tagName,

@@ -9,6 +9,7 @@ import prettier from "prettier/standalone";
 import { type Plugin } from "unified";
 import { hastToStaticModule, type HastNode } from "../../hastToStaticModule";
 import { nameComponents } from "../../nameComponents";
+import { createSlot } from "../slot";
 
 function deepClone<T>(obj: T): T {
   return JSON.parse(JSON.stringify(obj));
@@ -48,7 +49,7 @@ export const rehypeExtractByMatch =
 
         const tag = child.tagName as string | undefined;
         // Don't re-extract already-inserted components, but do descend.
-        if (typeof tag === "string" && tag.startsWith("Components$src$")) {
+        if (typeof tag === "string" && tag === "slot") {
           walk(child, depth + 1);
           continue;
         }
@@ -128,17 +129,11 @@ export const rehypeExtractByMatch =
       )
       .sort((a, b) => a.match.depth - b.match.depth)
       .forEach((n) => {
-        const outDir = path.join("src/components", n.path);
-        const rel = path.join(outDir, n.name).replaceAll(path.sep, "$");
-        const componentTagName = `Components$${rel}`;
-        n.match.parent.children[n.match.index] = {
-          type: "element",
-          tagName: componentTagName,
-          properties: {},
-          children: [],
-        };
+        n.match.parent.children[n.match.index] = createSlot({
+          importPath: path.join("@/components", n.path, n.name),
+        });
 
-        const outPath = path.join(outDir, `${n.name}.tsx`);
+        const outPath = path.join("src/components", n.path, `${n.name}.tsx`);
         if (!promises.has(outPath)) {
           promises.set(
             outPath,

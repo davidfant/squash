@@ -13,6 +13,7 @@ import rehypeRecma from "rehype-recma";
 import { unified } from "unified";
 import { visit } from "unist-util-visit";
 import { recmaExtractJSXComponents } from "../../recmaExtractJSXComponents";
+import { createSlot } from "../slot";
 
 // SVGR-free: reuse the same HAST -> JSX pipeline used elsewhere, then wrap with a named component and inject {...props}
 async function svgToComponent(
@@ -114,15 +115,10 @@ export const rehypeExtractSVGs =
         .digest("hex")
         .slice(0, 8);
       const componentName = hashToComponentName.get(hash)!;
-      const componentTagName = `Components$${path
-        .join("src/svgs", componentName)
-        .replaceAll("/", "$")}`;
       const { parent, index, className } = occs[i]!;
-      parent.children[index] = {
-        type: "element",
-        tagName: componentTagName,
-        properties: className.length ? { className } : {},
-        children: [],
-      };
+      parent.children[index] = createSlot({
+        importPath: path.join("@/svgs", componentName),
+        props: !!className.length ? { className } : undefined,
+      });
     });
   };

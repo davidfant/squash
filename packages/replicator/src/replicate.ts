@@ -1,4 +1,3 @@
-import path from "path";
 import parserBabel from "prettier/plugins/babel";
 import parserEstree from "prettier/plugins/estree";
 import parserHtml from "prettier/plugins/html";
@@ -14,9 +13,9 @@ import { unified } from "unified";
 import { recmaExtractJSXComponents } from "./lib/recmaExtractJSXComponents";
 import { rehypeExtractBase64Images } from "./lib/rehype/extract/base64Images";
 // import { rehypeExtractBlocks } from "./lib/rehypeExtractBlocks";
-import { rehypeDesignSystemButtons } from "./lib/rehype/designSystem/buttons";
 import { rehypeExtractBlocks } from "./lib/rehype/extract/blocks";
 import { rehypeExtractBodyAttributes } from "./lib/rehype/extract/bodyAttributes";
+import { rehypeExtractButtons } from "./lib/rehype/extract/buttons";
 import { rehypeExtractRoles } from "./lib/rehype/extract/roles";
 import { rehypeExtractStylesAndScripts } from "./lib/rehype/extract/stylesAndScripts";
 import { rehypeExtractSVGs } from "./lib/rehype/extract/svgs";
@@ -69,10 +68,9 @@ export async function replicate(
       .use(opts.stylesAndScripts ? rehypeExtractStylesAndScripts(ctx) : noop)
       .use(opts.base64Images ? rehypeExtractBase64Images(sink) : noop)
       .use(opts.svgs ? rehypeExtractSVGs(sink) : noop)
-      .use(opts.buttons ? rehypeDesignSystemButtons(sink) : noop)
-      // .use(opts.buttons ? rehypeExtractButtons(sink) : noop)
+      // .use(opts.buttons ? rehypeDesignSystemButtons(sink) : noop)
+      .use(opts.buttons ? rehypeExtractButtons(sink) : noop)
       .use(opts.roles ? rehypeExtractRoles(sink) : noop)
-      // .use(rehypeExtractNearDuplicateBlocks(PATH_TO_TEMPLATE, stats))
       .use(opts.blocks ? rehypeExtractBlocks(sink) : noop)
       .use(opts.tags ? rehypeExtractTags(sink) : noop)
       .use(rehypeRecma)
@@ -96,26 +94,26 @@ export async function replicate(
           .use(rehypeIdentifyUrlsToDownload(ctx))
           .use(rehypeStringify)
           .process([page.html.head, ...ctx.tagsToMoveToHead].join("\n"));
-        await Promise.all(
-          Array.from(ctx.urlsToDownload).map(async (relativeUrl) => {
-            const url = new URL(relativeUrl, page.url);
-            if (url.href.length > 255) {
-              // TODO: rename the urls to download to something shorter
-              console.warn(`Skipping ${url.href} because it's too long`);
-              return;
-            }
+        // await Promise.all(
+        //   Array.from(ctx.urlsToDownload).map(async (relativeUrl) => {
+        //     const url = new URL(relativeUrl, page.url);
+        //     if (url.href.length > 255) {
+        //       // TODO: rename the urls to download to something shorter
+        //       console.warn(`Skipping ${url.href} because it's too long`);
+        //       return;
+        //     }
 
-            const response = await fetch(url.href);
-            if (!response.ok) {
-              throw new Error(
-                `Failed to download ${url}: ${response.status} ${response.statusText}`
-              );
-            }
+        //     const response = await fetch(url.href);
+        //     if (!response.ok) {
+        //       throw new Error(
+        //         `Failed to download ${url}: ${response.status} ${response.statusText}`
+        //       );
+        //     }
 
-            const buffer = Buffer.from(await response.arrayBuffer());
-            await sink.writeBytes(path.join("public", url.pathname), buffer);
-          })
-        );
+        //     const buffer = Buffer.from(await response.arrayBuffer());
+        //     await sink.writeBytes(path.join("public", url.pathname), buffer);
+        //   })
+        // );
 
         return head;
       }),
@@ -141,7 +139,7 @@ export async function replicate(
         .map(([key, value]) => `${key}="${value}"`)
         .join(" ")}>
       </body>
-      <script type="module" src="/src/main.tsx"></script>
+      <script type="module" src="/src/main.jsx"></script>
     </html>
     `.trim();
   // <script type="module" src="/script.js"></script>
@@ -154,6 +152,6 @@ export async function replicate(
         parser: "babel",
         plugins: [parserBabel, parserEstree],
       })
-      .then((text) => sink.writeText("src/App.tsx", text)),
+      .then((text) => sink.writeText("src/App.jsx", text)),
   ]);
 }

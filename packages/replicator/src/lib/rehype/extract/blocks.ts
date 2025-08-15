@@ -8,6 +8,7 @@ import prettier from "prettier/standalone";
 import { type Plugin } from "unified";
 import { visit } from "unist-util-visit";
 import { hastToStaticModule } from "../../hastToStaticModule";
+import { createSlot } from "../slot";
 
 type HastNode = any;
 interface Occurrence {
@@ -76,7 +77,7 @@ export const rehypeExtractBlocks =
   (sink: FileSink): Plugin<[], Root> =>
   () =>
   async (tree: Root) => {
-    const blocksDir = "src/components/blocks";
+    const blocksPath = "components/blocks";
     const occs: Occurrence[] = [];
 
     // Pass 1: collect signatures for all element subtrees (excluding svg; already handled)
@@ -88,7 +89,7 @@ export const rehypeExtractBlocks =
         index: number | undefined,
         parent: HastNode | undefined
       ) => {
-        if (node.tagName.startsWith("Components$src$")) return;
+        if (node.tagName === "slot") return;
         if (!parent || index == null) return;
 
         const normalized = normalizeForSignature(node);
@@ -138,10 +139,11 @@ export const rehypeExtractBlocks =
         .digest("hex")
         .slice(0, 8);
       const componentName = `Block_${hash}`;
-      const componentPath = path.join(blocksDir, `${componentName}.tsx`);
-      const componentTagName = `Components$${path
-        .join(blocksDir, componentName)
-        .replaceAll(path.sep, "$")}`;
+      const componentPath = path.join(
+        "src",
+        blocksPath,
+        `${componentName}.tsx`
+      );
 
       try {
         const firstNode = viable[0]!.node;
@@ -151,12 +153,9 @@ export const rehypeExtractBlocks =
 
         // Replace all viable occurrences with the component tag
         for (const { parent, index, node } of viable) {
-          parent.children[index] = {
-            type: "element",
-            tagName: componentTagName,
-            properties: {},
-            children: [],
-          } as HastNode;
+          parent.children[index] = createSlot({
+            importPath: path.join("@", blocksPath, componentName),
+          });
           replaced.add(node);
           replacedParents.add(parent);
         }

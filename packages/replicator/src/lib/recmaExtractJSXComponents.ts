@@ -20,30 +20,63 @@ export const recmaExtractJSXComponents: Plugin<
 
     visit(tree, (node) => {
       if (node.type === "JSXElement") {
-        [node.openingElement, node.closingElement].forEach((el) => {
-          if (!el) return;
-          const name = el.name;
-          if (
-            name.type === "JSXIdentifier" &&
-            name.name.startsWith("Components$src$")
-          ) {
-            const importPath = name.name
-              .replaceAll("$", "/")
-              .replace("Components/src", "@");
-            const componentName = importPath.split("/").pop()!;
-            name.name = componentName;
-            imports.set(componentName, {
-              type: "ImportDeclaration",
-              specifiers: [
-                {
-                  type: "ImportDefaultSpecifier",
-                  local: { type: "Identifier", name: componentName },
-                },
-              ],
-              source: { type: "Literal", value: importPath },
-            });
+        // [node.openingElement, node.closingElement].forEach((el) => {
+        //   if (!el) return;
+        //   const name = el.name;
+        //   if (
+        //     name.type === "JSXIdentifier" &&
+        //     name.name.startsWith("Components$src$")
+        //   ) {
+        //     const importPath = name.name
+        //       .replaceAll("$", "/")
+        //       .replace("Components/src", "@");
+        //     const componentName = importPath.split("/").pop()!;
+        //     name.name = componentName;
+        //     imports.set(componentName, {
+        //       type: "ImportDeclaration",
+        //       specifiers: [
+        //         {
+        //           type: "ImportDefaultSpecifier",
+        //           local: { type: "Identifier", name: componentName },
+        //         },
+        //       ],
+        //       source: { type: "Literal", value: importPath },
+        //     });
+        //   }
+        // });
+
+        const name = node.openingElement.name;
+        if (name.type === "JSXIdentifier" && name.name === "slot") {
+          const importAttr = node.openingElement.attributes
+            .filter((a) => a.type === "JSXAttribute")
+            .find(
+              (a) => a.name.type === "JSXIdentifier" && a.name.name === "import"
+            );
+          if (importAttr?.value?.type !== "Literal") return;
+          const importPath = importAttr.value.value;
+          if (typeof importPath !== "string") return;
+
+          const importAttrIndex =
+            node.openingElement.attributes.indexOf(importAttr);
+          node.openingElement.attributes.splice(importAttrIndex);
+
+          const componentName = importPath.split("/").pop()!;
+          name.name = componentName;
+          if (node.closingElement?.name.type === "JSXIdentifier") {
+            node.closingElement.name.name = componentName;
           }
-        });
+
+          imports.set(componentName, {
+            type: "ImportDeclaration",
+            specifiers: [
+              {
+                type: "ImportDefaultSpecifier",
+                local: { type: "Identifier", name: componentName },
+              },
+            ],
+            source: { type: "Literal", value: importPath },
+          });
+        }
       }
     });
 

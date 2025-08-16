@@ -9,7 +9,7 @@ import prettier from "prettier/standalone";
 import { visit } from "unist-util-visit";
 import type { HastNode } from "../../hastToStaticModule";
 import { nameComponents, type ComponentSignature } from "../../nameComponents";
-import { createSlot } from "../slot";
+import { createRefFromComponent } from "../createRef";
 
 function toClassTokens(props: Record<string, any> | undefined): string[] {
   if (!props) return [];
@@ -152,8 +152,8 @@ export const rehypeExtractButtons =
       delete newProps.className;
       delete newProps.class;
 
-      occ.parent.children[occ.index] = createSlot({
-        importPath: path.join("@", buttonsPath, componentName),
+      occ.parent.children[occ.index] = createRefFromComponent({
+        module: path.join("@", buttonsPath, componentName),
         props: newProps,
         children: occ.node.children,
       });

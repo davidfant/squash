@@ -10,12 +10,13 @@ import rehypeRecma from "rehype-recma";
 import rehypeRemoveComments from "rehype-remove-comments";
 import rehypeStringify from "rehype-stringify";
 import { unified } from "unified";
-import { recmaExtractJSXComponents } from "./lib/recmaExtractJSXComponents";
+import { recmaReplaceRefs } from "./lib/recmaReplaceRefs";
 import { rehypeExtractBase64Images } from "./lib/rehype/extract/base64Images";
 // import { rehypeExtractBlocks } from "./lib/rehypeExtractBlocks";
+import rehypeMinifyWhitespace from "rehype-minify-whitespace";
+import { rehypeDesignSystemButtons } from "./lib/rehype/designSystem/buttons";
 import { rehypeExtractBlocks } from "./lib/rehype/extract/blocks";
 import { rehypeExtractBodyAttributes } from "./lib/rehype/extract/bodyAttributes";
-import { rehypeExtractButtons } from "./lib/rehype/extract/buttons";
 import { rehypeExtractRoles } from "./lib/rehype/extract/roles";
 import { rehypeExtractStylesAndScripts } from "./lib/rehype/extract/stylesAndScripts";
 import { rehypeExtractSVGs } from "./lib/rehype/extract/svgs";
@@ -60,22 +61,45 @@ export async function replicate(
     bodyAttributes: {},
   };
 
+  // console.log(
+  //   (
+  //     await // .use(rehypeStringify)
+  //     unified()
+  //       .use(rehypeParse, { fragment: true })
+  //       .use(rehypeMinifyWhitespace)
+  //       .use(rehypeRecma)
+  //       .use(recmaJsx)
+  //       .use(recmaExtractJSXComponents)
+  //       // TODO: compress the HTML so we don't get stupid {"\n             "} in the JSX
+  //       .use(recmaStringify).process(`
+  //         <slot variant="primary" import="@/svg/Test">
+  //           <slot variant="primary" import="@/svg/West">
+  //             <p>wow</p>
+  //             <img src="dang" />
+  //           </slot>
+  //         </slot>
+  //       `)
+  //   ).value
+  // );
+  // if (Math.random()) throw new Error("dang...");
+
   const [body, head] = await Promise.all([
     unified()
       .use(rehypeParse, { fragment: true })
+      .use(rehypeMinifyWhitespace)
       .use(rehypeRemoveComments)
       .use(rehypeRemoveScripts)
       .use(opts.stylesAndScripts ? rehypeExtractStylesAndScripts(ctx) : noop)
       .use(opts.base64Images ? rehypeExtractBase64Images(sink) : noop)
       .use(opts.svgs ? rehypeExtractSVGs(sink) : noop)
-      // .use(opts.buttons ? rehypeDesignSystemButtons(sink) : noop)
-      .use(opts.buttons ? rehypeExtractButtons(sink) : noop)
+      .use(opts.buttons ? rehypeDesignSystemButtons(sink) : noop)
+      // .use(opts.buttons ? rehypeExtractButtons(sink) : noop)
       .use(opts.roles ? rehypeExtractRoles(sink) : noop)
       .use(opts.blocks ? rehypeExtractBlocks(sink) : noop)
       .use(opts.tags ? rehypeExtractTags(sink) : noop)
       .use(rehypeRecma)
       .use(recmaJsx)
-      .use(recmaExtractJSXComponents)
+      .use(recmaReplaceRefs)
       .use(recmaStringify)
       .process(page.html.body),
 
@@ -139,7 +163,7 @@ export async function replicate(
         .map(([key, value]) => `${key}="${value}"`)
         .join(" ")}>
       </body>
-      <script type="module" src="/src/main.jsx"></script>
+      <script type="module" src="/src/main.tsx"></script>
     </html>
     `.trim();
   // <script type="module" src="/script.js"></script>
@@ -152,6 +176,6 @@ export async function replicate(
         parser: "babel",
         plugins: [parserBabel, parserEstree],
       })
-      .then((text) => sink.writeText("src/App.jsx", text)),
+      .then((text) => sink.writeText("src/App.tsx", text)),
   ]);
 }

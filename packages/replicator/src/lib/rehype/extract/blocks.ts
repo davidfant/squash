@@ -8,7 +8,7 @@ import prettier from "prettier/standalone";
 import { type Plugin } from "unified";
 import { visit } from "unist-util-visit";
 import { hastToStaticModule } from "../../hastToStaticModule";
-import { createSlot } from "../slot";
+import { createRefFromComponent } from "../createRef";
 
 type HastNode = any;
 interface Occurrence {
@@ -153,8 +153,8 @@ export const rehypeExtractBlocks =
 
         // Replace all viable occurrences with the component tag
         for (const { parent, index, node } of viable) {
-          parent.children[index] = createSlot({
-            importPath: path.join("@", blocksPath, componentName),
+          parent.children[index] = createRefFromComponent({
+            module: path.join("@", blocksPath, componentName),
           });
           replaced.add(node);
           replacedParents.add(parent);

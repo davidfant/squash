@@ -9,7 +9,7 @@ import prettier from "prettier/standalone";
 import { type Plugin } from "unified";
 import { hastToStaticModule, type HastNode } from "../../hastToStaticModule";
 import { nameComponents } from "../../nameComponents";
-import { createSlot } from "../slot";
+import { createRefFromComponent } from "../createRef";
 
 function deepClone<T>(obj: T): T {
   return JSON.parse(JSON.stringify(obj));
@@ -129,8 +129,8 @@ export const rehypeExtractByMatch =
       )
       .sort((a, b) => a.match.depth - b.match.depth)
       .forEach((n) => {
-        n.match.parent.children[n.match.index] = createSlot({
-          importPath: path.join("@/components", n.path, n.name),
+        n.match.parent.children[n.match.index] = createRefFromComponent({
+          module: path.join("@/components", n.path, n.name),
         });
 
         const outPath = path.join("src/components", n.path, `${n.name}.tsx`);

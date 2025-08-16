@@ -6,9 +6,9 @@ import recmaStringify from "recma-stringify";
 import rehypeRecma from "rehype-recma";
 import { unified } from "unified";
 import {
-  recmaExtractJSXComponents,
+  recmaReplaceRefs,
   type ExtractJSXComponentsOptions,
-} from "./recmaExtractJSXComponents";
+} from "./recmaReplaceRefs";
 
 export type HastNode = any;
 
@@ -19,7 +19,7 @@ export async function hastToStaticModule(
   const processor = unified()
     .use(rehypeRecma)
     .use(recmaJsx)
-    .use(recmaExtractJSXComponents, options)
+    .use(recmaReplaceRefs, options)
     .use(recmaStringify);
   const estree = await processor.run(hastRoot as any);
   const js = String(processor.stringify(estree as any));

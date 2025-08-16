@@ -2,11 +2,13 @@ import { hastToStaticModule, type HastNode } from "@/lib/hastToStaticModule";
 import type { FileSink } from "@/lib/sinks/base";
 import { anthropic, type AnthropicProviderOptions } from "@ai-sdk/anthropic";
 import { openai } from "@ai-sdk/openai";
-import { generateText, wrapLanguageModel } from "ai";
+import { generateObject, generateText, wrapLanguageModel } from "ai";
 import crypto from "crypto";
 import type { Root } from "hast";
 import { visit } from "unist-util-visit";
+import z from "zod";
 import { filesystemCacheMiddleware } from "../../filesystemCacheMiddleware";
+import { createRef } from "../createRef";
 
 const componentsInstructions = `
 You are a React design system expert. You will be given a list of buttons that have appeared in the HTML of a scraped website. Your task is to translate common button patterns into one or more reusable TypeScript Button components that we will add to our design system. Design system components must use the classes provided in the provided HTML, not use your own styling such as tailwind. If there are clusters of components that fundamentally work differently (e.g. the CSS classes are not at all or barely overlapping) it is acceptable to provide separate design system Button components for the different clusters. You should avoid creating design system buttons for usages that seem one-off, as we can always fall back to using a simple <button> or provide a specific <Button className={...} />
@@ -14,20 +16,23 @@ You are a React design system expert. You will be given a list of buttons that h
 Aspects to consider when creating the design system components:
 1. Try to disentangle the different component permutations, including what classes are connected to various variants, sizes, etc
 2. Review the component children to see if the structure can be standardized within the component
+3. if a component in the original code can both have e.g. the button tag and div tag, in the design system component only use button, don't make the tag configurable
 
-You can draw inspiration from e.g. ShadCN for how to design button props that express the various permutations the provided components take. For example, properties such as size and variant might be useful. Also, you can use the util \`import { cn } from "@/lib/utils";\` to combine class names.
+You can draw inspiration from e.g. ShadCN for how to design button props that express the various permutations the provided components take. For example:
+- properties such as size and variant might be useful
+- you can use the util \`import { cn } from "@/lib/utils";\` to combine class names
 
-Respond with a list of design system components, each with a name and the file contents of the component
+Respond with a list of design system components, where the header is the import path of the component (starting with @/components/ui/[[name]].tsx, and the code contains the file contents.
 
 For example:
-# Button
+# @/components/ui/Button.tsx
 \`\`\`tsx
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   // ...
 }
-export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>((props, ref) => {
+export function Button(props: ButtonProps) {
   // ...
-});
+}
 \`\`\`
 `.trim();
 
@@ -43,6 +48,24 @@ function toClassNames(props: Record<string, any> | undefined): string[] {
 
 function computeHash(input: string): string {
   return crypto.createHash("sha256").update(input).digest("hex").slice(0, 8);
+}
+
+export function parseCodeBlocks(
+  md: string
+): { module: string; code: string }[] {
+  const blocks: { module: string; code: string }[] = [];
+
+  // `[\s\S]*?` = non-greedy “anything”, because the `.` wildcard
+  // doesn’t match line breaks unless you use the /s flag (which Node <16 lacks).
+  const pattern = /#\s+(.+?)\s*\n```tsx\s+([\s\S]*?)```/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(md)) !== null) {
+    const [, module, code] = match;
+    blocks.push({ module: module!.trim(), code: code!.trim() });
+  }
+
+  return blocks;
 }
 
 export const rehypeDesignSystemButtons =
@@ -126,26 +149,66 @@ export const rehypeDesignSystemButtons =
       },
     });
 
+    await Promise.all(
+      parseCodeBlocks(text).map(({ module, code }) =>
+        sink.writeText(module.replace("@/", "src/"), code)
+      )
+    );
+
     const rewritten = await Promise.all(
       instances.slice(0, 4).map((m) =>
-        generateText({
+        generateObject({
           model: wrapLanguageModel({
             model: openai("gpt-5-mini"),
             middleware: filesystemCacheMiddleware(),
           }),
+          schema: z.object({
+            rewritten: z
+              .object({
+                imports: z
+                  .object({
+                    module: z
+                      .string()
+                      .describe(
+                        "The module to import from, e.g. `@/components/ui/Button`"
+                      ),
+                    import: z
+                      .string()
+                      .array()
+                      .describe(
+                        "The items to import from the module, e.g. `default` or named exports (like `Button`)"
+                      ),
+                  })
+                  .array(),
+                jsx: z.string(),
+              })
+              .nullable(),
+          }),
           system: `
 You are a React developer, tasked with migrating React components to a design system. You will be given a single React component and your task is to review the provided design system components and if possible rewrite the component to use the design system components.
 
-Respond with a TypeScript code block containing the rewritten component. When referring to the design system components, use the \`UI\` namespace (e.g. \`<UI.Button size="small">Add</UI.Button>\`). Only respond with the recreated JSX without any imports. If it's not possible to recreate it using the components you provided, respond with null.
+Respond with a rewritten component including:
+1. a list of all imports, but exclude React
+2. the rewritten component's pure JSX
 
 Example when it's possible to rewrite the component:
-\`\`\`tsx
-<UI.Button size="small">Add</UI.Button>
+\`\`\`
+{
+  "rewritten": {
+    "imports": [
+      { "module": "@/components/ui/Button", "import": ["Button"] },
+      { "module": "@/svgs/MyIcon", "import": ["default"] }
+    ],
+    "jsx": "<Button size='small' icon={<MyIcon />}>Add</Button>"
+  }
+}
 \`\`\`
 
-Example when it's not possible to rewrite the component:
-\`\`\`tsx
-null
+Example when it's not possible to rewrite the component using the design system components:
+\`\`\`
+{
+  "rewritten": null
+}
 \`\`\`
 
 Below are the design system components you can use:
@@ -158,13 +221,17 @@ ${text}
 
     console.log("XXXX");
     console.log(text);
-    // console.dir(toolCalls, { depth: null });
     console.log("XXXX");
 
-    for (const r of rewritten) {
-      console.log("\n\n\n\n\n\nWOWOWOWOWOWO");
-      console.log(r.text);
-    }
+    rewritten.forEach((r, i) => {
+      if (!r.object.rewritten) return;
+      console.dir(r.object.rewritten, { depth: null });
+      const match = matches[i]!;
+      match.parent.children[match.index] = createRef({
+        imports: r.object.rewritten.imports,
+        jsx: r.object.rewritten.jsx,
+      });
+    });
 
     // matches.forEach((match, index) => {
     //   // find everything between <example${index}

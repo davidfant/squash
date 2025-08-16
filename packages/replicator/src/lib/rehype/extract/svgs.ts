@@ -12,8 +12,8 @@ import rehypeParse from "rehype-parse";
 import rehypeRecma from "rehype-recma";
 import { unified } from "unified";
 import { visit } from "unist-util-visit";
-import { recmaExtractJSXComponents } from "../../recmaExtractJSXComponents";
-import { createSlot } from "../slot";
+import { recmaReplaceRefs } from "../../recmaReplaceRefs";
+import { createRefFromComponent } from "../createRef";
 
 // SVGR-free: reuse the same HAST -> JSX pipeline used elsewhere, then wrap with a named component and inject {...props}
 async function svgToComponent(
@@ -24,7 +24,7 @@ async function svgToComponent(
     .use(rehypeParse, { fragment: true })
     .use(rehypeRecma)
     .use(recmaJsx)
-    .use(recmaExtractJSXComponents)
+    .use(recmaReplaceRefs)
     .use(recmaStringify)
     .process(rawSvg);
 
@@ -116,9 +116,18 @@ export const rehypeExtractSVGs =
         .slice(0, 8);
       const componentName = hashToComponentName.get(hash)!;
       const { parent, index, className } = occs[i]!;
-      parent.children[index] = createSlot({
-        importPath: path.join("@/svgs", componentName),
+      parent.children[index] = createRefFromComponent({
+        module: path.join("@/svgs", componentName),
         props: !!className.length ? { className } : undefined,
       });
+      console.log("SVG");
+      console.dir(
+        createRefFromComponent({
+          module: path.join("@/svgs", componentName),
+          // TODO: should we pass along more props than className to the component?
+          props: !!className.length ? { className } : undefined,
+        }),
+        { depth: null }
+      );
     });
   };

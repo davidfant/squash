@@ -23,6 +23,8 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^2.0.1",
     "@ai-sdk/openai": "^2.0.3",
+    "acorn": "^8.15.0",
+    "acorn-jsx": "^5.3.2",
     "ai": "^5.0.9",
     "estree-util-visit": "^2.0.0",
     "hast": "^1.0.0",
@@ -31,6 +33,7 @@
     "prettier": "^3.0.0",
     "recma-jsx": "^1.0.1",
     "recma-stringify": "^1.0.0",
+    "rehype-minify-whitespace": "^6.0.2",
     "rehype-parse": "^9.0.1",
     "rehype-recma": "^1.0.0",
     "rehype-remove-comments": "^6.1.1",

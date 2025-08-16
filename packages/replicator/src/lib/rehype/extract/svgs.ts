@@ -120,14 +120,5 @@ export const rehypeExtractSVGs =
         module: path.join("@/svgs", componentName),
         props: !!className.length ? { className } : undefined,
       });
-      console.log("SVG");
-      console.dir(
-        createRefFromComponent({
-          module: path.join("@/svgs", componentName),
-          // TODO: should we pass along more props than className to the component?
-          props: !!className.length ? { className } : undefined,
-        }),
-        { depth: null }
-      );
     });
   };

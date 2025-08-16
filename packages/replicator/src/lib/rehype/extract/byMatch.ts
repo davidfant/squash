@@ -47,13 +47,6 @@ export const rehypeExtractByMatch =
         const child = children[i];
         if (!child || child.type !== "element") continue;
 
-        const tag = child.tagName as string | undefined;
-        // Don't re-extract already-inserted components, but do descend.
-        if (typeof tag === "string" && tag === "slot") {
-          walk(child, depth + 1);
-          continue;
-        }
-
         const path = match(child);
         if (path) {
           matches.push({

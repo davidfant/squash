@@ -122,8 +122,8 @@ export const rehypeExtractButtons =
       const named = await nameComponents(
         sortedSigs.map((sig, i): ComponentSignature => {
           const meta = signatureToMeta.get(sig)!;
-          const jsx = `<${meta.tagName} className="${meta.baseClasses}">...</${meta.tagName}>`;
-          return { id: keys[i]!, tsx: jsx };
+          const tsx = `<${meta.tagName} className="${meta.baseClasses}">...</${meta.tagName}>`;
+          return { id: keys[i]!, tsx };
         })
       );
 

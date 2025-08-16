@@ -1,3 +1,4 @@
+import path from "path";
 import parserBabel from "prettier/plugins/babel";
 import parserEstree from "prettier/plugins/estree";
 import parserHtml from "prettier/plugins/html";
@@ -61,28 +62,6 @@ export async function replicate(
     bodyAttributes: {},
   };
 
-  // console.log(
-  //   (
-  //     await // .use(rehypeStringify)
-  //     unified()
-  //       .use(rehypeParse, { fragment: true })
-  //       .use(rehypeMinifyWhitespace)
-  //       .use(rehypeRecma)
-  //       .use(recmaJsx)
-  //       .use(recmaExtractJSXComponents)
-  //       // TODO: compress the HTML so we don't get stupid {"\n             "} in the JSX
-  //       .use(recmaStringify).process(`
-  //         <slot variant="primary" import="@/svg/Test">
-  //           <slot variant="primary" import="@/svg/West">
-  //             <p>wow</p>
-  //             <img src="dang" />
-  //           </slot>
-  //         </slot>
-  //       `)
-  //   ).value
-  // );
-  // if (Math.random()) throw new Error("dang...");
-
   const [body, head] = await Promise.all([
     unified()
       .use(rehypeParse, { fragment: true })
@@ -118,26 +97,26 @@ export async function replicate(
           .use(rehypeIdentifyUrlsToDownload(ctx))
           .use(rehypeStringify)
           .process([page.html.head, ...ctx.tagsToMoveToHead].join("\n"));
-        // await Promise.all(
-        //   Array.from(ctx.urlsToDownload).map(async (relativeUrl) => {
-        //     const url = new URL(relativeUrl, page.url);
-        //     if (url.href.length > 255) {
-        //       // TODO: rename the urls to download to something shorter
-        //       console.warn(`Skipping ${url.href} because it's too long`);
-        //       return;
-        //     }
+        await Promise.all(
+          Array.from(ctx.urlsToDownload).map(async (relativeUrl) => {
+            const url = new URL(relativeUrl, page.url);
+            if (url.href.length > 255) {
+              // TODO: rename the urls to download to something shorter
+              console.warn(`Skipping ${url.href} because it's too long`);
+              return;
+            }
 
-        //     const response = await fetch(url.href);
-        //     if (!response.ok) {
-        //       throw new Error(
-        //         `Failed to download ${url}: ${response.status} ${response.statusText}`
-        //       );
-        //     }
+            const response = await fetch(url.href);
+            if (!response.ok) {
+              throw new Error(
+                `Failed to download ${url}: ${response.status} ${response.statusText}`
+              );
+            }
 
-        //     const buffer = Buffer.from(await response.arrayBuffer());
-        //     await sink.writeBytes(path.join("public", url.pathname), buffer);
-        //   })
-        // );
+            const buffer = Buffer.from(await response.arrayBuffer());
+            await sink.writeBytes(path.join("public", url.pathname), buffer);
+          })
+        );
 
         return head;
       }),

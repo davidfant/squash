@@ -122,10 +122,6 @@ export const rehypeDesignSystemButtons =
       )
     );
 
-    console.log("XXXX");
-    console.log(["```tsx", ...instances, "```"].join("\n"));
-    console.log("XXXX");
-
     const { text } = await generateText({
       model: wrapLanguageModel({
         model: anthropic("claude-sonnet-4-20250514"),
@@ -219,10 +215,6 @@ ${text}
       )
     );
 
-    console.log("XXXX");
-    console.log(text);
-    console.log("XXXX");
-
     rewritten.forEach((r, i) => {
       if (!r.object.rewritten) return;
       console.dir(r.object.rewritten, { depth: null });
@@ -232,17 +224,4 @@ ${text}
         jsx: r.object.rewritten.jsx,
       });
     });
-
-    // matches.forEach((match, index) => {
-    //   // find everything between <example${index}
-    //   const example = text.match(new RegExp(`<example${index}>(.*)</example${index}>`, "s"))?.[1];
-    //   if (!example) return;
-    //   const { text } = await generateText({
-    //     model: model,
-    //     messages: [{ role: "user", content: example }],
-    //   });
-    // })
-
-    // console.log(matches.length);
-    // console.log(new Set(matches.map((m) => m.classNames.join(" "))).size);
   };

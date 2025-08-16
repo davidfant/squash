@@ -156,7 +156,7 @@ export const rehypeDesignSystemButtons =
     );
 
     const rewritten = await Promise.all(
-      instances.slice(0, 4).map((m) =>
+      instances.slice(0, 9999).map((m) =>
         generateObject({
           model: wrapLanguageModel({
             model: openai("gpt-5-mini"),

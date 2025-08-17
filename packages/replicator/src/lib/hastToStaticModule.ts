@@ -19,7 +19,7 @@ export async function hastToStaticModule(
   const processor = unified()
     .use(rehypeRecma)
     .use(recmaJsx)
-    .use(recmaReplaceRefs, options)
+    .use(recmaReplaceRefs)
     .use(recmaStringify);
   const estree = await processor.run(hastRoot as any);
   const js = String(processor.stringify(estree as any));

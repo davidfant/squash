@@ -122,6 +122,8 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-size: 1.05rem; /* 18px base font size (up from default 16px) */
+    line-height: 1.75; /* Increased line height for better readability */
   }
 }
 
@@ -132,5 +134,21 @@
   .scrollbar-hide {
     -ms-overflow-style: none; /* IE and Edge */
     scrollbar-width: none; /* Firefox */
+  }
+  
+  @keyframes gradient {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+  
+  .animate-gradient {
+    animation: gradient 3s ease infinite;
   }
 }

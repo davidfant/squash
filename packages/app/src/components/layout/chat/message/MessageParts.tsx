@@ -8,15 +8,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import type { AllTools, ChatMessage } from "@squash/api/agent/types";
 import type { ToolUIPart } from "ai";
-import {
-  CheckCircle2Icon,
-  CircleX,
-  Eye,
-  GitCommit,
-  Loader2,
-} from "lucide-react";
+import { CheckCircle2Icon, CircleX, Eye, Loader2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { Markdown } from "../../Markdown";
 
@@ -29,17 +24,53 @@ const ToolAlert = ({
   title,
   description,
   details,
+  isLoading = false,
+  showExpanded = false,
 }: {
   icon: ReactNode;
   title: string;
   description?: string;
   details?: ReactNode;
+  isLoading?: boolean;
+  showExpanded?: boolean;
 }) => {
   const alert = (
-    <Alert>
+    <Alert
+      className={cn(
+        "transition-all duration-500 ease-out",
+        isLoading
+          ? "animate-gradient bg-gradient-to-r from-muted via-muted/50 to-muted bg-[length:200%_100%]"
+          : ""
+      )}
+    >
       {icon}
-      <AlertTitle>{title}</AlertTitle>
-      {description && <AlertDescription>{description}</AlertDescription>}
+      <div className="min-w-0 flex-1">
+        <AlertTitle className="transition-all duration-300 ease-in-out">
+          {title}
+          {/* Single line description - always show when not expanded */}
+          {!showExpanded && description && (
+            <>
+              <span className="mx-2 opacity-60">•</span>
+              <span className="font-normal text-muted-foreground">
+                {description}
+              </span>
+            </>
+          )}
+        </AlertTitle>
+        {/* Multi-line description - smooth height animation */}
+        <div
+          className={cn(
+            "grid transition-all duration-500 ease-out",
+            showExpanded && description
+              ? "grid-rows-[1fr] opacity-100"
+              : "grid-rows-[0fr] opacity-0"
+          )}
+        >
+          <div className="overflow-hidden">
+            <AlertDescription className="pt-1">{description}</AlertDescription>
+          </div>
+        </div>
+      </div>
     </Alert>
   );
 
@@ -67,7 +98,13 @@ const ToolErrorAlert = ({
   description: string;
 }) => <ToolAlert icon={<CircleX />} title={title} description={description} />;
 
-function ReadFileToolAlert({ part }: { part: ToolPart<"readFile"> }) {
+function ReadFileToolAlert({
+  part,
+  isLastTool,
+}: {
+  part: ToolPart<"readFile">;
+  isLastTool: boolean;
+}) {
   switch (part.state) {
     case "output-available":
       if (!part.output.success) {
@@ -83,6 +120,7 @@ function ReadFileToolAlert({ part }: { part: ToolPart<"readFile"> }) {
           icon={<Eye />}
           title={`Read ${part.input.path}`}
           description={part.input.explanation}
+          showExpanded={isLastTool}
           details={
             <pre className="whitespace-pre-wrap max-h-[60vh] overflow-y-auto">
               {part.output.content}
@@ -104,12 +142,20 @@ function ReadFileToolAlert({ part }: { part: ToolPart<"readFile"> }) {
           icon={<Loader2 className="animate-spin" />}
           title={`Reading ${part.input?.path ?? ""}`}
           description={part.input?.explanation}
+          isLoading={true}
+          showExpanded={true}
         />
       );
   }
 }
 
-function WriteFileToolAlert({ part }: { part: ToolPart<"writeFile"> }) {
+function WriteFileToolAlert({
+  part,
+  isLastTool,
+}: {
+  part: ToolPart<"writeFile">;
+  isLastTool: boolean;
+}) {
   switch (part.state) {
     case "output-available":
       return (
@@ -117,6 +163,7 @@ function WriteFileToolAlert({ part }: { part: ToolPart<"writeFile"> }) {
           icon={<CheckCircle2Icon />}
           title={`Updated ${part.input.path}`}
           description={part.input.explanation ?? part.input.instruction}
+          showExpanded={isLastTool}
           details={
             <pre className="whitespace-pre-wrap max-h-[60vh] overflow-y-auto">
               {part.input.codeEdit}
@@ -138,87 +185,49 @@ function WriteFileToolAlert({ part }: { part: ToolPart<"writeFile"> }) {
           icon={<Loader2 className="animate-spin" />}
           title={`Updating ${part.input?.path ?? ""}`}
           description={part.input?.explanation ?? part.input?.instruction}
-        />
-      );
-  }
-}
-
-function GitCommitToolAlert({ part }: { part: ToolPart<"gitCommit"> }) {
-  switch (part.state) {
-    case "output-available":
-      return (
-        <ToolAlert
-          icon={<GitCommit />}
-          title="Git Commit"
-          description={`Created commit ${part.output.commitSha.slice(0, 7)}`}
-          details={
-            <div className="space-y-2">
-              <div>
-                <span className="font-semibold">Title:</span>
-                <p className="mt-1">{part.input.title}</p>
-              </div>
-              {part.input.body && (
-                <div>
-                  <span className="font-semibold">Body:</span>
-                  <p className="mt-1 whitespace-pre-wrap">{part.input.body}</p>
-                </div>
-              )}
-              <div>
-                <span className="font-semibold">Commit SHA:</span>
-                <p className="mt-1 font-mono text-sm">
-                  {part.output.commitSha}
-                </p>
-              </div>
-            </div>
-          }
-        />
-      );
-    case "output-error":
-      return (
-        <ToolAlert
-          icon={<CircleX />}
-          title="Git Commit Error"
-          description="Failed to create git commit"
-          details={
-            <pre className="whitespace-pre-wrap max-h-[60vh] overflow-y-auto text-destructive">
-              {part.errorText}
-            </pre>
-          }
-        />
-      );
-    case "input-streaming":
-    case "input-available":
-      return (
-        <ToolAlert
-          icon={<Loader2 className="animate-spin" />}
-          title="Creating git commit..."
-          description={part.input?.title}
+          isLoading={true}
+          showExpanded={true}
         />
       );
   }
 }
 
 export function MessageParts({ parts }: { parts: ChatMessage["parts"] }) {
+  // Find the index of the last tool part
+  const lastToolIndex = parts.reduce((lastIdx, part, idx) => {
+    if (part.type.startsWith("tool-") && part.type !== "tool-todoWrite") {
+      return idx;
+    }
+    return lastIdx;
+  }, -1);
+
   const renderedParts = parts
     .map((c, index) => {
+      const isLastTool = index === lastToolIndex;
+
       switch (c.type) {
         case "text":
           return <Markdown key={index}>{c.text}</Markdown>;
         case "tool-readFile":
-          return <ReadFileToolAlert key={index} part={c} />;
+          return (
+            <ReadFileToolAlert key={index} part={c} isLastTool={isLastTool} />
+          );
         case "tool-writeFile":
-          return <WriteFileToolAlert key={index} part={c} />;
+          return (
+            <WriteFileToolAlert key={index} part={c} isLastTool={isLastTool} />
+          );
         case "tool-deleteFile":
         case "tool-grepSearch":
-        case "tool-todoWrite":
         case "tool-webSearch":
           return (
             <div key={index}>
               <pre>{JSON.stringify(c, null, 2)}</pre>
             </div>
           );
+        case "tool-todoWrite":
+          return null;
         case "tool-gitCommit":
-          return <GitCommitToolAlert key={index} part={c} />;
+          return null;
         case "step-start":
         case "data-gitSha":
         case "file":
@@ -239,7 +248,7 @@ export function MessageParts({ parts }: { parts: ChatMessage["parts"] }) {
     .filter((p) => !!p);
 
   return renderedParts.length ? (
-    <div className="space-y-3">{renderedParts}</div>
+    <div className="space-y-5">{renderedParts}</div>
   ) : (
     <Skeleton className="h-4 w-48 mb-4" />
   );

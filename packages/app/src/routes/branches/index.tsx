@@ -1,6 +1,7 @@
 import { authClient } from "@/auth";
 import { ChatThread } from "@/components/layout/chat/ChatThread";
 import { ChatProvider } from "@/components/layout/chat/context";
+import { HistoryPanel } from "@/components/layout/chat/HistoryPanel";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -9,13 +10,15 @@ import {
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { api, useQuery } from "@/hooks/api";
 import type { ChatMessage } from "@squash/api/agent/types";
+import { useState } from "react";
 import { useParams } from "react-router";
 import { BranchPreview } from "./BranchPreview";
 import { BranchContextProvider, useBranchContext } from "./context";
 import { BranchHeader } from "./header/BranchHeader";
 
 function Component({ branchId }: { branchId: string }) {
-  const { branch } = useBranchContext();
+  const { branch, setPreview } = useBranchContext();
+  const [isHistoryEnabled, setIsHistoryEnabled] = useState(false);
 
   const session = authClient.useSession();
   const threadMessages = useQuery(api.chat.branches[":branchId"].$get, {
@@ -24,7 +27,11 @@ function Component({ branchId }: { branchId: string }) {
   });
 
   const handleHistoryToggle = (enabled: boolean) => {
-    console.log("History toggle:", enabled);
+    setIsHistoryEnabled(enabled);
+  };
+
+  const handleSelectCommit = (sha: string) => {
+    setPreview(sha);
   };
 
   const handleHideChatSidebar = () => {
@@ -57,7 +64,7 @@ function Component({ branchId }: { branchId: string }) {
       <SidebarProvider className="flex flex-col h-screen">
         <BranchHeader
           title={branch.name}
-          isHistoryEnabled={false}
+          isHistoryEnabled={isHistoryEnabled}
           onHistoryToggle={handleHistoryToggle}
           onHideChatSidebar={handleHideChatSidebar}
           onRefresh={handleRefresh}
@@ -76,7 +83,16 @@ function Component({ branchId }: { branchId: string }) {
             maxSize={35}
             className="flex"
           >
-            <ChatThread ready={!!threadMessages.data} id={branchId} />
+            {isHistoryEnabled ? (
+              <HistoryPanel
+                onClose={() => setIsHistoryEnabled(false)}
+                onSelectCommit={handleSelectCommit}
+                className="w-full"
+                threadId={branchId}
+              />
+            ) : (
+              <ChatThread ready={!!threadMessages.data} id={branchId} />
+            )}
           </ResizablePanel>
           <ResizableHandle className="bg-transparent w-[3px] data-[resize-handle-state=hover]:bg-primary/20 data-[resize-handle-state=drag]:bg-primary/20 transition-colors" />
           <ResizablePanel defaultSize={75} className="flex">

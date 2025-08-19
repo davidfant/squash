@@ -5,6 +5,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { initReactI18next } from "react-i18next";
 import { BrowserRouter, Route, Routes } from "react-router";
+import { ThemeProvider } from "./contexts/ThemeContext";
 import "./index.css";
 import resources from "./locales/default";
 import { BranchPage } from "./routes/branches";
@@ -25,25 +26,26 @@ const queryClient = new QueryClient();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/extension-auth" element={<ExtensionAuthPage />} />
-          <Route path="/repos/:repoId" element={<RepoPage />} />
-          <Route
-            path="/repos/:repoId/branches/:branchId"
-            element={<BranchPage />}
-          />
-          <Route path="/new/repo" element={<NewRepoPage />} />
-          <Route
-            path="/new/repo/:providerId"
-            element={<NewRepoFromProvider />}
-          />
-          {/* <Route path="/project/page/:pageId" element={<ProjectPage />} />
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/extension-auth" element={<ExtensionAuthPage />} />
+            <Route path="/repos/:repoId" element={<RepoPage />} />
+            <Route
+              path="/repos/:repoId/branches/:branchId"
+              element={<BranchPage />}
+            />
+            <Route path="/new/repo" element={<NewRepoPage />} />
+            <Route
+              path="/new/repo/:providerId"
+              element={<NewRepoFromProvider />}
+            />
+            {/* <Route path="/project/page/:pageId" element={<ProjectPage />} />
           <Route path="/project/x" element={<ProjectCanvas />} /> */}
-          {/* <Route path="/new/:threadId" element={<ThreadPage />} />
+            {/* <Route path="/new/:threadId" element={<ThreadPage />} />
           <Route path="/workflows/:workflowId" element={<WorkflowPage />} />
           <Route path="/invite/:inviteId" element={<InvitePage />} />
           <Route
@@ -56,9 +58,10 @@ createRoot(document.getElementById("root")!).render(
             </div>
             }
             /> */}
-        </Routes>
-        <Toaster />
-      </BrowserRouter>
-    </QueryClientProvider>
+          </Routes>
+          <Toaster />
+        </BrowserRouter>
+      </QueryClientProvider>
+    </ThemeProvider>
   </StrictMode>
 );

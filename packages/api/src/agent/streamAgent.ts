@@ -1,4 +1,5 @@
 import * as FlyioExec from "@/lib/flyio/exec";
+import { wrapModelWithLangsmith } from "@/lib/langsmith";
 import { morphMerge } from "@/lib/morph";
 import { anthropic } from "@ai-sdk/anthropic";
 import { google } from "@ai-sdk/google";
@@ -58,7 +59,8 @@ export async function streamAgent(
     UIMessageStreamOptions<ChatMessage>,
     "onFinish" | "messageMetadata"
   > & {
-    morphApiKey: string;
+    env: CloudflareBindings;
+    threadId: string;
     fileTransfer: {
       bucket: R2Bucket;
       bucketName: string;
@@ -84,7 +86,21 @@ export async function streamAgent(
     onFinish: opts.onFinish,
     execute: async ({ writer }) => {
       const agentStream = streamText({
-        model: anthropic("claude-sonnet-4-20250514"),
+        model: wrapModelWithLangsmith(
+          anthropic("claude-sonnet-4-20250514"),
+          opts.env,
+          {
+            runName: "hypershape-agent-main",
+            tags: ["hypershape", "agent", "main-flow"],
+            metadata: {
+              sandboxId: runtimeContext.sandbox.appId,
+              machineId: runtimeContext.sandbox.machineId,
+              workdir: runtimeContext.sandbox.workdir,
+              messageCount: messages.length,
+              session_id: opts.threadId,
+            },
+          }
+        ),
         messages: [
           ...withCacheBreakpoints([{ role: "system", content: SystemPrompt }]),
           {
@@ -101,6 +117,7 @@ export async function streamAgent(
         ],
         tools: createAgentTools(runtimeContext),
         stopWhen: [stepCountIs(20)],
+        experimental_telemetry: { isEnabled: true },
         onStepFinish: (step) => {
           step.toolCalls.forEach((tc) => {
             if (tc.dynamic) return;
@@ -115,7 +132,8 @@ export async function streamAgent(
                         original: r.content,
                         instructions: tc.input.instruction,
                         update: tc.input.codeEdit,
-                        apiKey: opts.morphApiKey,
+                        apiKey: opts.env.MORPH_API_KEY,
+                        sessionId: opts.threadId,
                       })
                     : tc.input.codeEdit
                 ),
@@ -148,7 +166,20 @@ export async function streamAgent(
       }
 
       const commitStream = streamText({
-        model: google("gemini-2.5-flash-lite"),
+        model: wrapModelWithLangsmith(
+          google("gemini-2.5-flash-lite"),
+          opts.env,
+          {
+            runName: "Commit Message",
+            tags: ["commit"],
+            metadata: {
+              changesCount: changes.length,
+              sandboxId: runtimeContext.sandbox.appId,
+              session_id: opts.threadId,
+            },
+          }
+        ),
+        experimental_telemetry: { isEnabled: true },
         messages: [
           {
             role: "system",

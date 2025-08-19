@@ -1,6 +1,3 @@
-import { GitBranch, Home, Moon, Settings, Sun } from "lucide-react";
-import * as React from "react";
-
 import { authClient } from "@/auth";
 import {
   Sidebar,
@@ -14,7 +11,10 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
+import { useTheme } from "@/contexts/ThemeContext";
 import { api, useQuery } from "@/hooks/api";
+import { GitBranch, Home, Moon, Settings, Sun } from "lucide-react";
+import * as React from "react";
 import { Link } from "react-router";
 import { NavMain } from "./nav-main";
 import { NavUser } from "./nav-user";
@@ -60,6 +60,8 @@ export function AppSidebar({
         avatar: session.data.user.image || "",
       }
     : null;
+
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -119,40 +121,8 @@ export function AppSidebar({
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              tooltip="Toggle theme"
-              onClick={() => {
-                const isDark =
-                  document.documentElement.classList.contains("dark");
-                const newTheme = isDark ? "light" : "dark";
-                localStorage.setItem("theme", newTheme);
-                if (newTheme === "dark") {
-                  document.documentElement.classList.add("dark");
-                } else {
-                  document.documentElement.classList.remove("dark");
-                }
-              }}
-            >
-              {(() => {
-                const [theme, setTheme] = React.useState<"light" | "dark">(
-                  "light"
-                );
-                React.useEffect(() => {
-                  const checkTheme = () => {
-                    const isDark =
-                      document.documentElement.classList.contains("dark");
-                    setTheme(isDark ? "dark" : "light");
-                  };
-                  checkTheme();
-                  const observer = new MutationObserver(checkTheme);
-                  observer.observe(document.documentElement, {
-                    attributes: true,
-                    attributeFilter: ["class"],
-                  });
-                  return () => observer.disconnect();
-                }, []);
-                return theme === "light" ? <Sun /> : <Moon />;
-              })()}
+            <SidebarMenuButton tooltip="Toggle theme" onClick={toggleTheme}>
+              {theme === "light" ? <Moon /> : <Sun />}
               <span>Appearance</span>
             </SidebarMenuButton>
           </SidebarMenuItem>

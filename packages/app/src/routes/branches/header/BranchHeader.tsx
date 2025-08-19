@@ -1,4 +1,3 @@
-import { useChatContext } from "@/components/layout/chat/context";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -17,7 +16,6 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import {
-  ArrowUpRight,
   ChevronDown,
   Copy,
   Eye,
@@ -26,6 +24,7 @@ import {
   Lock,
   Settings,
   Users,
+  ArrowRight,
 } from "lucide-react";
 import { Link } from "react-router";
 import { PreviewAddressBar } from "./PreviewAddressBar";
@@ -57,7 +56,6 @@ export function BranchHeader({
   publicUrl = "https://myproject.com",
   className,
 }: BranchHeaderProps) {
-  const { messages } = useChatContext();
   const copyPublicUrl = () => {
     navigator.clipboard.writeText(publicUrl);
   };
@@ -75,7 +73,7 @@ export function BranchHeader({
         {/* App Logo */}
         <Link to="/" className="flex items-center">
           <img
-            src="/vite.svg"
+            src="/circle.svg"
             alt="Logo"
             className="size-8 hover:opacity-80 transition-opacity"
           />
@@ -123,17 +121,9 @@ export function BranchHeader({
               onPressedChange={onHistoryToggle}
               variant="default"
               size="sm"
-              onClick={() =>
-                alert(
-                  messages
-                    .flatMap((m) => m.parts)
-                    .filter((p) => p.type === "data-gitSha")
-                    .map((p) => `${p.data.title}: ${p.data.sha}`)
-                    .join("\n")
-                )
-              }
+              className="relative z-10"
             >
-              <History />
+              <History className="h-4 w-4" />
             </Toggle>
           </TooltipTrigger>
           <TooltipContent>
@@ -207,9 +197,9 @@ export function BranchHeader({
         {/* Publish Button */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button size="sm">
-              <ArrowUpRight className="size-4 mr-1" />
-              Publish
+            <Button size="sm" variant="outline">
+              See Preview
+              <ArrowRight className="size-4 ml-1" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-64">

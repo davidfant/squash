@@ -15,7 +15,7 @@ export const MessageHeader = ({
   onRetry?: () => void;
 }) => (
   <div className="relative flex w-full gap-2 rounded-lg py-1">
-    <img src="/vite.svg" className="size-5 rounded-sm" />
+    <img src="/circle.svg" className="size-5 rounded-sm" />
     <span className="font-medium flex-1 text-sm">{author}</span>
 
     {onRetry && (

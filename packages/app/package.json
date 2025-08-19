@@ -4,9 +4,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite --clearScreen false --port 5173",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build --clearScreen false",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "push": "wrangler pages deploy"
   },
   "dependencies": {
     "@ai-sdk/react": "^2.0.2",
@@ -58,7 +59,6 @@
     "uuid": "^11.1.0"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "1.2.3",
     "@eslint/js": "^9.30.1",
     "@tailwindcss/vite": "latest",
     "@types/lodash.kebabcase": "^4.1.9",

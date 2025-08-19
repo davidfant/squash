@@ -8,7 +8,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --clearScreen false --port 5174",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build --clearScreen false",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview"
   },

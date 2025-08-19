@@ -19,8 +19,10 @@
   "scripts": {
     "dev": "pnpm typegen && concurrently \"pnpm dev:wrangler\" \"pnpm dev:tsc\"",
     "dev:wrangler": "wrangler dev --x-remote-bindings",
-    "dev:tsc": "pnpm tsc --watch --preserveWatchOutput",
-    "deploy": "wrangler deploy --minify",
+    "dev:tsc": "tsc --watch --preserveWatchOutput",
+    "drizzle:migrate:dev": "drizzle-kit push",
+    "drizzle:migrate:prod": "DOTENV_CONFIG_PATH=.dev.vars.prod drizzle-kit migrate",
+    "push": "wrangler deploy --minify --env production",
     "build": "tsc -b",
     "typegen": "wrangler types --env-interface CloudflareBindings"
   },

@@ -7,14 +7,6 @@
   "observability": {
     "enabled": true
   },
-  "vars": {
-    "APP_URL": "",
-    "GOOGLE_GENERATIVE_AI_API_KEY": "",
-    "BETTER_AUTH_SECRET": "",
-    "DATABASE_URL": "",
-    "REPLICATOR_GIT_SYNC_API_URL": "",
-    "REPLICATOR_GIT_SYNC_API_SECRET": ""
-  },
   "r2_buckets": [
     {
       "binding": "R2_FILE_TRANSFER_BUCKET",
@@ -22,5 +14,29 @@
       "experimental_remote": true
     }
   ],
+  "vars": {
+    "APP_URL": "http://localhost:5173",
+    "R2_FILE_TRANSFER_BUCKET_NAME": "file-transfer",
+    "R2_REPOS_BUCKET_NAME": "repos",
+    "REPLICATOR_GIT_SYNC_API_URL": "http://localhost:8888",
+    "TZ": "utc",
+    "LANGSMITH_TRACING": "true",
+    "LANGSMITH_ENDPOINT": "https://api.smith.langchain.com",
+    "OTEL_ENABLED": "true"
+  },
+  "env": {
+    "production": {
+      "vars": {
+        "APP_URL": "https://app.squash.build",
+        "R2_FILE_TRANSFER_BUCKET_NAME": "file-transfer",
+        "R2_REPOS_BUCKET_NAME": "repos",
+        "REPLICATOR_GIT_SYNC_API_URL": "http://localhost:8888",
+        "TZ": "utc",
+        "LANGSMITH_TRACING": "true",
+        "LANGSMITH_ENDPOINT": "https://api.smith.langchain.com",
+        "OTEL_ENABLED": "true"
+      }
+    }
+  },
   "rules": [{ "type": "Text", "globs": ["**/*.md"], "fallthrough": true }]
 }

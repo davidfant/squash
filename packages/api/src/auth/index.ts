@@ -1,6 +1,6 @@
 import { betterAuth, type User } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { organization, jwt } from "better-auth/plugins";
+import { jwt, organization } from "better-auth/plugins";
 import { randomUUID } from "crypto";
 import { asc, eq } from "drizzle-orm";
 import { createDatabase, type Database } from "../database";

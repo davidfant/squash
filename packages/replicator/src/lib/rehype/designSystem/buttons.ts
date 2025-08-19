@@ -117,9 +117,7 @@ export const rehypeDesignSystemButtons =
       // Array.from(matchesBySignature.values())
       //   .flat()
       //   .map((m) => hastToStaticModule(m.node))
-      matches.map((m, i) =>
-        hastToStaticModule(m.node, { componentName: `Button${i}` })
-      )
+      matches.map((m, i) => hastToStaticModule(m.node))
     );
 
     const { text } = await generateText({

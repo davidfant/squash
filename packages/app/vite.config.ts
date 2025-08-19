@@ -1,4 +1,3 @@
-import { cloudflare } from "@cloudflare/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import fs from "fs";
@@ -18,5 +17,5 @@ const wranglerEnv = Object.assign(
 Object.assign(process.env, wranglerEnv);
 
 export default defineConfig({
-  plugins: [react(), cloudflare(), tailwindcss(), tsconfigPaths(), dts()],
+  plugins: [react(), tailwindcss(), tsconfigPaths(), dts()],
 });

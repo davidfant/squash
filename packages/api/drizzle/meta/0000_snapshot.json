@@ -1,5 +1,5 @@
 {
-  "id": "4feee00b-78e3-45c4-8e88-029a22bc0849",
+  "id": "922db8ae-8fe2-4b71-a9df-2fbd18baf87d",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -744,14 +744,14 @@
           "notNull": true,
           "default": "gen_random_uuid()"
         },
-        "name": {
-          "name": "name",
+        "url": {
+          "name": "url",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "url": {
-          "name": "url",
+        "name": {
+          "name": "name",
           "type": "text",
           "primaryKey": false,
           "notNull": true

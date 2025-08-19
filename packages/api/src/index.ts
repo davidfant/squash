@@ -10,11 +10,11 @@ import { replicatorRouter } from "./routers/replicator";
 import { reposRouter } from "./routers/repos";
 
 const app = new Hono<{ Bindings: CloudflareBindings }>()
+  .use("*", cors({ origin: process.env.APP_URL, credentials: true }))
   .use(requestId())
   .use(logger())
   .use(databaseMiddleware)
   .use(authMiddleware)
-  .use("*", cors({ origin: process.env.APP_URL, credentials: true }))
   .on(["GET", "POST"], "/auth/*", (c) => c.get("auth").handler(c.req.raw))
   .route("/chat", chatRouter)
   .route("/replicator", replicatorRouter)

@@ -104,8 +104,8 @@ CREATE TABLE "message_thread" (
 --> statement-breakpoint
 CREATE TABLE "repo" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"name" text NOT NULL,
 	"url" text NOT NULL,
+	"name" text NOT NULL,
 	"snapshot" json NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,

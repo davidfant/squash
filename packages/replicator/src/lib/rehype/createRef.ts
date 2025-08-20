@@ -19,18 +19,17 @@ export const createRefFromComponent = ({
   props?: Record<string, unknown>;
   children?: unknown[];
 }) => {
-  if (Object.keys(props).some((p) => p !== "className")) {
-    throw new Error("Only className is supported for now");
-  }
+  const componentName = module.split("/").pop()!;
   return {
     type: "element",
     tagName: "ref",
     properties: {
       imports: JSON.stringify([{ module: module, import: ["default"] }]),
-      // jsx: `<${module.split("/").pop()} className="${((props.className as string[]) ?? []).join(" ")}" />`,
-      jsx: !!props.className
-        ? `<${module.split("/").pop()} className="${(props.className as string[]).join(" ")}" />`
-        : `<${module.split("/").pop()} />`,
+      // jsx: !!props.className
+      //   ? `<${componentName} className=${JSON.stringify(props.className)} />`
+      //   : `<${componentName} />`,
+      tagName: componentName,
+      props: JSON.stringify(props),
     },
     children,
   };

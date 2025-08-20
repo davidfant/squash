@@ -25,6 +25,7 @@ function build() {
       --build-arg AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
       --build-arg AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
       --build-arg AWS_ENDPOINT_URL_S3=$AWS_ENDPOINT_URL_S3 \
+      --build-arg GIT_TAG=v$TEMPLATE_VERSION \
       --tag $DOCKER_TAG \
       --file ../Dockerfile.$TEMPLATE_NAME \
       .

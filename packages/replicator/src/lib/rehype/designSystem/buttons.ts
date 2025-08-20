@@ -1,8 +1,9 @@
-import { hastToStaticModule, type HastNode } from "@/lib/hastToStaticModule";
+import { filesystemCacheMiddleware } from "@/lib/filesystemCacheMiddleware";
+import { hastNodeToTsxModule, type HastNode } from "@/lib/hastNode";
 import type { FileSink } from "@/lib/sinks/base";
 import { anthropic, type AnthropicProviderOptions } from "@ai-sdk/anthropic";
 import { openai } from "@ai-sdk/openai";
-import { generateObject, generateText } from "ai";
+import { generateObject, generateText, wrapLanguageModel } from "ai";
 import crypto from "crypto";
 import type { Root } from "hast";
 import { visit } from "unist-util-visit";
@@ -113,18 +114,19 @@ export const rehypeDesignSystemButtons =
     }
 
     const instances = await Promise.all(
-      // Array.from(matchesBySignature.values())
-      //   .flat()
-      //   .map((m) => hastToStaticModule(m.node))
-      matches.map((m, i) => hastToStaticModule(m.node))
+      Array.from(matchesBySignature.values())
+        .map((matches) => matches.slice(0, 5))
+        .flat()
+        .map((m) => hastNodeToTsxModule(m.node))
+      // matches.map((m, i) => hastNodeToTsxModule(m.node))
     );
 
     const { text } = await generateText({
-      // model: wrapLanguageModel({
-      //   model: anthropic("claude-sonnet-4-20250514"),
-      //   middleware: filesystemCacheMiddleware(),
-      // }),
-      model: anthropic("claude-sonnet-4-20250514"),
+      // model: anthropic("claude-sonnet-4-20250514"),
+      model: wrapLanguageModel({
+        model: anthropic("claude-sonnet-4-20250514"),
+        middleware: filesystemCacheMiddleware(),
+      }),
       maxOutputTokens: 10000,
       messages: [
         { role: "system", content: componentsInstructions },
@@ -152,11 +154,11 @@ export const rehypeDesignSystemButtons =
     const rewritten = await Promise.all(
       instances.slice(0, 9999).map((m) =>
         generateObject({
-          // model: wrapLanguageModel({
-          //   model: openai("gpt-5-mini"),
-          //   middleware: filesystemCacheMiddleware(),
-          // }),
-          model: openai("gpt-5-mini"),
+          // model: openai("gpt-5-mini"),
+          model: wrapLanguageModel({
+            model: openai("gpt-5"),
+            middleware: filesystemCacheMiddleware(),
+          }),
           schema: z.object({
             rewritten: z
               .object({
@@ -183,8 +185,8 @@ export const rehypeDesignSystemButtons =
 You are a React developer, tasked with migrating React components to a design system. You will be given a single React component and your task is to review the provided design system components and if possible rewrite the component to use the design system components.
 
 Respond with a rewritten component including:
-1. a list of all imports, but exclude React
-2. the rewritten component's pure JSX
+1. a list of all imports, but exclude React. in the module to import, don't unclude the file extension. For example, if the file is at "./src/components/ui/Button.tsx", the module should be "@/components/ui/Button"
+2. the rewritten component's pure JSX. This should not include any imports or exports of the component, only the component's JSX
 
 Example when it's possible to rewrite the component:
 \`\`\`
@@ -216,7 +218,7 @@ ${text}
 
     rewritten.forEach((r, i) => {
       if (!r.object.rewritten) return;
-      console.dir(r.object.rewritten, { depth: null });
+      // console.dir(r.object.rewritten, { depth: null });
       const match = matches[i]!;
       match.parent.children[match.index] = createRef({
         imports: r.object.rewritten.imports,

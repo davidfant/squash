@@ -1,8 +1,6 @@
 import { config } from "@/config";
+import * as prettier from "@/lib/prettier";
 import { generateObject } from "ai";
-import parserBabel from "prettier/plugins/babel";
-import parserEstree from "prettier/plugins/estree";
-import prettier from "prettier/standalone";
 import z from "zod";
 
 export interface ComponentSignature {
@@ -26,10 +24,8 @@ export async function nameComponents(
   components: ComponentSignature[]
 ): Promise<Record<string, string>> {
   if (components.length === 0) return {};
-
-  const formattedComponents = await prettier.format(
-    components.map((b) => `const ${b.id} = () => (${b.tsx});`).join("\n"),
-    { parser: "babel", plugins: [parserBabel, parserEstree] }
+  const formattedComponents = await prettier.js(
+    components.map((b) => `const ${b.id} = () => (${b.tsx});`).join("\n")
   );
 
   const { object } = await generateObject({

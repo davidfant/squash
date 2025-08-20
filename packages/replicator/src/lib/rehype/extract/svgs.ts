@@ -1,18 +1,16 @@
+import * as prettier from "@/lib/prettier";
 import type { FileSink } from "@/lib/sinks/base";
 import crypto from "crypto";
 import { toHtml } from "hast-util-to-html";
 import path from "path";
-import parserBabel from "prettier/plugins/babel";
-import parserEstree from "prettier/plugins/estree";
-import parserHtml from "prettier/plugins/html";
-import prettier from "prettier/standalone";
 import recmaJsx from "recma-jsx";
 import recmaStringify from "recma-stringify";
+import rehypeMinifyWhitespace from "rehype-minify-whitespace";
 import rehypeParse from "rehype-parse";
 import rehypeRecma from "rehype-recma";
 import { unified } from "unified";
 import { visit } from "unist-util-visit";
-import { recmaReplaceRefs } from "../../recmaReplaceRefs";
+import { recmaReplaceRefs } from "../../recma/replaceRefs";
 import { createRefFromComponent } from "../createRef";
 
 // SVGR-free: reuse the same HAST -> JSX pipeline used elsewhere, then wrap with a named component and inject {...props}
@@ -22,6 +20,7 @@ async function svgToComponent(
 ): Promise<string> {
   const vfile = await unified()
     .use(rehypeParse, { fragment: true })
+    .use(rehypeMinifyWhitespace)
     .use(rehypeRecma)
     .use(recmaJsx)
     .use(recmaReplaceRefs)
@@ -39,12 +38,13 @@ async function svgToComponent(
     .replace(/<svg(\b[^>]*)\/>/s, (_m, attrs) => `<svg${attrs} {...props} />`)
     .replace(/<svg(\b[^>]*)>/s, (_m, attrs) => `<svg${attrs} {...props}>`);
 
-  const wrapped = `export default function ${componentName}(props) { return ${jsxWithProps}; }`;
-
-  return prettier.format(wrapped, {
-    parser: "babel",
-    plugins: [parserBabel, parserEstree],
-  });
+  return prettier.ts(
+    [
+      `import type { SVGProps } from "react";`,
+      `const ${componentName} = (props: SVGProps<SVGSVGElement>) => ${jsxWithProps}`,
+      `export default ${componentName}`,
+    ].join("\n")
+  );
 }
 
 export const rehypeExtractSVGs =
@@ -82,11 +82,7 @@ export const rehypeExtractSVGs =
 
     if (occs.length === 0) return;
 
-    const prettyList = await Promise.all(
-      occs.map((o) =>
-        prettier.format(o.raw, { parser: "html", plugins: [parserHtml] })
-      )
-    );
+    const prettyList = await Promise.all(occs.map((o) => prettier.html(o.raw)));
 
     const hashToComponentName = new Map<string, string>();
 
@@ -118,7 +114,9 @@ export const rehypeExtractSVGs =
       const { parent, index, className } = occs[i]!;
       parent.children[index] = createRefFromComponent({
         module: path.join("@/svgs", componentName),
-        props: !!className.length ? { className } : undefined,
+        props: !!className.length
+          ? { className: className.join(" ") }
+          : undefined,
       });
     });
   };

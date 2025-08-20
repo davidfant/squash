@@ -85,7 +85,7 @@ export const replicatorRouter = new Hono<{
           url: git.remote,
           snapshot: {
             type: "docker",
-            image: "registry.fly.io/squash-template:replicator-vite-js-v0.0.2",
+            image: "registry.fly.io/squash-template:replicator-vite-js-v0.0.3",
             port: 5173,
             entrypoint: "pnpm dev --host 0.0.0.0 --port $PORT",
             workdir: "/root/repo",

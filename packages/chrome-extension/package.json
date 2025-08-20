@@ -24,7 +24,7 @@
     "tw-animate-css": "^1.3.5"
   },
   "devDependencies": {
-    "@crxjs/vite-plugin": "^2.1.0",
+    "@crxjs/vite-plugin": "^2.2.0",
     "@types/chrome": "^0.1.3",
     "@types/node": "^22.8.7",
     "@types/react": "^19.1.8",

@@ -78,6 +78,6 @@
     "vite": "^6.3.5",
     "vite-plugin-dts": "^4.5.4",
     "vite-tsconfig-paths": "^5.1.4",
-    "wrangler": "^4.28.1"
+    "wrangler": "^4.31.0"
   }
 }

@@ -2,12 +2,11 @@ import { hastToStaticModule, type HastNode } from "@/lib/hastToStaticModule";
 import type { FileSink } from "@/lib/sinks/base";
 import { anthropic, type AnthropicProviderOptions } from "@ai-sdk/anthropic";
 import { openai } from "@ai-sdk/openai";
-import { generateObject, generateText, wrapLanguageModel } from "ai";
+import { generateObject, generateText } from "ai";
 import crypto from "crypto";
 import type { Root } from "hast";
 import { visit } from "unist-util-visit";
 import z from "zod";
-import { filesystemCacheMiddleware } from "../../filesystemCacheMiddleware";
 import { createRef } from "../createRef";
 
 const componentsInstructions = `
@@ -121,10 +120,11 @@ export const rehypeDesignSystemButtons =
     );
 
     const { text } = await generateText({
-      model: wrapLanguageModel({
-        model: anthropic("claude-sonnet-4-20250514"),
-        middleware: filesystemCacheMiddleware(),
-      }),
+      // model: wrapLanguageModel({
+      //   model: anthropic("claude-sonnet-4-20250514"),
+      //   middleware: filesystemCacheMiddleware(),
+      // }),
+      model: anthropic("claude-sonnet-4-20250514"),
       maxOutputTokens: 10000,
       messages: [
         { role: "system", content: componentsInstructions },
@@ -152,10 +152,11 @@ export const rehypeDesignSystemButtons =
     const rewritten = await Promise.all(
       instances.slice(0, 9999).map((m) =>
         generateObject({
-          model: wrapLanguageModel({
-            model: openai("gpt-5-mini"),
-            middleware: filesystemCacheMiddleware(),
-          }),
+          // model: wrapLanguageModel({
+          //   model: openai("gpt-5-mini"),
+          //   middleware: filesystemCacheMiddleware(),
+          // }),
+          model: openai("gpt-5-mini"),
           schema: z.object({
             rewritten: z
               .object({

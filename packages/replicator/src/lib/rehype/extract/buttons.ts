@@ -1,13 +1,11 @@
 import { config } from "@/config";
+import * as prettier from "@/lib/prettier";
 import type { FileSink } from "@/lib/sinks/base";
 import crypto from "crypto";
 import type { Root } from "hast";
 import path from "path";
-import parserBabel from "prettier/plugins/babel";
-import parserEstree from "prettier/plugins/estree";
-import prettier from "prettier/standalone";
 import { visit } from "unist-util-visit";
-import type { HastNode } from "../../hastToStaticModule";
+import type { HastNode } from "../../hastNode";
 import { nameComponents, type ComponentSignature } from "../../nameComponents";
 import { createRefFromComponent } from "../createRef";
 
@@ -35,17 +33,13 @@ async function createComponentCode(
   tagName: string,
   baseClasses: string
 ) {
-  const code = `
+  return prettier.ts(`
 export default function ${componentName}({ className = "", children, ...props }) {
   return (
-    <${tagName} {...props} className={[${JSON.stringify(baseClasses)}, className].filter(Boolean).join(" ")}> {children} </${tagName}>
+    <${tagName} {...props} className={[${JSON.stringify(baseClasses)}, className].filter(Boolean).join(" ")}>{children}</${tagName}>
   );
 }
-`;
-  return prettier.format(code, {
-    parser: "babel",
-    plugins: [parserBabel, parserEstree],
-  });
+`);
 }
 
 export const rehypeExtractButtons =
@@ -154,7 +148,7 @@ export const rehypeExtractButtons =
 
       occ.parent.children[occ.index] = createRefFromComponent({
         module: path.join("@", buttonsPath, componentName),
-        props: newProps,
+        // props: newProps,
         children: occ.node.children,
       });
     }

@@ -1,13 +1,12 @@
+import * as prettier from "@/lib/prettier";
 import type { FileSink } from "@/lib/sinks/base";
 import crypto from "crypto";
 import type { Root } from "hast";
 import { toHtml } from "hast-util-to-html";
 import path from "path";
-import parserHtml from "prettier/plugins/html";
-import prettier from "prettier/standalone";
 import { type Plugin } from "unified";
 import { visit } from "unist-util-visit";
-import { hastToStaticModule } from "../../hastToStaticModule";
+import { hastNodeToTsxModule } from "../../hastNode";
 import { createRefFromComponent } from "../createRef";
 
 type HastNode = any;
@@ -101,9 +100,8 @@ export const rehypeExtractBlocks =
     const table = new Map<string, Occurrence[]>();
     await Promise.all(
       occs.map(async (occ) => {
-        const pretty = await prettier.format(
-          toHtml(normalizeForSignature(occ.node), { closeSelfClosing: true }),
-          { parser: "html", plugins: [parserHtml] }
+        const pretty = await prettier.html(
+          toHtml(normalizeForSignature(occ.node), { closeSelfClosing: true })
         );
         const occs = table.get(pretty) || [];
         table.set(pretty, occs);
@@ -148,7 +146,7 @@ export const rehypeExtractBlocks =
       try {
         const firstNode = viable[0]!.node;
         const hastRoot = { type: "root", children: [deepClone(firstNode)] };
-        const moduleCode = await hastToStaticModule(hastRoot);
+        const moduleCode = await hastNodeToTsxModule(hastRoot);
         await sink.writeText(componentPath, moduleCode);
 
         // Replace all viable occurrences with the component tag

@@ -34,7 +34,8 @@ async function readJson<T>(file: string): Promise<T | null> {
     return JSON.parse(data) as T;
   } catch (e: any) {
     if (e?.code === "ENOENT") return null;
-    throw e;
+    console.warn("Failed reading cache file", file, e);
+    return null;
   }
 }
 
@@ -64,8 +65,8 @@ export function filesystemCacheMiddleware(
   options: FSCacheOptions = {}
 ): LanguageModelV2Middleware {
   return {
-    wrapGenerate: async ({ doGenerate, params }) => {
-      const key = stableKey(params);
+    wrapGenerate: async ({ doGenerate, params, model }) => {
+      const key = stableKey({ ...params, model });
       const file = cachePath(options, "generate", key);
 
       if (!(await isExpired(file, options.ttlSeconds))) {

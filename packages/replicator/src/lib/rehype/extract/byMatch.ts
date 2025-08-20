@@ -1,13 +1,12 @@
 import { config } from "@/config";
+import * as prettier from "@/lib/prettier";
 import type { FileSink } from "@/lib/sinks/base";
 import crypto from "crypto";
 import type { Root } from "hast";
 import { toHtml } from "hast-util-to-html";
 import path from "path";
-import parserHtml from "prettier/plugins/html";
-import prettier from "prettier/standalone";
 import { type Plugin } from "unified";
-import { hastToStaticModule, type HastNode } from "../../hastToStaticModule";
+import { hastNodeToTsxModule, type HastNode } from "../../hastNode";
 import { nameComponents } from "../../nameComponents";
 import { createRefFromComponent } from "../createRef";
 
@@ -63,12 +62,7 @@ export const rehypeExtractByMatch =
     })(tree as any);
 
     const html = await Promise.all(
-      matches.map((occ) =>
-        prettier.format(toHtml(occ.node), {
-          parser: "html",
-          plugins: [parserHtml],
-        })
-      )
+      matches.map((occ) => prettier.html(toHtml(occ.node)))
     );
 
     const grouped: Record<
@@ -130,7 +124,7 @@ export const rehypeExtractByMatch =
         if (!promises.has(outPath)) {
           promises.set(
             outPath,
-            hastToStaticModule(n.match.node).then((code) =>
+            hastNodeToTsxModule(n.match.node).then((code) =>
               sink.writeText(outPath, code)
             )
           );

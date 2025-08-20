@@ -1,9 +1,5 @@
+import * as prettier from "@/lib/prettier";
 import path from "path";
-import parserBabel from "prettier/plugins/babel";
-import parserEstree from "prettier/plugins/estree";
-import parserHtml from "prettier/plugins/html";
-import parserCss from "prettier/plugins/postcss";
-import prettier from "prettier/standalone";
 import recmaJsx from "recma-jsx";
 import recmaStringify from "recma-stringify";
 import rehypeParse from "rehype-parse";
@@ -11,13 +7,15 @@ import rehypeRecma from "rehype-recma";
 import rehypeRemoveComments from "rehype-remove-comments";
 import rehypeStringify from "rehype-stringify";
 import { unified } from "unified";
-import { recmaReplaceRefs } from "./lib/recmaReplaceRefs";
+import { recmaReplaceRefs } from "./lib/recma/replaceRefs";
 import { rehypeExtractBase64Images } from "./lib/rehype/extract/base64Images";
 // import { rehypeExtractBlocks } from "./lib/rehypeExtractBlocks";
 import rehypeMinifyWhitespace from "rehype-minify-whitespace";
-import { rehypeDesignSystemButtons } from "./lib/rehype/designSystem/buttons";
+import { recmaFixProperties } from "./lib/recma/fixProperties";
+import { recmaRemoveRedundantFragment } from "./lib/recma/removeRedundantFragment";
 import { rehypeExtractBlocks } from "./lib/rehype/extract/blocks";
 import { rehypeExtractBodyAttributes } from "./lib/rehype/extract/bodyAttributes";
+import { rehypeExtractButtons } from "./lib/rehype/extract/buttons";
 import { rehypeExtractRoles } from "./lib/rehype/extract/roles";
 import { rehypeExtractStylesAndScripts } from "./lib/rehype/extract/stylesAndScripts";
 import { rehypeExtractSVGs } from "./lib/rehype/extract/svgs";
@@ -71,14 +69,16 @@ export async function replicate(
       .use(opts.stylesAndScripts ? rehypeExtractStylesAndScripts(ctx) : noop)
       .use(opts.base64Images ? rehypeExtractBase64Images(sink) : noop)
       .use(opts.svgs ? rehypeExtractSVGs(sink) : noop)
-      .use(opts.buttons ? rehypeDesignSystemButtons(sink) : noop)
-      // .use(opts.buttons ? rehypeExtractButtons(sink) : noop)
+      // .use(opts.buttons ? rehypeDesignSystemButtons(sink) : noop)
+      .use(opts.buttons ? rehypeExtractButtons(sink) : noop)
       .use(opts.roles ? rehypeExtractRoles(sink) : noop)
       .use(opts.blocks ? rehypeExtractBlocks(sink) : noop)
       .use(opts.tags ? rehypeExtractTags(sink) : noop)
       .use(rehypeRecma)
       .use(recmaJsx)
       .use(recmaReplaceRefs)
+      .use(recmaFixProperties)
+      .use(recmaRemoveRedundantFragment)
       .use(recmaStringify)
       .process(page.html.body),
 
@@ -92,6 +92,7 @@ export async function replicate(
       .then(async () => {
         const head = await unified()
           .use(rehypeParse, { fragment: true })
+          .use(rehypeMinifyWhitespace)
           .use(rehypeRemoveComments)
           .use(rehypeRemoveScripts)
           .use(rehypeIdentifyUrlsToDownload(ctx))
@@ -121,13 +122,10 @@ export async function replicate(
         return head;
       }),
     prettier
-      .format(page.css, { parser: "css", plugins: [parserCss] })
+      .css(page.css)
       .then((text) => sink.writeText("public/styles.css", text)),
     prettier
-      .format(page.js, {
-        parser: "babel",
-        plugins: [parserBabel, parserEstree],
-      })
+      .js(page.js)
       .then((text) => sink.writeText("public/script.js", text)),
   ]);
 
@@ -147,14 +145,9 @@ export async function replicate(
     `.trim();
   // <script type="module" src="/script.js"></script>
   await Promise.all([
+    prettier.html(html).then((text) => sink.writeText("index.html", text)),
     prettier
-      .format(html, { parser: "html", plugins: [parserHtml] })
-      .then((text) => sink.writeText("index.html", text)),
-    prettier
-      .format(String(body), {
-        parser: "babel",
-        plugins: [parserBabel, parserEstree],
-      })
+      .ts(String(body))
       .then((text) => sink.writeText("src/App.tsx", text)),
   ]);
 }

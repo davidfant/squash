@@ -10,9 +10,10 @@ ARG AWS_SECRET_ACCESS_KEY
 ARG AWS_ENDPOINT_URL_S3
 ARG AWS_DEFAULT_REGION=auto
 ARG GIT_URL=s3://repos/templates/replicator-vite-js
+ARG GIT_TAG
 
 WORKDIR /root/repo
-RUN git clone --depth 1 --branch v0.0.2 $GIT_URL /root/repo \
+RUN git clone --depth 1 --branch $GIT_TAG $GIT_URL /root/repo \
  && rm -rf .git
 
 RUN pnpm install

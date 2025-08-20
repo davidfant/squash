@@ -122,7 +122,7 @@ export function AppSidebar({
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton tooltip="Toggle theme" onClick={toggleTheme}>
-              {theme === "light" ? <Moon /> : <Sun />}
+              {theme === "light" ? <Sun /> : <Moon />}
               <span>Appearance</span>
             </SidebarMenuButton>
           </SidebarMenuItem>

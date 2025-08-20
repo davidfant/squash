@@ -87,20 +87,18 @@ function NewRepoForm({ provider }: { provider: ProviderData }) {
 
   const handleConfirmImport = () => {
     if (selectedRepoForImport && editedInfo) {
-      const snapshot = {
-        type: "docker" as const,
-        port: editedInfo.port,
-        image: "node:20-alpine",
-        entrypoint: editedInfo.entrypoint,
-      };
-
       importRepo.mutate({
         param: { providerId: provider.id },
-        // @ts-ignore - API types need to be regenerated to include required snapshot parameter
         json: {
           repoId: selectedRepoForImport.id,
-          snapshot: snapshot,
-        } as any,
+          snapshot: {
+            type: "docker",
+            port: editedInfo.port,
+            image: "node:20-alpine",
+            entrypoint: editedInfo.entrypoint,
+            workdir: "/",
+          },
+        },
       });
     }
   };

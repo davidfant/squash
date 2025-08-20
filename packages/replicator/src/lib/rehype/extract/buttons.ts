@@ -1,4 +1,3 @@
-import { config } from "@/config";
 import * as prettier from "@/lib/prettier";
 import type { FileSink } from "@/lib/sinks/base";
 import crypto from "crypto";
@@ -100,46 +99,37 @@ export const rehypeExtractButtons =
 
     if (signatureToMeta.size === 0) return;
 
-    // Derive default names per signature
-    const defaultNameBySig = new Map<string, string>();
-    for (const sig of signatureToMeta.keys()) {
-      const hash = computeHash(sig);
-      defaultNameBySig.set(sig, `Button_${hash}`);
-    }
-
     // Optionally call AI to rename components in batch
-    let finalNameBySig = new Map(defaultNameBySig);
-    if (config.componentNaming.enabled) {
-      const sortedSigs = Array.from(signatureToMeta.keys()).sort();
-      const keys = sortedSigs.map((_, i) => `BUTTON${i + 1}`);
+    const sortedSigs = Array.from(signatureToMeta.keys()).sort();
+    const keys = sortedSigs.map((_, i) => `Button${i + 1}`);
 
-      const named = await nameComponents(
-        sortedSigs.map((sig, i): ComponentSignature => {
-          const meta = signatureToMeta.get(sig)!;
-          const tsx = `<${meta.tagName} className="${meta.baseClasses}">...</${meta.tagName}>`;
-          return { id: keys[i]!, tsx };
-        })
-      );
+    const named = await nameComponents(
+      sortedSigs.map((sig, i): ComponentSignature => {
+        const meta = signatureToMeta.get(sig)!;
+        const tsx = `<${meta.tagName} className="${meta.baseClasses}">...</${meta.tagName}>`;
+        return { id: keys[i]!, tsx };
+      })
+    );
 
-      // Build mapping sig -> AI name, ensuring sanitized and unique
-      const used = new Set<string>();
-      const sanitize = (s: string) => {
-        let candidate = s;
-        let n = 2;
-        while (used.has(candidate)) candidate = `${s}${n++}`;
-        used.add(candidate);
-        return candidate;
-      };
+    // Build mapping sig -> AI name, ensuring sanitized and unique
+    const used = new Set<string>();
+    const sanitize = (s: string) => {
+      let candidate = s;
+      let n = 2;
+      while (used.has(candidate)) candidate = `${s}${n++}`;
+      used.add(candidate);
+      return candidate;
+    };
 
-      sortedSigs.forEach((sig, i) => {
-        const raw = named[keys[i]!]!;
-        if (raw) finalNameBySig.set(sig, sanitize(raw));
-      });
-    }
+    const nameBySig = new Map<string, string>();
+    sortedSigs.forEach((sig, i) => {
+      const raw = named[keys[i]!]!;
+      if (raw) nameBySig.set(sig, sanitize(raw));
+    });
 
     // Second pass: replace nodes with final names
     for (const occ of occurrences) {
-      const componentName = finalNameBySig.get(occ.signature)!;
+      const componentName = nameBySig.get(occ.signature)!;
 
       // Replace node with component tag, preserving all original props except class/className
       const newProps: Record<string, any> = { ...(occ.node.properties || {}) };
@@ -155,7 +145,7 @@ export const rehypeExtractButtons =
 
     await Promise.all([
       Array.from(signatureToMeta.entries()).map(async ([sig, meta]) => {
-        const cName = finalNameBySig.get(sig)!;
+        const cName = nameBySig.get(sig)!;
         const filePath = path.join("src", buttonsPath, `${cName}.tsx`);
         const code = await createComponentCode(
           cName,

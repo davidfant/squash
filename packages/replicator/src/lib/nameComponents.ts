@@ -23,6 +23,10 @@ The output MUST contain a mapping of component id to name, where the name needs 
 export async function nameComponents(
   components: ComponentSignature[]
 ): Promise<Record<string, string>> {
+  if (!config.componentNaming) {
+    return Object.fromEntries(components.map((c) => [c.id, c.id]));
+  }
+
   if (components.length === 0) return {};
   const formattedComponents = await prettier.js(
     components.map((b) => `const ${b.id} = () => (${b.tsx});`).join("\n")

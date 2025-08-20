@@ -1,0 +1,35 @@
+{
+  "name": "replicator-git-sync",
+  "compatibility_date": "2025-08-19",
+  "main": "src/worker.ts",
+
+  // -------- Containers (beta) --------
+  "containers": [
+    {
+      "class_name": "Container",
+
+      "image": "./Dockerfile",
+      "image_build_context": "../..",
+
+      "instance_type": "basic",
+      "max_instances": 1
+    }
+  ],
+
+  "durable_objects": {
+    "bindings": [{ "name": "REPLICATOR_GIT_SYNC", "class_name": "Container" }]
+  },
+
+  "vars": {
+    "AWS_ENDPOINT_URL_S3": "",
+    "AWS_ACCESS_KEY_ID": "",
+    "AWS_SECRET_ACCESS_KEY": "",
+    "AWS_DEFAULT_REGION": "auto",
+    "REPOS_BUCKET_NAME": "repos",
+    "FILE_TRANSFER_BUCKET_NAME": "file-transfer",
+    "API_SECRET": "",
+    "PORT": 8888
+  },
+
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Container"] }]
+}

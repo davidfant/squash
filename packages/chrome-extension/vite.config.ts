@@ -1,23 +1,19 @@
 import { crx } from "@crxjs/vite-plugin";
+import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
 import { defineConfig } from "vite";
 import manifest from "./manifest.config";
 
 export default defineConfig({
-  plugins: [react(), crx({ manifest })],
+  plugins: [react(), tailwindcss(), crx({ manifest })],
   resolve: {
     alias: { "@": path.resolve(__dirname, "./src") },
   },
   server: {
-    port: 5174,
-    strictPort: true,
-    hmr: {
-      protocol: "ws",
-      host: "localhost",
-      port: 5174,
-    },
-    // Add CORS headers to allow extension access
+    // port: 5174,
+    // strictPort: true,
+    // hmr: { protocol: "ws", host: "localhost", port: 5174 },
     cors: true,
     headers: {
       "Access-Control-Allow-Origin": "*",

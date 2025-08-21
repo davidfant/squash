@@ -4,7 +4,7 @@ import path from "node:path";
 import { FileSystemSink } from "./lib/sinks/fs";
 import { logFileTree } from "./logFileTree";
 import { replicate } from "./replicate";
-import type { Capture } from "./types";
+import type { Snapshot } from "./types";
 
 const PATH_TO_CAPTURE = `./captures/posthog.json`;
 const PATH_TO_TEMPLATE = `./captures/replicated`;
@@ -43,7 +43,7 @@ const PATH_TO_TEMPLATE = `./captures/replicated`;
 // );
 const capture = JSON.parse(
   await fs.readFile(PATH_TO_CAPTURE, "utf-8")
-) as Capture;
+) as Snapshot;
 
 await Promise.all(
   [

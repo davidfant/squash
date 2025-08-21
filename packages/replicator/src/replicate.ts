@@ -23,7 +23,7 @@ import { rehypeExtractTags } from "./lib/rehype/extract/tags";
 import { rehypeIdentifyUrlsToDownload } from "./lib/rehype/identifyUrlsToDownload";
 import { rehypeRemoveScripts } from "./lib/rehype/removeScripts";
 import type { FileSink } from "./lib/sinks/base";
-import type { Capture, Context } from "./types";
+import type { Context, Snapshot } from "./types";
 
 const noop = () => () => {};
 
@@ -38,7 +38,7 @@ interface ReplicateOptions {
 }
 
 export async function replicate(
-  capture: Capture,
+  snapshot: Snapshot,
   sink: FileSink<any>,
   _options: ReplicateOptions = {}
 ) {
@@ -53,7 +53,6 @@ export async function replicate(
     ..._options,
   };
 
-  const page = capture.pages[0]!;
   const ctx: Context = {
     tagsToMoveToHead: [],
     urlsToDownload: new Set(),
@@ -80,7 +79,8 @@ export async function replicate(
       .use(recmaFixProperties)
       .use(recmaRemoveRedundantFragment)
       .use(recmaStringify)
-      .process(page.html.body),
+      // TODO: body
+      .process(snapshot.page.html),
 
     unified()
       .use(rehypeParse, { fragment: false })
@@ -88,7 +88,8 @@ export async function replicate(
       .use(rehypeExtractBodyAttributes(ctx))
       .use(rehypeIdentifyUrlsToDownload(ctx))
       .use(rehypeStringify)
-      .process(page.html.body)
+      // TODO: body
+      .process(snapshot.page.html)
       .then(async () => {
         const head = await unified()
           .use(rehypeParse, { fragment: true })
@@ -97,10 +98,16 @@ export async function replicate(
           .use(rehypeRemoveScripts)
           .use(rehypeIdentifyUrlsToDownload(ctx))
           .use(rehypeStringify)
-          .process([page.html.head, ...ctx.tagsToMoveToHead].join("\n"));
+          .process(
+            [
+              // TODO: head
+              snapshot.page.html,
+              ...ctx.tagsToMoveToHead,
+            ].join("\n")
+          );
         await Promise.all(
           Array.from(ctx.urlsToDownload).map(async (relativeUrl) => {
-            const url = new URL(relativeUrl, page.url);
+            const url = new URL(relativeUrl, snapshot.page.url);
             if (url.href.length > 255) {
               // TODO: rename the urls to download to something shorter
               console.warn(`Skipping ${url.href} because it's too long`);
@@ -121,12 +128,12 @@ export async function replicate(
 
         return head;
       }),
-    prettier
-      .css(page.css)
-      .then((text) => sink.writeText("public/styles.css", text)),
-    prettier
-      .js(page.js)
-      .then((text) => sink.writeText("public/script.js", text)),
+    // prettier
+    //   .css(page.css)
+    //   .then((text) => sink.writeText("public/styles.css", text)),
+    // prettier
+    //   .js(page.js)
+    //   .then((text) => sink.writeText("public/script.js", text)),
   ]);
 
   const html = `

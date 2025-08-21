@@ -4,11 +4,14 @@ export interface Context {
   bodyAttributes: Record<string, unknown>;
 }
 
-export interface Capture {
-  pages: Array<{
+export interface Snapshot {
+  page: {
     url: string;
-    js: string;
-    css: string;
-    html: { head: string; body: string };
-  }>;
+    title: string;
+    html: string;
+  };
+}
+
+export interface Session {
+  snapshots: Snapshot[];
 }

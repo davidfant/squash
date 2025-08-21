@@ -1,186 +1,20 @@
-// Chrome extension background script for web page scraping and replication
+import type { Snapshot } from "@squash/replicator";
+import { v4 as uuid } from "uuid";
 
-// Types
-interface AssetContent {
-  href?: string;
-  src?: string;
-  media?: string | null;
-  type?: string;
-  content?: string;
-  index?: number;
+interface ApiResponse {
+  success: boolean;
+  key?: string;
+  repoId?: string;
+  error?: string;
 }
 
-interface ScrapedPage {
-  url: string;
-  title: string;
-  collectedAt: string;
-  html: string;
-  assets: {
-    stylesheets: { linked: AssetContent[]; inline: AssetContent[] };
-    scripts: { linked: AssetContent[]; inline: AssetContent[] };
-  };
+interface StorageConfig {
+  authToken: string;
+  apiBase: string;
+  appUrl: string;
 }
 
-interface ReplicatorPage {
-  url: string;
-  js: string;
-  css: string;
-  html: { head: string; body: string };
-}
-
-// Utility functions
-async function fetchAssetContent(url: string): Promise<string> {
-  try {
-    const response = await fetch(url, { credentials: "omit", mode: "cors" });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return await response.text();
-  } catch (error) {
-    return `/* Failed to fetch ${url}: ${
-      error instanceof Error ? error.message : String(error)
-    } */`;
-  }
-}
-
-function combineAssets(assets: AssetContent[]): string {
-  return assets
-    .map((asset) => {
-      const source = asset.href || asset.src || `inline-${asset.index}`;
-      return `/* Source: ${source} */\n${asset.content || ""}`;
-    })
-    .join("\n\n");
-}
-
-function extractHtmlSections(html: string): { head: string; body: string } {
-  const headMatch = html.match(/<head[^>]*>([\s\S]*?)<\/head>/i);
-  const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-
-  return {
-    head: headMatch?.[1] || "",
-    body: bodyMatch?.[1] || html,
-  };
-}
-
-function transformToReplicatorFormat(scrape: ScrapedPage): {
-  pages: ReplicatorPage[];
-} {
-  const { head, body } = extractHtmlSections(scrape.html);
-
-  const allStyles = [
-    ...scrape.assets.stylesheets.linked,
-    ...scrape.assets.stylesheets.inline,
-  ];
-  const allScripts = [
-    ...scrape.assets.scripts.linked,
-    ...scrape.assets.scripts.inline,
-  ];
-
-  return {
-    pages: [
-      {
-        url: scrape.url,
-        css: combineAssets(allStyles),
-        js: combineAssets(allScripts),
-        html: { head, body },
-      },
-    ],
-  };
-}
-
-// Main page capture functionality
-async function capturePage(tabId: number): Promise<void> {
-  try {
-    // Inject script to collect page data
-    const results = await chrome.scripting.executeScript({
-      target: { tabId },
-      func: () => {
-        const absoluteUrl = (url: string) => new URL(url, location.href).href;
-
-        const stylesheets = {
-          linked: Array.from(
-            document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')
-          ).map((link) => ({
-            href: absoluteUrl(link.href),
-            media: link.media || null,
-          })),
-          inline: Array.from(
-            document.querySelectorAll<HTMLStyleElement>("style")
-          ).map((style, index) => ({
-            index,
-            media: style.media || null,
-            content: style.textContent || "",
-          })),
-        };
-
-        const blacklistedTypes = ["application/json", "application/ld+json"];
-        const scripts = {
-          linked: Array.from(document.scripts)
-            .filter((script) => script.src)
-            .filter((script) => !blacklistedTypes.includes(script.type))
-            .map((script) => ({
-              src: absoluteUrl(script.src),
-              type: script.type || "text/javascript",
-            })),
-          inline: Array.from(document.scripts)
-            .filter((script) => script.src)
-            .filter((script) => !blacklistedTypes.includes(script.type))
-            .filter((script) => !!script.textContent)
-            .map((script, index) => ({
-              index,
-              type: script.type || "text/javascript",
-              content: script.textContent!,
-            })),
-        };
-
-        return {
-          url: location.href,
-          title: document.title,
-          collectedAt: new Date().toISOString(),
-          html: document.documentElement.outerHTML,
-          assets: { stylesheets, scripts },
-        };
-      },
-    });
-
-    const scrapedData = results[0]?.result;
-    if (!scrapedData) throw new Error("Failed to scrape page data");
-
-    // Fetch external assets
-    const linkedStyles = await Promise.all(
-      scrapedData.assets.stylesheets.linked.map(async (stylesheet) => ({
-        ...stylesheet,
-        content: await fetchAssetContent(stylesheet.href!),
-      }))
-    );
-
-    const linkedScripts = await Promise.all(
-      scrapedData.assets.scripts.linked.map(async (script) => ({
-        ...script,
-        content: await fetchAssetContent(script.src!),
-      }))
-    );
-
-    const completeData: ScrapedPage = {
-      ...scrapedData,
-      assets: {
-        stylesheets: {
-          linked: linkedStyles,
-          inline: scrapedData.assets.stylesheets.inline,
-        },
-        scripts: {
-          linked: linkedScripts,
-          inline: scrapedData.assets.scripts.inline,
-        },
-      },
-    };
-
-    // Send to replicator API
-    await sendToReplicator(completeData);
-  } catch (error) {
-    console.error("Page capture failed:", error);
-  }
-}
-
-async function sendToReplicator(scrapedData: ScrapedPage): Promise<void> {
+async function getStorageConfig(): Promise<StorageConfig> {
   const { authToken, apiBase, appUrl } = await chrome.storage.local.get([
     "authToken",
     "apiBase",
@@ -188,42 +22,146 @@ async function sendToReplicator(scrapedData: ScrapedPage): Promise<void> {
   ]);
 
   if (!authToken || !apiBase) {
-    throw new Error("Missing authentication credentials");
-  }
-
-  const replicatorData = transformToReplicatorFormat(scrapedData);
-
-  const response = await fetch(`${apiBase}/replicator`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${authToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(replicatorData),
-  });
-
-  if (!response.ok) {
     throw new Error(
-      `Replicator API error: ${response.status} ${response.statusText}`
+      "Missing authentication credentials. Please configure the extension first."
     );
   }
 
-  const result = await response.json();
+  return { authToken, apiBase, appUrl };
+}
 
-  // Open the created repo or main app
-  const targetUrl =
-    result?.repoId && appUrl
-      ? `${appUrl}/repos/${result.repoId}`
-      : appUrl || "https://app.hypershape.com";
+// Main page capture functionality
+async function capturePage(tabId: number): Promise<void> {
+  try {
+    const config = await getStorageConfig();
+    console.log("Starting page capture for tab:", tabId);
 
-  await chrome.tabs.create({ url: targetUrl });
+    // Generate session ID
+    const sessionId = uuid();
+    console.log("Generated session ID:", sessionId);
+
+    // Inject script to collect page data
+    const results = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: () => ({
+        url: location.href,
+        title: document.title,
+        html: document.documentElement.outerHTML,
+      }),
+    });
+
+    const page = results[0]?.result;
+    if (!page) {
+      throw new Error("Failed to extract page data");
+    }
+
+    console.log("Extracted page data:", {
+      url: page.url,
+      title: page.title,
+    });
+
+    await uploadSnapshot(sessionId, { page }, config);
+    const repoId = await processSession(sessionId, config);
+    await navigateToRepo(repoId, config);
+
+    console.log("Page capture completed successfully!");
+  } catch (error) {
+    console.error("Page capture failed:", error);
+    // Show error notification
+    await chrome.notifications.create({
+      type: "basic",
+      iconUrl: "circle.svg",
+      title: "Page Capture Failed",
+      message:
+        error instanceof Error ? error.message : "An unknown error occurred",
+    });
+  }
+}
+
+async function uploadSnapshot(
+  sessionId: string,
+  snapshot: Snapshot,
+  config: StorageConfig
+): Promise<void> {
+  console.log("Uploading snapshot for session:", sessionId);
+
+  const response = await fetch(
+    `${config.apiBase}/replicator/${sessionId}/snapshot`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${config.authToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(snapshot),
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `Snapshot upload failed: ${response.status} ${response.statusText} - ${errorText}`
+    );
+  }
+
+  const result: ApiResponse = await response.json();
+  if (!result.success) {
+    throw new Error(
+      `Snapshot upload failed: ${result.error || "Unknown error"}`
+    );
+  }
+
+  console.log("Snapshot uploaded successfully:", result.key);
+}
+
+async function processSession(
+  sessionId: string,
+  config: StorageConfig
+): Promise<string> {
+  console.log("Processing session:", sessionId);
+
+  const response = await fetch(`${config.apiBase}/replicator/${sessionId}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${config.authToken}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `Session processing failed: ${response.status} ${response.statusText} - ${errorText}`
+    );
+  }
+
+  const result: ApiResponse = await response.json();
+  if (!result.repoId) {
+    throw new Error(
+      `Session processing failed: ${result.error || "No repo ID returned"}`
+    );
+  }
+
+  console.log("Session processed successfully, repo ID:", result.repoId);
+  return result.repoId;
+}
+
+async function navigateToRepo(
+  repoId: string,
+  config: StorageConfig
+): Promise<void> {
+  console.log("Navigating to repo:", repoId);
+  await chrome.tabs.create({ url: `${config.appUrl}/repos/${repoId}` });
 }
 
 // Event listeners
 chrome.action.onClicked.addListener(async (tab) => {
-  if (tab.id) {
-    await capturePage(tab.id);
+  if (!tab.id) {
+    console.error("No tab ID available");
+    return;
   }
+
+  await capturePage(tab.id);
 });
 
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
@@ -239,10 +177,25 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
   if (request.action === "capturePage" && request.tabId) {
     capturePage(request.tabId)
       .then(() => sendResponse({ success: true }))
-      .catch((error) => sendResponse({ success: false, error: error.message }));
-    return true;
+      .catch((error) => {
+        console.error("Capture page error:", error);
+        sendResponse({
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
+    return true; // Keep message channel open for async response
   }
 
   sendResponse({ success: false, error: "Unknown action" });
   return false;
+});
+
+// Handle extension startup
+chrome.runtime.onStartup.addListener(() => {
+  console.log("Extension started");
+});
+
+chrome.runtime.onInstalled.addListener(() => {
+  console.log("Extension installed/updated");
 });

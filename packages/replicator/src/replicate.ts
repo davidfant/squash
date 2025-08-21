@@ -1,29 +1,8 @@
 import * as prettier from "@/lib/prettier";
-import path from "path";
-import recmaJsx from "recma-jsx";
-import recmaStringify from "recma-stringify";
-import rehypeParse from "rehype-parse";
-import rehypeRecma from "rehype-recma";
-import rehypeRemoveComments from "rehype-remove-comments";
-import rehypeStringify from "rehype-stringify";
-import { unified } from "unified";
-import { recmaReplaceRefs } from "./lib/recma/replaceRefs";
-import { rehypeExtractBase64Images } from "./lib/rehype/extract/base64Images";
+import { JSDOM } from "jsdom";
 // import { rehypeExtractBlocks } from "./lib/rehypeExtractBlocks";
-import rehypeMinifyWhitespace from "rehype-minify-whitespace";
-import { recmaFixProperties } from "./lib/recma/fixProperties";
-import { recmaRemoveRedundantFragment } from "./lib/recma/removeRedundantFragment";
-import { rehypeExtractBlocks } from "./lib/rehype/extract/blocks";
-import { rehypeExtractBodyAttributes } from "./lib/rehype/extract/bodyAttributes";
-import { rehypeExtractButtons } from "./lib/rehype/extract/buttons";
-import { rehypeExtractRoles } from "./lib/rehype/extract/roles";
-import { rehypeExtractStylesAndScripts } from "./lib/rehype/extract/stylesAndScripts";
-import { rehypeExtractSVGs } from "./lib/rehype/extract/svgs";
-import { rehypeExtractTags } from "./lib/rehype/extract/tags";
-import { rehypeIdentifyUrlsToDownload } from "./lib/rehype/identifyUrlsToDownload";
-import { rehypeRemoveScripts } from "./lib/rehype/removeScripts";
 import type { FileSink } from "./lib/sinks/base";
-import type { Context, Snapshot } from "./types";
+import type { Snapshot } from "./types";
 
 const noop = () => () => {};
 
@@ -53,12 +32,28 @@ export async function replicate(
     ..._options,
   };
 
-  const ctx: Context = {
-    tagsToMoveToHead: [],
-    urlsToDownload: new Set(),
-    bodyAttributes: {},
-  };
+  const {
+    window: { document: doc },
+  } = new JSDOM(snapshot.page.html);
 
+  // 1. get all attributes on the HTML and body tags
+  const html = doc.querySelector("html") ?? doc.createElement("html");
+  const head = doc.querySelector("head") ?? doc.createElement("head");
+  const body = doc.querySelector("body") ?? doc.createElement("body");
+  const htmlAttrs = Array.from(html.attributes);
+  const bodyAttrs = Array.from(body.attributes);
+
+  const blacklistedScriptTypes = ["application/json", "application/ld+json"];
+  Array.from(doc.querySelectorAll("script"))
+    .filter((s) => blacklistedScriptTypes.includes(s.type))
+    .forEach((s) => s.remove());
+
+  Array.from(body.querySelectorAll("link,style,script")).forEach((tag) => {
+    body.removeChild(tag);
+    head.appendChild(tag);
+  });
+
+  /*
   const [body, head] = await Promise.all([
     unified()
       .use(rehypeParse, { fragment: true })
@@ -136,25 +131,37 @@ export async function replicate(
     //   .then((text) => sink.writeText("public/script.js", text)),
   ]);
 
-  const html = `
-    <!DOCTYPE html>
-    <html lang="en">
-      <head>
-        ${head}
-        <link rel="stylesheet" href="/styles.css" />
-      </head>
-      <body ${Object.entries(ctx.bodyAttributes)
-        .map(([key, value]) => `${key}="${value}"`)
-        .join(" ")}>
-      </body>
-      <script type="module" src="/src/main.tsx"></script>
-    </html>
-    `.trim();
-  // <script type="module" src="/script.js"></script>
+  */
+
+  // const replicatedHtml = `
+  //   <!DOCTYPE html>
+  //   <html lang="en">
+  //     <head>
+  //       ${head}
+  //       <link rel="stylesheet" href="/styles.css" />
+  //     </head>
+  //     <body ${Object.entries(ctx.bodyAttributes)
+  //       .map(([key, value]) => `${key}="${value}"`)
+  //       .join(" ")}>
+  //     </body>
+  //     <script type="module" src="/src/main.tsx"></script>
+  //   </html>
+  // `.trim();
+  const replicatedHtml = `
+<!DOCTYPE html>
+<html ${htmlAttrs.map((a) => `${a.name}="${a.value}"`).join(" ")}>
+  <head>${head.innerHTML}</head>
+  <body ${bodyAttrs.map((a) => `${a.name}="${a.value}"`).join(" ")}>
+  </body>
+  <script type="module" src="/src/main.tsx"></script>
+</html>
+  `.trim();
   await Promise.all([
-    prettier.html(html).then((text) => sink.writeText("index.html", text)),
     prettier
-      .ts(String(body))
-      .then((text) => sink.writeText("src/App.tsx", text)),
+      .html(replicatedHtml)
+      .then((text) => sink.writeText("index.html", text)),
+    // prettier
+    //   .ts(String(body))
+    //   .then((text) => sink.writeText("src/App.tsx", text)),
   ]);
 }

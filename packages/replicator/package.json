@@ -11,12 +11,18 @@
   "scripts": {
     "dev": "tsc --watch --preserveWatchOutput",
     "build": "tsc",
-    "replicate": "tsx watch --env-file .env src/playground.ts"
+    "replicate": "tsx watch --env-file .env src/playground.ts",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
   },
   "devDependencies": {
+    "@jest/globals": "^30.0.5",
     "@types/estree": "^1.0.5",
     "@types/hast": "^3.0.4",
+    "@types/jest": "^30.0.0",
+    "@types/jsdom": "^21.1.7",
     "@types/node": "^24.2.0",
+    "jest": "^30.0.5",
+    "ts-jest": "^29.4.1",
     "tsx": "^4.20.3",
     "typescript": "~5.8.3"
   },
@@ -29,6 +35,7 @@
     "estree-util-visit": "^2.0.0",
     "hast": "^1.0.0",
     "hast-util-to-html": "^9.0.5",
+    "jsdom": "^26.1.0",
     "nanotar": "^0.2.0",
     "prettier": "^3.0.0",
     "recma-jsx": "^1.0.1",

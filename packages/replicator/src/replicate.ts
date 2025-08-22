@@ -1,5 +1,5 @@
 import * as prettier from "@/lib/prettier";
-import { JSDOM } from "jsdom";
+import { load } from "cheerio";
 // import { rehypeExtractBlocks } from "./lib/rehypeExtractBlocks";
 import type { FileSink } from "./lib/sinks/base";
 import type { Snapshot } from "./types";
@@ -32,25 +32,25 @@ export async function replicate(
     ..._options,
   };
 
-  const {
-    window: { document: doc },
-  } = new JSDOM(snapshot.page.html);
+  const $ = load(snapshot.page.html);
 
   // 1. get all attributes on the HTML and body tags
-  const html = doc.querySelector("html") ?? doc.createElement("html");
-  const head = doc.querySelector("head") ?? doc.createElement("head");
-  const body = doc.querySelector("body") ?? doc.createElement("body");
-  const htmlAttrs = Array.from(html.attributes);
-  const bodyAttrs = Array.from(body.attributes);
+  const html = $("html") ?? $("html");
+  const head = $("head") ?? $("head");
+  const body = $("body") ?? $("body");
+  const htmlAttrs = Array.from(html[0]?.attributes ?? []);
+  const bodyAttrs = Array.from(body[0]?.attributes ?? []);
 
   const blacklistedScriptTypes = ["application/json", "application/ld+json"];
-  Array.from(doc.querySelectorAll("script"))
-    .filter((s) => blacklistedScriptTypes.includes(s.type))
-    .forEach((s) => s.remove());
+  $("script")
+    .filter((_, s) => blacklistedScriptTypes.includes(s.type))
+    .each((_, s) => {
+      $(s).remove();
+    });
 
-  Array.from(body.querySelectorAll("link,style,script")).forEach((tag) => {
-    body.removeChild(tag);
-    head.appendChild(tag);
+  body.find("link,style,script").each((_, tag) => {
+    $(tag).remove();
+    head.append(tag);
   });
 
   /*
@@ -150,7 +150,7 @@ export async function replicate(
   const replicatedHtml = `
 <!DOCTYPE html>
 <html ${htmlAttrs.map((a) => `${a.name}="${a.value}"`).join(" ")}>
-  <head>${head.innerHTML}</head>
+  <head>${head.html() ?? ""}</head>
   <body ${bodyAttrs.map((a) => `${a.name}="${a.value}"`).join(" ")}>
   </body>
   <script type="module" src="/src/main.tsx"></script>

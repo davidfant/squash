@@ -1,5 +1,5 @@
 import type { Asset, FileSink } from "@/lib/sinks/base";
-import { JSDOM } from "jsdom";
+import { load } from "cheerio";
 import { replicate } from "..";
 
 class TestSink implements FileSink<Asset[]> {
@@ -24,7 +24,7 @@ const test = async (html: string) => {
   return sink.finalize();
 };
 
-const normalize = (s?: string) => (s ?? "").replace(/\s+/g, " ").trim();
+const normalize = (s?: string | null) => (s ?? "").replace(/\s+/g, " ").trim();
 
 function expectSinkFile(assets: Asset[], path: string) {
   const asset = assets.find((a) => a.path === path);
@@ -65,16 +65,16 @@ describe("replicate", () => {
       );
 
       const index = expectSinkFile(files, "index.html");
-      const { window } = new JSDOM(index);
-      const head = window.document.querySelector("head");
+      const $ = load(index);
+      const head = $("head");
       expect(head).toBeDefined();
-      expect(normalize(head?.innerHTML)).toContain(
+      expect(normalize(head?.html())).toContain(
         normalize(`<script src="/script.js"></script>`)
       );
-      expect(normalize(head?.innerHTML)).toContain(
+      expect(normalize(head?.html())).toContain(
         normalize(`<link rel="stylesheet" href="/style.css">`)
       );
-      expect(normalize(head?.innerHTML)).toContain(
+      expect(normalize(head?.html())).toContain(
         normalize(`<style> * { color: red; } </style>`)
       );
     });
@@ -91,11 +91,11 @@ describe("replicate", () => {
         </html>`
       );
       const index = expectSinkFile(files, "index.html");
-      const { window } = new JSDOM(index);
-      const head = window.document.querySelector("head");
+      const $ = load(index);
+      const head = $("head");
       expect(head).toBeDefined();
-      expect(head?.innerHTML).not.toContain("application/json");
-      expect(head?.innerHTML).not.toContain("application/ld+json");
+      expect(head?.html()).not.toContain("application/json");
+      expect(head?.html()).not.toContain("application/ld+json");
     });
 
     xit("should download scripts and styles", async () => {});

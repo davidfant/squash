@@ -62,6 +62,19 @@ function App() {
       });
       console.log("Active tab:", tab);
 
+      await chrome.scripting.executeScript({
+        target: { tabId: tab!.id! },
+        world: "MAIN",
+        files: ["dist/src/page/inject.js"],
+      });
+
+      const results = await chrome.scripting.executeScript({
+        target: { tabId: tab!.id! },
+        world: "MAIN",
+        func: () => console.log(window.__squash?.reactFiber()),
+      });
+      console.log("rezzzz", results);
+
       if (tab.id) {
         // Send message to background script to capture the page
         const response = await chrome.runtime.sendMessage({
@@ -87,7 +100,7 @@ function App() {
         onClick={handleCapturePage}
         className="w-full h-12 text-base font-medium bg-black hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-200 dark:text-black text-white"
         size="lg"
-        disabled={!isAuthenticated || isCapturing}
+        // disabled={!isAuthenticated || isCapturing}
       >
         {isCapturing ? (
           <>

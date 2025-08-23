@@ -175,15 +175,16 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
   }
 
   if (request.action === "capturePage" && request.tabId) {
-    capturePage(request.tabId)
-      .then(() => sendResponse({ success: true }))
-      .catch((error) => {
-        console.error("Capture page error:", error);
-        sendResponse({
-          success: false,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      });
+    console.log("wow bg...");
+    // capturePage(request.tabId)
+    //   .then(() => sendResponse({ success: true }))
+    //   .catch((error) => {
+    //     console.error("Capture page error:", error);
+    //     sendResponse({
+    //       success: false,
+    //       error: error instanceof Error ? error.message : String(error),
+    //     });
+    //   });
     return true; // Keep message channel open for async response
   }
 

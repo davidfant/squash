@@ -41,12 +41,8 @@ export async function replicate(
   const htmlAttrs = Array.from(html[0]?.attributes ?? []);
   const bodyAttrs = Array.from(body[0]?.attributes ?? []);
 
-  const blacklistedScriptTypes = ["application/json", "application/ld+json"];
-  $("script")
-    .filter((_, s) => blacklistedScriptTypes.includes(s.type))
-    .each((_, s) => {
-      $(s).remove();
-    });
+  $('script[type="application/json"]').remove();
+  $('script[type="application/ld+json"]').remove();
 
   body.find("link,style,script").each((_, tag) => {
     $(tag).remove();

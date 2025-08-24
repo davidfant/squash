@@ -1,5 +1,5 @@
-import { Metadata } from "@squash/replicator/types";
 import type { Fiber } from "react-reconciler";
+import { Metadata } from "../types";
 import Tag = Metadata.ReactFiber.Component.Tag;
 
 function getFiberFromElement(el: Element): Fiber | null {

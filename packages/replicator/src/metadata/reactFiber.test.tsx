@@ -1,6 +1,6 @@
-import { Metadata } from "@squash/replicator";
 import { forwardRef, memo, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
+import { Metadata } from "../types";
 import { reactFiber } from "./reactFiber";
 import Tag = Metadata.ReactFiber.Component.Tag;
 

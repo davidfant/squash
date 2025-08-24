@@ -43,20 +43,23 @@ async function createSnapshot(tabId: number): Promise<void> {
     const result = await chrome.scripting.executeScript({
       target: { tabId },
       world: "MAIN",
-      func: () => ({
-        page: {
-          url: location.href,
-          title: document.title,
-          html: document.documentElement.outerHTML,
-        },
-        // metadata: window.__squash?.reactFiber() ?? null,
-        metadata: (() => {
-          const metadata = window.__squash?.reactFiber();
-          // @ts-ignore
-          window.metadata = metadata;
-          return metadata;
-        })(),
-      }),
+      func: () => {
+        const metadata = window.__squash?.reactFiber();
+        // @ts-ignore
+        window.metadata = metadata;
+        const snapshot: Snapshot = {
+          page: {
+            url: location.href,
+            title: document.title,
+            html: document.documentElement.outerHTML,
+          },
+          metadata,
+        };
+        document
+          .querySelectorAll("[data-squash-parent-id]")
+          .forEach((el) => el.removeAttribute("data-squash-parent-id"));
+        return snapshot;
+      },
     });
     const snapshot = result[0]?.result;
     if (!snapshot) {

@@ -7,9 +7,9 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
-    "./types": {
-      "types": "./dist/types.d.ts",
-      "default": "./dist/types.js"
+    "./metadata/reactFiber": {
+      "types": "./dist/metadata/reactFiber.d.ts",
+      "default": "./dist/metadata/reactFiber.js"
     }
   },
   "scripts": {
@@ -22,18 +22,26 @@
   },
   "devDependencies": {
     "@jest/globals": "^30.0.5",
+    "@squash/chrome-extension": "workspace:*",
     "@types/cheerio": "^1.0.0",
     "@types/estree": "^1.0.5",
     "@types/hast": "^3.0.4",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.2.0",
+    "@types/react": "^19.1.9",
+    "@types/react-dom": "^19.1.7",
+    "@types/react-reconciler": "^0.32.0",
     "aws4fetch": "^1.0.20",
     "concurrently": "^9.2.0",
     "jest": "^30.0.5",
+    "jest-environment-jsdom": "^30.0.5",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
     "ts-jest": "^29.4.1",
     "tsc-alias": "^1.8.16",
     "tsx": "^4.20.3",
-    "typescript": "~5.8.3"
+    "typescript": "~5.8.3",
+    "util": "^0.12.5"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^2.0.1",
@@ -45,7 +53,9 @@
     "estree-util-visit": "^2.0.0",
     "hast": "^1.0.0",
     "hast-util-to-html": "^9.0.5",
+    "jest-diff": "^30.0.5",
     "nanotar": "^0.2.0",
+    "parse5": "^8.0.0",
     "prettier": "^3.0.0",
     "recma-jsx": "^1.0.1",
     "recma-stringify": "^1.0.0",

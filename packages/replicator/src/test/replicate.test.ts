@@ -18,7 +18,7 @@ class TestSink implements FileSink<Asset[]> {
 const test = async (html: string) => {
   const sink = new TestSink();
   await replicate(
-    { page: { url: "http://localhost", title: "Test", html } },
+    { page: { url: "http://localhost", title: "Test", html }, metadata: null },
     sink
   );
   return sink.finalize();

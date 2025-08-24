@@ -31,36 +31,43 @@ async function getStorageConfig(): Promise<StorageConfig> {
 }
 
 // Main page capture functionality
-async function capturePage(tabId: number): Promise<void> {
+async function createSnapshot(tabId: number): Promise<void> {
   try {
     const config = await getStorageConfig();
-    console.log("Starting page capture for tab:", tabId);
+
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      world: "MAIN",
+      files: ["dist/src/page/inject.js"],
+    });
+    const result = await chrome.scripting.executeScript({
+      target: { tabId },
+      world: "MAIN",
+      func: () => ({
+        page: {
+          url: location.href,
+          title: document.title,
+          html: document.documentElement.outerHTML,
+        },
+        // metadata: window.__squash?.reactFiber() ?? null,
+        metadata: (() => {
+          const metadata = window.__squash?.reactFiber();
+          // @ts-ignore
+          window.metadata = metadata;
+          return metadata;
+        })(),
+      }),
+    });
+    const snapshot = result[0]?.result;
+    if (!snapshot) {
+      throw new Error("Failed to extract page data");
+    }
 
     // Generate session ID
     const sessionId = uuid();
     console.log("Generated session ID:", sessionId);
 
-    // Inject script to collect page data
-    const results = await chrome.scripting.executeScript({
-      target: { tabId },
-      func: () => ({
-        url: location.href,
-        title: document.title,
-        html: document.documentElement.outerHTML,
-      }),
-    });
-
-    const page = results[0]?.result;
-    if (!page) {
-      throw new Error("Failed to extract page data");
-    }
-
-    console.log("Extracted page data:", {
-      url: page.url,
-      title: page.title,
-    });
-
-    await uploadSnapshot(sessionId, { page }, config);
+    await uploadSnapshot(sessionId, snapshot, config);
     const repoId = await processSession(sessionId, config);
     await navigateToRepo(repoId, config);
 
@@ -154,16 +161,6 @@ async function navigateToRepo(
   await chrome.tabs.create({ url: `${config.appUrl}/repos/${repoId}` });
 }
 
-// Event listeners
-chrome.action.onClicked.addListener(async (tab) => {
-  if (!tab.id) {
-    console.error("No tab ID available");
-    return;
-  }
-
-  await capturePage(tab.id);
-});
-
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
   if (request.action === "ping") {
     sendResponse({
@@ -174,17 +171,16 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
     return false;
   }
 
-  if (request.action === "capturePage" && request.tabId) {
-    console.log("wow bg...");
-    // capturePage(request.tabId)
-    //   .then(() => sendResponse({ success: true }))
-    //   .catch((error) => {
-    //     console.error("Capture page error:", error);
-    //     sendResponse({
-    //       success: false,
-    //       error: error instanceof Error ? error.message : String(error),
-    //     });
-    //   });
+  if (request.action === "createSnapshot" && request.tabId) {
+    createSnapshot(request.tabId)
+      .then(() => sendResponse({ success: true }))
+      .catch((error) => {
+        console.error("Capture page error:", error);
+        sendResponse({
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
     return true; // Keep message channel open for async response
   }
 
@@ -193,10 +189,7 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 });
 
 // Handle extension startup
-chrome.runtime.onStartup.addListener(() => {
-  console.log("Extension started");
-});
-
-chrome.runtime.onInstalled.addListener(() => {
-  console.log("Extension installed/updated");
-});
+chrome.runtime.onStartup.addListener(() => console.log("Extension started"));
+chrome.runtime.onInstalled.addListener(() =>
+  console.log("Extension installed/updated")
+);

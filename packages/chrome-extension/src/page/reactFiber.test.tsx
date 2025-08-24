@@ -1,26 +1,32 @@
-import { ReactFiber } from "@/types";
+import { Metadata } from "@squash/replicator";
 import { forwardRef, memo, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { reactFiber } from "./reactFiber";
-import Tag = ReactFiber.Component.Tag;
+import Tag = Metadata.ReactFiber.Component.Tag;
 
 const root = createRoot(document.body);
 
 async function setup(app: ReactNode) {
   root.render(app);
   await new Promise((r) => requestAnimationFrame(r));
-  const snapshot = reactFiber()!;
-  return snapshot;
+  const metadata = reactFiber()!;
+  return metadata;
 }
 
-function component(snapshot: ReactFiber.Snapshot, id: number) {
-  const c = snapshot.components[id];
+function code(metadata: Metadata.ReactFiber, id: number) {
+  const c = metadata.code[id];
+  if (!c) throw new Error(`Code ${id} not found`);
+  return { value: c, id };
+}
+
+function component(metadata: Metadata.ReactFiber, id: number) {
+  const c = metadata.components[id];
   if (!c) throw new Error(`Component ${id} not found`);
   return { value: c, id };
 }
 
-function node(snapshot: ReactFiber.Snapshot, id: number) {
-  const n = snapshot.nodes[id];
+function node(metadata: Metadata.ReactFiber, id: number) {
+  const n = metadata.nodes[id];
   if (!n) throw new Error(`Node ${id} not found`);
   return { value: n, id };
 }
@@ -33,12 +39,12 @@ function expectParentNodeId(selector: string, expected: number) {
 
 describe("reactFiber", () => {
   it("should add HostRoot component and tag the first DOM element", async () => {
-    const snapshot = await setup(<div>Hello</div>);
-    const c = component(snapshot, 0);
-    const n = node(snapshot, 0);
+    const metadata = await setup(<div>Hello</div>);
+    const c = component(metadata, 0);
+    const n = node(metadata, 0);
     expect(c.value).toEqual({ tag: Tag.HostRoot });
 
-    expect(n.value).toEqual({ componentId: c.id, props: null });
+    expect(n.value).toEqual({ componentId: c.id, parentId: null, props: null });
     expect(n.value.props).toBeNull();
 
     expectParentNodeId("div", n.id);
@@ -47,76 +53,133 @@ describe("reactFiber", () => {
   describe("FunctionComponent", () => {
     it("should register component and tag its child", async () => {
       const C = () => <div>Hello</div>;
-      const snapshot = await setup(<C />);
-      const c = component(snapshot, 1);
-      const n = node(snapshot, 1);
+      const metadata = await setup(<C />);
+      const c = code(metadata, 0);
+      const comp = component(metadata, 1);
+      const n = node(metadata, 1);
 
-      expect(c.value).toEqual({
+      expect(c.value).toBe(C.toString());
+      expect(comp.value).toEqual({
         tag: Tag.FunctionComponent,
         name: "C",
-        code: C.toString(),
+        codeId: c.id,
       });
 
-      expect(n.value.componentId).toBe(c.id);
+      expect(n.value.componentId).toBe(comp.id);
       expect(n.value.props).toEqual({});
       expectParentNodeId("div", n.id);
     });
 
-    it("should add instance props", async () => {
-      const C = ({ name }: { name: string }) => <div>{name}</div>;
-      const snapshot = await setup(<C name="John" />);
-      const n = node(snapshot, 1);
-      expect(n.value).toEqual({ componentId: 1, props: { name: "John" } });
+    describe("props", () => {
+      it("should add instance props", async () => {
+        const C = ({ name }: { name: string }) => <div>{name}</div>;
+        const metadata = await setup(<C name="John" />);
+        const n = node(metadata, 1);
+        expect(n.value).toEqual({
+          componentId: 1,
+          parentId: 0,
+          props: { name: "John" },
+        });
+      });
+
+      it("should strip out react elements (e.g. children)", async () => {
+        const A = ({ children }: { children: ReactNode }) => (
+          <div>{children}</div>
+        );
+        const B = () => <div>Hello</div>;
+        const metadata = await setup(
+          <A>
+            <B />
+          </A>
+        );
+        const n = node(metadata, 1);
+        expect(n.value).toEqual({
+          componentId: 1,
+          parentId: 0,
+          props: { children: "[$$typeof: Symbol(react.transitional.element)]" },
+        });
+      });
+
+      it("should strip out functions", async () => {
+        const A = ({ onClick }: { onClick: () => void }) => (
+          <div onClick={onClick}>Hello</div>
+        );
+        const metadata = await setup(<A onClick={() => {}} />);
+        const n = node(metadata, 1);
+        expect(n.value).toEqual({
+          componentId: 1,
+          parentId: 0,
+          props: { onClick: "[Function]" },
+        });
+      });
     });
 
     it("should only register component once", async () => {
       const A = () => <div>A</div>;
-      const B = () => (
-        <div>
-          <A />
-        </div>
-      );
-      const snapshot = await setup(
-        <>
-          <A />
-          <B />
-        </>
-      );
-      const a = component(snapshot, 1);
-      const b = component(snapshot, 2);
+      const B = () => <A />;
+      const metadata = await setup([<A key="a" />, <B key="b" />]);
+      const a = component(metadata, 1);
+      const b = component(metadata, 2);
 
       expect(a.value).toEqual({
         tag: Tag.FunctionComponent,
         name: "A",
-        code: A.toString(),
+        codeId: 0,
       });
 
       expect(b.value).toEqual({
         tag: Tag.FunctionComponent,
         name: "B",
-        code: B.toString(),
+        codeId: 1,
       });
 
-      expect(node(snapshot, 1).value.componentId).toBe(a.id);
-      expect(node(snapshot, 2).value.componentId).toBe(b.id);
-      expect(node(snapshot, 3).value.componentId).toBe(a.id);
+      expect(node(metadata, 1).value.componentId).toBe(a.id);
+      expect(node(metadata, 2).value.componentId).toBe(b.id);
+      expect(node(metadata, 3).value.componentId).toBe(a.id);
+    });
+
+    it("should have correct parentId", async () => {
+      const A = () => <div>A</div>;
+      const B = () => <A />;
+      const metadata = await setup([<A key="a" />, <B key="b" />]);
+
+      const a = component(metadata, 1);
+      const b = component(metadata, 2);
+
+      expect(node(metadata, 1).value).toEqual({
+        componentId: a.id,
+        parentId: 0,
+        props: {},
+      });
+      expect(node(metadata, 2).value).toEqual({
+        componentId: b.id,
+        parentId: 0,
+        props: {},
+      });
+      expect(node(metadata, 3).value).toEqual({
+        componentId: a.id,
+        parentId: 2,
+        props: {},
+      });
     });
   });
 
   describe("ForwardRef", () => {
     it("should register component and tag its child", async () => {
       const C = forwardRef(() => <div>Hello</div>);
-      const snapshot = await setup(<C />);
-      const c = component(snapshot, 1);
-      const n = node(snapshot, 1);
+      const metadata = await setup(<C />);
+      const c = code(metadata, 0);
+      const comp = component(metadata, 1);
+      const n = node(metadata, 1);
 
-      expect(c.value).toEqual({
+      expect(c.value).toBe((C as any).render.toString());
+      expect(comp.value).toEqual({
         tag: Tag.ForwardRef,
         name: undefined,
-        code: (C as any).render.toString(),
+        codeId: c.id,
       });
 
-      expect(n.value.componentId).toBe(c.id);
+      expect(n.value.componentId).toBe(comp.id);
       expect(n.value.props).toEqual({});
       expectParentNodeId("div", n.id);
     });
@@ -125,25 +188,39 @@ describe("reactFiber", () => {
   describe("memo", () => {
     it("should register simple memo", async () => {
       const C = memo(() => <div>Hello</div>);
-      const snapshot = await setup(<C />);
-      const c = component(snapshot, 1);
+      const metadata = await setup(<C />);
+      const c = code(metadata, 0);
+      const comp = component(metadata, 1);
 
-      expect(c.value).toEqual({
+      expect(c.value).toBe(C.type.toString());
+      expect(comp.value).toEqual({
         tag: Tag.SimpleMemoComponent,
         name: undefined,
-        code: C.type.toString(),
+        codeId: c.id,
       });
     });
 
-    it("should register complex memo", async () => {
+    it("should register complex memo, but only register code once", async () => {
       const C = memo(forwardRef(() => <div>Hello</div>));
-      const snapshot = await setup(<C />);
-      const c = component(snapshot, 1);
+      const metadata = await setup(<C />);
 
-      expect(c.value).toEqual({
+      expect(Object.keys(metadata.code).length).toBe(1);
+
+      const c = code(metadata, 0);
+      const comps = {
+        memo: component(metadata, 1),
+        forwardRef: component(metadata, 2),
+      };
+
+      expect(comps.memo.value).toEqual({
         tag: Tag.MemoComponent,
         name: undefined,
-        code: (C as any).type.render.toString(),
+        codeId: c.id,
+      });
+      expect(comps.forwardRef.value).toEqual({
+        tag: Tag.ForwardRef,
+        name: undefined,
+        codeId: c.id,
       });
     });
   });

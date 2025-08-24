@@ -1,49 +1,53 @@
+import { AwsClient } from "aws4fetch";
 import { ChildProcess, spawn } from "node:child_process";
 import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { FileSystemSink } from "./lib/sinks/fs";
 import { logFileTree } from "./logFileTree";
 import { replicate } from "./replicate";
 import type { Snapshot } from "./types";
 
-const PATH_TO_CAPTURE = `./captures/posthog.json`;
-const PATH_TO_TEMPLATE = `./captures/replicated`;
+const SNAPSHOT_CACHE_DIR = path.join(os.tmpdir(), "squash-replicator");
+const PATH_TO_TEMPLATE = `./playground`;
 
-// const capture2 = await fs
-//   .readFile(PATH_TO_CAPTURE, "utf-8")
-//   .then(
-//     (t) =>
-//       JSON.parse(t) as {
-//         captureData: {
-//           css: string;
-//           js: string;
-//           headContent: string;
-//           bodyContent: string;
-//         };
-//         currentUrl: string;
-//         timestamp: string;
-//         sessionId: string;
-//       }
-//   )
-//   .then(
-//     ({ captureData: d, currentUrl: url }): Capture => ({
-//       pages: [
-//         {
-//           css: d.css,
-//           js: d.js,
-//           html: { head: d.headContent, body: d.bodyContent },
-//           url,
-//         },
-//       ],
-//     })
-//   );
-// await fs.writeFile(
-//   PATH_TO_CAPTURE,
-//   JSON.stringify(capture2, null, 2)
-// );
-const capture = JSON.parse(
-  await fs.readFile(PATH_TO_CAPTURE, "utf-8")
-) as Snapshot;
+const snapshots: Record<string, string> = {
+  cursor:
+    "46cb2680-f22a-4656-a386-c535e1fe3808/aebd068b-62ae-4a89-a8fd-e635bcda52b8/1755997565749.json",
+  autodesk:
+    "46cb2680-f22a-4656-a386-c535e1fe3808/dc5975ac-1a72-4165-aab8-db59d1a24a94/1755997532609.json",
+};
+
+const arg = process.argv[2];
+if (!arg) throw new Error("No snapshot ID provided");
+
+const snapshotId = snapshots[arg] ?? arg;
+if (!snapshotId) throw new Error("Invalid snapshot ID");
+
+const snapshotPath = path.join(SNAPSHOT_CACHE_DIR, snapshotId);
+const snapshot = await (async (): Promise<Snapshot> => {
+  if (await fs.stat(snapshotPath).catch(() => false)) {
+    console.log("Using cached snapshot", snapshotId);
+  } else {
+    console.log("Downloading snapshot", snapshotId);
+    const url = `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${process.env.R2_BUCKET_NAME}/${snapshotId}`;
+    const signedUrl = await new AwsClient({
+      accessKeyId: process.env.R2_ACCESS_KEY_ID!,
+      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+      service: "s3",
+      region: "auto",
+    }).sign(url, { method: "GET", aws: { signQuery: true } });
+
+    // fetch and save at snapshotPath
+    await fs.mkdir(path.dirname(snapshotPath), { recursive: true });
+    await fetch(signedUrl)
+      .then((res) => res.json())
+      .then((json) => fs.writeFile(snapshotPath, JSON.stringify(json)));
+    console.log("Saved to", snapshotPath);
+  }
+
+  return fs.readFile(snapshotPath, "utf-8").then(JSON.parse);
+})();
 
 await Promise.all(
   [
@@ -55,7 +59,7 @@ await Promise.all(
 
 // const sink = new TarSink();
 const sink = new FileSystemSink(PATH_TO_TEMPLATE);
-await replicate(capture, sink, {
+await replicate(snapshot, sink, {
   // stylesAndScripts: false,
   // base64Images: false,
   // svgs: false,

@@ -1,5 +1,6 @@
-import { ReactFiber } from "@/types";
+import { Metadata } from "@squash/replicator/types";
 import type { Fiber } from "react-reconciler";
+import Tag = Metadata.ReactFiber.Component.Tag;
 
 function getFiberFromElement(el: Element): Fiber | null {
   for (let key in el) {
@@ -79,79 +80,110 @@ function getCode(elementType: any): Function | undefined {
   }
 }
 
-export function reactFiber(): ReactFiber.Snapshot | null {
+function sanitize(value: any, seen = new WeakSet<any>()): any {
+  if (value === null) return null;
+  if (value === undefined) return undefined;
+  if (value === window) return "[Window]";
+  if (typeof value === "object") {
+    if (seen.has(value)) return "[Circular]";
+    seen.add(value);
+    if (typeof value.$$typeof === "symbol") {
+      return `[$$typeof: ${value.$$typeof.toString()}]`;
+    }
+    if (value instanceof Element) {
+      return "[Element]";
+    }
+    return Object.fromEntries(
+      Object.entries(value).map(([k, v]) => [k, sanitize(v, seen)])
+    );
+  }
+  if (typeof value === "function") {
+    return "[Function]";
+  }
+  return value;
+}
+
+export function reactFiber(): Metadata.ReactFiber | null {
   const root = findReactRoot();
   if (!root) return null;
 
-  const snapshot: ReactFiber.Snapshot = {
+  const metadata: Metadata.ReactFiber = {
     type: "react-fiber",
+    code: {},
     components: {},
     nodes: {},
   };
-  let componentId = 0;
-  let nodeId = 0;
+  const ids = { code: 0, component: 0, node: 0 };
 
-  const componentIdLookup = new Map<
-    `${ReactFiber.Component.Tag}:${string | undefined}`,
-    Map<unknown, number>
-  >();
+  const codeIdLookup = new Map<Function, number>();
+  type CompKey = `${Tag}:${string}`; // Tag:codeId
+  const compIdLookup = new Map<CompKey, number>();
+
   walkFrom<number>(root, (fiber, depth, parent) => {
-    const add = <T extends ReactFiber.Component.Any>({
+    const add = <T extends Metadata.ReactFiber.Component.Any>({
       component: c,
       props = null,
       key,
     }: {
       component: T;
-      key?: unknown;
+      key: CompKey;
       props?: Record<string, unknown> | string | null;
     }) => {
-      const tagNameKey = `${c.tag}:${
-        "name" in c ? c.name : undefined
-      }` as const;
-      if (!componentIdLookup.has(tagNameKey)) {
-        componentIdLookup.set(tagNameKey, new Map<unknown, number>());
-      }
-      const tagNameLookup = componentIdLookup.get(tagNameKey)!;
+      const componentId = compIdLookup.get(key) ?? ids.component++;
+      compIdLookup.set(key, componentId);
 
-      const cid = tagNameLookup.get(key) ?? componentId++;
-      tagNameLookup.set(key, cid);
-
-      const nid = nodeId++;
-      snapshot.components[cid] = c;
-      snapshot.nodes[nid] = { componentId: cid, props };
-      return { component: cid, node: nid };
+      const nodeId = ids.node++;
+      metadata.components[componentId] = c;
+      metadata.nodes[nodeId] = {
+        componentId,
+        props,
+        parentId: parent ?? null,
+      };
+      return { component: componentId, node: nodeId };
     };
     switch (fiber.tag) {
-      case ReactFiber.Component.Tag.HostRoot: {
-        const ids = add({ component: { tag: fiber.tag } });
-        return ids.component;
-      }
-      case ReactFiber.Component.Tag.FunctionComponent:
-      case ReactFiber.Component.Tag.MemoComponent:
-      case ReactFiber.Component.Tag.SimpleMemoComponent:
-      case ReactFiber.Component.Tag.ForwardRef: {
-        const fn = getCode(fiber.elementType);
+      case Tag.HostRoot: {
         const ids = add({
-          component: {
-            tag: fiber.tag,
-            name: fiber.elementType.displayName ?? fiber.elementType.name,
-            code: fn?.toString(),
-          },
-          key: fn,
-          props: fiber.memoizedProps,
+          component: { tag: fiber.tag },
+          key: `${Tag.HostRoot}:host`,
         });
         return ids.component;
       }
-      case ReactFiber.Component.Tag.HostText: {
+      case Tag.FunctionComponent:
+      case Tag.MemoComponent:
+      case Tag.SimpleMemoComponent:
+      case Tag.ForwardRef: {
+        const fn = getCode(fiber.elementType);
+        if (!fn) {
+          console.warn("Could not get code for", fiber.elementType);
+          return;
+        }
+
+        const codeId = codeIdLookup.get(fn) ?? ids.code++;
+        codeIdLookup.set(fn, codeId);
+        metadata.code[codeId] = fn.toString();
+
+        const id = add({
+          component: {
+            tag: fiber.tag,
+            name: fiber.elementType.displayName ?? fiber.elementType.name,
+            codeId,
+          },
+          key: `${fiber.tag}:${codeId}`,
+          props: sanitize(fiber.memoizedProps),
+        });
+        return id.component;
+      }
+      case Tag.HostText: {
         const text = fiber.memoizedProps as string;
         const ids = add({
           component: { tag: fiber.tag },
           props: text,
-          key: "text",
+          key: `${Tag.HostText}:text`,
         });
         return ids.component;
       }
-      case ReactFiber.Component.Tag.DOMElement:
+      case Tag.DOMElement:
         if (parent !== undefined) {
           (fiber.stateNode as HTMLElement).setAttribute(
             "data-squash-parent-id",
@@ -159,22 +191,23 @@ export function reactFiber(): ReactFiber.Snapshot | null {
           );
         }
         break;
-      case ReactFiber.Component.Tag.ClassComponent: // TODO...
-      case ReactFiber.Component.Tag.HostPortal:
-      case ReactFiber.Component.Tag.Fragment:
-      case ReactFiber.Component.Tag.SuspenseComponent:
-      case ReactFiber.Component.Tag.SuspenseListComponent:
-      case ReactFiber.Component.Tag.StrictMode:
-      case ReactFiber.Component.Tag.ContextConsumer:
-      case ReactFiber.Component.Tag.ContextProvider: // TODO: might want to do something w memoizedProps.value
-      case ReactFiber.Component.Tag.LegacyHiddenComponent:
-      case ReactFiber.Component.Tag.HostHoistable as any:
-      case ReactFiber.Component.Tag.HostSingleton as any:
+      case Tag.ClassComponent: // TODO...
+      case Tag.HostPortal:
+      case Tag.Fragment:
+      case Tag.SuspenseComponent:
+      case Tag.SuspenseListComponent:
+      case Tag.StrictMode:
+      case Tag.ContextConsumer:
+      case Tag.ContextProvider: // TODO: might want to do something w memoizedProps.value
+      case Tag.LegacyHiddenComponent:
+      case Tag.CacheComponent:
+      case Tag.HostHoistable as any:
+      case Tag.HostSingleton as any:
         break;
       default:
         console.log("unknown", fiber.tag, fiber);
     }
   });
 
-  return snapshot;
+  return metadata;
 }

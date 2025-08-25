@@ -1,7 +1,24 @@
 import type { RefImport } from "@/types";
+import * as acorn from "acorn";
+import acornJsx from "acorn-jsx";
 import type { ImportDeclaration, NodeMap, Program } from "estree";
-import { visit } from "estree-util-visit";
+import { SKIP, visit } from "estree-util-visit";
 import type { Plugin } from "unified";
+
+const JSXParser = acorn.Parser.extend(acornJsx());
+function parseJSX(code: string) {
+  const ast = JSXParser.parse(code, {
+    ecmaVersion: "latest",
+    sourceType: "module",
+  });
+  if (ast.body[0]!.type === "ExpressionStatement") {
+    return ast.body[0]!.expression;
+  } else {
+    console.error(code);
+    console.error(ast.body[0]);
+    throw new Error("Expected ExpressionStatement");
+  }
+}
 
 export const recmaReplaceRefs: Plugin<[], Program> = () => (tree: Program) => {
   const imports = new Map<string, RefImport[]>();
@@ -15,7 +32,16 @@ export const recmaReplaceRefs: Plugin<[], Program> = () => (tree: Program) => {
     imports.set(i.module, existing);
   };
 
-  visit(tree, (node) => {
+  const findAttr = <T>(element: NodeMap["JSXElement"], name: string) => {
+    const attr = element.openingElement.attributes.find(
+      (a): a is NodeMap["JSXAttribute"] =>
+        a.type === "JSXAttribute" && a.name.name === name
+    );
+    if (attr?.value?.type !== "Literal") return;
+    return attr.value.value as T;
+  };
+
+  visit(tree, (node, key, idx, ancestors) => {
     // existing imports
     if (node.type === "ImportDeclaration") {
       const module = node.source.value as string;
@@ -37,20 +63,33 @@ export const recmaReplaceRefs: Plugin<[], Program> = () => (tree: Program) => {
       node.openingElement?.name?.type === "JSXIdentifier" &&
       node.openingElement.name.name === "ref"
     ) {
-      const importsAttr = node.openingElement.attributes.find(
-        (a): a is NodeMap["JSXAttribute"] =>
-          a.type === "JSXAttribute" && a.name.name === "imports"
-      )?.value;
-      if (importsAttr?.type !== "Literal") return;
+      const importsString = findAttr<string>(node, "imports");
+      const jsxString = findAttr<string>(node, "jsx");
+      if (!!importsString) {
+        const refImports = JSON.parse(importsString) as RefImport[];
+        for (const imp of refImports) {
+          const existing = imports.get(imp.module) ?? [];
+          const exists = existing.some(
+            (i) => i.name === imp.name && !!i.default === imp.default
+          );
+          if (!exists) existing.push(imp);
+          imports.set(imp.module, existing);
+        }
+      }
 
-      const refImports = JSON.parse(importsAttr.value as string) as RefImport[];
-      for (const imp of refImports) {
-        const existing = imports.get(imp.module) ?? [];
-        const exists = existing.some(
-          (i) => i.name === imp.name && !!i.default === imp.default
-        );
-        if (!exists) existing.push(imp);
-        imports.set(imp.module, existing);
+      if (!!jsxString) {
+        const jsx = parseJSX(jsxString);
+        const parent = ancestors.at(-1)!;
+        if (typeof idx === "number") {
+          // @ts-ignore
+          parent[key!][idx] = jsx;
+        } else {
+          // @ts-ignore
+          parent[key!] = jsx;
+        }
+
+        // Don’t walk into the brand-new subtree
+        return SKIP;
       }
     }
   });

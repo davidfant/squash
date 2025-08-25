@@ -115,11 +115,11 @@ export function reactFiber(): Metadata.ReactFiber | null {
   };
   const ids = { code: 0, component: 0, node: 0 };
 
-  const codeIdLookup = new Map<Function, number>();
+  const codeIdLookup = new Map<Function, Metadata.ReactFiber.CodeId>();
   type CompKey = `${Tag}:${string}`; // Tag:codeId
-  const compIdLookup = new Map<CompKey, number>();
+  const compIdLookup = new Map<CompKey, Metadata.ReactFiber.ComponentId>();
 
-  walkFrom<number>(root, (fiber, depth, parent) => {
+  walkFrom<Metadata.ReactFiber.NodeId>(root, (fiber, depth, parent) => {
     const add = <T extends Metadata.ReactFiber.Component.Any>({
       component: c,
       props = null,
@@ -129,10 +129,10 @@ export function reactFiber(): Metadata.ReactFiber | null {
       key: CompKey;
       props?: Record<string, unknown> | string | null;
     }) => {
-      const componentId = compIdLookup.get(key) ?? ids.component++;
+      const componentId = compIdLookup.get(key) ?? `C${ids.component++}`;
       compIdLookup.set(key, componentId);
 
-      const nodeId = ids.node++;
+      const nodeId = `N${ids.node++}` as const;
       metadata.components[componentId] = c;
       metadata.nodes[nodeId] = {
         componentId,
@@ -159,7 +159,7 @@ export function reactFiber(): Metadata.ReactFiber | null {
           return;
         }
 
-        const codeId = codeIdLookup.get(fn) ?? ids.code++;
+        const codeId = codeIdLookup.get(fn) ?? `F${ids.code++}`;
         codeIdLookup.set(fn, codeId);
         metadata.code[codeId] = fn.toString();
 

@@ -1,5 +1,9 @@
 export namespace Metadata {
   export namespace ReactFiber {
+    export type NodeId = `N${number}`;
+    export type ComponentId = `C${number}`;
+    export type CodeId = `F${number}`;
+
     export namespace Component {
       export enum Tag {
         FunctionComponent = 0, // Function component
@@ -39,7 +43,7 @@ export namespace Metadata {
       interface WithCode<T extends Tag> {
         tag: T;
         name: string | undefined;
-        codeId: number;
+        codeId: CodeId;
       }
 
       export type Function = WithCode<Tag.FunctionComponent>;
@@ -66,17 +70,17 @@ export namespace Metadata {
     }
 
     export interface Node {
-      parentId: number | null;
-      componentId: number;
+      parentId: NodeId | null;
+      componentId: ComponentId;
       props: Record<string, unknown> | string | null;
     }
   }
 
   export interface ReactFiber {
     type: "react-fiber";
-    code: Record<number, string>;
-    components: Record<number, ReactFiber.Component.Any>;
-    nodes: Record<number, ReactFiber.Node>;
+    code: Record<ReactFiber.CodeId, string>;
+    components: Record<ReactFiber.ComponentId, ReactFiber.Component.Any>;
+    nodes: Record<ReactFiber.NodeId, ReactFiber.Node>;
   }
 }
 

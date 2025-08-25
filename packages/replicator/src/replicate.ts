@@ -88,12 +88,14 @@ export async function replicate(
             element: Element;
             index: number;
             parent: Root | Element;
-            nodeId: number;
+            nodeId: Metadata.ReactFiber.NodeId;
           }> = [];
 
           visit(tree, "element", (element, index, parent) => {
             if (index === undefined) return;
-            const nodeId = element.properties?.["dataSquashNodeId"] as number;
+            const nodeId = element.properties?.[
+              "dataSquashNodeId"
+            ] as Metadata.ReactFiber.NodeId;
             if (parent?.type !== "element" && parent?.type !== "root") return;
 
             const n = m.nodes[nodeId];
@@ -103,7 +105,8 @@ export async function replicate(
             }
           });
 
-          const componentName = group.component.name ?? `Component${group.id}`;
+          const componentName =
+            group.component.name ?? `Component${group.id.slice(1)}`;
 
           if (!elements.length) return;
           const processor = unified()

@@ -14,19 +14,19 @@ async function setup(app: ReactNode) {
 }
 
 function code(metadata: Metadata.ReactFiber, id: number) {
-  const c = metadata.code[id];
+  const c = metadata.code[`F${id}`];
   if (!c) throw new Error(`Code ${id} not found`);
   return { value: c, id };
 }
 
 function component(metadata: Metadata.ReactFiber, id: number) {
-  const c = metadata.components[id];
+  const c = metadata.components[`C${id}`];
   if (!c) throw new Error(`Component ${id} not found`);
   return { value: c, id };
 }
 
 function node(metadata: Metadata.ReactFiber, id: number) {
-  const n = metadata.nodes[id];
+  const n = metadata.nodes[`N${id}`];
   if (!n) throw new Error(`Node ${id} not found`);
   return { value: n, id };
 }

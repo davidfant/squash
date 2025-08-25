@@ -1,61 +1,85 @@
-import type { Metadata } from "..";
+import { Metadata } from "..";
 
-type NodeId = number;
-type ComponentId = number;
-
-interface GroupInfo {
-  nodes: NodeId[];
-  dependants: Set<ComponentId>;
-  dependencies: Set<ComponentId>;
-}
+type NodeId = Metadata.ReactFiber.NodeId;
+type ComponentId = Metadata.ReactFiber.ComponentId;
 
 function buildChildMap(
   nodes: Record<NodeId, Metadata.ReactFiber.Node>
 ): Map<NodeId, NodeId[]> {
   const m = new Map<NodeId, NodeId[]>();
-  for (const [idStr, n] of Object.entries(nodes)) {
-    const id = Number(idStr);
-    if (!m.has(id)) m.set(id, []);
-    if (n.parentId !== null) (m.get(n.parentId) ?? []).push(id);
+  for (const [_nodeId, n] of Object.entries(nodes)) {
+    const nodeId = _nodeId as NodeId;
+    if (!m.has(nodeId)) m.set(nodeId, []);
+    if (n.parentId !== null) (m.get(n.parentId) ?? []).push(nodeId);
   }
   return m;
 }
 
-function buildGroups(
+function buildComponentDeps(
   nodes: Record<NodeId, Metadata.ReactFiber.Node>,
-  components: Record<ComponentId, Metadata.ReactFiber.Component.Any>
-): Map<ComponentId, GroupInfo> {
-  const childMap = buildChildMap(nodes);
-  const groups = new Map<ComponentId, GroupInfo>();
+  components: Record<ComponentId, Metadata.ReactFiber.Component.Any>,
+  childMap: Map<NodeId, NodeId[]>
+): Map<ComponentId, Set<ComponentId>> {
+  const componentIds = new Set<ComponentId>(
+    Object.values(nodes).map((n) => n.componentId)
+  );
 
-  const getGroup = (cid: ComponentId) =>
-    groups.get(cid) ??
-    groups
-      .set(cid, { nodes: [], dependants: new Set(), dependencies: new Set() })
-      .get(cid)!;
-
-  for (const [idStr, node] of Object.entries(nodes)) {
-    const id = Number(idStr);
-    getGroup(node.componentId).nodes.push(id);
-  }
+  // 1. build direct component ➜ component edges
+  const direct = new Map<ComponentId, Set<ComponentId>>();
+  for (const compId of componentIds) direct.set(compId, new Set());
 
   for (const [nodeId, node] of Object.entries(nodes)) {
-    const parent = nodes[Number(nodeId)]!;
-    const parentCid = parent.componentId;
-    console.log("outer", nodeId, parent);
+    const parentComp = node.componentId;
+    const childIds = childMap.get(nodeId as NodeId) ?? [];
 
-    console.log("children", childMap.get(Number(nodeId)));
-    for (const childId of childMap.get(Number(nodeId)) ?? []) {
-      const childCid = nodes[childId]!.componentId;
-      if (childCid !== parentCid) {
-        console.log("adding...", { childCid, parentCid });
-        getGroup(parentCid).dependencies.add(childCid);
-        getGroup(childCid).dependants.add(parentCid);
-      }
+    for (const cId of childIds) {
+      const childComp = nodes[cId]!.componentId;
+      if (childComp !== parentComp) direct.get(parentComp)!.add(childComp);
     }
   }
 
-  console.log("childMap", childMap);
+  // 2. expand to transitive closure with simple DFS + memo
+  const memo = new Map<ComponentId, Set<ComponentId>>();
+  const collect = (
+    cid: ComponentId,
+    stack = new Set<ComponentId>()
+  ): Set<ComponentId> => {
+    if (memo.has(cid)) return memo.get(cid)!;
+    if (stack.has(cid)) return new Set(); // defensive: cycle detected
+    stack.add(cid);
+
+    const out = new Set<ComponentId>();
+    for (const d of direct.get(cid) ?? []) {
+      out.add(d);
+      for (const sub of collect(d, stack)) out.add(sub);
+    }
+    stack.delete(cid);
+    memo.set(cid, out);
+    return out;
+  };
+
+  const result = new Map<ComponentId, Set<ComponentId>>();
+  for (const compId of componentIds) result.set(compId, collect(compId));
+  // remove all non-code React components (e.g. DOM nodes, text nodes, etc)
+  for (const [compId, comp] of Object.entries(components)) {
+    if (!("codeId" in comp)) {
+      for (const deps of result.values()) {
+        deps.delete(compId as ComponentId);
+      }
+    }
+  }
+  return result;
+}
+
+function buildComponentNodesMap(
+  nodes: Record<NodeId, Metadata.ReactFiber.Node>
+): Map<ComponentId, NodeId[]> {
+  const groups = new Map<ComponentId, NodeId[]>();
+
+  for (const [nodeId, node] of Object.entries(nodes)) {
+    if (!groups.has(node.componentId)) groups.set(node.componentId, []);
+    groups.get(node.componentId)!.push(nodeId as NodeId);
+  }
 
   return groups;
 }
@@ -63,7 +87,7 @@ function buildGroups(
 export async function metadataProcessor(
   metadata: Metadata.ReactFiber,
   process: (group: {
-    id: number;
+    id: ComponentId;
     component: Metadata.ReactFiber.Component.Any;
     nodes: Record<NodeId, Metadata.ReactFiber.Node>;
   }) => unknown
@@ -71,45 +95,34 @@ export async function metadataProcessor(
   if (!metadata) return;
 
   const { nodes, components } = metadata;
-  const groups = buildGroups(nodes, components);
+  const childMap = buildChildMap(nodes);
+  const componentNodes = buildComponentNodesMap(nodes);
+  const componentDeps = buildComponentDeps(nodes, components, childMap);
 
-  console.log("Metadata", metadata);
-  console.log("Groups", groups);
+  // console.log("Metadata", metadata);
+  // console.log("Component Nodes Map", componentNodes);
+  // console.log("Component Dependencies", componentDeps);
 
-  // dependency counters
-  const remaining = new Map<ComponentId, number>(
-    [...groups].map(([cid, g]) => [cid, g.dependencies.size])
-  );
-
-  // queue of groups that are ready right now
-  const ready: ComponentId[] = [...remaining]
-    .filter(([, cnt]) => cnt === 0)
-    .map(([cid]) => cid);
-
+  const remaining = [...componentNodes];
   const processed = new Set<ComponentId>();
 
-  while (ready.length) {
-    const cid = ready.pop()!;
-    const g = groups.get(cid)!;
+  const next = () => {
+    const idx = remaining.findIndex(([componentId]) =>
+      [...componentDeps.get(componentId)!].every((cid) => processed.has(cid))
+    );
+    if (idx === -1) return;
+    const [spliced] = remaining.splice(idx, 1);
+    const [componentId, nodes] = spliced!;
+    return { componentId, nodes };
+  };
 
+  let g: { componentId: ComponentId; nodes: NodeId[] } | undefined;
+  while ((g = next())) {
     await process({
-      id: cid,
-      component: metadata.components[cid]!,
+      id: g.componentId,
+      component: metadata.components[g.componentId]!,
       nodes: Object.fromEntries(g.nodes.map((id) => [id, nodes[id]!])),
     });
-    processed.add(cid);
-
-    for (const higher of g.dependants) {
-      const left = remaining.get(higher)! - 1;
-      remaining.set(higher, left);
-      if (left === 0) ready.push(higher);
-    }
+    processed.add(g.componentId);
   }
-
-  // const unprocessed = [...groups.keys()].filter((cid) => !processed.has(cid));
-  // if (unprocessed.length) {
-  //   throw new Error(
-  //     `Dependency cycle detected among components: ${unprocessed.join(", ")}`
-  //   );
-  // }
 }

@@ -75,7 +75,7 @@ describe("replicate > reactFiber", () => {
     expectFileToMatchSnapshot(files, "src/components/A.tsx");
   });
 
-  test.only("should create nested components", async () => {
+  test("should create nested components", async () => {
     const A = () => <div>Hello</div>;
     const B = () => (
       <div>

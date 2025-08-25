@@ -8,7 +8,9 @@ import rehypeRecma from "rehype-recma";
 import rehypeStringify from "rehype-stringify";
 import { unified } from "unified";
 import { SKIP, visit } from "unist-util-visit";
+import { createUniqueNames } from "./lib/createUniqueNames";
 import { metadataProcessor } from "./lib/metadataProcessor";
+import { componentToRecma } from "./lib/recma/componentToRecma";
 import { recmaRemoveRedundantFragment } from "./lib/recma/removeRedundantFragment";
 import { recmaReplaceRefs } from "./lib/recma/replaceRefs";
 import { rehypeStripSquashAttribute } from "./lib/rehype/stripSquashAttribute";
@@ -17,6 +19,8 @@ import type { FileSink } from "./lib/sinks/base";
 import { Metadata, type RefImport, type Snapshot } from "./types";
 type Root = import("hast").Root;
 type Element = import("hast").Element;
+type NodeId = Metadata.ReactFiber.NodeId;
+type ComponentId = Metadata.ReactFiber.ComponentId;
 
 interface ReplicateOptions {
   stylesAndScripts?: boolean;
@@ -77,6 +81,8 @@ export async function replicate(
 
   // if (!rootNode) throw new Error("No root node found");
 
+  const compNameById = createUniqueNames(m.components);
+
   await unified()
     .use(rehypeParse, { fragment: true })
     .use(() => (tree: Root) => {
@@ -88,14 +94,12 @@ export async function replicate(
             element: Element;
             index: number;
             parent: Root | Element;
-            nodeId: Metadata.ReactFiber.NodeId;
+            nodeId: NodeId;
           }> = [];
 
           visit(tree, "element", (element, index, parent) => {
             if (index === undefined) return;
-            const nodeId = element.properties?.[
-              "dataSquashNodeId"
-            ] as Metadata.ReactFiber.NodeId;
+            const nodeId = element.properties?.["dataSquashNodeId"] as NodeId;
             if (parent?.type !== "element" && parent?.type !== "root") return;
 
             const n = m.nodes[nodeId];
@@ -105,8 +109,7 @@ export async function replicate(
             }
           });
 
-          const componentName =
-            group.component.name ?? `Component${group.id.slice(1)}`;
+          const componentName = compNameById.get(group.id)!;
 
           if (!elements.length) return;
           const processor = unified()
@@ -124,7 +127,7 @@ export async function replicate(
               ...acc,
               [el.nodeId]: [...(acc[el.nodeId] ?? []), el],
             }),
-            {} as Record<number, typeof elements>
+            {} as Record<NodeId, typeof elements>
           );
 
           // TODO: group elements by nodeId, and then create one single component using the group
@@ -137,8 +140,12 @@ export async function replicate(
             await prettier.ts(processor.stringify(estree))
           );
 
-          for (const elements of Object.values(elementsByNodeId)) {
+          for (const [nodeId, elements] of Object.entries(elementsByNodeId)) {
             const { index, parent } = elements[0]!;
+            const props = nodes.find((n) => n.id === nodeId)!.props as Record<
+              string,
+              unknown
+            >;
             parent.children[index] = h("ref", {
               imports: JSON.stringify([
                 {
@@ -146,7 +153,10 @@ export async function replicate(
                   name: componentName,
                 },
               ] satisfies RefImport[]),
-              jsx: `<${componentName} />`,
+              jsx: unified()
+                .use(recmaJsx)
+                .use(recmaStringify)
+                .stringify(componentToRecma(componentName, props)),
             });
             elements.slice(1).forEach((e) => (e.element.tagName = "rm"));
           }

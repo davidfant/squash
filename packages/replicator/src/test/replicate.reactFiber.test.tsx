@@ -89,6 +89,20 @@ describe("replicate > reactFiber", () => {
   });
 
   describe("props", () => {
+    test("simple props are defined in call site", async () => {
+      const A = (_: any) => <div />;
+      const files = await run(
+        <A
+          enabled
+          string="text"
+          number={-1}
+          array={[1, 2, 3]}
+          object={{ a: 1, b: 2 }}
+        />
+      );
+      expectFileToMatchSnapshot(files, "src/components/A.tsx");
+      expectFileToMatchSnapshot(files, "src/App.tsx");
+    });
     // props like children
   });
 
@@ -96,9 +110,20 @@ describe("replicate > reactFiber", () => {
     "should throw an error if same data-squash-parent-id nodes existing in different parents",
     () => {}
   );
-  test.todo("should support multiple components with same name", () => {});
 
   describe("naming", () => {
+    test.only("should support multiple components with same name", async () => {
+      const A = () => <div>Hello</div>;
+      A.displayName = "X";
+      const B = () => <div>Yellow</div>;
+      B.displayName = "X";
+
+      const files = await run([<A key="a" />, <B key="b" />]);
+      expectFileToMatchSnapshot(files, "src/components/X1.tsx");
+      expectFileToMatchSnapshot(files, "src/components/X2.tsx");
+      expectFileToMatchSnapshot(files, "src/App.tsx");
+    });
+
     test.todo("should rewrite component", () => {});
     test.todo("should rewrite component bottoms up", () => {});
   });

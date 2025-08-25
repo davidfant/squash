@@ -4,8 +4,9 @@ export default {
   testEnvironment: "jsdom",
   extensionsToTreatAsEsm: [".ts", ".tsx"],
   moduleNameMapper: {
-    "^(\\.{1,2}/.*)\\.js$": "$1",
     "^@/(.*)$": "<rootDir>/src/$1",
+    // hast just needs to mapped to something
+    hast: "<rootDir>/package.json",
   },
   transform: {
     "^.+\\.ts$": ["ts-jest", { useESM: true }],

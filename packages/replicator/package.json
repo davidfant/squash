@@ -18,7 +18,8 @@
     "dev:alias": "tsc-alias --watch",
     "build": "tsc",
     "replicate": "tsx watch --env-file .env src/playground.ts",
-    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
+    "test:jest": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:vitest": "vitest"
   },
   "devDependencies": {
     "@jest/globals": "^30.0.5",
@@ -41,7 +42,9 @@
     "tsc-alias": "^1.8.16",
     "tsx": "^4.20.3",
     "typescript": "~5.8.3",
-    "util": "^0.12.5"
+    "util": "^0.12.5",
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^3.2.4"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^2.0.1",
@@ -51,8 +54,8 @@
     "ai": "^5.0.9",
     "cheerio": "^1.1.2",
     "estree-util-visit": "^2.0.0",
-    "hast": "^1.0.0",
     "hast-util-to-html": "^9.0.5",
+    "hastscript": "^9.0.1",
     "jest-diff": "^30.0.5",
     "nanotar": "^0.2.0",
     "parse5": "^8.0.0",
@@ -66,6 +69,7 @@
     "rehype-stringify": "^10.0.1",
     "unified": "^11.0.5",
     "unist-util-visit": "^5.0.0",
+    "unist-util-visit-parents": "^6.0.1",
     "zod": "^4.0.16"
   }
 }

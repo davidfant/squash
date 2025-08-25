@@ -2,11 +2,11 @@ import { diffRenderedHtml } from "./diffRenderedHtml";
 
 describe("diffRenderedHtml", () => {
   describe("null", () => {
-    it("identical", () => {
+    test("identical", () => {
       expect(diffRenderedHtml("<div>Hello</div>", <div>Hello</div>)).toBeNull();
     });
 
-    it("attribute order is different", () => {
+    test("attribute order is different", () => {
       expect(
         diffRenderedHtml(
           "<div class='a' id='b'>Hello</div>",
@@ -17,7 +17,7 @@ describe("diffRenderedHtml", () => {
       ).toBeNull();
     });
 
-    it("attribute is empty string vs true", () => {
+    test("attribute is empty string vs true", () => {
       expect(
         diffRenderedHtml(
           `<button disabled="">Hello</button>`,
@@ -25,7 +25,7 @@ describe("diffRenderedHtml", () => {
         )
       ).toBeNull();
     });
-    it("whitespace is different", () => {
+    test("whitespace is different", () => {
       expect(
         diffRenderedHtml(
           `
@@ -40,7 +40,7 @@ describe("diffRenderedHtml", () => {
   });
 
   describe("diff", () => {
-    it("attribute is missing", () => {
+    test("attribute is missing", () => {
       const diff = diffRenderedHtml(
         `<button disabled>Hello</button>`,
         <button>Hello</button>
@@ -70,7 +70,7 @@ describe("diffRenderedHtml", () => {
       );
     });
 
-    it("tag is different", () => {
+    test("tag is different", () => {
       expect(diffRenderedHtml(`<button>Hello</button>`, <div>Hello</div>)).toBe(
         `
 - Expected
@@ -94,7 +94,7 @@ describe("diffRenderedHtml", () => {
       );
     });
 
-    it("child is missing", () => {
+    test("child is missing", () => {
       const diff = diffRenderedHtml(
         `<div>Hello</div>`,
         <div>

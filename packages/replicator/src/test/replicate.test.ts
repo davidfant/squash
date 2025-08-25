@@ -2,7 +2,7 @@ import type { Asset, FileSink } from "@/lib/sinks/base";
 import { load } from "cheerio";
 import { replicate } from "..";
 
-class TestSink implements FileSink<Asset[]> {
+export class TestSink implements FileSink<Asset[]> {
   private assets: Asset[] = [];
   async writeText(path: string, text: string) {
     this.assets.push({ path, bytes: new TextEncoder().encode(text) });
@@ -15,7 +15,7 @@ class TestSink implements FileSink<Asset[]> {
   }
 }
 
-const test = async (html: string) => {
+const run = async (html: string) => {
   const sink = new TestSink();
   await replicate(
     { page: { url: "http://localhost", title: "Test", html }, metadata: null },
@@ -26,7 +26,7 @@ const test = async (html: string) => {
 
 const normalize = (s?: string | null) => (s ?? "").replace(/\s+/g, " ").trim();
 
-function expectSinkFile(assets: Asset[], path: string) {
+export function expectFile(assets: Asset[], path: string) {
   const asset = assets.find((a) => a.path === path);
   expect(asset).toBeDefined();
   return new TextDecoder().decode(asset!.bytes);
@@ -34,37 +34,36 @@ function expectSinkFile(assets: Asset[], path: string) {
 
 describe("replicate", () => {
   describe("attributes", () => {
-    it("should copy html attributes", async () => {
-      const files = await test(`<html lang="en" class="dark"></html>`);
-      const index = expectSinkFile(files, "index.html");
+    test("should copy html attributes", async () => {
+      const files = await run(`<html lang="en" class="dark"></html>`);
+      const index = expectFile(files, "index.html");
       expect(index).toContain(`<html lang="en" class="dark">`);
     });
 
-    it("should copy body attributes", async () => {
-      const files = await test(
+    test("should copy body attributes", async () => {
+      const files = await run(
         `<html lang="en" class="dark">
           <body class="bg-white">
           </body>
         </html>`
       );
-      const index = expectSinkFile(files, "index.html");
+      const index = expectFile(files, "index.html");
       expect(index).toContain(`<body class="bg-white">`);
     });
   });
 
   describe("links, scripts and styles", () => {
-    it("should move links, scripts and styles in body to head", async () => {
-      const files = await test(
+    test("should move links and styles in body to head", async () => {
+      const files = await run(
         `<html>
           <body>
-            <script src="/script.js"></script>
             <link rel="stylesheet" href="/style.css">
             <style>* { color: red; }</style>
           </body>
         </html>`
       );
 
-      const index = expectSinkFile(files, "index.html");
+      const index = expectFile(files, "index.html");
       const $ = load(index);
       const head = $("head");
       expect(head).toBeDefined();
@@ -79,10 +78,12 @@ describe("replicate", () => {
       );
     });
 
-    it("should remove json and json+ld scripts", async () => {
-      const files = await test(
+    // test("should remove json and json+ld scripts", async () => {
+    test("should remove scripts", async () => {
+      const files = await run(
         `<html>
           <head>
+            <script src="/script.js"></script>
             <script type="application/json">{"foo": "bar"}</script>
           </head>
           <body>
@@ -90,14 +91,13 @@ describe("replicate", () => {
           </body>
         </html>`
       );
-      const index = expectSinkFile(files, "index.html");
+      const index = expectFile(files, "index.html");
       const $ = load(index);
-      const head = $("head");
-      expect(head).toBeDefined();
-      expect(head?.html()).not.toContain("application/json");
-      expect(head?.html()).not.toContain("application/ld+json");
+      expect($.html()).not.toContain("script");
+      // expect(head?.html()).not.toContain("application/json");
+      // expect(head?.html()).not.toContain("application/ld+json");
     });
 
-    xit("should download scripts and styles", async () => {});
+    test.todo("should download styles", async () => {});
   });
 });

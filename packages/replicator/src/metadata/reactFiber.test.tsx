@@ -38,7 +38,7 @@ function expectParentNodeId(selector: string, expected: number) {
 }
 
 describe("reactFiber", () => {
-  it("should add HostRoot component and tag the first DOM element", async () => {
+  test("should add HostRoot component and tag the first DOM element", async () => {
     const metadata = await setup(<div>Hello</div>);
     const c = component(metadata, 0);
     const n = node(metadata, 0);
@@ -51,7 +51,7 @@ describe("reactFiber", () => {
   });
 
   describe("FunctionComponent", () => {
-    it("should register component and tag its child", async () => {
+    test("should register component and tag its child", async () => {
       const C = () => <div>Hello</div>;
       const metadata = await setup(<C />);
       const c = code(metadata, 0);
@@ -71,7 +71,7 @@ describe("reactFiber", () => {
     });
 
     describe("props", () => {
-      it("should add instance props", async () => {
+      test("should add instance props", async () => {
         const C = ({ name }: { name: string }) => <div>{name}</div>;
         const metadata = await setup(<C name="John" />);
         const n = node(metadata, 1);
@@ -82,7 +82,7 @@ describe("reactFiber", () => {
         });
       });
 
-      it("should strip out react elements (e.g. children)", async () => {
+      test("should strip out react elements (e.g. children)", async () => {
         const A = ({ children }: { children: ReactNode }) => (
           <div>{children}</div>
         );
@@ -100,7 +100,7 @@ describe("reactFiber", () => {
         });
       });
 
-      it("should strip out functions", async () => {
+      test("should strip out functions", async () => {
         const A = ({ onClick }: { onClick: () => void }) => (
           <div onClick={onClick}>Hello</div>
         );
@@ -114,7 +114,7 @@ describe("reactFiber", () => {
       });
     });
 
-    it("should only register component once", async () => {
+    test("should only register component once", async () => {
       const A = () => <div>A</div>;
       const B = () => <A />;
       const metadata = await setup([<A key="a" />, <B key="b" />]);
@@ -138,7 +138,7 @@ describe("reactFiber", () => {
       expect(node(metadata, 3).value.componentId).toBe(a.id);
     });
 
-    it("should have correct parentId", async () => {
+    test("should have correct parentId", async () => {
       const A = () => <div>A</div>;
       const B = () => <A />;
       const metadata = await setup([<A key="a" />, <B key="b" />]);
@@ -165,7 +165,7 @@ describe("reactFiber", () => {
   });
 
   describe("ForwardRef", () => {
-    it("should register component and tag its child", async () => {
+    test("should register component and tag its child", async () => {
       const C = forwardRef(() => <div>Hello</div>);
       const metadata = await setup(<C />);
       const c = code(metadata, 0);
@@ -186,7 +186,7 @@ describe("reactFiber", () => {
   });
 
   describe("memo", () => {
-    it("should register simple memo", async () => {
+    test("should register simple memo", async () => {
       const C = memo(() => <div>Hello</div>);
       const metadata = await setup(<C />);
       const c = code(metadata, 0);
@@ -200,7 +200,7 @@ describe("reactFiber", () => {
       });
     });
 
-    it("should register complex memo, but only register code once", async () => {
+    test("should register complex memo, but only register code once", async () => {
       const C = memo(forwardRef(() => <div>Hello</div>));
       const metadata = await setup(<C />);
 

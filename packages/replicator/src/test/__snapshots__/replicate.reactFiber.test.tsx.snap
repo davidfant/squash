@@ -1,0 +1,8 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`replicate > reactFiber > should create App.tsx 1`] = `
+"export function App(props) {
+  return <div>{"Hello"}</div>;
+}
+"
+`;

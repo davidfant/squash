@@ -26,7 +26,7 @@ export const recmaReplaceRefs: Plugin<[], Program> = () => (tree: Program) => {
   const addImport = (i: RefImport) => {
     const existing = imports.get(i.module) ?? [];
     const exists = existing.some(
-      (i) => i.name === i.name && !!i.default === i.default
+      (i) => i.name === i.name && !!i.default === !!i.default
     );
     if (!exists) existing.push(i);
     imports.set(i.module, existing);
@@ -68,12 +68,7 @@ export const recmaReplaceRefs: Plugin<[], Program> = () => (tree: Program) => {
       if (!!importsString) {
         const refImports = JSON.parse(importsString) as RefImport[];
         for (const imp of refImports) {
-          const existing = imports.get(imp.module) ?? [];
-          const exists = existing.some(
-            (i) => i.name === imp.name && !!i.default === imp.default
-          );
-          if (!exists) existing.push(imp);
-          imports.set(imp.module, existing);
+          addImport(imp);
         }
       }
 

@@ -21,3 +21,87 @@ export function App(props) {
 }
 "
 `;
+
+exports[`replicate > reactFiber > should create component when one instance returns null and another returns jsx 1`] = `
+"import { A } from "@/components/A";
+export function App(props) {
+  return <A />;
+}
+"
+`;
+
+exports[`replicate > reactFiber > should create component when one instance returns null and another returns jsx 2`] = `
+"export function A(props) {
+  return <div>{"Hello"}</div>;
+}
+"
+`;
+
+exports[`replicate > reactFiber > should create nested components 1`] = `
+"export function A(props) {
+  return <div>{"Hello"}</div>;
+}
+"
+`;
+
+exports[`replicate > reactFiber > should create nested components 2`] = `
+"import { A } from "@/components/A";
+export function B(props) {
+  return (
+    <div>
+      <A />
+    </div>
+  );
+}
+"
+`;
+
+exports[`replicate > reactFiber > should create nested components 3`] = `
+"import { B } from "@/components/B";
+export function App(props) {
+  return <B />;
+}
+"
+`;
+
+exports[`replicate > reactFiber > should not create a component when returning null 1`] = `
+"export function App(props) {
+  return <div />;
+}
+"
+`;
+
+exports[`replicate > reactFiber > should only create one component for memo(forwardRef(function)) 1`] = `
+"export function Component2(props) {
+  return <div>{"Hello"}</div>;
+}
+"
+`;
+
+exports[`replicate > reactFiber > should only create one component for memo(forwardRef(function)) 2`] = `
+"import { Component2 } from "@/components/Component2";
+export function App(props) {
+  return <Component2 />;
+}
+"
+`;
+
+exports[`replicate > reactFiber > should only create one component if renders same component multiple times 1`] = `
+"export function A(props) {
+  return <div>{"Hello"}</div>;
+}
+"
+`;
+
+exports[`replicate > reactFiber > should only create one component if renders same component multiple times 2`] = `
+"import { A } from "@/components/A";
+export function App(props) {
+  return (
+    <>
+      <A />
+      <A />
+    </>
+  );
+}
+"
+`;

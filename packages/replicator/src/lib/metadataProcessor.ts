@@ -5,8 +5,8 @@ type ComponentId = number;
 
 interface GroupInfo {
   nodes: NodeId[];
-  dependencies: Set<ComponentId>;
   dependants: Set<ComponentId>;
+  dependencies: Set<ComponentId>;
 }
 
 function buildChildMap(
@@ -28,33 +28,34 @@ function buildGroups(
   const childMap = buildChildMap(nodes);
   const groups = new Map<ComponentId, GroupInfo>();
 
-  // helper to lazily create group objects
   const getGroup = (cid: ComponentId) =>
     groups.get(cid) ??
     groups
-      .set(cid, { nodes: [], dependencies: new Set(), dependants: new Set() })
+      .set(cid, { nodes: [], dependants: new Set(), dependencies: new Set() })
       .get(cid)!;
 
   for (const [idStr, node] of Object.entries(nodes)) {
     const id = Number(idStr);
-    if (!groups.has(node.componentId)) {
-      getGroup(node.componentId).nodes.push(id);
-    }
+    getGroup(node.componentId).nodes.push(id);
   }
 
-  // 2️⃣ establish cross-group dependencies
-  for (const [id, node] of Object.entries(nodes)) {
-    const parent = nodes[Number(id)]!;
+  for (const [nodeId, node] of Object.entries(nodes)) {
+    const parent = nodes[Number(nodeId)]!;
     const parentCid = parent.componentId;
+    console.log("outer", nodeId, parent);
 
-    for (const childId of childMap.get(Number(id)) ?? []) {
+    console.log("children", childMap.get(Number(nodeId)));
+    for (const childId of childMap.get(Number(nodeId)) ?? []) {
       const childCid = nodes[childId]!.componentId;
       if (childCid !== parentCid) {
+        console.log("adding...", { childCid, parentCid });
         getGroup(parentCid).dependencies.add(childCid);
         getGroup(childCid).dependants.add(parentCid);
       }
     }
   }
+
+  console.log("childMap", childMap);
 
   return groups;
 }
@@ -71,6 +72,9 @@ export async function metadataProcessor(
 
   const { nodes, components } = metadata;
   const groups = buildGroups(nodes, components);
+
+  console.log("Metadata", metadata);
+  console.log("Groups", groups);
 
   // dependency counters
   const remaining = new Map<ComponentId, number>(
@@ -102,10 +106,10 @@ export async function metadataProcessor(
     }
   }
 
-  const unprocessed = [...groups.keys()].filter((cid) => !processed.has(cid));
-  if (unprocessed.length) {
-    throw new Error(
-      `Dependency cycle detected among components: ${unprocessed.join(", ")}`
-    );
-  }
+  // const unprocessed = [...groups.keys()].filter((cid) => !processed.has(cid));
+  // if (unprocessed.length) {
+  //   throw new Error(
+  //     `Dependency cycle detected among components: ${unprocessed.join(", ")}`
+  //   );
+  // }
 }

@@ -1,5 +1,5 @@
 import { reactFiber } from "@/metadata/reactFiber";
-import type { ReactNode } from "react";
+import { forwardRef, memo, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { describe, test } from "vitest";
 import { replicate } from "..";
@@ -33,30 +33,70 @@ describe("replicate > reactFiber", () => {
     expectFileToMatchSnapshot(files, "src/App.tsx");
   });
 
-  test.only("should create a component", async () => {
+  test("should create a component", async () => {
     const A = () => <div>Hello</div>;
     const files = await run(<A />);
     expectFileToMatchSnapshot(files, "src/components/A.tsx");
     expectFileToMatchSnapshot(files, "src/App.tsx");
   });
 
-  test.todo(
-    "should only create one component if renders multiple components",
-    () => {}
-  );
+  test("should only create one component if renders same component multiple times", async () => {
+    const A = () => <div>Hello</div>;
+    const files = await run([<A key="1" />, <A key="2" />]);
+    expectFileToMatchSnapshot(files, "src/components/A.tsx");
+    expectFileToMatchSnapshot(files, "src/App.tsx");
+  });
+
+  test("should only create one component for memo(forwardRef(function))", async () => {
+    const A = memo(forwardRef(() => <div>Hello</div>));
+    const files = await run(<A />);
+    expectFileToMatchSnapshot(files, "src/components/Component2.tsx");
+    expectFileToMatchSnapshot(files, "src/App.tsx");
+  });
+
+  test("should not create a component when returning null", async () => {
+    const A = () => null;
+    const files = await run(
+      <div>
+        <A />
+      </div>
+    );
+    expectFileToMatchSnapshot(files, "src/App.tsx");
+  });
+
+  test("should create component when one instance returns null and another returns jsx", async () => {
+    const A = ({ enabled }: { enabled: boolean }) =>
+      enabled ? <div>Hello</div> : null;
+    const files = await run([
+      <A key="1" enabled={true} />,
+      <A key="2" enabled={false} />,
+    ]);
+    expectFileToMatchSnapshot(files, "src/App.tsx");
+    expectFileToMatchSnapshot(files, "src/components/A.tsx");
+  });
+
+  test.only("should create nested components", async () => {
+    const A = () => <div>Hello</div>;
+    const B = () => (
+      <div>
+        <A />
+      </div>
+    );
+    const files = await run(<B />);
+    expectFileToMatchSnapshot(files, "src/components/A.tsx");
+    expectFileToMatchSnapshot(files, "src/components/B.tsx");
+    expectFileToMatchSnapshot(files, "src/App.tsx");
+  });
+
+  describe("props", () => {
+    // props like children
+  });
+
   test.todo(
     "should throw an error if same data-squash-parent-id nodes existing in different parents",
     () => {}
   );
-  test.todo(
-    "should only create one component for memo(forwardRef(function))",
-    () => {}
-  );
-  test.todo("should not create a component when returning null", () => {});
-  test.todo(
-    "should create component when one instance returns null and another returns jsx",
-    () => {}
-  );
+  test.todo("should support multiple components with same name", () => {});
 
   describe("naming", () => {
     test.todo("should rewrite component", () => {});

@@ -69,17 +69,6 @@ export async function replicate(
   const nodes = Object.entries(m.nodes).map(([id, n]) => ({ id, ...n }));
   const comps = Object.entries(m.components).map(([id, c]) => ({ id, ...c }));
 
-  const sort: Record<
-    string,
-    {
-      node: Metadata.ReactFiber.Node;
-      children: Set<string>;
-      parents: Set<string>;
-      elements: Element[];
-      processed: boolean;
-    }
-  > = {};
-
   // const rootNode = nodes.find(
   //   (node) =>
   //     m.components[node.componentId]?.tag ===
@@ -88,63 +77,64 @@ export async function replicate(
 
   // if (!rootNode) throw new Error("No root node found");
 
-  const file = await unified()
+  await unified()
     .use(rehypeParse, { fragment: true })
-    .use(
-      () => async (tree: Root) =>
-        metadataProcessor(m, async (group) => {
-          if ("codeId" in group.component) {
-            const code = m.code[group.component.codeId]!;
+    .use(() => (tree: Root) => {
+      return metadataProcessor(m, async (group) => {
+        if ("codeId" in group.component) {
+          // const code = m.code[group.component.codeId]!;
 
-            // 1. for each node, get all children
-            const children = Object.values(nodes).filter(
-              (n) => n.parentId! in group.nodes
-            );
-            // find elements that are children
+          const elements: Array<{
+            element: Element;
+            index: number;
+            parent: Root | Element;
+            nodeId: number;
+          }> = [];
 
-            const elements: Array<{
-              element: Element;
-              index: number;
-              parent: Root | Element;
-              nodeId: number;
-            }> = [];
+          visit(tree, "element", (element, index, parent) => {
+            if (index === undefined) return;
+            const nodeId = element.properties?.["dataSquashNodeId"] as number;
+            if (parent?.type !== "element" && parent?.type !== "root") return;
 
-            visit(tree, "element", (element, index, parent) => {
-              if (index === undefined) return;
-              const nodeId = element.properties?.["dataSquashNodeId"] as number;
-              if (parent?.type !== "element" && parent?.type !== "root") return;
+            const n = m.nodes[nodeId];
+            if (n && n.parentId !== null && n.parentId in group.nodes) {
+              elements.push({ element, index, parent, nodeId: n.parentId });
+              return SKIP;
+            }
+          });
 
-              const n = m.nodes[nodeId];
-              if (n && n.parentId !== null && n.parentId in group.nodes) {
-                elements.push({ element, index, parent, nodeId: n.parentId });
-                return SKIP;
-              }
-            });
+          const componentName = group.component.name ?? `Component${group.id}`;
 
-            const componentName =
-              group.component.name ?? `Component${group.id}`;
+          if (!elements.length) return;
+          const processor = unified()
+            .use(rehypeStripSquashAttribute)
+            .use(rehypeRecma)
+            .use(recmaJsx)
+            // .use(recmaFixProperties)
+            .use(recmaRemoveRedundantFragment)
+            .use(recmaWrapAsComponent, componentName)
+            .use(recmaReplaceRefs)
+            .use(recmaStringify);
 
-            if (!elements.length) return;
-            const processor = unified()
-              .use(rehypeStripSquashAttribute)
-              .use(rehypeRecma)
-              .use(recmaJsx)
-              // .use(recmaFixProperties)
-              .use(recmaRemoveRedundantFragment)
-              .use(recmaWrapAsComponent, componentName)
-              .use(recmaReplaceRefs)
-              .use(recmaStringify);
+          const elementsByNodeId = elements.reduce(
+            (acc, el) => ({
+              ...acc,
+              [el.nodeId]: [...(acc[el.nodeId] ?? []), el],
+            }),
+            {} as Record<number, typeof elements>
+          );
 
-            const estree = await processor.run({
-              type: "root",
-              children: elements.map(({ element }) => element),
-            });
-            await sink.writeText(
-              `src/components/${componentName}.tsx`,
-              await prettier.ts(processor.stringify(estree))
-            );
+          // TODO: group elements by nodeId, and then create one single component using the group
+          const estree = await processor.run({
+            type: "root",
+            children: Object.values(elementsByNodeId)[0]!.map((e) => e.element),
+          });
+          await sink.writeText(
+            `src/components/${componentName}.tsx`,
+            await prettier.ts(processor.stringify(estree))
+          );
 
-            // TODO: do this for every found node...
+          for (const elements of Object.values(elementsByNodeId)) {
             const { index, parent } = elements[0]!;
             parent.children[index] = h("ref", {
               imports: JSON.stringify([
@@ -155,28 +145,36 @@ export async function replicate(
               ] satisfies RefImport[]),
               jsx: `<${componentName} />`,
             });
-            parent.children = parent.children.filter((_, i) => i === index);
-          } else if (
-            group.component.tag === Metadata.ReactFiber.Component.Tag.HostRoot
-          ) {
-            const processor = unified()
-              .use(rehypeStripSquashAttribute)
-              .use(rehypeRecma)
-              .use(recmaJsx)
-              // .use(recmaFixProperties)
-              .use(recmaRemoveRedundantFragment)
-              .use(recmaWrapAsComponent, "App")
-              .use(recmaReplaceRefs)
-              .use(recmaStringify);
-
-            const estree = await processor.run(tree);
-            await sink.writeText(
-              "src/App.tsx",
-              await prettier.ts(processor.stringify(estree))
-            );
+            elements.slice(1).forEach((e) => (e.element.tagName = "rm"));
           }
-        })
-    )
+
+          elements.forEach(({ parent }) => {
+            parent.children = parent.children.filter(
+              (el) => el.type !== "element" || el.tagName !== "rm"
+            );
+          });
+        } else if (
+          group.component.tag === Metadata.ReactFiber.Component.Tag.HostRoot
+        ) {
+          const processor = unified()
+            .use(rehypeStripSquashAttribute)
+            .use(rehypeRecma)
+            .use(recmaJsx)
+            // .use(recmaFixProperties)
+            .use(recmaRemoveRedundantFragment)
+            .use(recmaWrapAsComponent, "App")
+            .use(recmaReplaceRefs)
+            .use(recmaStringify);
+
+          // const estree = await processor.run(tree);
+          const estree = await processor.run(JSON.parse(JSON.stringify(tree)));
+          await sink.writeText(
+            "src/App.tsx",
+            await prettier.ts(processor.stringify(estree))
+          );
+        }
+      });
+    })
     // .use(() => async (tree: Root) => {
     //   const sel = (node: Element) =>
     //     node.properties &&

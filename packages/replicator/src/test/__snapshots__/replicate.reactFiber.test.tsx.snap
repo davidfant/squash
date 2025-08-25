@@ -6,3 +6,18 @@ exports[`replicate > reactFiber > should create App.tsx 1`] = `
 }
 "
 `;
+
+exports[`replicate > reactFiber > should create a component 1`] = `
+"export function A(props) {
+  return <div>{"Hello"}</div>;
+}
+"
+`;
+
+exports[`replicate > reactFiber > should create a component 2`] = `
+"import { A } from "@/components/A";
+export function App(props) {
+  return <A />;
+}
+"
+`;

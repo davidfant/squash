@@ -3,8 +3,8 @@ import recmaJsx from "recma-jsx";
 import recmaStringify from "recma-stringify";
 import rehypeRecma from "rehype-recma";
 import { unified } from "unified";
+import { recmaRemoveRedundantFragment } from "../recma/removeRedundantFragment";
 import { recmaFixProperties } from "./recma/fixProperties";
-import { recmaRemoveRedundantFragment } from "./recma/removeRedundantFragment";
 import { recmaReplaceRefs } from "./recma/replaceRefs";
 
 export type HastNode = any;

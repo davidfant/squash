@@ -26,17 +26,18 @@ const run = async (html: string) => {
 
 const normalize = (s?: string | null) => (s ?? "").replace(/\s+/g, " ").trim();
 
-export function expectFile(assets: Asset[], path: string) {
+export function expectFileToMatchSnapshot(assets: Asset[], path: string) {
   const asset = assets.find((a) => a.path === path);
   expect(asset).toBeDefined();
-  return new TextDecoder().decode(asset!.bytes);
+  const text = new TextDecoder().decode(asset!.bytes);
+  expect(text).toMatchSnapshot();
 }
 
 describe("replicate", () => {
   describe("attributes", () => {
     test("should copy html attributes", async () => {
       const files = await run(`<html lang="en" class="dark"></html>`);
-      const index = expectFile(files, "index.html");
+      const index = expectFileToMatchSnapshot(files, "index.html");
       expect(index).toContain(`<html lang="en" class="dark">`);
     });
 
@@ -47,7 +48,7 @@ describe("replicate", () => {
           </body>
         </html>`
       );
-      const index = expectFile(files, "index.html");
+      const index = expectFileToMatchSnapshot(files, "index.html");
       expect(index).toContain(`<body class="bg-white">`);
     });
   });
@@ -63,7 +64,7 @@ describe("replicate", () => {
         </html>`
       );
 
-      const index = expectFile(files, "index.html");
+      const index = expectFileToMatchSnapshot(files, "index.html");
       const $ = load(index);
       const head = $("head");
       expect(head).toBeDefined();
@@ -91,7 +92,7 @@ describe("replicate", () => {
           </body>
         </html>`
       );
-      const index = expectFile(files, "index.html");
+      const index = expectFileToMatchSnapshot(files, "index.html");
       const $ = load(index);
       expect($.html()).not.toContain("script");
       // expect(head?.html()).not.toContain("application/json");

@@ -31,23 +31,28 @@ function node(metadata: Metadata.ReactFiber, id: number) {
   return { value: n, id };
 }
 
-function expectParentNodeId(selector: string, expected: number) {
+function expectElementNodeId(selector: string, expected: number) {
   const el = document.body.querySelector(selector);
   expect(el).toBeDefined();
-  expect(el?.getAttribute("data-squash-parent-id")).toBe(expected.toString());
+  expect(el?.getAttribute("data-squash-node-id")).toBe(expected.toString());
 }
 
 describe("reactFiber", () => {
   test("should add HostRoot component and tag the first DOM element", async () => {
     const metadata = await setup(<div>Hello</div>);
     const c = component(metadata, 0);
-    const n = node(metadata, 0);
+    const nodes = {
+      root: node(metadata, 0),
+      div: node(metadata, 1),
+    };
     expect(c.value).toEqual({ tag: Tag.HostRoot });
 
-    expect(n.value).toEqual({ componentId: c.id, parentId: null, props: null });
-    expect(n.value.props).toBeNull();
-
-    expectParentNodeId("div", n.id);
+    expect(nodes.root.value).toEqual({
+      componentId: c.id,
+      parentId: null,
+      props: null,
+    });
+    expectElementNodeId("div", nodes.div.id);
   });
 
   describe("FunctionComponent", () => {
@@ -55,19 +60,29 @@ describe("reactFiber", () => {
       const C = () => <div>Hello</div>;
       const metadata = await setup(<C />);
       const c = code(metadata, 0);
-      const comp = component(metadata, 1);
-      const n = node(metadata, 1);
+      const components = {
+        C: component(metadata, 1),
+        Cdiv: component(metadata, 2),
+      };
+      const nodes = {
+        C: node(metadata, 1),
+        Cdiv: node(metadata, 2),
+      };
 
       expect(c.value).toBe(C.toString());
-      expect(comp.value).toEqual({
+      expect(components.C.value).toEqual({
         tag: Tag.FunctionComponent,
         name: "C",
         codeId: c.id,
       });
+      expect(components.Cdiv.value).toEqual({ tag: Tag.DOMElement });
 
-      expect(n.value.componentId).toBe(comp.id);
-      expect(n.value.props).toEqual({});
-      expectParentNodeId("div", n.id);
+      expect(nodes.C.value.componentId).toBe(components.C.id);
+      expect(nodes.C.value.props).toEqual({});
+
+      expect(nodes.Cdiv.value.componentId).toBe(components.Cdiv.id);
+      expect(nodes.Cdiv.value.parentId).toBe(nodes.C.id);
+      expectElementNodeId("div", nodes.Cdiv.id);
     });
 
     describe("props", () => {
@@ -118,24 +133,36 @@ describe("reactFiber", () => {
       const A = () => <div>A</div>;
       const B = () => <A />;
       const metadata = await setup([<A key="a" />, <B key="b" />]);
-      const a = component(metadata, 1);
-      const b = component(metadata, 2);
+      const components = {
+        A: component(metadata, 1),
+        Adiv: component(metadata, 2),
+        B: component(metadata, 3),
+      };
+      const nodes = {
+        A: node(metadata, 1),
+        Adiv: node(metadata, 2),
+        B: node(metadata, 3),
+        BA: node(metadata, 4),
+        BAdiv: node(metadata, 5),
+      };
 
-      expect(a.value).toEqual({
+      expect(components.A.value).toEqual({
         tag: Tag.FunctionComponent,
         name: "A",
         codeId: 0,
       });
-
-      expect(b.value).toEqual({
+      expect(components.Adiv.value).toEqual({ tag: Tag.DOMElement });
+      expect(components.B.value).toEqual({
         tag: Tag.FunctionComponent,
         name: "B",
         codeId: 1,
       });
 
-      expect(node(metadata, 1).value.componentId).toBe(a.id);
-      expect(node(metadata, 2).value.componentId).toBe(b.id);
-      expect(node(metadata, 3).value.componentId).toBe(a.id);
+      expect(nodes.A.value.componentId).toBe(components.A.id);
+      expect(nodes.Adiv.value.componentId).toBe(components.Adiv.id);
+      expect(nodes.B.value.componentId).toBe(components.B.id);
+      expect(nodes.BA.value.componentId).toBe(components.A.id);
+      expect(nodes.BAdiv.value.componentId).toBe(components.Adiv.id);
     });
 
     test("should have correct parentId", async () => {
@@ -143,24 +170,20 @@ describe("reactFiber", () => {
       const B = () => <A />;
       const metadata = await setup([<A key="a" />, <B key="b" />]);
 
-      const a = component(metadata, 1);
-      const b = component(metadata, 2);
+      const nodes = {
+        root: node(metadata, 0),
+        A: node(metadata, 1),
+        Adiv: node(metadata, 2),
+        B: node(metadata, 3),
+        BA: node(metadata, 4),
+        BAdiv: node(metadata, 5),
+      };
 
-      expect(node(metadata, 1).value).toEqual({
-        componentId: a.id,
-        parentId: 0,
-        props: {},
-      });
-      expect(node(metadata, 2).value).toEqual({
-        componentId: b.id,
-        parentId: 0,
-        props: {},
-      });
-      expect(node(metadata, 3).value).toEqual({
-        componentId: a.id,
-        parentId: 2,
-        props: {},
-      });
+      expect(nodes.A.value.parentId).toBe(nodes.root.id);
+      expect(nodes.Adiv.value.parentId).toBe(nodes.A.id);
+      expect(nodes.B.value.parentId).toBe(nodes.root.id);
+      expect(nodes.BA.value.parentId).toBe(nodes.B.id);
+      expect(nodes.BAdiv.value.parentId).toBe(nodes.BA.id);
     });
   });
 
@@ -169,19 +192,33 @@ describe("reactFiber", () => {
       const C = forwardRef(() => <div>Hello</div>);
       const metadata = await setup(<C />);
       const c = code(metadata, 0);
-      const comp = component(metadata, 1);
-      const n = node(metadata, 1);
+      const components = {
+        C: component(metadata, 1),
+        Cdiv: component(metadata, 2),
+      };
+      const nodes = {
+        C: node(metadata, 1),
+        Cdiv: node(metadata, 2),
+      };
 
       expect(c.value).toBe((C as any).render.toString());
-      expect(comp.value).toEqual({
+      expect(components.C.value).toEqual({
         tag: Tag.ForwardRef,
         name: undefined,
         codeId: c.id,
       });
 
-      expect(n.value.componentId).toBe(comp.id);
-      expect(n.value.props).toEqual({});
-      expectParentNodeId("div", n.id);
+      expect(nodes.C.value).toEqual({
+        componentId: components.C.id,
+        parentId: 0,
+        props: {},
+      });
+      expect(nodes.Cdiv.value).toEqual({
+        componentId: components.Cdiv.id,
+        parentId: nodes.C.id,
+        props: null,
+      });
+      expectElementNodeId("div", nodes.Cdiv.id);
     });
   });
 

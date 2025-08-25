@@ -51,13 +51,18 @@ export namespace Metadata {
         tag: Tag.HostText;
       }
 
+      export interface DOMElement {
+        tag: Tag.DOMElement;
+      }
+
       export type Any =
         | HostRoot
         | Function
         | ForwardRef
         | Memo
         | SimpleMemo
-        | Text;
+        | Text
+        | DOMElement;
     }
 
     export interface Node {
@@ -82,4 +87,10 @@ export interface Snapshot {
 
 export interface Session {
   snapshots: Snapshot[];
+}
+
+export interface RefImport {
+  module: string;
+  name: string;
+  default?: boolean;
 }

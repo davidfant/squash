@@ -1,5 +1,5 @@
 import { filesystemCacheMiddleware } from "@/lib/filesystemCacheMiddleware";
-import { hastNodeToTsxModule, type HastNode } from "@/lib/hastNode";
+import { hastNodeToTsxModule, type HastNode } from "@/lib/old/hastNode";
 import type { FileSink } from "@/lib/sinks/base";
 import { anthropic, type AnthropicProviderOptions } from "@ai-sdk/anthropic";
 import { openai } from "@ai-sdk/openai";

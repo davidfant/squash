@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { describe, test } from "vitest";
 import { replicate } from "..";
-import { expectFile, TestSink } from "./replicate.test";
+import { expectFileToMatchSnapshot, TestSink } from "./replicate.test";
 
 const root = createRoot(document.body);
 
@@ -14,15 +14,13 @@ const run = async (node: ReactNode) => {
   const sink = new TestSink();
   const metadata = reactFiber();
   const html = document.documentElement.innerHTML;
-  console.log(html);
   const page = { url: "http://localhost", title: "Test", html };
-  console.log(JSON.stringify({ page, metadata }, null, 2));
   await replicate({ page, metadata }, sink);
   return sink.finalize();
 };
 
 describe("replicate > reactFiber", () => {
-  test.only("should create App.tsx", async () => {
+  test("should create App.tsx", async () => {
     // const A = () => <div>Hello</div>;
     // const B = ({ children }: { children: ReactNode }) => <div>{children}</div>;
     // const files = await test([
@@ -32,12 +30,16 @@ describe("replicate > reactFiber", () => {
     //   </B>,
     // ]);
     const files = await run(<div>Hello</div>);
-    const apptsx = expectFile(files, "src/App.tsx");
-    expect(apptsx).toMatchSnapshot();
-    console.log(apptsx);
+    expectFileToMatchSnapshot(files, "src/App.tsx");
   });
 
-  test.todo("should create a component", () => {});
+  test.only("should create a component", async () => {
+    const A = () => <div>Hello</div>;
+    const files = await run(<A />);
+    expectFileToMatchSnapshot(files, "src/components/A.tsx");
+    expectFileToMatchSnapshot(files, "src/App.tsx");
+  });
+
   test.todo(
     "should only create one component if renders multiple components",
     () => {}

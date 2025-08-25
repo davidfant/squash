@@ -147,7 +147,7 @@ export function reactFiber(): Metadata.ReactFiber | null {
           component: { tag: fiber.tag },
           key: `${Tag.HostRoot}:host`,
         });
-        return ids.component;
+        return ids.node;
       }
       case Tag.FunctionComponent:
       case Tag.MemoComponent:
@@ -172,7 +172,7 @@ export function reactFiber(): Metadata.ReactFiber | null {
           key: `${fiber.tag}:${codeId}`,
           props: sanitize(fiber.memoizedProps),
         });
-        return id.component;
+        return id.node;
       }
       case Tag.HostText: {
         const text = fiber.memoizedProps as string;
@@ -181,16 +181,19 @@ export function reactFiber(): Metadata.ReactFiber | null {
           props: text,
           key: `${Tag.HostText}:text`,
         });
-        return ids.component;
+        return ids.node;
       }
-      case Tag.DOMElement:
-        if (parent !== undefined) {
-          (fiber.stateNode as HTMLElement).setAttribute(
-            "data-squash-parent-id",
-            parent.toString()
-          );
-        }
-        break;
+      case Tag.DOMElement: {
+        const ids = add({
+          component: { tag: fiber.tag },
+          key: `${Tag.DOMElement}:native`,
+        });
+        (fiber.stateNode as HTMLElement).setAttribute(
+          "data-squash-node-id",
+          ids.node.toString()
+        );
+        return ids.node;
+      }
       case Tag.ClassComponent: // TODO...
       case Tag.HostPortal:
       case Tag.Fragment:

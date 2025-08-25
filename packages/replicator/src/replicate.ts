@@ -1,6 +1,5 @@
 import * as prettier from "@/lib/prettier";
 import { load } from "cheerio";
-import type { Expression, Program } from "estree";
 import { h } from "hastscript";
 import recmaJsx from "recma-jsx";
 import recmaStringify from "recma-stringify";
@@ -9,9 +8,13 @@ import rehypeRecma from "rehype-recma";
 import rehypeStringify from "rehype-stringify";
 import { unified } from "unified";
 import { SKIP, visit } from "unist-util-visit";
+import { metadataProcessor } from "./lib/metadataProcessor";
 import { recmaRemoveRedundantFragment } from "./lib/recma/removeRedundantFragment";
+import { recmaReplaceRefs } from "./lib/recma/replaceRefs";
+import { rehypeStripSquashAttribute } from "./lib/rehype/stripSquashAttribute";
+import { recmaWrapAsComponent } from "./lib/rehype/wrapAsComponent";
 import type { FileSink } from "./lib/sinks/base";
-import { Metadata, type Snapshot } from "./types";
+import { Metadata, type RefImport, type Snapshot } from "./types";
 type Root = import("hast").Root;
 type Element = import("hast").Element;
 
@@ -24,46 +27,6 @@ interface ReplicateOptions {
   blocks?: boolean;
   tags?: boolean;
 }
-
-function wrapAsComponent(program: Program, componentName: string): Program {
-  const jsxStmt = program.body
-    .filter((n) => n.type === "ExpressionStatement")
-    .find(
-      (n) =>
-        n.expression?.type === "JSXElement" ||
-        n.expression?.type === "JSXFragment"
-    );
-
-  const jsx: Expression | undefined = jsxStmt?.expression;
-  if (!jsx) throw new Error("No top-level JSX found after HAST → ESTree.");
-
-  program.body = [
-    {
-      type: "ExportNamedDeclaration",
-      declaration: {
-        type: "FunctionDeclaration",
-        id: { type: "Identifier", name: componentName },
-        params: [{ type: "Identifier", name: "props" }],
-        generator: false,
-        async: false,
-        body: {
-          type: "BlockStatement",
-          body: [{ type: "ReturnStatement", argument: jsx }],
-        },
-      },
-      attributes: [],
-      specifiers: [],
-      source: null,
-    },
-  ];
-  return program;
-}
-
-const rehypeStripSquashAttribute = () => (tree: Root) => {
-  visit(tree, "element", (node) => {
-    delete node.properties["dataSquashParentId"];
-  });
-};
 
 export async function replicate(
   snapshot: Snapshot,
@@ -106,73 +69,165 @@ export async function replicate(
   const nodes = Object.entries(m.nodes).map(([id, n]) => ({ id, ...n }));
   const comps = Object.entries(m.components).map(([id, c]) => ({ id, ...c }));
 
-  const rootNode = nodes.find(
-    (node) =>
-      m.components[node.componentId]?.tag ===
-      Metadata.ReactFiber.Component.Tag.HostRoot
-  );
+  const sort: Record<
+    string,
+    {
+      node: Metadata.ReactFiber.Node;
+      children: Set<string>;
+      parents: Set<string>;
+      elements: Element[];
+      processed: boolean;
+    }
+  > = {};
 
-  if (!rootNode) throw new Error("No root node found");
+  // const rootNode = nodes.find(
+  //   (node) =>
+  //     m.components[node.componentId]?.tag ===
+  //     Metadata.ReactFiber.Component.Tag.HostRoot
+  // );
+
+  // if (!rootNode) throw new Error("No root node found");
 
   const file = await unified()
     .use(rehypeParse, { fragment: true })
-    .use(() => async (tree: Root) => {
-      const sel = (node: Element) =>
-        node.properties &&
-        // node.properties["data-squash-parent-id"] === rootNode.id;
-        node.properties["dataSquashParentId"] === rootNode.id;
+    .use(
+      () => async (tree: Root) =>
+        metadataProcessor(m, async (group) => {
+          if ("codeId" in group.component) {
+            const code = m.code[group.component.codeId]!;
 
-      const elements: Array<{
-        node: Element;
-        index: number;
-        parent: Root | Element;
-      }> = [];
+            // 1. for each node, get all children
+            const children = Object.values(nodes).filter(
+              (n) => n.parentId! in group.nodes
+            );
+            // find elements that are children
 
-      visit(tree, "element", (node, index, parent) => {
-        if (index === undefined || !sel(node)) return;
-        if (parent?.type !== "element" && parent?.type !== "root") return;
-        elements.push({ node, index, parent });
-        return SKIP;
-      });
+            const elements: Array<{
+              element: Element;
+              index: number;
+              parent: Root | Element;
+              nodeId: number;
+            }> = [];
 
-      if (!elements.length) return;
+            visit(tree, "element", (element, index, parent) => {
+              if (index === undefined) return;
+              const nodeId = element.properties?.["dataSquashNodeId"] as number;
+              if (parent?.type !== "element" && parent?.type !== "root") return;
 
-      // Create a root hast node containing all the elements
-      const appRoot: Root = {
-        type: "root",
-        children: elements.map(({ node }) => node),
-      };
+              const n = m.nodes[nodeId];
+              if (n && n.parentId !== null && n.parentId in group.nodes) {
+                elements.push({ element, index, parent, nodeId: n.parentId });
+                return SKIP;
+              }
+            });
 
-      const processor = unified()
-        .use(rehypeStripSquashAttribute)
-        .use(rehypeRecma)
-        .use(recmaJsx)
-        // .use(recmaReplaceRefs)
-        // .use(recmaFixProperties)
-        .use(recmaRemoveRedundantFragment)
-        .use(() => (tree: Program) => wrapAsComponent(tree, "App"))
-        .use(recmaStringify);
+            const componentName =
+              group.component.name ?? `Component${group.id}`;
 
-      // Convert to JSX and write App.tsx
-      // const appTsxContent = await hastNodeToTsxModule(appRoot);
-      const estree = await processor.run(appRoot);
-      await sink.writeText("src/App.tsx", processor.stringify(estree));
+            if (!elements.length) return;
+            const processor = unified()
+              .use(rehypeStripSquashAttribute)
+              .use(rehypeRecma)
+              .use(recmaJsx)
+              // .use(recmaFixProperties)
+              .use(recmaRemoveRedundantFragment)
+              .use(recmaWrapAsComponent, componentName)
+              .use(recmaReplaceRefs)
+              .use(recmaStringify);
 
-      const { index, parent } = elements[0]!;
-      parent.children[index] = h("ref", {
-        imports: JSON.stringify([{ path: "./src/App", name: "App" }]),
-        jsx: "<App />",
-      });
-      parent.children = parent.children.filter((_, i) => i === index);
+            const estree = await processor.run({
+              type: "root",
+              children: elements.map(({ element }) => element),
+            });
+            await sink.writeText(
+              `src/components/${componentName}.tsx`,
+              await prettier.ts(processor.stringify(estree))
+            );
 
-      // // replace node with <ref .../>
-      // const idx = (parent.children as any[]).indexOf(node);
-      // (parent.children as any[])[idx] = h("ref", {
-      //   src: ref.src,
-      //   jsx: ref.jsx,
-      // }) as any;
-      // remove
-    })
+            // TODO: do this for every found node...
+            const { index, parent } = elements[0]!;
+            parent.children[index] = h("ref", {
+              imports: JSON.stringify([
+                {
+                  module: `@/components/${componentName}`,
+                  name: componentName,
+                },
+              ] satisfies RefImport[]),
+              jsx: `<${componentName} />`,
+            });
+            parent.children = parent.children.filter((_, i) => i === index);
+          } else if (
+            group.component.tag === Metadata.ReactFiber.Component.Tag.HostRoot
+          ) {
+            const processor = unified()
+              .use(rehypeStripSquashAttribute)
+              .use(rehypeRecma)
+              .use(recmaJsx)
+              // .use(recmaFixProperties)
+              .use(recmaRemoveRedundantFragment)
+              .use(recmaWrapAsComponent, "App")
+              .use(recmaReplaceRefs)
+              .use(recmaStringify);
+
+            const estree = await processor.run(tree);
+            await sink.writeText(
+              "src/App.tsx",
+              await prettier.ts(processor.stringify(estree))
+            );
+          }
+        })
+    )
+    // .use(() => async (tree: Root) => {
+    //   const sel = (node: Element) =>
+    //     node.properties &&
+    //     // node.properties["data-squash-parent-id"] === rootNode.id;
+    //     node.properties["dataSquashNodeId"] === rootNode.id;
+
+    //   const elements: Array<{
+    //     node: Element;
+    //     index: number;
+    //     parent: Root | Element;
+    //   }> = [];
+
+    //   visit(tree, "element", (node, index, parent) => {
+    //     if (index === undefined || !sel(node)) return;
+    //     if (parent?.type !== "element" && parent?.type !== "root") return;
+    //     elements.push({ node, index, parent });
+    //     return SKIP;
+    //   });
+
+    //   if (!elements.length) return;
+    //   const processor = unified()
+    //     .use(rehypeStripSquashAttribute)
+    //     .use(rehypeRecma)
+    //     .use(recmaJsx)
+    //     // .use(recmaReplaceRefs)
+    //     // .use(recmaFixProperties)
+    //     .use(recmaRemoveRedundantFragment)
+    //     .use(recmaWrapAsComponent, "App")
+    //     .use(recmaStringify);
+
+    //   const estree = await processor.run({
+    //     type: "root",
+    //     children: elements.map(({ node }) => node),
+    //   });
+    //   await sink.writeText("src/App.tsx", processor.stringify(estree));
+
+    //   const { index, parent } = elements[0]!;
+    //   parent.children[index] = h("ref", {
+    //     imports: JSON.stringify([{ path: "./src/App", name: "App" }]),
+    //     jsx: "<App />",
+    //   });
+    //   parent.children = parent.children.filter((_, i) => i === index);
+
+    //   // // replace node with <ref .../>
+    //   // const idx = (parent.children as any[]).indexOf(node);
+    //   // (parent.children as any[])[idx] = h("ref", {
+    //   //   src: ref.src,
+    //   //   jsx: ref.jsx,
+    //   // }) as any;
+    //   // remove
+    // })
     .use(rehypeStringify)
     .process(snapshot.page.html);
 

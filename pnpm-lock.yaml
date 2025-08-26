@@ -432,6 +432,9 @@ importers:
       lodash.camelcase:
         specifier: ^4.3.0
         version: 4.3.0
+      lodash.kebabcase:
+        specifier: ^4.1.1
+        version: 4.1.1
       lodash.upperfirst:
         specifier: ^4.3.1
         version: 4.3.1
@@ -490,6 +493,9 @@ importers:
       '@types/lodash.camelcase':
         specifier: ^4.3.9
         version: 4.3.9
+      '@types/lodash.kebabcase':
+        specifier: ^4.1.9
+        version: 4.1.9
       '@types/lodash.upperfirst':
         specifier: ^4.3.9
         version: 4.3.9

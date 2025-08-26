@@ -1,5 +1,6 @@
 import * as prettier from "@/lib/prettier";
 import { load } from "cheerio";
+import path from "path";
 import recmaJsx from "recma-jsx";
 import recmaStringify from "recma-stringify";
 import rehypeParse from "rehype-parse";
@@ -7,7 +8,6 @@ import rehypeRecma from "rehype-recma";
 import rehypeStringify from "rehype-stringify";
 import { unified } from "unified";
 import { SKIP, visit } from "unist-util-visit";
-import { createUniqueNames } from "./lib/createUniqueNames";
 import { buildParentMap, metadataProcessor } from "./lib/metadataProcessor";
 import { createRef } from "./lib/recma/createRef";
 import { recmaFixProperties } from "./lib/recma/fixProperties";
@@ -16,6 +16,7 @@ import { recmaReplaceRefs } from "./lib/recma/replaceRefs";
 import { rehypeStripSquashAttribute } from "./lib/rehype/stripSquashAttribute";
 import { recmaWrapAsComponent } from "./lib/rehype/wrapAsComponent";
 import type { FileSink } from "./lib/sinks/base";
+import { uniquePathsForComponents } from "./lib/uniquePathsForComponents";
 import { Metadata, type Snapshot } from "./types";
 type Root = import("hast").Root;
 type Element = import("hast").Element;
@@ -90,7 +91,7 @@ export async function replicate(
 
   // if (!rootNode) throw new Error("No root node found");
 
-  const compNameById = createUniqueNames(m.components);
+  const compPathById = uniquePathsForComponents(m.components);
   const codeIdToComponentId = new Map<CodeId, ComponentId>(
     comps
       .map((c) =>
@@ -113,7 +114,6 @@ export async function replicate(
               element: Element;
               index: number;
               parent: Root | Element;
-              nodeIds: NodeId[];
             }>
           >();
 
@@ -128,13 +128,13 @@ export async function replicate(
               if (parentMap.get(nodeId)?.has(parentId)) {
                 elementsByNodeId
                   .get(parentId)!
-                  .push({ element, index, parent, nodeIds: [nodeId] });
+                  .push({ element, index, parent });
                 return SKIP;
               }
             });
           }
 
-          const componentName = compNameById.get(group.id)!;
+          const compPath = compPathById.get(group.id)!;
 
           if (![...elementsByNodeId.values()].flat().length) return;
           const processor = unified()
@@ -142,7 +142,7 @@ export async function replicate(
             .use(rehypeRecma)
             .use(recmaJsx)
             .use(recmaRemoveRedundantFragment)
-            .use(recmaWrapAsComponent, componentName)
+            .use(recmaWrapAsComponent, compPath.name)
             .use(recmaReplaceRefs)
             .use(recmaFixProperties)
             .use(recmaStringify);
@@ -159,20 +159,28 @@ export async function replicate(
             })
           );
           await sink.writeText(
-            `src/components/${componentName}.tsx`,
+            path.join(
+              "src",
+              "components",
+              compPath.dir,
+              `${compPath.name}.tsx`
+            ),
             await prettier.ts(processor.stringify(estree))
           );
 
           const codeIdToComponentImport = new Map(
             Array.from(codeIdToComponentId.entries()).map(
               ([codeId, componentId]) => {
-                const name = compNameById.get(componentId)!;
-                return [codeId, { module: `@/components/${name}`, name }];
+                const p = compPathById.get(componentId)!;
+                const m = path.join("@/components", p.dir, p.name);
+                return [codeId, { module: m, name: p.name }];
               }
             )
           );
 
           for (const [nodeId, elements] of elementsByNodeId.entries()) {
+            if (!elements.length) continue;
+
             const { index, parent } = elements[0]!;
             const props = nodes.find((n) => n.id === nodeId)!.props as Record<
               string,
@@ -184,8 +192,12 @@ export async function replicate(
               parent.children[index]!,
               createRef({
                 component: {
-                  module: `@/components/${componentName}`,
-                  name: componentName,
+                  module: path.join(
+                    "@/components",
+                    compPath.dir,
+                    compPath.name
+                  ),
+                  name: compPath.name,
                 },
                 props,
                 nodeId,

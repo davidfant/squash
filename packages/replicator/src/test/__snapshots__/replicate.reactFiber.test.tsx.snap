@@ -7,6 +7,13 @@ exports[`replicate with react fiber > naming > should TitleCase component name 1
 "
 `;
 
+exports[`replicate with react fiber > naming > should put component with . in the name in a directory 1`] = `
+"export function Div(props) {
+  return <div>{"Hello"}</div>;
+}
+"
+`;
+
 exports[`replicate with react fiber > naming > should support multiple components with same name 1`] = `
 "export function Dupe1(props) {
   return <div>{"Hello"}</div>;

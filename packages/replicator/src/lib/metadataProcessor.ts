@@ -194,10 +194,10 @@ export async function metadataProcessor(
     propProvided
   );
 
-  console.log("Metadata", metadata);
-  console.log("Component Nodes Map", componentNodes);
-  console.log("Components provided by props", propProvided);
-  console.log("Component Dependencies", componentDeps);
+  // console.log("Metadata", metadata);
+  // console.log("Component Nodes Map", componentNodes);
+  // console.log("Components provided by props", propProvided);
+  // console.log("Component Dependencies", componentDeps);
 
   const remaining = [...componentNodes];
   const processed = new Set<ComponentId>();

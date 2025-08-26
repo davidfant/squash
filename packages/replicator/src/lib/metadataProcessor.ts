@@ -15,10 +15,94 @@ function buildChildMap(
   return m;
 }
 
+export function buildParentMap(
+  nodes: Record<NodeId, Metadata.ReactFiber.Node>
+): Map<NodeId, Set<NodeId>> {
+  const parentMap = new Map<NodeId, Set<NodeId>>();
+
+  /**
+   * Depth-first walk up the tree, memoising along the way
+   * so each node’s ancestor set is computed exactly once.
+   */
+  const collectAncestors = (id: NodeId): Set<NodeId> => {
+    // Already done? – return the cached set.
+    const cached = parentMap.get(id);
+    if (cached) return cached;
+
+    const out = new Set<NodeId>();
+    const node = nodes[id];
+    if (!node) throw new Error(`Unknown node ${id}`);
+
+    const { parentId } = node;
+    if (parentId !== null) {
+      // Add the direct parent…
+      out.add(parentId);
+      // …then union in the parent’s ancestors (memoised).
+      collectAncestors(parentId).forEach(out.add, out);
+    }
+
+    parentMap.set(id, out);
+    return out;
+  };
+
+  // Kick off the collection for every node once.
+  Object.keys(nodes).forEach((id) => collectAncestors(id as NodeId));
+
+  return parentMap;
+}
+
+function buildPropProvidedMap(
+  nodes: Record<NodeId, Metadata.ReactFiber.Node>,
+  components: Record<ComponentId, Metadata.ReactFiber.Component.Any>
+): Map<ComponentId, Set<ComponentId>> {
+  /* ------------------------------------------------------------------ */
+  /* 1.  codeId → componentId lookup (fast O(#components))              */
+  /* ------------------------------------------------------------------ */
+  const codeIdToComponent = new Map<string | number, ComponentId>();
+  for (const [compId, comp] of Object.entries(components)) {
+    if ("codeId" in comp && comp.codeId != null) {
+      codeIdToComponent.set(comp.codeId, compId as ComponentId);
+    }
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 2.  Recursive collector that walks arbitrary JS values              */
+  /* ------------------------------------------------------------------ */
+  const collect = (val: any, out: Set<ComponentId>): void => {
+    if (Array.isArray(val)) {
+      for (const v of val) collect(v, out);
+    } else if (typeof val === "object" && val !== null) {
+      if (val.$$typeof === "react.tag") {
+        const componentId = codeIdToComponent.get(val.codeId);
+        if (componentId) out.add(componentId);
+      }
+
+      // Recurse through all properties so nested structures are covered.
+      for (const v of Object.values(val)) collect(v, out);
+    }
+  };
+
+  /* ------------------------------------------------------------------ */
+  /* 3.  Scan every node’s props once                                    */
+  /* ------------------------------------------------------------------ */
+  const provided = new Map<ComponentId, Set<ComponentId>>();
+
+  for (const node of Object.values(nodes)) {
+    const parentComp = node.componentId as ComponentId;
+    const set = provided.get(parentComp) ?? new Set<ComponentId>();
+    collect(node.props, set);
+    if (set.size > 0) provided.set(parentComp, set);
+  }
+
+  return provided;
+}
+
+// TODO: should remove children that are provided by props among dependencies
 function buildComponentDeps(
   nodes: Record<NodeId, Metadata.ReactFiber.Node>,
   components: Record<ComponentId, Metadata.ReactFiber.Component.Any>,
-  childMap: Map<NodeId, NodeId[]>
+  childMap: Map<NodeId, NodeId[]>,
+  propProvided: Map<ComponentId, Set<ComponentId>>
 ): Map<ComponentId, Set<ComponentId>> {
   const componentIds = new Set<ComponentId>(
     Object.values(nodes).map((n) => n.componentId)
@@ -34,7 +118,12 @@ function buildComponentDeps(
 
     for (const cId of childIds) {
       const childComp = nodes[cId]!.componentId;
-      if (childComp !== parentComp) direct.get(parentComp)!.add(childComp);
+      if (
+        propProvided.get(parentComp)?.has(childComp) !== false &&
+        childComp !== parentComp
+      ) {
+        direct.get(parentComp)!.add(childComp);
+      }
     }
   }
 
@@ -97,19 +186,28 @@ export async function metadataProcessor(
   const { nodes, components } = metadata;
   const childMap = buildChildMap(nodes);
   const componentNodes = buildComponentNodesMap(nodes);
-  const componentDeps = buildComponentDeps(nodes, components, childMap);
+  const propProvided = buildPropProvidedMap(nodes, components);
+  const componentDeps = buildComponentDeps(
+    nodes,
+    components,
+    childMap,
+    propProvided
+  );
 
-  // console.log("Metadata", metadata);
-  // console.log("Component Nodes Map", componentNodes);
-  // console.log("Component Dependencies", componentDeps);
+  console.log("Metadata", metadata);
+  console.log("Component Nodes Map", componentNodes);
+  console.log("Components provided by props", propProvided);
+  console.log("Component Dependencies", componentDeps);
 
   const remaining = [...componentNodes];
   const processed = new Set<ComponentId>();
 
   const next = () => {
+    // TODO: when common processing, we want to get the component where the most amount of deps + children have been processed. We e.g. don't want to process a component where lots of children provided through props are not yet processed.
     const idx = remaining.findIndex(([componentId]) =>
       [...componentDeps.get(componentId)!].every((cid) => processed.has(cid))
     );
+
     if (idx === -1) return;
     const [spliced] = remaining.splice(idx, 1);
     const [componentId, nodes] = spliced!;
@@ -124,5 +222,11 @@ export async function metadataProcessor(
       nodes: Object.fromEntries(g.nodes.map((id) => [id, nodes[id]!])),
     });
     processed.add(g.componentId);
+  }
+
+  if (remaining.length) {
+    throw new Error(
+      `Metadata processor failed to process all components. Remaining: ${remaining.map(([id]) => id).join(", ")}`
+    );
   }
 }

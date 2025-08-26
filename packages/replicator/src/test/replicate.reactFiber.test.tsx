@@ -40,6 +40,8 @@ describe("replicate with react fiber", () => {
     expectFileToMatchSnapshot(files, "src/App.tsx");
   });
 
+  test.todo("should work if no DOM element is rendered aside from text");
+
   test("should only create one component if renders same component multiple times", async () => {
     const CompA = () => <div>Hello</div>;
     const files = await run([<CompA key="1" />, <CompA key="2" />]);
@@ -148,11 +150,32 @@ describe("replicate with react fiber", () => {
       "should use props.children instead of redeclaring children in component body",
       async () => {
         // <A>wow</A> should have a component A that just returns props.children, not "wow"
+        // To do this, find all react elements that are provided through props. Then traverse the rendered children to detect which segments look 100% like a react element from the props. If that's the case for all nodes with that component, then we can just use that prop value.
       }
     );
 
     test("should convert tabIndex to number", async () => {
       const files = await run(<div tabIndex={"1" as any} />);
+      expectFileToMatchSnapshot(files, "src/App.tsx");
+    });
+
+    test("should not get stuck if core component creates what looks like circular deps", async () => {
+      const Common = ({ children }: { children: ReactNode }) => (
+        <div role="common">{children}</div>
+      );
+      // Child depends on Common, Parent depends on Common and Child. Common "seems" to depend on Child based on its children in the DOM, but we should exclude components as deps that come from props
+      const Child = () => <Common>child</Common>;
+      const Parent = () => (
+        <div>
+          <Common>
+            <Child />
+          </Common>
+        </div>
+      );
+      const files = await run(<Parent />);
+      expectFileToMatchSnapshot(files, "src/components/Common.tsx");
+      expectFileToMatchSnapshot(files, "src/components/Child.tsx");
+      expectFileToMatchSnapshot(files, "src/components/Parent.tsx");
       expectFileToMatchSnapshot(files, "src/App.tsx");
     });
   });
@@ -177,10 +200,17 @@ describe("replicate with react fiber", () => {
     });
 
     test("should TitleCase component name", async () => {
-      const A = () => <div>Hello</div>;
-      A.displayName = "componentName";
-      const files = await run(<A />);
+      const Comp = () => <div>Hello</div>;
+      Comp.displayName = "componentName";
+      const files = await run(<Comp />);
       expectFileToMatchSnapshot(files, "src/components/ComponentName.tsx");
+    });
+
+    test("should put component with . in the name in a directory", async () => {
+      const Comp = () => <div>Hello</div>;
+      Comp.displayName = "Primitive.div";
+      const files = await run(<Comp />);
+      expectFileToMatchSnapshot(files, "src/components/primitive/Div.tsx");
     });
 
     test.todo("should rewrite component", () => {});

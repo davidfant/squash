@@ -8,7 +8,7 @@ import rehypeStringify from "rehype-stringify";
 import { unified } from "unified";
 import { SKIP, visit } from "unist-util-visit";
 import { createUniqueNames } from "./lib/createUniqueNames";
-import { metadataProcessor } from "./lib/metadataProcessor";
+import { buildParentMap, metadataProcessor } from "./lib/metadataProcessor";
 import { createRef } from "./lib/recma/createRef";
 import { recmaFixProperties } from "./lib/recma/fixProperties";
 import { recmaRemoveRedundantFragment } from "./lib/recma/removeRedundantFragment";
@@ -32,6 +32,8 @@ interface ReplicateOptions {
   blocks?: boolean;
   tags?: boolean;
 }
+
+const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
 
 export async function replicate(
   snapshot: Snapshot,
@@ -96,6 +98,7 @@ export async function replicate(
       )
       .filter((v) => !!v)
   );
+  const parentMap = buildParentMap(m.nodes);
 
   await unified()
     .use(rehypeParse, { fragment: true })
@@ -104,28 +107,36 @@ export async function replicate(
         if ("codeId" in group.component) {
           // const code = m.code[group.component.codeId]!;
 
-          const elements: Array<{
-            element: Element;
-            index: number;
-            parent: Root | Element;
-            nodeId: NodeId;
-          }> = [];
+          const elementsByNodeId = new Map<
+            NodeId,
+            Array<{
+              element: Element;
+              index: number;
+              parent: Root | Element;
+              nodeIds: NodeId[];
+            }>
+          >();
 
-          visit(tree, "element", (element, index, parent) => {
-            if (index === undefined) return;
-            const nodeId = element.properties?.["dataSquashNodeId"] as NodeId;
-            if (parent?.type !== "element" && parent?.type !== "root") return;
+          for (const parentId of Object.keys(group.nodes) as NodeId[]) {
+            elementsByNodeId.set(parentId, []);
 
-            const n = m.nodes[nodeId];
-            if (n && n.parentId !== null && n.parentId in group.nodes) {
-              elements.push({ element, index, parent, nodeId: n.parentId });
-              return SKIP;
-            }
-          });
+            visit(tree, "element", (element, index, parent) => {
+              if (index === undefined) return;
+              const nodeId = element.properties?.["dataSquashNodeId"] as NodeId;
+              if (parent?.type !== "element" && parent?.type !== "root") return;
+
+              if (parentMap.get(nodeId)?.has(parentId)) {
+                elementsByNodeId
+                  .get(parentId)!
+                  .push({ element, index, parent, nodeIds: [nodeId] });
+                return SKIP;
+              }
+            });
+          }
 
           const componentName = compNameById.get(group.id)!;
 
-          if (!elements.length) return;
+          if (![...elementsByNodeId.values()].flat().length) return;
           const processor = unified()
             .use(rehypeStripSquashAttribute)
             .use(rehypeRecma)
@@ -136,19 +147,17 @@ export async function replicate(
             .use(recmaFixProperties)
             .use(recmaStringify);
 
-          const elementsByNodeId = elements.reduce(
-            (acc, el) => ({
-              ...acc,
-              [el.nodeId]: [...(acc[el.nodeId] ?? []), el],
-            }),
-            {} as Record<NodeId, typeof elements>
-          );
-
           // TODO: group elements by nodeId, and then create one single component using the group
-          const estree = await processor.run({
-            type: "root",
-            children: Object.values(elementsByNodeId)[0]!.map((e) => e.element),
-          });
+          const estree = await processor.run(
+            clone({
+              type: "root",
+              children:
+                elementsByNodeId
+                  .values()
+                  .next()
+                  .value?.map((e) => e.element) ?? [],
+            })
+          );
           await sink.writeText(
             `src/components/${componentName}.tsx`,
             await prettier.ts(processor.stringify(estree))
@@ -163,25 +172,32 @@ export async function replicate(
             )
           );
 
-          for (const [nodeId, elements] of Object.entries(elementsByNodeId)) {
+          for (const [nodeId, elements] of elementsByNodeId.entries()) {
             const { index, parent } = elements[0]!;
             const props = nodes.find((n) => n.id === nodeId)!.props as Record<
               string,
               unknown
             >;
-            parent.children[index] = createRef({
-              component: {
-                module: `@/components/${componentName}`,
-                name: componentName,
-              },
-              props,
-              nodeId,
-              ctx: { codeIdToComponentImport },
-            });
+            // Note(fant): we need to Object.assign instead of replace because some
+            // of the elements detected might point at the parent being replaced
+            Object.assign(
+              parent.children[index]!,
+              createRef({
+                component: {
+                  module: `@/components/${componentName}`,
+                  name: componentName,
+                },
+                props,
+                nodeId,
+                ctx: { codeIdToComponentImport },
+                // Note(fant): for now we keep the children within the ref, so that in the processor loop we still can find elements of a certain node.
+                children: elements.flatMap((e) => e.element.children),
+              })
+            );
             elements.slice(1).forEach((e) => (e.element.tagName = "rm"));
           }
 
-          elements.forEach(({ parent }) => {
+          [...elementsByNodeId.values()].flat().forEach(({ parent }) => {
             parent.children = parent.children.filter(
               (el) => el.type !== "element" || el.tagName !== "rm"
             );
@@ -200,7 +216,7 @@ export async function replicate(
             .use(recmaStringify);
 
           // const estree = await processor.run(tree);
-          const estree = await processor.run(JSON.parse(JSON.stringify(tree)));
+          const estree = await processor.run(clone(tree));
           await sink.writeText(
             "src/App.tsx",
             await prettier.ts(processor.stringify(estree))

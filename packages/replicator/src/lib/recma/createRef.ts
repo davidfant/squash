@@ -1,5 +1,6 @@
 import type { RefImport } from "@/types";
 import type { NodeMap } from "estree";
+import type { ElementContent } from "hast";
 import { h } from "hastscript";
 import recmaJsx from "recma-jsx";
 import recmaStringify from "recma-stringify";
@@ -167,24 +168,30 @@ export function createRef({
   nodeId,
   component,
   props,
+  children,
   ctx,
 }: {
   nodeId: string;
   component: RefImport;
   props: Record<string, unknown>;
+  children: ElementContent[];
   ctx: Context;
 }) {
   const created = createComponentElement(component, props, ctx);
-  return h("ref", {
-    dataSquashNodeId: nodeId,
-    imports: JSON.stringify(created.imports satisfies RefImport[]),
-    jsx: unified()
-      .use(recmaJsx)
-      .use(recmaStringify)
-      .stringify({
-        type: "Program",
-        sourceType: "module",
-        body: [{ type: "ExpressionStatement", expression: created.element }],
-      }),
-  });
+  return h(
+    "ref",
+    {
+      dataSquashNodeId: nodeId,
+      imports: JSON.stringify(created.imports satisfies RefImport[]),
+      jsx: unified()
+        .use(recmaJsx)
+        .use(recmaStringify)
+        .stringify({
+          type: "Program",
+          sourceType: "module",
+          body: [{ type: "ExpressionStatement", expression: created.element }],
+        }),
+    },
+    ...children
+  );
 }

@@ -35,18 +35,6 @@ function replaceReactElements(
         const built = buildAttributes(rest, ctx);
         built.imports.forEach((i) => addImport(i, imports));
 
-        // TODO: look up component by codeId
-        console.log(
-          "TODO: look up code by code id",
-          value,
-          (() => {
-            if (value.$$typeof === "react.tag") {
-              return { module: undefined, name: value.tagName };
-            }
-            const component = ctx.codeIdToComponentImport.get(value.codeId!);
-            return component ?? { module: undefined, name: "unknown" };
-          })()
-        );
         const el = createComponentElement(
           (() => {
             if (value.$$typeof === "react.tag") {

@@ -92,7 +92,7 @@ describe("replicate with react fiber", () => {
     const A = () => (
       <>
         {[1, 2, 3].map((x) => (
-          <div>{x}</div>
+          <div key={x}>{x}</div>
         ))}
         {(() => (
           <div>Hello</div>
@@ -127,7 +127,7 @@ describe("replicate with react fiber", () => {
       expectFileToMatchSnapshot(files, "src/App.tsx");
     });
 
-    test.only("should recreate children that are react elements", async () => {
+    test("should recreate children that are react elements", async () => {
       const A = ({ children }: { children: ReactNode }) => children;
       const B = ({ children }: { children: ReactNode }) => children;
       const files = await run(

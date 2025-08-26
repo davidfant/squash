@@ -19,7 +19,7 @@ const run = async (node: ReactNode) => {
   return sink.finalize();
 };
 
-describe("replicate > reactFiber", () => {
+describe("replicate with react fiber", () => {
   test("should create App.tsx", async () => {
     // const A = () => <div>Hello</div>;
     // const B = ({ children }: { children: ReactNode }) => <div>{children}</div>;
@@ -88,6 +88,13 @@ describe("replicate > reactFiber", () => {
     expectFileToMatchSnapshot(files, "src/App.tsx");
   });
 
+  test.todo("should handle inline expressions like mapping over array");
+
+  test.todo(
+    "should throw an error if same data-squash-parent-id nodes existing in different parents",
+    () => {}
+  );
+
   describe("props", () => {
     test("simple props are defined in call site", async () => {
       const A = (_: any) => <div />;
@@ -103,16 +110,33 @@ describe("replicate > reactFiber", () => {
       expectFileToMatchSnapshot(files, "src/components/A.tsx");
       expectFileToMatchSnapshot(files, "src/App.tsx");
     });
-    // props like children
+
+    test.only("should recreate children that are react elements", async () => {
+      const A = ({ children }: { children: ReactNode }) => children;
+      const B = ({ children }: { children: ReactNode }) => children;
+      const files = await run(
+        <A>
+          <B>
+            <div>Hello</div>
+          </B>
+        </A>
+      );
+      // TODO: test to make sure that A and B just renders children
+      // expectFileToMatchSnapshot(files, "src/components/A.tsx");
+      // expectFileToMatchSnapshot(files, "src/components/B.tsx");
+      expectFileToMatchSnapshot(files, "src/App.tsx");
+    });
+
+    test.todo(
+      "should use props.children instead of redeclaring children in component body",
+      async () => {
+        // <A>wow</A> should have a component A that just returns props.children, not "wow"
+      }
+    );
   });
 
-  test.todo(
-    "should throw an error if same data-squash-parent-id nodes existing in different parents",
-    () => {}
-  );
-
   describe("naming", () => {
-    test.only("should support multiple components with same name", async () => {
+    test("should support multiple components with same name", async () => {
       const A = () => <div>Hello</div>;
       A.displayName = "X";
       const B = () => <div>Yellow</div>;

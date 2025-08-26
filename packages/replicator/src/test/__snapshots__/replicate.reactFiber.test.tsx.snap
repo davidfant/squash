@@ -163,3 +163,29 @@ export function App(props) {
 }
 "
 `;
+
+exports[`replicate with react fiber > props > should recreate children that are react elements 1`] = `
+"export function App(props) {
+  return (
+    <A>
+      <F1>
+        <div>Hello</div>
+      </F1>
+    </A>
+  );
+}
+"
+`;
+
+exports[`replicate with react fiber > props > should recreate children that are react elements 3`] = `
+"export function App(props) {
+  return (
+    <A>
+      <B>
+        <div>Hello</div>
+      </B>
+    </A>
+  );
+}
+"
+`;

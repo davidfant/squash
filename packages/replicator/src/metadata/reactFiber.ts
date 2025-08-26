@@ -69,7 +69,11 @@ function walkFrom<T>(
 
 function getCode(elementType: any): Function | undefined {
   if (typeof elementType === "function") return elementType;
-  if (typeof elementType === "object" && "$$typeof" in elementType) {
+  if (
+    typeof elementType === "object" &&
+    elementType !== null &&
+    "$$typeof" in elementType
+  ) {
     // if is Symbol(react.memo)
     if (elementType.$$typeof === Symbol.for("react.memo")) {
       return getCode(elementType.type);
@@ -80,7 +84,11 @@ function getCode(elementType: any): Function | undefined {
   }
 }
 
-function sanitize(value: any, seen = new WeakSet<any>()): any {
+function sanitize(
+  value: any,
+  codeIdLookup: Map<Function, Metadata.ReactFiber.CodeId>,
+  seen = new WeakSet<any>()
+): any {
   if (value === null) return null;
   if (value === undefined) return undefined;
   if (value === window) return "[Window]";
@@ -88,13 +96,31 @@ function sanitize(value: any, seen = new WeakSet<any>()): any {
     if (seen.has(value)) return "[Circular]";
     seen.add(value);
     if (typeof value.$$typeof === "symbol") {
+      if ("type" in value) {
+        if (typeof value.type === "function") {
+          return {
+            $$typeof: "react.code",
+            codeId: codeIdLookup.get(value.type) ?? null,
+            props: sanitize(value.props, codeIdLookup, seen),
+          } satisfies Metadata.ReactFiber.Element.Code;
+        } else if (typeof value.type === "string") {
+          return {
+            $$typeof: "react.tag",
+            tagName: value.type,
+            props: sanitize(value.props, codeIdLookup, seen),
+          } satisfies Metadata.ReactFiber.Element.Tag;
+        }
+      }
       return `[$$typeof: ${value.$$typeof.toString()}]`;
     }
     if (value instanceof Element) {
       return "[Element]";
     }
     return Object.fromEntries(
-      Object.entries(value).map(([k, v]) => [k, sanitize(v, seen)])
+      Object.entries(value).map(([k, v]) => [
+        k,
+        sanitize(v, codeIdLookup, seen),
+      ])
     );
   }
   if (typeof value === "function") {
@@ -118,6 +144,13 @@ export function reactFiber(): Metadata.ReactFiber | null {
   const codeIdLookup = new Map<Function, Metadata.ReactFiber.CodeId>();
   type CompKey = `${Tag}:${string}`; // Tag:codeId
   const compIdLookup = new Map<CompKey, Metadata.ReactFiber.ComponentId>();
+
+  walkFrom(root, (fiber) => {
+    const fn = getCode(fiber.elementType);
+    if (!fn) return;
+    const codeId = codeIdLookup.get(fn) ?? `F${ids.code++}`;
+    codeIdLookup.set(fn, codeId);
+  });
 
   walkFrom<Metadata.ReactFiber.NodeId>(root, (fiber, depth, parent) => {
     const add = <T extends Metadata.ReactFiber.Component.Any>({
@@ -159,8 +192,7 @@ export function reactFiber(): Metadata.ReactFiber | null {
           return;
         }
 
-        const codeId = codeIdLookup.get(fn) ?? `F${ids.code++}`;
-        codeIdLookup.set(fn, codeId);
+        const codeId = codeIdLookup.get(fn)!;
         metadata.code[codeId] = fn.toString();
 
         const id = add({
@@ -170,7 +202,7 @@ export function reactFiber(): Metadata.ReactFiber | null {
             codeId,
           },
           key: `${fiber.tag}:${codeId}`,
-          props: sanitize(fiber.memoizedProps),
+          props: sanitize(fiber.memoizedProps, codeIdLookup),
         });
         return id.node;
       }

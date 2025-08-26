@@ -6,7 +6,7 @@ import Tag = Metadata.ReactFiber.Component.Tag;
 
 const root = createRoot(document.body);
 
-async function setup(app: ReactNode) {
+async function run(app: ReactNode) {
   root.render(app);
   await new Promise((r) => requestAnimationFrame(r));
   const metadata = reactFiber()!;
@@ -14,32 +14,38 @@ async function setup(app: ReactNode) {
 }
 
 function code(metadata: Metadata.ReactFiber, id: number) {
-  const c = metadata.code[`F${id}`];
+  const codeId = `F${id}` as const;
+  const c = metadata.code[codeId];
   if (!c) throw new Error(`Code ${id} not found`);
-  return { value: c, id };
+  return { value: c, id: codeId };
 }
 
 function component(metadata: Metadata.ReactFiber, id: number) {
-  const c = metadata.components[`C${id}`];
+  const compId = `C${id}` as const;
+  const c = metadata.components[compId];
   if (!c) throw new Error(`Component ${id} not found`);
-  return { value: c, id };
+  return { value: c, id: compId };
 }
 
 function node(metadata: Metadata.ReactFiber, id: number) {
-  const n = metadata.nodes[`N${id}`];
+  const nodeId = `N${id}` as const;
+  const n = metadata.nodes[nodeId];
   if (!n) throw new Error(`Node ${id} not found`);
-  return { value: n, id };
+  return { value: n, id: nodeId };
 }
 
-function expectElementNodeId(selector: string, expected: number) {
+function expectElementNodeId(
+  selector: string,
+  expected: Metadata.ReactFiber.NodeId
+) {
   const el = document.body.querySelector(selector);
   expect(el).toBeDefined();
-  expect(el?.getAttribute("data-squash-node-id")).toBe(expected.toString());
+  expect(el?.getAttribute("data-squash-node-id")).toBe(expected);
 }
 
 describe("reactFiber", () => {
   test("should add HostRoot component and tag the first DOM element", async () => {
-    const metadata = await setup(<div>Hello</div>);
+    const metadata = await run(<div>Hello</div>);
     const c = component(metadata, 0);
     const nodes = {
       root: node(metadata, 0),
@@ -58,7 +64,7 @@ describe("reactFiber", () => {
   describe("FunctionComponent", () => {
     test("should register component and tag its child", async () => {
       const C = () => <div>Hello</div>;
-      const metadata = await setup(<C />);
+      const metadata = await run(<C />);
       const c = code(metadata, 0);
       const components = {
         C: component(metadata, 1),
@@ -88,30 +94,53 @@ describe("reactFiber", () => {
     describe("props", () => {
       test("should add instance props", async () => {
         const C = ({ name }: { name: string }) => <div>{name}</div>;
-        const metadata = await setup(<C name="John" />);
+        const metadata = await run(<C name="John" />);
         const n = node(metadata, 1);
         expect(n.value).toEqual({
-          componentId: 1,
-          parentId: 0,
+          componentId: "C1",
+          parentId: "N0",
           props: { name: "John" },
         });
       });
 
-      test("should strip out react elements (e.g. children)", async () => {
-        const A = ({ children }: { children: ReactNode }) => (
-          <div>{children}</div>
-        );
-        const B = () => <div>Hello</div>;
-        const metadata = await setup(
+      test.only("should strip out react elements (e.g. children)", async () => {
+        const A = ({ children }: { children: ReactNode }) => children;
+        const B = ({ children }: { children: ReactNode }) => children;
+        const C = ({ children }: { visible: boolean; children: ReactNode }) =>
+          children;
+        const metadata = await run(
           <A>
-            <B />
+            <B>
+              <C visible>
+                <div>Hello</div>
+              </C>
+            </B>
           </A>
         );
         const n = node(metadata, 1);
         expect(n.value).toEqual({
-          componentId: 1,
-          parentId: 0,
-          props: { children: "[$$typeof: Symbol(react.transitional.element)]" },
+          componentId: "C1",
+          parentId: "N0",
+          props: {
+            children: {
+              $$typeof: "react.code",
+              codeId: "F1",
+              props: {
+                children: {
+                  $$typeof: "react.code",
+                  codeId: "F2",
+                  props: {
+                    visible: true,
+                    children: {
+                      $$typeof: "react.tag",
+                      tagName: "div",
+                      props: { children: "Hello" },
+                    },
+                  },
+                },
+              },
+            },
+          },
         });
       });
 
@@ -119,11 +148,11 @@ describe("reactFiber", () => {
         const A = ({ onClick }: { onClick: () => void }) => (
           <div onClick={onClick}>Hello</div>
         );
-        const metadata = await setup(<A onClick={() => {}} />);
+        const metadata = await run(<A onClick={() => {}} />);
         const n = node(metadata, 1);
         expect(n.value).toEqual({
-          componentId: 1,
-          parentId: 0,
+          componentId: "C1",
+          parentId: "N0",
           props: { onClick: "[Function]" },
         });
       });
@@ -132,7 +161,7 @@ describe("reactFiber", () => {
     test("should only register component once", async () => {
       const A = () => <div>A</div>;
       const B = () => <A />;
-      const metadata = await setup([<A key="a" />, <B key="b" />]);
+      const metadata = await run([<A key="a" />, <B key="b" />]);
       const components = {
         A: component(metadata, 1),
         Adiv: component(metadata, 2),
@@ -149,13 +178,13 @@ describe("reactFiber", () => {
       expect(components.A.value).toEqual({
         tag: Tag.FunctionComponent,
         name: "A",
-        codeId: 0,
+        codeId: "F0",
       });
       expect(components.Adiv.value).toEqual({ tag: Tag.DOMElement });
       expect(components.B.value).toEqual({
         tag: Tag.FunctionComponent,
         name: "B",
-        codeId: 1,
+        codeId: "F1",
       });
 
       expect(nodes.A.value.componentId).toBe(components.A.id);
@@ -168,7 +197,7 @@ describe("reactFiber", () => {
     test("should have correct parentId", async () => {
       const A = () => <div>A</div>;
       const B = () => <A />;
-      const metadata = await setup([<A key="a" />, <B key="b" />]);
+      const metadata = await run([<A key="a" />, <B key="b" />]);
 
       const nodes = {
         root: node(metadata, 0),
@@ -190,7 +219,7 @@ describe("reactFiber", () => {
   describe("ForwardRef", () => {
     test("should register component and tag its child", async () => {
       const C = forwardRef(() => <div>Hello</div>);
-      const metadata = await setup(<C />);
+      const metadata = await run(<C />);
       const c = code(metadata, 0);
       const components = {
         C: component(metadata, 1),
@@ -210,7 +239,7 @@ describe("reactFiber", () => {
 
       expect(nodes.C.value).toEqual({
         componentId: components.C.id,
-        parentId: 0,
+        parentId: "N0",
         props: {},
       });
       expect(nodes.Cdiv.value).toEqual({
@@ -225,7 +254,7 @@ describe("reactFiber", () => {
   describe("memo", () => {
     test("should register simple memo", async () => {
       const C = memo(() => <div>Hello</div>);
-      const metadata = await setup(<C />);
+      const metadata = await run(<C />);
       const c = code(metadata, 0);
       const comp = component(metadata, 1);
 
@@ -239,7 +268,7 @@ describe("reactFiber", () => {
 
     test("should register complex memo, but only register code once", async () => {
       const C = memo(forwardRef(() => <div>Hello</div>));
-      const metadata = await setup(<C />);
+      const metadata = await run(<C />);
 
       expect(Object.keys(metadata.code).length).toBe(1);
 

@@ -20,17 +20,18 @@ function parseJSX(code: string) {
   }
 }
 
-export const recmaReplaceRefs: Plugin<[], Program> = () => (tree: Program) => {
-  const imports = new Map<string, RefImport[]>();
+export function addImport(i: RefImport, imports: RefImport[]) {
+  const exists = imports.some(
+    (ii) =>
+      i.module === ii.module &&
+      i.name === ii.name &&
+      !!i.default === !!ii.default
+  );
+  return exists ? imports : [...imports, i];
+}
 
-  const addImport = (i: RefImport) => {
-    const existing = imports.get(i.module) ?? [];
-    const exists = existing.some(
-      (i) => i.name === i.name && !!i.default === !!i.default
-    );
-    if (!exists) existing.push(i);
-    imports.set(i.module, existing);
-  };
+export const recmaReplaceRefs: Plugin<[], Program> = () => (tree: Program) => {
+  const imports: RefImport[] = [];
 
   const findAttr = <T>(element: NodeMap["JSXElement"], name: string) => {
     const attr = element.openingElement.attributes.find(
@@ -47,12 +48,12 @@ export const recmaReplaceRefs: Plugin<[], Program> = () => (tree: Program) => {
       const module = node.source.value as string;
       for (const spec of node.specifiers) {
         if (spec.type === "ImportDefaultSpecifier") {
-          addImport({ module, name: spec.local.name, default: true });
+          addImport({ module, name: spec.local.name, default: true }, imports);
         } else if (
           spec.type === "ImportSpecifier" &&
           spec.imported.type === "Identifier"
         ) {
-          addImport({ module, name: spec.imported.name });
+          addImport({ module, name: spec.imported.name }, imports);
         }
       }
     }
@@ -68,7 +69,7 @@ export const recmaReplaceRefs: Plugin<[], Program> = () => (tree: Program) => {
       if (!!importsString) {
         const refImports = JSON.parse(importsString) as RefImport[];
         for (const imp of refImports) {
-          addImport(imp);
+          addImport(imp, imports);
         }
       }
 
@@ -89,11 +90,11 @@ export const recmaReplaceRefs: Plugin<[], Program> = () => (tree: Program) => {
     }
   });
 
-  const importDecls: ImportDeclaration[] = [];
-  for (const [module, moduleImports] of imports) {
+  const importDecls = new Map<string, ImportDeclaration>();
+  for (const i of imports) {
     const specifiers: ImportDeclaration["specifiers"] = [];
 
-    for (const i of moduleImports) {
+    for (const i of imports) {
       if (i.default) {
         specifiers.push({
           type: "ImportDefaultSpecifier",
@@ -108,13 +109,17 @@ export const recmaReplaceRefs: Plugin<[], Program> = () => (tree: Program) => {
       }
     }
 
-    importDecls.push({
-      type: "ImportDeclaration",
-      source: { type: "Literal", value: module, raw: `'${module}'` },
-      specifiers,
-      attributes: [],
-    });
+    if (!importDecls.has(i.module)) {
+      importDecls.set(i.module, {
+        type: "ImportDeclaration",
+        source: { type: "Literal", value: i.module, raw: `'${i.module}'` },
+        specifiers: [],
+        attributes: [],
+      });
+    }
+
+    importDecls.get(i.module)!.specifiers.push(...specifiers);
   }
 
-  tree.body = [...importDecls, ...tree.body];
+  tree.body = [...importDecls.values(), ...tree.body];
 };

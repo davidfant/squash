@@ -74,6 +74,22 @@ export namespace Metadata {
       componentId: ComponentId;
       props: Record<string, unknown> | string | null;
     }
+
+    export namespace Element {
+      export interface Code {
+        $$typeof: "react.code";
+        codeId: CodeId | null;
+        props: Record<string, unknown>;
+      }
+
+      export interface Tag {
+        $$typeof: "react.tag";
+        tagName: string;
+        props: Record<string, unknown>;
+      }
+
+      export type Any = Code | Tag;
+    }
   }
 
   export interface ReactFiber {

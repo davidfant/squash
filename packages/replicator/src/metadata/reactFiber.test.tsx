@@ -1,4 +1,4 @@
-import { forwardRef, memo, type ReactNode } from "react";
+import { forwardRef, lazy, memo, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { Metadata } from "../types";
 import { reactFiber } from "./reactFiber";
@@ -103,7 +103,18 @@ describe("reactFiber", () => {
         });
       });
 
-      test.only("should strip out react elements (e.g. children)", async () => {
+      test.only("should support array props", async () => {
+        const C = ({ children }: { children: ReactNode[] }) => (
+          <div>{children}</div>
+        );
+        const metadata = await run(<C children={[1, 2]} />);
+        const n = node(metadata, 1);
+        expect(n.value.props).toEqual({
+          children: [1, 2],
+        });
+      });
+
+      test("should strip out react elements (e.g. children)", async () => {
         const A = ({ children }: { children: ReactNode }) => children;
         const B = ({ children }: { children: ReactNode }) => children;
         const C = ({ children }: { visible: boolean; children: ReactNode }) =>
@@ -139,6 +150,31 @@ describe("reactFiber", () => {
                   },
                 },
               },
+            },
+          },
+        });
+      });
+
+      test.only("should register node nested in lazy/memo/forwardRef", async () => {
+        const A = ({ children }: { children: ReactNode }) => children;
+        const B = lazy(async () => ({
+          default: memo(forwardRef(() => <div>Hello</div>)),
+        }));
+        const metadata = await run(
+          <A>
+            <B />
+          </A>
+        );
+        const n = node(metadata, 1);
+        console.dir(n, { depth: null });
+        expect(n.value).toEqual({
+          componentId: "C1",
+          parentId: "N0",
+          props: {
+            children: {
+              $$typeof: "react.code",
+              codeId: "F1",
+              props: {},
             },
           },
         });

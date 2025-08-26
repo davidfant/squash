@@ -74,12 +74,16 @@ function getCode(elementType: any): Function | undefined {
     elementType !== null &&
     "$$typeof" in elementType
   ) {
-    // if is Symbol(react.memo)
-    if (elementType.$$typeof === Symbol.for("react.memo")) {
-      return getCode(elementType.type);
-    }
-    if (elementType.$$typeof === Symbol.for("react.forward_ref")) {
-      return elementType.render;
+    switch (elementType.$$typeof) {
+      case Symbol.for("react.memo"):
+        return getCode(elementType.type);
+      case Symbol.for("react.forward_ref"):
+        return elementType.render;
+      case Symbol.for("react.lazy"):
+        const loaded = elementType._init(elementType._payload);
+        return getCode(loaded);
+      default:
+        return undefined;
     }
   }
 }
@@ -92,23 +96,29 @@ function sanitize(
   if (value === null) return null;
   if (value === undefined) return undefined;
   if (value === window) return "[Window]";
+  if (Array.isArray(value)) {
+    return value.map((v) => sanitize(v, codeIdLookup, seen));
+  }
   if (typeof value === "object") {
     if (seen.has(value)) return "[Circular]";
     seen.add(value);
     if (typeof value.$$typeof === "symbol") {
       if ("type" in value) {
-        if (typeof value.type === "function") {
-          return {
-            $$typeof: "react.code",
-            codeId: codeIdLookup.get(value.type) ?? null,
-            props: sanitize(value.props, codeIdLookup, seen),
-          } satisfies Metadata.ReactFiber.Element.Code;
-        } else if (typeof value.type === "string") {
+        if (typeof value.type === "string") {
           return {
             $$typeof: "react.tag",
             tagName: value.type,
             props: sanitize(value.props, codeIdLookup, seen),
           } satisfies Metadata.ReactFiber.Element.Tag;
+        }
+
+        const code = getCode(value.type);
+        if (code) {
+          return {
+            $$typeof: "react.code",
+            codeId: codeIdLookup.get(code) ?? null,
+            props: sanitize(value.props, codeIdLookup, seen),
+          } satisfies Metadata.ReactFiber.Element.Code;
         }
       }
       return `[$$typeof: ${value.$$typeof.toString()}]`;

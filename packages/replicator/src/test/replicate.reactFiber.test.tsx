@@ -88,12 +88,28 @@ describe("replicate with react fiber", () => {
     expectFileToMatchSnapshot(files, "src/App.tsx");
   });
 
-  test.todo("should handle inline expressions like mapping over array");
+  test("should support inline functions", async () => {
+    const A = () => (
+      <>
+        {[1, 2, 3].map((x) => (
+          <div>{x}</div>
+        ))}
+        {(() => (
+          <div>Hello</div>
+        ))()}
+      </>
+    );
+    const files = await run(<A />);
+    expectFileToMatchSnapshot(files, "src/components/A.tsx");
+    expectFileToMatchSnapshot(files, "src/App.tsx");
+  });
 
   test.todo(
     "should throw an error if same data-squash-parent-id nodes existing in different parents",
     () => {}
   );
+
+  test.todo("should remove components that just return children");
 
   describe("props", () => {
     test("simple props are defined in call site", async () => {

@@ -31,14 +31,17 @@ export const replicatorRouter = new Hono<{
               z.object({
                 tag: z.number(),
                 name: z.string().optional(),
-                codeId: z.number().optional(),
+                codeId: z.string().optional(),
               })
             ),
             nodes: z.record(
               z.string(),
               z.object({
-                parentId: z.number().nullable(),
-                componentId: z.number(),
+                parentId: z
+                  .string()
+                  .transform((id) => id as `N${number}`)
+                  .nullable(),
+                componentId: z.string().transform((id) => id as `C${number}`),
                 props: z
                   .record(z.string(), z.unknown())
                   .or(z.string())

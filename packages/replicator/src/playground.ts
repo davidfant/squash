@@ -13,7 +13,7 @@ const PATH_TO_TEMPLATE = `./playground`;
 
 const snapshots: Record<string, string> = {
   cursor:
-    "46cb2680-f22a-4656-a386-c535e1fe3808/e61389b1-eb31-4951-8f45-d31e299e8a10/1756000121874.json",
+    "46cb2680-f22a-4656-a386-c535e1fe3808/0e7e720f-491f-442d-a9c6-bfcf60bde1ba/1756183558170.json",
   // autodesk:
   //   "46cb2680-f22a-4656-a386-c535e1fe3808/dc5975ac-1a72-4165-aab8-db59d1a24a94/1755997532609.json",
 };
@@ -55,6 +55,7 @@ await Promise.all(
   [
     path.join(PATH_TO_TEMPLATE, "src/components"),
     path.join(PATH_TO_TEMPLATE, "src/svgs"),
+    path.join(PATH_TO_TEMPLATE, "src/App.tsx"),
     path.join(PATH_TO_TEMPLATE, "public"),
   ].map((p) => fs.rm(p, { recursive: true }).catch(() => {}))
 );

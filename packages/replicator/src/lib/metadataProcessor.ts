@@ -99,9 +99,9 @@ export async function metadataProcessor(
   const componentNodes = buildComponentNodesMap(nodes);
   const componentDeps = buildComponentDeps(nodes, components, childMap);
 
-  // console.log("Metadata", metadata);
-  // console.log("Component Nodes Map", componentNodes);
-  // console.log("Component Dependencies", componentDeps);
+  console.log("Metadata", metadata);
+  console.log("Component Nodes Map", componentNodes);
+  console.log("Component Dependencies", componentDeps);
 
   const remaining = [...componentNodes];
   const processed = new Set<ComponentId>();

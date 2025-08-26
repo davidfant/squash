@@ -21,7 +21,6 @@
     "test": "vitest"
   },
   "devDependencies": {
-    "@squash/chrome-extension": "workspace:*",
     "@types/cheerio": "^1.0.0",
     "@types/estree": "^1.0.5",
     "@types/hast": "^3.0.4",

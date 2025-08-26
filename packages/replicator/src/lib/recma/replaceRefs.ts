@@ -27,7 +27,7 @@ export function addImport(i: RefImport, imports: RefImport[]) {
       i.name === ii.name &&
       !!i.default === !!ii.default
   );
-  return exists ? imports : [...imports, i];
+  if (!exists) imports.push(i);
 }
 
 export const recmaReplaceRefs: Plugin<[], Program> = () => (tree: Program) => {
@@ -92,23 +92,6 @@ export const recmaReplaceRefs: Plugin<[], Program> = () => (tree: Program) => {
 
   const importDecls = new Map<string, ImportDeclaration>();
   for (const i of imports) {
-    const specifiers: ImportDeclaration["specifiers"] = [];
-
-    for (const i of imports) {
-      if (i.default) {
-        specifiers.push({
-          type: "ImportDefaultSpecifier",
-          local: { type: "Identifier", name: i.name },
-        });
-      } else {
-        specifiers.push({
-          type: "ImportSpecifier",
-          imported: { type: "Identifier", name: i.name },
-          local: { type: "Identifier", name: i.name },
-        });
-      }
-    }
-
     if (!importDecls.has(i.module)) {
       importDecls.set(i.module, {
         type: "ImportDeclaration",
@@ -118,7 +101,18 @@ export const recmaReplaceRefs: Plugin<[], Program> = () => (tree: Program) => {
       });
     }
 
-    importDecls.get(i.module)!.specifiers.push(...specifiers);
+    if (i.default) {
+      importDecls.get(i.module)!.specifiers.push({
+        type: "ImportDefaultSpecifier",
+        local: { type: "Identifier", name: i.name },
+      });
+    } else {
+      importDecls.get(i.module)!.specifiers.push({
+        type: "ImportSpecifier",
+        imported: { type: "Identifier", name: i.name },
+        local: { type: "Identifier", name: i.name },
+      });
+    }
   }
 
   tree.body = [...importDecls.values(), ...tree.body];

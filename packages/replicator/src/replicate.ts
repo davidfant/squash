@@ -19,6 +19,7 @@ import { Metadata, type Snapshot } from "./types";
 type Root = import("hast").Root;
 type Element = import("hast").Element;
 type NodeId = Metadata.ReactFiber.NodeId;
+type CodeId = Metadata.ReactFiber.CodeId;
 type ComponentId = Metadata.ReactFiber.ComponentId;
 
 interface ReplicateOptions {
@@ -69,8 +70,14 @@ export async function replicate(
   const m = snapshot.metadata;
   if (!m) throw new Error("Metadata is required");
 
-  const nodes = Object.entries(m.nodes).map(([id, n]) => ({ id, ...n }));
-  const comps = Object.entries(m.components).map(([id, c]) => ({ id, ...c }));
+  const nodes = Object.entries(m.nodes).map(([id, n]) => ({
+    id: id as NodeId,
+    ...n,
+  }));
+  const comps = Object.entries(m.components).map(([id, c]) => ({
+    id: id as ComponentId,
+    ...c,
+  }));
 
   // const rootNode = nodes.find(
   //   (node) =>
@@ -81,6 +88,13 @@ export async function replicate(
   // if (!rootNode) throw new Error("No root node found");
 
   const compNameById = createUniqueNames(m.components);
+  const codeIdToComponentId = new Map<CodeId, ComponentId>(
+    comps
+      .map((c) =>
+        "codeId" in c && c.codeId ? ([c.codeId, c.id] as const) : undefined
+      )
+      .filter((v) => !!v)
+  );
 
   await unified()
     .use(rehypeParse, { fragment: true })
@@ -139,6 +153,15 @@ export async function replicate(
             await prettier.ts(processor.stringify(estree))
           );
 
+          const codeIdToComponentImport = new Map(
+            Array.from(codeIdToComponentId.entries()).map(
+              ([codeId, componentId]) => {
+                const name = compNameById.get(componentId)!;
+                return [codeId, { module: `@/components/${name}`, name }];
+              }
+            )
+          );
+
           for (const [nodeId, elements] of Object.entries(elementsByNodeId)) {
             const { index, parent } = elements[0]!;
             const props = nodes.find((n) => n.id === nodeId)!.props as Record<
@@ -152,6 +175,7 @@ export async function replicate(
               },
               props,
               nodeId,
+              ctx: { codeIdToComponentImport },
             });
             elements.slice(1).forEach((e) => (e.element.tagName = "rm"));
           }

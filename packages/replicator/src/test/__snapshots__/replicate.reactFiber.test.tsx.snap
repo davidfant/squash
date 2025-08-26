@@ -165,27 +165,38 @@ export function App(props) {
 `;
 
 exports[`replicate with react fiber > props > should recreate children that are react elements 1`] = `
-"export function App(props) {
+"import { A } from "@/components/A";
+import { B } from "@/components/B";
+export function App(props) {
   return (
     <A>
-      <F1>
-        <div>Hello</div>
-      </F1>
+      <B>
+        <div>{"Hello"}</div>
+      </B>
     </A>
   );
 }
 "
 `;
 
-exports[`replicate with react fiber > props > should recreate children that are react elements 3`] = `
-"export function App(props) {
+exports[`replicate with react fiber > should support inline functions 1`] = `
+"export function A(props) {
   return (
-    <A>
-      <B>
-        <div>Hello</div>
-      </B>
-    </A>
+    <>
+      <div>{"1"}</div>
+      <div>{"2"}</div>
+      <div>{"3"}</div>
+      <div>{"Hello"}</div>
+    </>
   );
+}
+"
+`;
+
+exports[`replicate with react fiber > should support inline functions 2`] = `
+"import { A } from "@/components/A";
+export function App(props) {
+  return <A />;
 }
 "
 `;

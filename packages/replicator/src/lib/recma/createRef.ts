@@ -6,8 +6,14 @@ import recmaStringify from "recma-stringify";
 import { unified } from "unified";
 import { addImport } from "./replaceRefs";
 
-// TODO: based on props we might need to add more imports!!!
-function replaceReactElements(value: any): {
+interface Context {
+  codeIdToComponentImport: Map<string, RefImport>;
+}
+
+function replaceReactElements(
+  value: any,
+  ctx: Context
+): {
   imports: RefImport[];
   value: any;
   element: boolean;
@@ -16,7 +22,7 @@ function replaceReactElements(value: any): {
   if (Array.isArray(value)) {
     const replaced: any[] = [];
     for (const v of value) {
-      const r = replaceReactElements(v);
+      const r = replaceReactElements(v, ctx);
       r.imports.forEach((i) => addImport(i, imports));
       replaced.push(r.value);
     }
@@ -26,17 +32,31 @@ function replaceReactElements(value: any): {
       case "react.code":
       case "react.tag": {
         const { children, ...rest } = value.props;
-        const built = buildAttributes(rest);
+        const built = buildAttributes(rest, ctx);
         built.imports.forEach((i) => addImport(i, imports));
 
         // TODO: look up component by codeId
+        console.log(
+          "TODO: look up code by code id",
+          value,
+          (() => {
+            if (value.$$typeof === "react.tag") {
+              return { module: undefined, name: value.tagName };
+            }
+            const component = ctx.codeIdToComponentImport.get(value.codeId!);
+            return component ?? { module: undefined, name: "unknown" };
+          })()
+        );
         const el = createComponentElement(
-          value.$$typeof === "react.code"
-            ? value.codeId
-              ? { module: `@/components/${value.codeId}`, name: value.codeId }
-              : { module: undefined, name: "unknown" }
-            : { module: undefined, name: value.tagName },
-          value.props
+          (() => {
+            if (value.$$typeof === "react.tag") {
+              return { module: undefined, name: value.tagName };
+            }
+            const component = ctx.codeIdToComponentImport.get(value.codeId!);
+            return component ?? { module: undefined, name: "unknown" };
+          })(),
+          value.props,
+          ctx
         );
         return { imports: el.imports, value: el.element, element: true };
       }
@@ -44,7 +64,7 @@ function replaceReactElements(value: any): {
 
     const replaced: Record<string, any> = {};
     for (const [k, v] of Object.entries(value)) {
-      const r = replaceReactElements(v);
+      const r = replaceReactElements(v, ctx);
       r.imports.forEach((i) => addImport(i, imports));
       replaced[k] = r.value;
     }
@@ -55,7 +75,10 @@ function replaceReactElements(value: any): {
   return { imports: [], value, element: false };
 }
 
-function buildAttributes(props: Record<string, unknown>): {
+function buildAttributes(
+  props: Record<string, unknown>,
+  ctx: Context
+): {
   imports: RefImport[];
   attributes: NodeMap["JSXAttribute"][];
 } {
@@ -78,7 +101,7 @@ function buildAttributes(props: Record<string, unknown>): {
         };
       }
       // everything else becomes an expression
-      const replaced = replaceReactElements(v);
+      const replaced = replaceReactElements(v, ctx);
       replaced.imports.forEach((i) => addImport(i, imports));
       return {
         type: "JSXAttribute",
@@ -93,7 +116,8 @@ function buildAttributes(props: Record<string, unknown>): {
 
 function createComponentElement(
   component: { module?: string; name: string },
-  props: Record<string, unknown>
+  props: Record<string, unknown>,
+  ctx: Context
 ): { imports: RefImport[]; element: NodeMap["JSXElement"] } {
   const imports: RefImport[] = component.module
     ? [{ module: component.module, name: component.name }]
@@ -101,17 +125,21 @@ function createComponentElement(
 
   const { children, ...rest } = props;
   const childNodes: NodeMap["JSXElement"]["children"] = [];
-  (Array.isArray(children) ? children : !!children ? [children] : []).map(
-    (child) => {
-      if (typeof child === "string") {
-        childNodes.push({ type: "JSXText", value: child, raw: child });
+  [children]
+    .flat(Infinity)
+    .filter((c) => !!c)
+    .map((child) => {
+      if (typeof child === "string" || typeof child === "number") {
+        childNodes.push({
+          type: "JSXExpressionContainer",
+          expression: { type: "Literal", value: child },
+        });
       } else {
-        const replaced = replaceReactElements(child);
+        const replaced = replaceReactElements(child, ctx);
         replaced.imports.forEach((i) => addImport(i, imports));
         childNodes.push(replaced.value);
       }
-    }
-  );
+    });
 
   const element: NodeMap["JSXElement"] = {
     type: "JSXElement",
@@ -124,7 +152,7 @@ function createComponentElement(
         value: (() => {
           if (value === true) return null;
           if (typeof value === "string") return { type: "Literal", value };
-          const replaced = replaceReactElements(value);
+          const replaced = replaceReactElements(value, ctx);
           replaced.imports.forEach((i) => addImport(i, imports));
           return {
             type: "JSXExpressionContainer",
@@ -151,12 +179,14 @@ export function createRef({
   nodeId,
   component,
   props,
+  ctx,
 }: {
   nodeId: string;
   component: RefImport;
   props: Record<string, unknown>;
+  ctx: Context;
 }) {
-  const created = createComponentElement(component, props);
+  const created = createComponentElement(component, props, ctx);
   return h("ref", {
     dataSquashNodeId: nodeId,
     imports: JSON.stringify(created.imports satisfies RefImport[]),

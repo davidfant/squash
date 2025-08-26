@@ -1,3 +1,5 @@
+import camelCase from "lodash.camelcase";
+import upperFirst from "lodash.upperfirst";
 import type { Metadata } from "..";
 
 export function createUniqueNames(
@@ -7,10 +9,13 @@ export function createUniqueNames(
   >
 ) {
   const compNameById = new Map<Metadata.ReactFiber.ComponentId, string>(
-    Object.entries(components).map(([id, c]) => [
-      id as Metadata.ReactFiber.ComponentId,
-      "name" in c && c.name ? c.name : `Component${id.slice(1)}`,
-    ])
+    Object.entries(components).map(([_id, c]) => {
+      const id = _id as Metadata.ReactFiber.ComponentId;
+      if ("name" in c && !!c.name && c.name.length >= 3) {
+        return [id, upperFirst(camelCase(c.name))];
+      }
+      return [id, `Component${id.slice(1)}`];
+    })
   );
   const compIdsByName = new Map<string, Metadata.ReactFiber.ComponentId[]>();
   for (const id of Object.keys(

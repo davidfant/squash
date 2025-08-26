@@ -34,16 +34,16 @@ describe("replicate with react fiber", () => {
   });
 
   test("should create a component", async () => {
-    const A = () => <div>Hello</div>;
-    const files = await run(<A />);
-    expectFileToMatchSnapshot(files, "src/components/A.tsx");
+    const Comp = () => <div>Hello</div>;
+    const files = await run(<Comp />);
+    expectFileToMatchSnapshot(files, "src/components/Comp.tsx");
     expectFileToMatchSnapshot(files, "src/App.tsx");
   });
 
   test("should only create one component if renders same component multiple times", async () => {
-    const A = () => <div>Hello</div>;
-    const files = await run([<A key="1" />, <A key="2" />]);
-    expectFileToMatchSnapshot(files, "src/components/A.tsx");
+    const CompA = () => <div>Hello</div>;
+    const files = await run([<CompA key="1" />, <CompA key="2" />]);
+    expectFileToMatchSnapshot(files, "src/components/CompA.tsx");
     expectFileToMatchSnapshot(files, "src/App.tsx");
   });
 
@@ -55,41 +55,41 @@ describe("replicate with react fiber", () => {
   });
 
   test("should not create a component when returning null", async () => {
-    const A = () => null;
+    const CompA = () => null;
     const files = await run(
       <div>
-        <A />
+        <CompA />
       </div>
     );
     expectFileToMatchSnapshot(files, "src/App.tsx");
   });
 
   test("should create component when one instance returns null and another returns jsx", async () => {
-    const A = ({ enabled }: { enabled: boolean }) =>
+    const Comp = ({ enabled }: { enabled: boolean }) =>
       enabled ? <div>Hello</div> : null;
     const files = await run([
-      <A key="1" enabled={true} />,
-      <A key="2" enabled={false} />,
+      <Comp key="1" enabled={true} />,
+      <Comp key="2" enabled={false} />,
     ]);
     expectFileToMatchSnapshot(files, "src/App.tsx");
-    expectFileToMatchSnapshot(files, "src/components/A.tsx");
+    expectFileToMatchSnapshot(files, "src/components/Comp.tsx");
   });
 
   test("should create nested components", async () => {
-    const A = () => <div>Hello</div>;
-    const B = () => (
+    const CompA = () => <div>Hello</div>;
+    const CompB = () => (
       <div>
-        <A />
+        <CompA />
       </div>
     );
-    const files = await run(<B />);
-    expectFileToMatchSnapshot(files, "src/components/A.tsx");
-    expectFileToMatchSnapshot(files, "src/components/B.tsx");
+    const files = await run(<CompB />);
+    expectFileToMatchSnapshot(files, "src/components/CompA.tsx");
+    expectFileToMatchSnapshot(files, "src/components/CompB.tsx");
     expectFileToMatchSnapshot(files, "src/App.tsx");
   });
 
   test("should support inline functions", async () => {
-    const A = () => (
+    const Comp = () => (
       <>
         {[1, 2, 3].map((x) => (
           <div key={x}>{x}</div>
@@ -99,8 +99,8 @@ describe("replicate with react fiber", () => {
         ))()}
       </>
     );
-    const files = await run(<A />);
-    expectFileToMatchSnapshot(files, "src/components/A.tsx");
+    const files = await run(<Comp />);
+    expectFileToMatchSnapshot(files, "src/components/Comp.tsx");
     expectFileToMatchSnapshot(files, "src/App.tsx");
   });
 
@@ -114,9 +114,9 @@ describe("replicate with react fiber", () => {
 
   describe("props", () => {
     test("simple props are defined in call site", async () => {
-      const A = (_: any) => <div />;
+      const Comp = (_: any) => <div />;
       const files = await run(
-        <A
+        <Comp
           enabled
           string="text"
           number={-1}
@@ -124,19 +124,19 @@ describe("replicate with react fiber", () => {
           object={{ a: 1, b: 2 }}
         />
       );
-      expectFileToMatchSnapshot(files, "src/components/A.tsx");
+      expectFileToMatchSnapshot(files, "src/components/Comp.tsx");
       expectFileToMatchSnapshot(files, "src/App.tsx");
     });
 
     test("should recreate children that are react elements", async () => {
-      const A = ({ children }: { children: ReactNode }) => children;
-      const B = ({ children }: { children: ReactNode }) => children;
+      const CompA = ({ children }: { children: ReactNode }) => children;
+      const CompB = ({ children }: { children: ReactNode }) => children;
       const files = await run(
-        <A>
-          <B>
+        <CompA>
+          <CompB>
             <div>Hello</div>
-          </B>
-        </A>
+          </CompB>
+        </CompA>
       );
       // TODO: test to make sure that A and B just renders children
       // expectFileToMatchSnapshot(files, "src/components/A.tsx");
@@ -159,15 +159,28 @@ describe("replicate with react fiber", () => {
 
   describe("naming", () => {
     test("should support multiple components with same name", async () => {
-      const A = () => <div>Hello</div>;
-      A.displayName = "X";
-      const B = () => <div>Yellow</div>;
-      B.displayName = "X";
+      const CompA = () => <div>Hello</div>;
+      CompA.displayName = "Dupe";
+      const CompB = () => <div>Yellow</div>;
+      CompB.displayName = "Dupe";
 
-      const files = await run([<A key="a" />, <B key="b" />]);
-      expectFileToMatchSnapshot(files, "src/components/X1.tsx");
-      expectFileToMatchSnapshot(files, "src/components/X2.tsx");
+      const files = await run([<CompA key="a" />, <CompB key="b" />]);
+      expectFileToMatchSnapshot(files, "src/components/Dupe1.tsx");
+      expectFileToMatchSnapshot(files, "src/components/Dupe2.tsx");
       expectFileToMatchSnapshot(files, "src/App.tsx");
+    });
+
+    test("should use default name if component name length < 3", async () => {
+      const A = () => <div>Hello</div>;
+      const files = await run(<A />);
+      expectFileToMatchSnapshot(files, "src/components/Component1.tsx");
+    });
+
+    test("should TitleCase component name", async () => {
+      const A = () => <div>Hello</div>;
+      A.displayName = "componentName";
+      const files = await run(<A />);
+      expectFileToMatchSnapshot(files, "src/components/ComponentName.tsx");
     });
 
     test.todo("should rewrite component", () => {});

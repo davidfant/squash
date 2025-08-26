@@ -429,6 +429,12 @@ importers:
       jest-diff:
         specifier: ^30.0.5
         version: 30.0.5
+      lodash.camelcase:
+        specifier: ^4.3.0
+        version: 4.3.0
+      lodash.upperfirst:
+        specifier: ^4.3.1
+        version: 4.3.1
       nanotar:
         specifier: ^0.2.0
         version: 0.2.0
@@ -472,9 +478,6 @@ importers:
         specifier: ^4.0.16
         version: 4.0.16
     devDependencies:
-      '@squash/chrome-extension':
-        specifier: workspace:*
-        version: link:../chrome-extension
       '@types/cheerio':
         specifier: ^1.0.0
         version: 1.0.0
@@ -484,6 +487,12 @@ importers:
       '@types/hast':
         specifier: ^3.0.4
         version: 3.0.4
+      '@types/lodash.camelcase':
+        specifier: ^4.3.9
+        version: 4.3.9
+      '@types/lodash.upperfirst':
+        specifier: ^4.3.9
+        version: 4.3.9
       '@types/node':
         specifier: ^24.2.0
         version: 24.2.1

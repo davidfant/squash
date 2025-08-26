@@ -1,193 +1,43 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`replicate > reactFiber > naming > should support multiple components with same name 1`] = `
-"export function X1(props) {
+exports[`replicate with react fiber > naming > should TitleCase component name 1`] = `
+"export function ComponentName(props) {
   return <div>{"Hello"}</div>;
-}
-"
-`;
-
-exports[`replicate > reactFiber > naming > should support multiple components with same name 2`] = `
-"export function X2(props) {
-  return <div>{"Yellow"}</div>;
-}
-"
-`;
-
-exports[`replicate > reactFiber > naming > should support multiple components with same name 3`] = `
-"import { X1 } from "@/components/X1";
-import { X2 } from "@/components/X2";
-export function App(props) {
-  return (
-    <>
-      <X1 />
-      <X2 />
-    </>
-  );
-}
-"
-`;
-
-exports[`replicate > reactFiber > props > simple props are defined in call site 1`] = `
-"export function A(props) {
-  return <div />;
-}
-"
-`;
-
-exports[`replicate > reactFiber > props > simple props are defined in call site 2`] = `
-"import { A } from "@/components/A";
-export function App(props) {
-  return (
-    <A
-      enabled
-      string="text"
-      number={-1}
-      array={{
-        "0": 1,
-        "1": 2,
-        "2": 3,
-      }}
-      object={{
-        a: 1,
-        b: 2,
-      }}
-    />
-  );
-}
-"
-`;
-
-exports[`replicate > reactFiber > should create App.tsx 1`] = `
-"export function App(props) {
-  return <div>{"Hello"}</div>;
-}
-"
-`;
-
-exports[`replicate > reactFiber > should create a component 1`] = `
-"export function A(props) {
-  return <div>{"Hello"}</div>;
-}
-"
-`;
-
-exports[`replicate > reactFiber > should create a component 2`] = `
-"import { A } from "@/components/A";
-export function App(props) {
-  return <A />;
-}
-"
-`;
-
-exports[`replicate > reactFiber > should create component when one instance returns null and another returns jsx 1`] = `
-"import { A } from "@/components/A";
-export function App(props) {
-  return <A enabled />;
-}
-"
-`;
-
-exports[`replicate > reactFiber > should create component when one instance returns null and another returns jsx 2`] = `
-"export function A(props) {
-  return <div>{"Hello"}</div>;
-}
-"
-`;
-
-exports[`replicate > reactFiber > should create nested components 1`] = `
-"export function A(props) {
-  return <div>{"Hello"}</div>;
-}
-"
-`;
-
-exports[`replicate > reactFiber > should create nested components 2`] = `
-"import { A } from "@/components/A";
-export function B(props) {
-  return (
-    <div>
-      <A />
-    </div>
-  );
-}
-"
-`;
-
-exports[`replicate > reactFiber > should create nested components 3`] = `
-"import { B } from "@/components/B";
-export function App(props) {
-  return <B />;
-}
-"
-`;
-
-exports[`replicate > reactFiber > should not create a component when returning null 1`] = `
-"export function App(props) {
-  return <div />;
-}
-"
-`;
-
-exports[`replicate > reactFiber > should only create one component for memo(forwardRef(function)) 1`] = `
-"export function Component2(props) {
-  return <div>{"Hello"}</div>;
-}
-"
-`;
-
-exports[`replicate > reactFiber > should only create one component for memo(forwardRef(function)) 2`] = `
-"import { Component2 } from "@/components/Component2";
-export function App(props) {
-  return <Component2 />;
-}
-"
-`;
-
-exports[`replicate > reactFiber > should only create one component if renders same component multiple times 1`] = `
-"export function A(props) {
-  return <div>{"Hello"}</div>;
-}
-"
-`;
-
-exports[`replicate > reactFiber > should only create one component if renders same component multiple times 2`] = `
-"import { A } from "@/components/A";
-export function App(props) {
-  return (
-    <>
-      <A />
-      <A />
-    </>
-  );
 }
 "
 `;
 
 exports[`replicate with react fiber > naming > should support multiple components with same name 1`] = `
-"export function X1(props) {
+"export function Dupe1(props) {
   return <div>{"Hello"}</div>;
 }
 "
 `;
 
 exports[`replicate with react fiber > naming > should support multiple components with same name 2`] = `
-"export function X2(props) {
+"export function Dupe2(props) {
   return <div>{"Yellow"}</div>;
 }
 "
 `;
 
 exports[`replicate with react fiber > naming > should support multiple components with same name 3`] = `
-"import { X1 } from "@/components/X1";
-import { X2 } from "@/components/X2";
+"import { Dupe1 } from "@/components/Dupe1";
+import { Dupe2 } from "@/components/Dupe2";
 export function App(props) {
   return (
     <>
-      <X1 />
-      <X2 />
+      <Dupe1 />
+      <Dupe2 />
     </>
   );
+}
+"
+`;
+
+exports[`replicate with react fiber > naming > should use default name if component name length < 3 1`] = `
+"export function Component1(props) {
+  return <div>{"Hello"}</div>;
 }
 "
 `;
@@ -200,32 +50,32 @@ exports[`replicate with react fiber > props > should convert tabIndex to number 
 `;
 
 exports[`replicate with react fiber > props > should recreate children that are react elements 1`] = `
-"import { A } from "@/components/A";
-import { B } from "@/components/B";
+"import { CompA } from "@/components/CompA";
+import { CompB } from "@/components/CompB";
 export function App(props) {
   return (
-    <A>
-      <B>
+    <CompA>
+      <CompB>
         <div>{"Hello"}</div>
-      </B>
-    </A>
+      </CompB>
+    </CompA>
   );
 }
 "
 `;
 
 exports[`replicate with react fiber > props > simple props are defined in call site 1`] = `
-"export function A(props) {
+"export function Comp(props) {
   return <div />;
 }
 "
 `;
 
 exports[`replicate with react fiber > props > simple props are defined in call site 2`] = `
-"import { A } from "@/components/A";
+"import { Comp } from "@/components/Comp";
 export function App(props) {
   return (
-    <A
+    <Comp
       enabled
       string="text"
       number={-1}
@@ -248,48 +98,48 @@ exports[`replicate with react fiber > should create App.tsx 1`] = `
 `;
 
 exports[`replicate with react fiber > should create a component 1`] = `
-"export function A(props) {
+"export function Comp(props) {
   return <div>{"Hello"}</div>;
 }
 "
 `;
 
 exports[`replicate with react fiber > should create a component 2`] = `
-"import { A } from "@/components/A";
+"import { Comp } from "@/components/Comp";
 export function App(props) {
-  return <A />;
+  return <Comp />;
 }
 "
 `;
 
 exports[`replicate with react fiber > should create component when one instance returns null and another returns jsx 1`] = `
-"import { A } from "@/components/A";
+"import { Comp } from "@/components/Comp";
 export function App(props) {
-  return <A enabled />;
+  return <Comp enabled />;
 }
 "
 `;
 
 exports[`replicate with react fiber > should create component when one instance returns null and another returns jsx 2`] = `
-"export function A(props) {
+"export function Comp(props) {
   return <div>{"Hello"}</div>;
 }
 "
 `;
 
 exports[`replicate with react fiber > should create nested components 1`] = `
-"export function A(props) {
+"export function CompA(props) {
   return <div>{"Hello"}</div>;
 }
 "
 `;
 
 exports[`replicate with react fiber > should create nested components 2`] = `
-"import { A } from "@/components/A";
-export function B(props) {
+"import { CompA } from "@/components/CompA";
+export function CompB(props) {
   return (
     <div>
-      <A />
+      <CompA />
     </div>
   );
 }
@@ -297,9 +147,9 @@ export function B(props) {
 `;
 
 exports[`replicate with react fiber > should create nested components 3`] = `
-"import { B } from "@/components/B";
+"import { CompB } from "@/components/CompB";
 export function App(props) {
-  return <B />;
+  return <CompB />;
 }
 "
 `;
@@ -327,19 +177,19 @@ export function App(props) {
 `;
 
 exports[`replicate with react fiber > should only create one component if renders same component multiple times 1`] = `
-"export function A(props) {
+"export function CompA(props) {
   return <div>{"Hello"}</div>;
 }
 "
 `;
 
 exports[`replicate with react fiber > should only create one component if renders same component multiple times 2`] = `
-"import { A } from "@/components/A";
+"import { CompA } from "@/components/CompA";
 export function App(props) {
   return (
     <>
-      <A />
-      <A />
+      <CompA />
+      <CompA />
     </>
   );
 }
@@ -347,7 +197,7 @@ export function App(props) {
 `;
 
 exports[`replicate with react fiber > should support inline functions 1`] = `
-"export function A(props) {
+"export function Comp(props) {
   return (
     <>
       <div>{"1"}</div>
@@ -361,9 +211,9 @@ exports[`replicate with react fiber > should support inline functions 1`] = `
 `;
 
 exports[`replicate with react fiber > should support inline functions 2`] = `
-"import { A } from "@/components/A";
+"import { Comp } from "@/components/Comp";
 export function App(props) {
-  return <A />;
+  return <Comp />;
 }
 "
 `;

@@ -110,6 +110,7 @@ describe("replicate with react fiber", () => {
   );
 
   test.todo("should remove components that just return children");
+  test.todo("should pull out SVGs into separate components");
 
   describe("props", () => {
     test("simple props are defined in call site", async () => {
@@ -149,6 +150,11 @@ describe("replicate with react fiber", () => {
         // <A>wow</A> should have a component A that just returns props.children, not "wow"
       }
     );
+
+    test("should convert tabIndex to number", async () => {
+      const files = await run(<div tabIndex={"1" as any} />);
+      expectFileToMatchSnapshot(files, "src/App.tsx");
+    });
   });
 
   describe("naming", () => {

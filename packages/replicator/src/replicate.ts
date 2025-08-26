@@ -10,6 +10,7 @@ import { SKIP, visit } from "unist-util-visit";
 import { createUniqueNames } from "./lib/createUniqueNames";
 import { metadataProcessor } from "./lib/metadataProcessor";
 import { createRef } from "./lib/recma/createRef";
+import { recmaFixProperties } from "./lib/recma/fixProperties";
 import { recmaRemoveRedundantFragment } from "./lib/recma/removeRedundantFragment";
 import { recmaReplaceRefs } from "./lib/recma/replaceRefs";
 import { rehypeStripSquashAttribute } from "./lib/rehype/stripSquashAttribute";
@@ -129,10 +130,10 @@ export async function replicate(
             .use(rehypeStripSquashAttribute)
             .use(rehypeRecma)
             .use(recmaJsx)
-            // .use(recmaFixProperties)
             .use(recmaRemoveRedundantFragment)
             .use(recmaWrapAsComponent, componentName)
             .use(recmaReplaceRefs)
+            .use(recmaFixProperties)
             .use(recmaStringify);
 
           const elementsByNodeId = elements.reduce(
@@ -192,10 +193,10 @@ export async function replicate(
             .use(rehypeStripSquashAttribute)
             .use(rehypeRecma)
             .use(recmaJsx)
-            // .use(recmaFixProperties)
             .use(recmaRemoveRedundantFragment)
             .use(recmaWrapAsComponent, "App")
             .use(recmaReplaceRefs)
+            .use(recmaFixProperties)
             .use(recmaStringify);
 
           // const estree = await processor.run(tree);

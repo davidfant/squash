@@ -30,6 +30,29 @@ type ComponentId = Metadata.ReactFiber.ComponentId;
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
 
+async function writeFile(
+  componentName: string,
+  dir: string,
+  root: Root,
+  sink: FileSink
+) {
+  const processor = unified()
+    .use(rehypeStripSquashAttribute)
+    .use(rehypeRecma)
+    .use(recmaJsx)
+    .use(recmaRemoveRedundantFragment)
+    .use(recmaWrapAsComponent, componentName)
+    .use(recmaReplaceRefs)
+    .use(recmaFixProperties)
+    .use(recmaStringify);
+
+  const estree = await processor.run(clone(root));
+  await sink.writeText(
+    path.join(dir, `${componentName}.tsx`),
+    await prettier.ts(processor.stringify(estree))
+  );
+}
+
 export async function replicate(snapshot: Snapshot, sink: FileSink<any>) {
   const $ = load(snapshot.page.html);
   const html = $("html") ?? $("html");
@@ -136,35 +159,18 @@ export async function replicate(snapshot: Snapshot, sink: FileSink<any>) {
             return;
           }
 
-          const processor = unified()
-            .use(rehypeStripSquashAttribute)
-            .use(rehypeRecma)
-            .use(recmaJsx)
-            .use(recmaRemoveRedundantFragment)
-            .use(recmaWrapAsComponent, compPath.name)
-            .use(recmaReplaceRefs)
-            .use(recmaFixProperties)
-            .use(recmaStringify);
-
-          // TODO: group elements by nodeId, and then create one single component using the group
-          const estree = await processor.run(
-            clone({
+          await writeFile(
+            compPath.name,
+            path.join("src", "components", compPath.dir),
+            {
               type: "root",
               children:
                 elementsByNodeId
                   .values()
                   .next()
                   .value?.map((e) => e.element) ?? [],
-            })
-          );
-          await sink.writeText(
-            path.join(
-              "src",
-              "components",
-              compPath.dir,
-              `${compPath.name}.tsx`
-            ),
-            await prettier.ts(processor.stringify(estree))
+            },
+            sink
           );
 
           const toReplace = [...elementsByNodeId.entries()]
@@ -216,22 +222,7 @@ export async function replicate(snapshot: Snapshot, sink: FileSink<any>) {
         } else if (
           group.component.tag === Metadata.ReactFiber.Component.Tag.HostRoot
         ) {
-          const processor = unified()
-            .use(rehypeStripSquashAttribute)
-            .use(rehypeRecma)
-            .use(recmaJsx)
-            .use(recmaRemoveRedundantFragment)
-            .use(recmaWrapAsComponent, "App")
-            .use(recmaReplaceRefs)
-            .use(recmaFixProperties)
-            .use(recmaStringify);
-
-          // const estree = await processor.run(tree);
-          const estree = await processor.run(clone(tree));
-          await sink.writeText(
-            "src/App.tsx",
-            await prettier.ts(processor.stringify(estree))
-          );
+          await writeFile("App", "src", clone(tree), sink);
         }
       });
     })

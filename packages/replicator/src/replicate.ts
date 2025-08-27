@@ -115,9 +115,27 @@ export async function replicate(snapshot: Snapshot, sink: FileSink<any>) {
             });
           }
 
+          if (group.id === "C53") {
+            console.log(group, elementsByNodeId);
+          }
+
           const compPath = compPathById.get(group.id)!;
 
-          if (![...elementsByNodeId.values()].flat().length) return;
+          // TODO: what do we do about this? The component never has a node, however it
+          // might still be called in some react element props somewhere.
+          if (![...elementsByNodeId.values()].flat().length) {
+            await sink.writeText(
+              path.join(
+                "src",
+                "components",
+                compPath.dir,
+                `${compPath.name}.tsx`
+              ),
+              `export const ${compPath.name} = () => null;`
+            );
+            return;
+          }
+
           const processor = unified()
             .use(rehypeStripSquashAttribute)
             .use(rehypeRecma)
@@ -158,6 +176,7 @@ export async function replicate(snapshot: Snapshot, sink: FileSink<any>) {
             );
 
           // Note(fant): loop over elements in reverse, so that we replace the innermost elements first.
+          // TODO: for testing, try saving all of these separately to see if it works
           for (const { nodeId, elements } of toReplace) {
             if (!elements.length) continue;
 
@@ -183,7 +202,6 @@ export async function replicate(snapshot: Snapshot, sink: FileSink<any>) {
                 nodeId,
                 ctx: { codeIdToComponentImport },
                 // Note(fant): for now we keep the children within the ref, so that in the processor loop we still can find elements of a certain node.
-                // children: elements.flatMap((e) => e.element.children),
                 children: clone(elements.map((e) => e.element)),
               })
             );

@@ -238,7 +238,6 @@ export async function metadataProcessor(
         [...componentDeps.get(id)!].filter((id) => !processed.has(id))
       );
     }
-    // console log all remaining deps, less what's already processed
     throw new Error(
       `Metadata processor failed to process all components. Remaining: ${remaining.map(([id]) => id).join(", ")}`
     );

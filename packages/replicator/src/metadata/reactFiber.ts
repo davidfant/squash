@@ -67,25 +67,36 @@ function walkFrom<T>(
   }
 }
 
-function getCode(elementType: any): Function | undefined {
-  if (typeof elementType === "function") return elementType;
+function getCode(el: any): Function | null | undefined {
+  if (typeof el.type === "function") return el.type;
+  if (el.type === Symbol.for("react.suspense")) {
+    return getCode({ type: el.props.children });
+  }
   if (
-    typeof elementType === "object" &&
-    elementType !== null &&
-    "$$typeof" in elementType
+    typeof el.type === "object" &&
+    el.type !== null &&
+    "$$typeof" in el.type
   ) {
-    switch (elementType.$$typeof) {
+    switch (el.type.$$typeof) {
       case Symbol.for("react.memo"):
-        return getCode(elementType.type);
+        return getCode(el.type);
       case Symbol.for("react.forward_ref"):
-        return elementType.render;
+        return el.type.render;
       case Symbol.for("react.lazy"):
-        const loaded = elementType._init(elementType._payload);
-        return getCode(loaded);
-      default:
-        return undefined;
+        const loaded = el.type._init(el.type._payload);
+        if (loaded instanceof Array) {
+          // Note(fant): this can return an array. e.g. cursor.com returns an array of meta, link, etc elements
+          return null;
+        }
+        return getCode({ type: loaded });
+      case Symbol.for("react.context"):
+        return null;
     }
   }
+
+  // if (el.elementType === Symbol.for("react.strict_mode")) return undefined;
+  // if (el.elementType === Symbol.for("react.suspense")) return undefined;
+  // if (typeof el.type === "string") return undefined;
 }
 
 function sanitize(
@@ -110,15 +121,24 @@ function sanitize(
             tagName: value.type,
             props: sanitize(value.props, codeIdLookup, seen),
           } satisfies Metadata.ReactFiber.Element.Tag;
+        } else if (value.type === Symbol.for("react.fragment")) {
+          return {
+            $$typeof: "react.fragment",
+            children: value.props.children.map((c: any) =>
+              sanitize(c, codeIdLookup, seen)
+            ),
+          } satisfies Metadata.ReactFiber.Element.Fragment;
         }
 
-        const code = getCode(value.type);
+        const code = getCode(value);
         if (code) {
           return {
             $$typeof: "react.code",
             codeId: codeIdLookup.get(code) ?? null,
             props: sanitize(value.props, codeIdLookup, seen),
           } satisfies Metadata.ReactFiber.Element.Code;
+        } else if (code === undefined) {
+          console.warn("Failed to extract React element", value);
         }
       }
       return `[$$typeof: ${value.$$typeof.toString()}]`;
@@ -156,7 +176,7 @@ export function reactFiber(): Metadata.ReactFiber | null {
   const compIdLookup = new Map<CompKey, Metadata.ReactFiber.ComponentId>();
 
   walkFrom(root, (fiber) => {
-    const fn = getCode(fiber.elementType);
+    const fn = getCode(fiber);
     if (!fn) return;
     const codeId = codeIdLookup.get(fn) ?? `F${ids.code++}`;
     codeIdLookup.set(fn, codeId);
@@ -196,7 +216,7 @@ export function reactFiber(): Metadata.ReactFiber | null {
       case Tag.MemoComponent:
       case Tag.SimpleMemoComponent:
       case Tag.ForwardRef: {
-        const fn = getCode(fiber.elementType);
+        const fn = getCode(fiber);
         if (!fn) {
           console.warn("Could not get code for", fiber.elementType);
           return;

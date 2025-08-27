@@ -88,7 +88,12 @@ export namespace Metadata {
         props: Record<string, unknown>;
       }
 
-      export type Any = Code | Tag;
+      export interface Fragment {
+        $$typeof: "react.fragment";
+        children: Array<Any | null>;
+      }
+
+      export type Any = Code | Tag | Fragment;
     }
   }
 

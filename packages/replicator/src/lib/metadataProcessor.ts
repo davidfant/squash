@@ -58,7 +58,7 @@ function buildPropProvidedMap(
   /* ------------------------------------------------------------------ */
   /* 1.  codeId → componentId lookup (fast O(#components))              */
   /* ------------------------------------------------------------------ */
-  const codeIdToComponent = new Map<string | number, ComponentId>();
+  const codeIdToComponent = new Map<Metadata.ReactFiber.CodeId, ComponentId>();
   for (const [compId, comp] of Object.entries(components)) {
     if ("codeId" in comp && comp.codeId != null) {
       codeIdToComponent.set(comp.codeId, compId as ComponentId);
@@ -72,9 +72,15 @@ function buildPropProvidedMap(
     if (Array.isArray(val)) {
       for (const v of val) collect(v, out);
     } else if (typeof val === "object" && val !== null) {
-      if (val.$$typeof === "react.tag") {
-        const componentId = codeIdToComponent.get(val.codeId);
+      if (val.$$typeof === "react.code") {
+        const el = val as Metadata.ReactFiber.Element.Code;
+        const componentId = codeIdToComponent.get(el.codeId!);
         if (componentId) out.add(componentId);
+      }
+      // TODO: write a test to verify that this works
+      if (val.$$typeof === "react.fragment") {
+        const f = val as Metadata.ReactFiber.Element.Fragment;
+        for (const c of f.children) collect(c, out);
       }
 
       // Recurse through all properties so nested structures are covered.
@@ -225,6 +231,14 @@ export async function metadataProcessor(
   }
 
   if (remaining.length) {
+    for (const [id] of remaining) {
+      console.log(
+        id,
+        // componentDeps.get(id),
+        [...componentDeps.get(id)!].filter((id) => !processed.has(id))
+      );
+    }
+    // console log all remaining deps, less what's already processed
     throw new Error(
       `Metadata processor failed to process all components. Remaining: ${remaining.map(([id]) => id).join(", ")}`
     );

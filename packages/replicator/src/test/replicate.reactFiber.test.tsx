@@ -77,6 +77,8 @@ describe("replicate with react fiber", () => {
     expectFileToMatchSnapshot(files, "src/components/Comp.tsx");
   });
 
+  test.todo("should pull out SVG components to /svgs dir", async () => {});
+
   test("should create nested components", async () => {
     const CompA = () => <div>Hello</div>;
     const CompB = () => (
@@ -130,53 +132,70 @@ describe("replicate with react fiber", () => {
       expectFileToMatchSnapshot(files, "src/App.tsx");
     });
 
-    test("should recreate children that are react elements", async () => {
-      const CompA = ({ children }: { children: ReactNode }) => children;
-      const CompB = ({ children }: { children: ReactNode }) => children;
-      const files = await run(
-        <CompA>
-          <CompB>
-            <div>Hello</div>
-          </CompB>
-        </CompA>
-      );
-      // TODO: test to make sure that A and B just renders children
-      // expectFileToMatchSnapshot(files, "src/components/A.tsx");
-      // expectFileToMatchSnapshot(files, "src/components/B.tsx");
-      expectFileToMatchSnapshot(files, "src/App.tsx");
-    });
+    describe("children", () => {
+      test("should recreate react element children", async () => {
+        const CompA = ({ children }: { children: ReactNode }) => children;
+        const CompB = ({ children }: { children: ReactNode }) => children;
+        const files = await run(
+          <CompA>
+            <CompB>
+              <div>Hello</div>
+            </CompB>
+          </CompA>
+        );
+        // TODO: test to make sure that A and B just renders children
+        // expectFileToMatchSnapshot(files, "src/components/A.tsx");
+        // expectFileToMatchSnapshot(files, "src/components/B.tsx");
+        expectFileToMatchSnapshot(files, "src/App.tsx");
+      });
 
-    test.todo(
-      "should use props.children instead of redeclaring children in component body",
-      async () => {
-        // <A>wow</A> should have a component A that just returns props.children, not "wow"
-        // To do this, find all react elements that are provided through props. Then traverse the rendered children to detect which segments look 100% like a react element from the props. If that's the case for all nodes with that component, then we can just use that prop value.
-      }
-    );
+      test.only("should recreate react fragment children", async () => {
+        const Comp = ({ children }: { children: ReactNode }) => children;
+        const files = await run(
+          <Comp>
+            <>
+              <div>Hello</div>
+              <div>World</div>
+            </>
+          </Comp>
+        );
+        expectFileToMatchSnapshot(files, "src/App.tsx");
+      });
+
+      test.todo(
+        "should use props.children instead of redeclaring children in component body",
+        async () => {
+          // <A>wow</A> should have a component A that just returns props.children, not "wow"
+          // To do this, find all react elements that are provided through props. Then traverse the rendered children to detect which segments look 100% like a react element from the props. If that's the case for all nodes with that component, then we can just use that prop value.
+        }
+      );
+    });
 
     test("should convert tabIndex to number", async () => {
       const files = await run(<div tabIndex={"1" as any} />);
       expectFileToMatchSnapshot(files, "src/App.tsx");
     });
 
-    test("should not get stuck if core component creates what looks like circular deps", async () => {
-      const Common = ({ children }: { children: ReactNode }) => (
-        <div role="common">{children}</div>
-      );
-      // Child depends on Common, Parent depends on Common and Child. Common "seems" to depend on Child based on its children in the DOM, but we should exclude components as deps that come from props
-      const Child = () => <Common>child</Common>;
-      const Parent = () => (
-        <div>
-          <Common>
-            <Child />
-          </Common>
-        </div>
-      );
-      const files = await run(<Parent />);
-      expectFileToMatchSnapshot(files, "src/components/Common.tsx");
-      expectFileToMatchSnapshot(files, "src/components/Child.tsx");
-      expectFileToMatchSnapshot(files, "src/components/Parent.tsx");
-      expectFileToMatchSnapshot(files, "src/App.tsx");
+    describe("processor dependency ordering", () => {
+      test("should not get stuck if core component creates what looks like circular deps", async () => {
+        const Common = ({ children }: { children: ReactNode }) => (
+          <div role="common">{children}</div>
+        );
+        // Child depends on Common, Parent depends on Common and Child. Common "seems" to depend on Child based on its children in the DOM, but we should exclude components as deps that come from props
+        const Child = () => <Common>child</Common>;
+        const Parent = () => (
+          <div>
+            <Common>
+              <Child />
+            </Common>
+          </div>
+        );
+        const files = await run(<Parent />);
+        expectFileToMatchSnapshot(files, "src/components/Common.tsx");
+        expectFileToMatchSnapshot(files, "src/components/Child.tsx");
+        expectFileToMatchSnapshot(files, "src/components/Parent.tsx");
+        expectFileToMatchSnapshot(files, "src/App.tsx");
+      });
     });
   });
 

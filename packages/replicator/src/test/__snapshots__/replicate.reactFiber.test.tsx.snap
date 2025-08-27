@@ -49,6 +49,21 @@ exports[`replicate with react fiber > naming > should use default name if compon
 "
 `;
 
+exports[`replicate with react fiber > props > children > should recreate react fragment children 1`] = `
+"import { Comp } from "@/components/Comp";
+export function App(props) {
+  return (
+    <Comp>
+      <>
+        <div>{"Hello"}</div>
+        <div>{"World"}</div>
+      </>
+    </Comp>
+  );
+}
+"
+`;
+
 exports[`replicate with react fiber > props > should convert tabIndex to number 1`] = `
 "export function App(props) {
   return <div tabIndex={1} />;

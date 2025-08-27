@@ -103,7 +103,7 @@ describe("reactFiber", () => {
         });
       });
 
-      test.only("should support array props", async () => {
+      test("should support array props", async () => {
         const C = ({ children }: { children: ReactNode[] }) => (
           <div>{children}</div>
         );
@@ -155,7 +155,7 @@ describe("reactFiber", () => {
         });
       });
 
-      test.only("should register node nested in lazy/memo/forwardRef", async () => {
+      test("should register node nested in lazy/memo/forwardRef", async () => {
         const A = ({ children }: { children: ReactNode }) => children;
         const B = lazy(async () => ({
           default: memo(forwardRef(() => <div>Hello</div>)),
@@ -166,7 +166,6 @@ describe("reactFiber", () => {
           </A>
         );
         const n = node(metadata, 1);
-        console.dir(n, { depth: null });
         expect(n.value).toEqual({
           componentId: "C1",
           parentId: "N0",

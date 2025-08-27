@@ -164,7 +164,7 @@ describe("replicate with react fiber", () => {
         expectFileToMatchSnapshot(files, "src/App.tsx");
       });
 
-      test.only("should escape weird JS property names", async () => {
+      test("should escape weird JS property names", async () => {
         const Comp = (_props: any) => <div />;
         const files = await run(
           <Comp

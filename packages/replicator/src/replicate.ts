@@ -91,6 +91,7 @@ export async function replicate(snapshot: Snapshot, sink: FileSink<any>) {
               element: Element;
               index: number;
               parent: Root | Element;
+              nodeId: NodeId;
             }>
           >();
 
@@ -105,7 +106,7 @@ export async function replicate(snapshot: Snapshot, sink: FileSink<any>) {
               if (parentMap.get(nodeId)?.has(parentId)) {
                 elementsByNodeId
                   .get(parentId)!
-                  .push({ element, index, parent });
+                  .push({ element, index, parent, nodeId });
                 return SKIP;
               }
             });

@@ -249,8 +249,8 @@ export async function metadataProcessor(
         [...componentDeps.get(id)!].filter((id) => !processed.has(id))
       );
     }
-    // throw new Error(
-    //   `Metadata processor failed to process all components. Remaining: ${remaining.map(([id]) => id).join(", ")}`
-    // );
+    throw new Error(
+      `Metadata processor failed to process all components. Remaining: ${remaining.map(([id]) => id).join(", ")}`
+    );
   }
 }

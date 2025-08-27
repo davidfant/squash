@@ -14,6 +14,8 @@ const PATH_TO_TEMPLATE = `./playground`;
 const snapshots: Record<string, string> = {
   cursor:
     "46cb2680-f22a-4656-a386-c535e1fe3808/0e7e720f-491f-442d-a9c6-bfcf60bde1ba/1756183558170.json",
+  dework:
+    "46cb2680-f22a-4656-a386-c535e1fe3808/4c751a7c-88e9-4aa7-8a7f-cc4affec16a5/1756321376209.json",
   // autodesk:
   //   "46cb2680-f22a-4656-a386-c535e1fe3808/dc5975ac-1a72-4165-aab8-db59d1a24a94/1755997532609.json",
 };
@@ -62,15 +64,7 @@ await Promise.all(
 
 // const sink = new TarSink();
 const sink = new FileSystemSink(PATH_TO_TEMPLATE);
-await replicate(snapshot, sink, {
-  // stylesAndScripts: false,
-  // base64Images: false,
-  // svgs: false,
-  // buttons: false,
-  // roles: false,
-  // blocks: false,
-  // tags: false,
-});
+await replicate(snapshot, sink);
 
 // const out = await sink.finalize();
 // await fs.writeFile("replicated.tar.gz", out);

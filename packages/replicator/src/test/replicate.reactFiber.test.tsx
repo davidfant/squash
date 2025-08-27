@@ -50,9 +50,11 @@ describe("replicate with react fiber", () => {
   });
 
   test("should only create one component for memo(forwardRef(function))", async () => {
-    const A = memo(forwardRef(() => <div>Hello</div>));
-    const files = await run(<A />);
-    expectFileToMatchSnapshot(files, "src/components/Component2.tsx");
+    const Comp = memo(forwardRef(() => <div>Hello</div>));
+    Comp.displayName = "Comp";
+    const files = await run(<Comp />);
+    expect(files.length).toBe(3); // index.html + Comp + App.tsx
+    expectFileToMatchSnapshot(files, "src/components/Comp.tsx");
     expectFileToMatchSnapshot(files, "src/App.tsx");
   });
 

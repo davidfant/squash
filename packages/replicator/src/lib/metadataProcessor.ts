@@ -3,14 +3,15 @@ import { Metadata } from "..";
 type NodeId = Metadata.ReactFiber.NodeId;
 type ComponentId = Metadata.ReactFiber.ComponentId;
 
-function buildChildMap(
+export function buildChildMap(
   nodes: Record<NodeId, Metadata.ReactFiber.Node>
 ): Map<NodeId, NodeId[]> {
   const m = new Map<NodeId, NodeId[]>();
   for (const [_nodeId, n] of Object.entries(nodes)) {
     const nodeId = _nodeId as NodeId;
-    if (!m.has(nodeId)) m.set(nodeId, []);
-    if (n.parentId !== null) (m.get(n.parentId) ?? []).push(nodeId);
+    if (n.parentId) {
+      m.set(n.parentId, [...(m.get(n.parentId) ?? []), nodeId]);
+    }
   }
   return m;
 }
@@ -205,8 +206,15 @@ export async function metadataProcessor(
   // console.log("Components provided by props", propProvided);
   // console.log("Component Dependencies", componentDeps);
 
-  console.log("C13 nodes", componentNodes.get("C13"));
-  console.log("C13 deps", componentDeps.get("C13"));
+  // console.log("C13 nodes", componentNodes.get("C13"));
+  // console.log(
+  //   "C13 children",
+  //   buildComponentDeps(nodes, components, childMap, new Map()).get("C13")
+  // );
+  // console.log("C13 props", propProvided.get("C13"));
+  // console.log("C13 deps", componentDeps.get("C13"));
+  // // console.log("parent", buildParentMap(nodes));
+  // console.log("---");
 
   const remaining = [...componentNodes];
   const processed = new Set<ComponentId>();

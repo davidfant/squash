@@ -10,6 +10,7 @@ import { unified } from "unified";
 import { SKIP, visit } from "unist-util-visit";
 import { downloadRemoteUrl } from "./lib/assets/downloadRemoteAsset";
 import { identifyUrlsToDownload } from "./lib/assets/identifyRemoveAssetsToDownload";
+import { fuseMemoForwardRef } from "./lib/fuseMemoForwardRef";
 import { buildParentMap, metadataProcessor } from "./lib/metadataProcessor";
 import { createRef } from "./lib/recma/createRef";
 import { recmaFixProperties } from "./lib/recma/fixProperties";
@@ -20,40 +21,16 @@ import { recmaWrapAsComponent } from "./lib/rehype/wrapAsComponent";
 import type { FileSink } from "./lib/sinks/base";
 import { uniquePathsForComponents } from "./lib/uniquePathsForComponents";
 import { Metadata, type Snapshot } from "./types";
+
 type Root = import("hast").Root;
 type Element = import("hast").Element;
 type NodeId = Metadata.ReactFiber.NodeId;
 type CodeId = Metadata.ReactFiber.CodeId;
 type ComponentId = Metadata.ReactFiber.ComponentId;
 
-interface ReplicateOptions {
-  stylesAndScripts?: boolean;
-  base64Images?: boolean;
-  svgs?: boolean;
-  buttons?: boolean;
-  roles?: boolean;
-  blocks?: boolean;
-  tags?: boolean;
-}
-
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
 
-export async function replicate(
-  snapshot: Snapshot,
-  sink: FileSink<any>,
-  _options: ReplicateOptions = {}
-) {
-  const opts: Required<ReplicateOptions> = {
-    stylesAndScripts: true,
-    base64Images: true,
-    svgs: true,
-    buttons: true,
-    roles: true,
-    blocks: true,
-    tags: true,
-    ..._options,
-  };
-
+export async function replicate(snapshot: Snapshot, sink: FileSink<any>) {
   const $ = load(snapshot.page.html);
   const html = $("html") ?? $("html");
   const head = $("head") ?? $("head");
@@ -80,6 +57,7 @@ export async function replicate(
 
   const m = snapshot.metadata;
   if (!m) throw new Error("Metadata is required");
+  fuseMemoForwardRef(m);
 
   const nodes = Object.entries(m.nodes).map(([id, n]) => ({
     id: id as NodeId,

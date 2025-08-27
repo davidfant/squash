@@ -49,6 +49,38 @@ exports[`replicate with react fiber > naming > should use default name if compon
 "
 `;
 
+exports[`replicate with react fiber > props > children > should escape weird JS property names 1`] = `
+"import { Comp } from "@/components/Comp";
+export function App(props) {
+  return (
+    <Comp
+      style={{
+        "--color": "red",
+      }}
+      obj={{
+        ":::wow what a key--?? ": 123,
+      }}
+    />
+  );
+}
+"
+`;
+
+exports[`replicate with react fiber > props > children > should recreate react element children 1`] = `
+"import { CompA } from "@/components/CompA";
+import { CompB } from "@/components/CompB";
+export function App(props) {
+  return (
+    <CompA>
+      <CompB>
+        <div>{"Hello"}</div>
+      </CompB>
+    </CompA>
+  );
+}
+"
+`;
+
 exports[`replicate with react fiber > props > children > should recreate react fragment children 1`] = `
 "import { Comp } from "@/components/Comp";
 export function App(props) {
@@ -60,6 +92,48 @@ export function App(props) {
       </>
     </Comp>
   );
+}
+"
+`;
+
+exports[`replicate with react fiber > props > processor dependency ordering > should not get stuck if core component creates what looks like circular deps 1`] = `
+"export function Common(props) {
+  return (
+    <div role="common">
+      <div role="common">{"child"}</div>
+    </div>
+  );
+}
+"
+`;
+
+exports[`replicate with react fiber > props > processor dependency ordering > should not get stuck if core component creates what looks like circular deps 2`] = `
+"import { Common } from "@/components/Common";
+export function Child(props) {
+  return <Common>{"child"}</Common>;
+}
+"
+`;
+
+exports[`replicate with react fiber > props > processor dependency ordering > should not get stuck if core component creates what looks like circular deps 3`] = `
+"import { Common } from "@/components/Common";
+import { Child } from "@/components/Child";
+export function Parent(props) {
+  return (
+    <div>
+      <Common>
+        <Child />
+      </Common>
+    </div>
+  );
+}
+"
+`;
+
+exports[`replicate with react fiber > props > processor dependency ordering > should not get stuck if core component creates what looks like circular deps 4`] = `
+"import { Parent } from "@/components/Parent";
+export function App(props) {
+  return <Parent />;
 }
 "
 `;
@@ -123,6 +197,33 @@ export function App(props) {
         <div>{"Hello"}</div>
       </CompB>
     </CompA>
+  );
+}
+"
+`;
+
+exports[`replicate with react fiber > props > should render JSX in props correctly 1`] = `
+"export function Comp(props) {
+  return <div>{"Hello"}</div>;
+}
+"
+`;
+
+exports[`replicate with react fiber > props > should render JSX in props correctly 2`] = `
+"import { Comp } from "@/components/Comp";
+export function App(props) {
+  return (
+    <Comp
+      prop={{
+        key: {
+          fragment: (
+            <>
+              <div>{"world"}</div>
+            </>
+          ),
+        },
+      }}
+    />
   );
 }
 "

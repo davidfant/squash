@@ -133,11 +133,12 @@ function sanitize(
             props: sanitize(value.props, codeIdLookup, seen),
           } satisfies Metadata.ReactFiber.Element.Tag;
         } else if (value.type === Symbol.for("react.fragment")) {
+          const children = Array.isArray(value.props.children)
+            ? value.props.children
+            : [value.props.children];
           return {
             $$typeof: "react.fragment",
-            children: value.props.children.map((c: any) =>
-              sanitize(c, codeIdLookup, seen)
-            ),
+            children: children.map((c: any) => sanitize(c, codeIdLookup, seen)),
           } satisfies Metadata.ReactFiber.Element.Fragment;
         }
 

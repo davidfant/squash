@@ -1,5 +1,5 @@
 import type { Metadata, RefImport } from "@/types";
-import type { NodeMap } from "estree";
+import type { Expression, NodeMap } from "estree";
 import type { ElementContent } from "hast";
 import { h } from "hastscript";
 import recmaJsx from "recma-jsx";
@@ -11,26 +11,30 @@ interface Context {
   codeIdToComponentImport: Map<string, RefImport>;
 }
 
-function replaceReactElements(
+function wrapInJSX(exp: Expression): NodeMap["JSXElement"]["children"][number] {
+  if (exp.type === "JSXElement" || exp.type === "JSXFragment") {
+    return exp;
+  } else {
+    return { type: "JSXExpressionContainer", expression: exp };
+  }
+}
+
+function toExpression(
   value: any,
   imports: RefImport[],
   ctx: Context
-): any {
+): Expression {
   if (Array.isArray(value)) {
-    const replaced: any[] = [];
+    const replaced: Expression[] = [];
     for (const v of value) {
-      const r = replaceReactElements(v, imports, ctx);
+      const r = toExpression(v, imports, ctx);
       replaced.push(r);
     }
-    return replaced;
+    return { type: "ArrayExpression", elements: replaced };
   } else if (typeof value === "object" && value !== null) {
     switch (value.$$typeof) {
       case "react.code": {
         const el = value as Metadata.ReactFiber.Element.Code;
-        const { children, ...rest } = el.props;
-        const built = buildAttributes(rest, ctx);
-        built.imports.forEach((i) => addImport(i, imports));
-
         return createComponentElement(
           ctx.codeIdToComponentImport.get(el.codeId!) ?? {
             module: undefined,
@@ -43,10 +47,6 @@ function replaceReactElements(
       }
       case "react.tag": {
         const el = value as Metadata.ReactFiber.Element.Tag;
-        const { children, ...rest } = el.props;
-        const built = buildAttributes(rest, ctx);
-        built.imports.forEach((i) => addImport(i, imports));
-
         return createComponentElement(
           { module: undefined, name: el.tagName },
           value.props,
@@ -56,67 +56,69 @@ function replaceReactElements(
       }
       case "react.fragment": {
         const f = value as Metadata.ReactFiber.Element.Fragment;
-        const children = f.children.map((c) =>
-          replaceReactElements(c, imports, ctx)
-        );
-        const fragment: NodeMap["JSXFragment"] = {
+        const children = f.children
+          .map((c) => toExpression(c, imports, ctx))
+          .map(wrapInJSX);
+        return {
           type: "JSXFragment",
-          openingFragment: { type: "JSXOpeningFragment" },
+          openingFragment: {
+            type: "JSXOpeningFragment",
+            // selfClosing: false,
+          },
           children,
           closingFragment: { type: "JSXClosingFragment" },
         };
-        return fragment;
       }
     }
 
-    const replaced: Record<string, any> = {};
-    for (const [k, v] of Object.entries(value)) {
-      replaced[k] = replaceReactElements(v, imports, ctx);
-    }
-
-    return replaced;
+    return {
+      type: "ObjectExpression",
+      properties: Object.entries(value).map(([k, v]) => ({
+        type: "Property",
+        // Note(fant): prettier will later unwrap the key if it's possible
+        // key: { type: "Identifier", name: k },
+        key: { type: "Literal", value: k },
+        value: toExpression(v, imports, ctx),
+        kind: "init",
+        computed: false,
+        shorthand: false,
+        method: false,
+      })),
+    };
   }
 
-  return value;
+  return { type: "Literal", value };
 }
 
-function buildAttributes(
+const buildAttributes = (
   props: Record<string, unknown>,
+  imports: RefImport[],
   ctx: Context
-): {
-  imports: RefImport[];
-  attributes: NodeMap["JSXAttribute"][];
-} {
-  const imports: RefImport[] = [];
-  const attributes = Object.entries(props).map(
-    ([k, v]): NodeMap["JSXAttribute"] => {
-      if (v === true) {
-        // boolean true → <tag attr />
-        return {
-          type: "JSXAttribute",
-          name: { type: "JSXIdentifier", name: k },
-          value: null,
-        };
-      }
-      if (typeof v === "string") {
-        return {
-          type: "JSXAttribute",
-          name: { type: "JSXIdentifier", name: k },
-          value: { type: "Literal", value: v },
-        };
-      }
-      // everything else becomes an expression
-      const replaced = replaceReactElements(v, imports, ctx);
+): NodeMap["JSXAttribute"][] =>
+  Object.entries(props).map(([k, v]): NodeMap["JSXAttribute"] => {
+    if (v === true) {
+      // boolean true → <tag attr />
       return {
         type: "JSXAttribute",
         name: { type: "JSXIdentifier", name: k },
-        value: { type: "JSXExpressionContainer", expression: replaced },
+        value: null,
       };
     }
-  );
-
-  return { attributes, imports };
-}
+    if (typeof v === "string") {
+      return {
+        type: "JSXAttribute",
+        name: { type: "JSXIdentifier", name: k },
+        value: { type: "Literal", value: v },
+      };
+    }
+    // everything else becomes an expression
+    const replaced = toExpression(v, imports, ctx);
+    return {
+      type: "JSXAttribute",
+      name: { type: "JSXIdentifier", name: k },
+      value: { type: "JSXExpressionContainer", expression: replaced },
+    };
+  });
 
 function createComponentElement(
   component: { module?: string; name: string },
@@ -129,40 +131,18 @@ function createComponentElement(
   }
 
   const { children, ...rest } = props;
-  const childNodes: NodeMap["JSXElement"]["children"] = [];
-  [children]
+  const childNodes: NodeMap["JSXElement"]["children"] = [children]
     .flat(Infinity)
     .filter((c) => !!c)
-    .map((child) => {
-      if (typeof child === "string" || typeof child === "number") {
-        childNodes.push({
-          type: "JSXExpressionContainer",
-          expression: { type: "Literal", value: child },
-        });
-      } else {
-        const replaced = replaceReactElements(child, imports, ctx);
-        childNodes.push(replaced);
-      }
-    });
+    .map((child) => toExpression(child, imports, ctx))
+    .map(wrapInJSX);
 
   return {
     type: "JSXElement",
     openingElement: {
       type: "JSXOpeningElement",
       name: { type: "JSXIdentifier", name: component.name },
-      attributes: Object.entries(rest).map(([k, value]) => ({
-        type: "JSXAttribute",
-        name: { type: "JSXIdentifier", name: k },
-        value: (() => {
-          if (value === true) return null;
-          if (typeof value === "string") return { type: "Literal", value };
-          const replaced = replaceReactElements(value, imports, ctx);
-          return {
-            type: "JSXExpressionContainer",
-            expression: { type: "Literal", value: replaced },
-          };
-        })(),
-      })),
+      attributes: buildAttributes(rest, imports, ctx),
       selfClosing: childNodes.length === 0,
     },
     closingElement:

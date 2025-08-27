@@ -149,7 +149,7 @@ describe("replicate with react fiber", () => {
         expectFileToMatchSnapshot(files, "src/App.tsx");
       });
 
-      test.only("should recreate react fragment children", async () => {
+      test("should recreate react fragment children", async () => {
         const Comp = ({ children }: { children: ReactNode }) => children;
         const files = await run(
           <Comp>
@@ -162,6 +162,17 @@ describe("replicate with react fiber", () => {
         expectFileToMatchSnapshot(files, "src/App.tsx");
       });
 
+      test.only("should escape weird JS property names", async () => {
+        const Comp = (_props: any) => <div />;
+        const files = await run(
+          <Comp
+            style={{ "--color": "red" }}
+            obj={{ ":::wow what a key--?? ": 123 }}
+          />
+        );
+        expectFileToMatchSnapshot(files, "src/App.tsx");
+      });
+
       test.todo(
         "should use props.children instead of redeclaring children in component body",
         async () => {
@@ -169,6 +180,25 @@ describe("replicate with react fiber", () => {
           // To do this, find all react elements that are provided through props. Then traverse the rendered children to detect which segments look 100% like a react element from the props. If that's the case for all nodes with that component, then we can just use that prop value.
         }
       );
+    });
+
+    test("should render JSX in props correctly", async () => {
+      const Comp = (_props: any) => <div>Hello</div>;
+      const files = await run(
+        <Comp
+          prop={{
+            key: {
+              fragment: (
+                <>
+                  <div>world</div>
+                </>
+              ),
+            },
+          }}
+        />
+      );
+      expectFileToMatchSnapshot(files, "src/components/Comp.tsx");
+      expectFileToMatchSnapshot(files, "src/App.tsx");
     });
 
     test("should convert tabIndex to number", async () => {

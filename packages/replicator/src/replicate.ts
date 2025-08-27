@@ -69,13 +69,17 @@ export async function replicate(snapshot: Snapshot, sink: FileSink<any>) {
   }));
 
   const compPathById = uniquePathsForComponents(m.components);
-  const codeIdToComponentId = new Map<CodeId, ComponentId>(
+  const codeIdToComponentImport = new Map(
     comps
-      .map((c) =>
-        "codeId" in c && c.codeId ? ([c.codeId, c.id] as const) : undefined
-      )
+      .map((c) => {
+        if (!("codeId" in c)) return;
+        const p = compPathById.get(c.id)!;
+        const m = path.join("@/components", p.dir, p.name);
+        return [c.codeId, { module: m, name: p.name }] as const;
+      })
       .filter((v) => !!v)
   );
+
   const parentMap = buildParentMap(m.nodes);
 
   await unified()
@@ -96,17 +100,16 @@ export async function replicate(snapshot: Snapshot, sink: FileSink<any>) {
           >();
 
           for (const parentId of Object.keys(group.nodes) as NodeId[]) {
-            elementsByNodeId.set(parentId, []);
-
             visit(tree, "element", (element, index, parent) => {
               if (index === undefined) return;
               const nodeId = element.properties?.["dataSquashNodeId"] as NodeId;
               if (parent?.type !== "element" && parent?.type !== "root") return;
 
               if (parentMap.get(nodeId)?.has(parentId)) {
-                elementsByNodeId
-                  .get(parentId)!
-                  .push({ element, index, parent, nodeId });
+                elementsByNodeId.set(parentId, [
+                  ...(elementsByNodeId.get(parentId) ?? []),
+                  { element, index, parent, nodeId },
+                ]);
                 return SKIP;
               }
             });
@@ -146,17 +149,16 @@ export async function replicate(snapshot: Snapshot, sink: FileSink<any>) {
             await prettier.ts(processor.stringify(estree))
           );
 
-          const codeIdToComponentImport = new Map(
-            Array.from(codeIdToComponentId.entries()).map(
-              ([codeId, componentId]) => {
-                const p = compPathById.get(componentId)!;
-                const m = path.join("@/components", p.dir, p.name);
-                return [codeId, { module: m, name: p.name }];
-              }
-            )
-          );
+          const toReplace = [...elementsByNodeId.entries()]
+            .map(([nodeId, elements]) => ({ nodeId, elements }))
+            .sort(
+              (a, b) =>
+                (parentMap.get(b.nodeId)?.size ?? 0) -
+                (parentMap.get(a.nodeId)?.size ?? 0)
+            );
 
-          for (const [nodeId, elements] of elementsByNodeId.entries()) {
+          // Note(fant): loop over elements in reverse, so that we replace the innermost elements first.
+          for (const { nodeId, elements } of toReplace) {
             if (!elements.length) continue;
 
             const { index, parent } = elements[0]!;
@@ -181,7 +183,8 @@ export async function replicate(snapshot: Snapshot, sink: FileSink<any>) {
                 nodeId,
                 ctx: { codeIdToComponentImport },
                 // Note(fant): for now we keep the children within the ref, so that in the processor loop we still can find elements of a certain node.
-                children: elements.flatMap((e) => e.element.children),
+                // children: elements.flatMap((e) => e.element.children),
+                children: clone(elements.map((e) => e.element)),
               })
             );
             elements.slice(1).forEach((e) => (e.element.tagName = "rm"));

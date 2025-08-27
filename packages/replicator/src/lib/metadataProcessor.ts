@@ -134,6 +134,8 @@ function buildComponentDeps(
     }
   }
 
+  console.log("direct", direct.get("C40"));
+
   // 2. expand to transitive closure with simple DFS + memo
   const memo = new Map<ComponentId, Set<ComponentId>>();
   const collect = (
@@ -159,11 +161,14 @@ function buildComponentDeps(
   // remove all non-code React components (e.g. DOM nodes, text nodes, etc)
   for (const [compId, comp] of Object.entries(components)) {
     if (!("codeId" in comp)) {
+      console.log("deleting...", compId, comp);
       for (const deps of result.values()) {
         deps.delete(compId as ComponentId);
       }
     }
   }
+  console.log("deps", result.get("C40"));
+  console.log("---");
   return result;
 }
 
@@ -206,15 +211,17 @@ export async function metadataProcessor(
   // console.log("Components provided by props", propProvided);
   // console.log("Component Dependencies", componentDeps);
 
-  // console.log("C13 nodes", componentNodes.get("C13"));
-  // console.log(
-  //   "C13 children",
-  //   buildComponentDeps(nodes, components, childMap, new Map()).get("C13")
-  // );
-  // console.log("C13 props", propProvided.get("C13"));
-  // console.log("C13 deps", componentDeps.get("C13"));
-  // // console.log("parent", buildParentMap(nodes));
-  // console.log("---");
+  console.log("C64 nodes", componentNodes.get("C64"));
+  const dWithoutP = buildComponentDeps(nodes, components, childMap, new Map());
+  console.log(
+    "C64 children",
+    // buildComponentDeps(nodes, components, childMap, new Map()).get("C64"),
+    dWithoutP.get("C40")
+  );
+  console.log("C64 props", propProvided.get("C64"));
+  console.log("C64 deps", componentDeps.get("C64"));
+  // console.log("parent", buildParentMap(nodes));
+  console.log("---");
 
   const remaining = [...componentNodes];
   const processed = new Set<ComponentId>();

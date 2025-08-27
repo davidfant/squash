@@ -255,6 +255,33 @@ export function App(props) {
 "
 `;
 
+exports[`replicate with react fiber > should allow the same component to be nested multiple times 1`] = `
+"export function Row(props) {
+  return (
+    <div>
+      <div>{"hello"}</div>
+      <div>{"world"}</div>
+      <div>{"!"}</div>
+    </div>
+  );
+}
+"
+`;
+
+exports[`replicate with react fiber > should allow the same component to be nested multiple times 2`] = `
+"import { Row } from "@/components/Row";
+export function App(props) {
+  return (
+    <Row>
+      <Row>{"hello"}</Row>
+      <Row>{"world"}</Row>
+      <Row>{"!"}</Row>
+    </Row>
+  );
+}
+"
+`;
+
 exports[`replicate with react fiber > should create App.tsx 1`] = `
 "export function App(props) {
   return <div>{"Hello"}</div>;

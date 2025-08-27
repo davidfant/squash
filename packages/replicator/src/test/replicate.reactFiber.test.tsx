@@ -110,6 +110,21 @@ describe("replicate with react fiber", () => {
     expectFileToMatchSnapshot(files, "src/App.tsx");
   });
 
+  test("should allow the same component to be nested multiple times", async () => {
+    const Row = ({ children }: { children: ReactNode }) => (
+      <div>{children}</div>
+    );
+    const files = await run(
+      <Row>
+        <Row>hello</Row>
+        <Row>world</Row>
+        <Row>!</Row>
+      </Row>
+    );
+    expectFileToMatchSnapshot(files, "src/components/Row.tsx");
+    expectFileToMatchSnapshot(files, "src/App.tsx");
+  });
+
   test.todo(
     "should throw an error if same data-squash-parent-id nodes existing in different parents",
     () => {}

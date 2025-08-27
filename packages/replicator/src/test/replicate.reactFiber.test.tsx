@@ -12,7 +12,7 @@ const run = async (node: ReactNode) => {
   await new Promise((r) => requestAnimationFrame(r));
 
   const sink = new TestSink();
-  const metadata = reactFiber();
+  const metadata = await reactFiber();
   const html = document.documentElement.innerHTML;
   const page = { url: "http://localhost", title: "Test", html };
   await replicate({ page, metadata }, sink);

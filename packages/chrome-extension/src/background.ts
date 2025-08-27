@@ -43,8 +43,8 @@ async function createSnapshot(tabId: number): Promise<void> {
     const result = await chrome.scripting.executeScript({
       target: { tabId },
       world: "MAIN",
-      func: () => {
-        const metadata = window.__squash?.reactFiber();
+      func: async () => {
+        const metadata = await window.__squash?.reactFiber();
         // @ts-ignore
         window.metadata = metadata;
         const snapshot: Snapshot = {

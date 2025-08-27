@@ -9,8 +9,8 @@ const root = createRoot(document.body);
 async function run(app: ReactNode) {
   root.render(app);
   await new Promise((r) => requestAnimationFrame(r));
-  const metadata = reactFiber()!;
-  return metadata;
+  const metadata = await reactFiber();
+  return metadata!;
 }
 
 function code(metadata: Metadata.ReactFiber, id: number) {
@@ -60,6 +60,8 @@ describe("reactFiber", () => {
     });
     expectElementNodeId("div", nodes.div.id);
   });
+
+  test.todo("should await loading lazy module");
 
   describe("FunctionComponent", () => {
     test("should register component and tag its child", async () => {

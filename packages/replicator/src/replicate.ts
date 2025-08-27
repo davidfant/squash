@@ -173,7 +173,7 @@ export async function replicate(snapshot: Snapshot, sink: FileSink<any>) {
             sink
           );
 
-          const toReplace = [...elementsByNodeId.entries()]
+          const elementsOrderedByDepth = [...elementsByNodeId.entries()]
             .map(([nodeId, elements]) => ({ nodeId, elements }))
             .sort(
               (a, b) =>
@@ -183,7 +183,7 @@ export async function replicate(snapshot: Snapshot, sink: FileSink<any>) {
 
           // Note(fant): loop over elements in reverse, so that we replace the innermost elements first.
           // TODO: for testing, try saving all of these separately to see if it works
-          for (const { nodeId, elements } of toReplace) {
+          for (const { nodeId, elements } of elementsOrderedByDepth) {
             if (!elements.length) continue;
 
             const { index, parent } = elements[0]!;

@@ -23,7 +23,7 @@ export function identifyUrlsToDownload(
   $("img[src], source[src], video[src], audio[src]").each((_, el) =>
     add($(el).attr("src"))
   );
-
+  $("video[poster]").each((_, el) => add($(el).attr("poster")));
   $("[srcset]").each((_, el) => {
     const srcset = $(el).attr("srcset");
     if (!srcset) return;

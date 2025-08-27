@@ -8,6 +8,8 @@ import rehypeRecma from "rehype-recma";
 import rehypeStringify from "rehype-stringify";
 import { unified } from "unified";
 import { SKIP, visit } from "unist-util-visit";
+import { downloadRemoteUrl } from "./lib/assets/downloadRemoteAsset";
+import { identifyUrlsToDownload } from "./lib/assets/identifyRemoveAssetsToDownload";
 import { buildParentMap, metadataProcessor } from "./lib/metadataProcessor";
 import { createRef } from "./lib/recma/createRef";
 import { recmaFixProperties } from "./lib/recma/fixProperties";
@@ -53,7 +55,6 @@ export async function replicate(
   };
 
   const $ = load(snapshot.page.html);
-
   const html = $("html") ?? $("html");
   const head = $("head") ?? $("head");
   const body = $("body") ?? $("body");
@@ -63,13 +64,19 @@ export async function replicate(
   // $('script[type="application/json"]').remove();
   // $('script[type="application/ld+json"]').remove();
   $("script").remove();
-
   body.find("link,style").each((_, tag) => {
     $(tag).remove();
     head.append(tag);
   });
 
-  // 1. group all elements by data-squash-parent-id
+  const urlsToDownload = identifyUrlsToDownload($, snapshot.page.url);
+  const urlsToDownloadP = Promise.all(
+    Array.from(urlsToDownload).map((str) =>
+      downloadRemoteUrl(new URL(str), sink)
+    )
+  );
+
+  // download every img src tag
 
   const m = snapshot.metadata;
   if (!m) throw new Error("Metadata is required");
@@ -82,14 +89,6 @@ export async function replicate(
     id: id as ComponentId,
     ...c,
   }));
-
-  // const rootNode = nodes.find(
-  //   (node) =>
-  //     m.components[node.componentId]?.tag ===
-  //     Metadata.ReactFiber.Component.Tag.HostRoot
-  // );
-
-  // if (!rootNode) throw new Error("No root node found");
 
   const compPathById = uniquePathsForComponents(m.components);
   const codeIdToComponentId = new Map<CodeId, ComponentId>(
@@ -251,4 +250,5 @@ export async function replicate(
   await prettier
     .html(replicatedHtml)
     .then((text) => sink.writeText("index.html", text));
+  await urlsToDownloadP;
 }

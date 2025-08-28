@@ -9,7 +9,7 @@ import rehypeRecma from "rehype-recma";
 import rehypeStringify from "rehype-stringify";
 import { unified } from "unified";
 import { filesystemCacheMiddleware } from "../filesystemCacheMiddleware";
-import { createRef, type CreateRefContext } from "../recma/createRef";
+import { type CreateRefContext } from "../recma/createRef";
 import { recmaFixProperties } from "../recma/fixProperties";
 import { recmaRemoveRedundantFragment } from "../recma/removeRedundantFragment";
 import { recmaReplaceRefs } from "../recma/replaceRefs";
@@ -56,8 +56,8 @@ export async function generateComponent(opts: {
   createRefContext: CreateRefContext;
   instances: Array<{
     nodeId: Metadata.ReactFiber.NodeId;
-    node: Metadata.ReactFiber.Node;
-    elements: Element[];
+    ref: Element;
+    children: Element[];
   }>;
 }): Promise<{ name: string; code: string }> {
   const processors = {
@@ -79,22 +79,11 @@ export async function generateComponent(opts: {
       opts.instances.map(async (i) => {
         const [jsx, html] = await Promise.all([
           processors.jsx
-            .run({
-              type: "root",
-              children: [
-                createRef({
-                  component: opts.component,
-                  props: i.node.props as Record<string, unknown>,
-                  nodeId: i.nodeId,
-                  ctx: opts.createRefContext,
-                  children: [],
-                }),
-              ],
-            })
+            .run({ type: "root", children: i.children })
             .then((estree) => processors.jsx.stringify(estree))
             .then(prettier.ts),
           processors.html
-            .run({ type: "root", children: i.elements } as Root)
+            .run({ type: "root", children: i.children } as Root)
             .then((t) => processors.html.stringify(t as Root))
             .then(prettier.html),
         ]);
@@ -103,32 +92,39 @@ export async function generateComponent(opts: {
     ),
   ]);
 
-  const numExamples = Math.min(opts.instances.length, 10);
+  const uniqueInstances = instances.filter(
+    (instance, index, self) =>
+      index ===
+      self.findIndex((t) => t.jsx === instance.jsx && t.html === instance.html)
+  );
+
+  const numExamples = Math.min(uniqueInstances.length, 10);
+  const content = [
+    "# Code",
+    code,
+    "",
+    "# Examples",
+    `Showing ${numExamples} of ${uniqueInstances.length} examples`,
+    ...uniqueInstances
+      .slice(0, numExamples)
+      .flatMap((instance, index) => [
+        `## Example ${index + 1}`,
+        "Input JSX",
+        `\`\`\`jsx\n${instance.jsx}\`\`\``,
+        "",
+        "Output HTML",
+        `\`\`\`html\n${instance.html}\`\`\``,
+        "",
+      ]),
+  ].join("\n");
+  console.log("---");
+  console.log(content);
+  console.log("---");
   const { text } = await generateText({
     model,
     messages: [
       { role: "system", content: Prompts.instructions },
-      {
-        role: "user",
-        content: [
-          "# Code",
-          code,
-          "",
-          "# Examples",
-          `Showing ${numExamples} of ${instances.length} examples`,
-          ...instances
-            .slice(0, numExamples)
-            .flatMap((instance, index) => [
-              `## Example ${index + 1}`,
-              "Input JSX",
-              `\`\`\`jsx\n${instance.jsx}\`\`\``,
-              "",
-              "Output HTML",
-              `\`\`\`html\n${instance.html}\`\`\``,
-              "",
-            ]),
-        ].join("\n"),
-      },
+      { role: "user", content },
     ],
   });
 
@@ -140,7 +136,10 @@ export async function generateComponent(opts: {
   });
 
   const diffs = rendered.map((r, i) => diffRenderedHtml(instances[i]!.html, r));
-  console.log(diffs);
+  if (diffs.some((d) => !!d)) {
+    console.log(diffs);
+    throw new Error("Failed to write correct component");
+  }
 
   return rewritten;
 }

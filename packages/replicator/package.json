@@ -33,12 +33,12 @@
     "@types/react-reconciler": "^0.32.0",
     "aws4fetch": "^1.0.20",
     "concurrently": "^9.2.0",
+    "happy-dom": "^18.0.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "tsc-alias": "^1.8.16",
     "tsx": "^4.20.3",
     "typescript": "~5.8.3",
-    "util": "^0.12.5",
     "vite-tsconfig-paths": "^5.1.4",
     "vitest": "^3.2.4"
   },

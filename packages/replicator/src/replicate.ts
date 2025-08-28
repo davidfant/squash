@@ -11,14 +11,13 @@ import { SKIP, visit } from "unist-util-visit";
 import { downloadRemoteUrl } from "./lib/assets/downloadRemoteAsset";
 import { identifyUrlsToDownload } from "./lib/assets/identifyRemoveAssetsToDownload";
 import { fuseMemoForwardRef } from "./lib/fuseMemoForwardRef";
-import { buildParentMap, metadataProcessor } from "./lib/metadataProcessor";
+import { buildAncestorsMap, metadataProcessor } from "./lib/metadataProcessor";
 import { createRef } from "./lib/recma/createRef";
 import { recmaFixProperties } from "./lib/recma/fixProperties";
 import { recmaRemoveRedundantFragment } from "./lib/recma/removeRedundantFragment";
 import { recmaReplaceRefs } from "./lib/recma/replaceRefs";
 import { rehypeStripSquashAttribute } from "./lib/rehype/stripSquashAttribute";
 import { recmaWrapAsComponent } from "./lib/rehype/wrapAsComponent";
-import { generateComponent } from "./lib/rewriteComponent/generate";
 import type { FileSink } from "./lib/sinks/base";
 import { uniquePathsForComponents } from "./lib/uniquePathsForComponents";
 import { Metadata, type Snapshot } from "./types";
@@ -102,7 +101,7 @@ export async function replicate(snapshot: Snapshot, sink: FileSink<any>) {
       .filter((v) => !!v)
   );
 
-  const parentMap = buildParentMap(m.nodes);
+  const ancestorsMap = buildAncestorsMap(m.nodes);
   await unified()
     .use(rehypeParse, { fragment: true })
     .use(() => (tree: Root) => {
@@ -126,7 +125,7 @@ export async function replicate(snapshot: Snapshot, sink: FileSink<any>) {
               const nodeId = element.properties?.["dataSquashNodeId"] as NodeId;
               if (parent?.type !== "element" && parent?.type !== "root") return;
 
-              if (parentMap.get(nodeId)?.has(parentId)) {
+              if (ancestorsMap.get(nodeId)?.has(parentId)) {
                 elementsByNodeId.set(parentId, [
                   ...(elementsByNodeId.get(parentId) ?? []),
                   { element, index, parent, nodeId },
@@ -157,39 +156,42 @@ export async function replicate(snapshot: Snapshot, sink: FileSink<any>) {
             return;
           }
 
-          // text
+          // typography: C23, text: C24, ant icon: C40
           // if (group.id === "C24") {
           // typography
           // if (group.id === "C24") {
           // icon
-          if (group.id === "C40") {
-            const rewritten = await generateComponent({
-              code: m.code[group.component.codeId]!,
-              component: {
-                name: compPath.name,
-                module: path.join("@/components", compPath.dir, compPath.name),
-              },
-              createRefContext: { codeIdToComponentImport },
-              instances: Object.entries(group.nodes).map(([nid, node]) => {
-                const nodeId = nid as NodeId;
-                const elements = (elementsByNodeId.get(nodeId) ?? []).map(
-                  (e) => e.element
-                );
-                return { nodeId, node, elements: clone(elements) };
-              }),
-            });
-
-            // TODO: create some kind of old => new name mapping so that we can update this later...
-            await sink.writeText(
-              path.join(
-                "src",
-                "components",
-                compPath.dir,
-                `${rewritten.name}.tsx`
-              ),
-              rewritten.code
-            );
-            return;
+          if (["C52"].includes(group.id)) {
+            // const rewritten = await generateComponent({
+            //   code: m.code[group.component.codeId]!,
+            //   component: {
+            //     name: compPath.name,
+            //     module: path.join("@/components", compPath.dir, compPath.name),
+            //   },
+            //   createRefContext: { codeIdToComponentImport },
+            //   instances: Object.entries(group.nodes).map(([nid, node]) => {
+            //     const nodeId = nid as NodeId;
+            //     const elements = (elementsByNodeId.get(nodeId) ?? []).map((e) =>
+            //       clone(e.element)
+            //     );
+            //     return { nodeId, ref: elements[0]!, children: elements };
+            //   }),
+            // });
+            // console.log("REWRITE", group.id, rewritten.name);
+            // console.log("---");
+            // console.log(rewritten.code);
+            // console.log("---");
+            // // TODO: create some kind of old => new name mapping so that we can update this later...
+            // await sink.writeText(
+            //   path.join(
+            //     "src",
+            //     "components",
+            //     compPath.dir,
+            //     `${rewritten.name}.tsx`
+            //   ),
+            //   rewritten.code
+            // );
+            // return;
           }
 
           await writeFile(
@@ -210,8 +212,8 @@ export async function replicate(snapshot: Snapshot, sink: FileSink<any>) {
             .map(([nodeId, elements]) => ({ nodeId, elements }))
             .sort(
               (a, b) =>
-                (parentMap.get(b.nodeId)?.size ?? 0) -
-                (parentMap.get(a.nodeId)?.size ?? 0)
+                (ancestorsMap.get(b.nodeId)?.size ?? 0) -
+                (ancestorsMap.get(a.nodeId)?.size ?? 0)
             );
 
           // Note(fant): loop over elements in reverse, so that we replace the innermost elements first.
@@ -219,14 +221,14 @@ export async function replicate(snapshot: Snapshot, sink: FileSink<any>) {
           for (const { nodeId, elements } of elementsOrderedByDepth) {
             if (!elements.length) continue;
 
-            // const compName = compPath.name;
-            const compName = `${compPath.name}_${nodeId}`;
-            await writeFile(
-              compName,
-              path.join("src", "components", compPath.dir),
-              { type: "root", children: elements.map((e) => e.element) ?? [] },
-              sink
-            );
+            const compName = compPath.name;
+            // const compName = `${compPath.name}_${nodeId}`;
+            // await writeFile(
+            //   compName,
+            //   path.join("src", "components", compPath.dir),
+            //   { type: "root", children: elements.map((e) => e.element) ?? [] },
+            //   sink
+            // );
 
             const { index, parent } = elements[0]!;
             const props = nodes.find((n) => n.id === nodeId)!.props as Record<

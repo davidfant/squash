@@ -1,17 +1,8 @@
 import { forwardRef, lazy, memo, type ReactNode } from "react";
-import { createRoot } from "react-dom/client";
+import { createRoot, type Root } from "react-dom/client";
 import { Metadata } from "../types";
 import { reactFiber } from "./reactFiber";
 import Tag = Metadata.ReactFiber.Component.Tag;
-
-const root = createRoot(document.body);
-
-async function run(app: ReactNode) {
-  root.render(app);
-  await new Promise((r) => requestAnimationFrame(r));
-  const metadata = await reactFiber();
-  return metadata!;
-}
 
 function code(metadata: Metadata.ReactFiber, id: number) {
   const codeId = `F${id}` as const;
@@ -44,6 +35,24 @@ function expectElementNodeId(
 }
 
 describe("reactFiber", () => {
+  let root: Root;
+  beforeEach(() => {
+    document.body.innerHTML = "";
+    root = createRoot(document.body);
+  });
+  afterEach(() => root.unmount());
+
+  async function run(app: ReactNode) {
+    root.render(app);
+    await new Promise<void>((r) => {
+      const check = () =>
+        document.body.innerHTML ? r() : requestAnimationFrame(check);
+      check();
+    });
+    const metadata = await reactFiber();
+    return metadata!;
+  }
+
   test("should add HostRoot component and tag the first DOM element", async () => {
     const metadata = await run(<div>Hello</div>);
     const c = component(metadata, 0);

@@ -16,7 +16,7 @@ export function buildChildMap(
   return m;
 }
 
-export function buildParentMap(
+export function buildAncestorsMap(
   nodes: Record<NodeId, Metadata.ReactFiber.Node>
 ): Map<NodeId, Set<NodeId>> {
   const parentMap = new Map<NodeId, Set<NodeId>>();

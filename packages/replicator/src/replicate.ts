@@ -103,7 +103,6 @@ export async function replicate(snapshot: Snapshot, sink: FileSink<any>) {
   );
 
   const parentMap = buildParentMap(m.nodes);
-
   await unified()
     .use(rehypeParse, { fragment: true })
     .use(() => (tree: Root) => {

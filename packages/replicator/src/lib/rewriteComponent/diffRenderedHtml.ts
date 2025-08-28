@@ -3,6 +3,23 @@ import * as parse5 from "parse5";
 
 const normText = (s: string) => s.replace(/\s+/g, " ").trim();
 
+const inlineStyleToObj = (style: string) =>
+  style
+    .split(";")
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .reduce(
+      (obj, chunk) => {
+        const [rawProp, ...rest] = chunk.split(":");
+        if (!rawProp || rest.length === 0) return obj;
+        const prop = rawProp.trim();
+        const value = rest.join(":").trim();
+        if (prop) obj[prop] = value;
+        return obj;
+      },
+      {} as Record<string, string>
+    );
+
 function simplify(
   node: parse5.DefaultTreeAdapterMap[keyof parse5.DefaultTreeAdapterMap]
 ): unknown {
@@ -15,12 +32,20 @@ function simplify(
   }
 
   const children = "childNodes" in node ? node.childNodes : [];
+  let attrs: Record<string, unknown> = {};
+  if ("attrs" in node) {
+    for (const { name, value } of node.attrs) {
+      if (name === "style") {
+        attrs[name] = inlineStyleToObj(value);
+      } else {
+        attrs[name] = value;
+      }
+    }
+  }
+
   return {
     tag: node.nodeName,
-    attrs:
-      "attrs" in node
-        ? Object.fromEntries(node.attrs.map((a) => [a.name, a.value]))
-        : {},
+    attrs,
     children: children.map(simplify).filter(Boolean),
   };
 }

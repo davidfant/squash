@@ -1,0 +1,68 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`diffRenderedHtml > diff > attribute is missing 1`] = `
+"- Expected
++ Received
+
+  Object {
+    "attrs": Object {},
+    "children": Array [
+      Object {
+-       "attrs": Object {
+-         "disabled": "",
+-       },
++       "attrs": Object {},
+        "children": Array [
+          "Hello",
+        ],
+        "tag": "button",
+      },
+    ],
+    "tag": "#document-fragment",
+  }"
+`;
+
+exports[`diffRenderedHtml > diff > child is missing 1`] = `
+"- Expected
++ Received
+
+  Object {
+    "attrs": Object {},
+    "children": Array [
+      Object {
+        "attrs": Object {},
+        "children": Array [
++         Object {
++           "attrs": Object {},
++           "children": Array [
+              "Hello",
++           ],
++           "tag": "div",
++         },
+        ],
+        "tag": "div",
+      },
+    ],
+    "tag": "#document-fragment",
+  }"
+`;
+
+exports[`diffRenderedHtml > diff > tag is different 1`] = `
+"- Expected
++ Received
+
+  Object {
+    "attrs": Object {},
+    "children": Array [
+      Object {
+        "attrs": Object {},
+        "children": Array [
+          "Hello",
+        ],
+-       "tag": "button",
++       "tag": "div",
+      },
+    ],
+    "tag": "#document-fragment",
+  }"
+`;

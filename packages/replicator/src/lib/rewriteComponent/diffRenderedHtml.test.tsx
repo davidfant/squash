@@ -30,6 +30,7 @@ describe("diffRenderedHtml", () => {
         )
       ).toBeNull();
     });
+
     test("whitespace is different", () => {
       expect(
         diff(
@@ -42,61 +43,35 @@ describe("diffRenderedHtml", () => {
         )
       ).toBeNull();
     });
+
+    test("style order is different", () => {
+      expect(
+        diff(
+          `<div style="position:absolute; top:0; left:0; right:0; bottom:0" />`,
+          <div
+            style={{
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              position: "absolute",
+            }}
+          />
+        )
+      ).toBeNull();
+    });
   });
 
   describe("diff", () => {
     test("attribute is missing", () => {
-      const diff = diff(
-        `<button disabled>Hello</button>`,
-        <button>Hello</button>
-      );
-      expect(diff).toBe(
-        `
-- Expected
-+ Received
-
-  Object {
-    "attrs": Object {},
-    "children": Array [
-      Object {
--       "attrs": Object {
--         "disabled": "",
--       },
-+       "attrs": Object {},
-        "children": Array [
-          "Hello",
-        ],
-        "tag": "button",
-      },
-    ],
-    "tag": "#document-fragment",
-  }  
-      `.trim()
-      );
+      const d = diff(`<button disabled>Hello</button>`, <button>Hello</button>);
+      expect(d).toMatchSnapshot();
     });
 
     test("tag is different", () => {
-      expect(diff(`<button>Hello</button>`, <div>Hello</div>)).toBe(
-        `
-- Expected
-+ Received
-
-  Object {
-    "attrs": Object {},
-    "children": Array [
-      Object {
-        "attrs": Object {},
-        "children": Array [
-          "Hello",
-        ],
--       "tag": "button",
-+       "tag": "div",
-      },
-    ],
-    "tag": "#document-fragment",
-  }
-        `.trim()
-      );
+      expect(
+        diff(`<button>Hello</button>`, <div>Hello</div>)
+      ).toMatchSnapshot();
     });
 
     test("child is missing", () => {
@@ -106,32 +81,7 @@ describe("diffRenderedHtml", () => {
           <div>Hello</div>
         </div>
       );
-      expect(d).toBe(
-        `
-- Expected
-+ Received
-
-  Object {
-    "attrs": Object {},
-    "children": Array [
-      Object {
-        "attrs": Object {},
-        "children": Array [
-+         Object {
-+           "attrs": Object {},
-+           "children": Array [
-              "Hello",
-+           ],
-+           "tag": "div",
-+         },
-        ],
-        "tag": "div",
-      },
-    ],
-    "tag": "#document-fragment",
-  }
-      `.trim()
-      );
+      expect(d).toMatchSnapshot();
     });
   });
 });

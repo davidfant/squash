@@ -296,7 +296,7 @@ export async function reactFiber(): Promise<Metadata.ReactFiber | null> {
           const id = add({
             component: {
               tag: fiber.tag,
-              name: fiber.elementType.displayName ?? fiber.elementType.name,
+              name: (fn as any).displayName ?? fiber.elementType.name,
               codeId,
             },
             key: `${fiber.tag}:${codeId}`,

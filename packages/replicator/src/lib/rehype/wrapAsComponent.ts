@@ -9,24 +9,30 @@ export const recmaWrapAsComponent: Plugin<[componentName: string], Program> =
       .find(
         (n) =>
           n.expression?.type === "JSXElement" ||
-          n.expression?.type === "JSXFragment"
+          n.expression?.type === "JSXFragment" ||
+          // @ts-expect-error
+          n.expression?.type === "JSXExpressionContainer"
       );
 
     const jsx: Expression | undefined = jsxStmt?.expression;
     if (!jsx) throw new Error("No top-level JSX found after HAST → ESTree.");
 
+    const returns =
+      // @ts-expect-error
+      jsx.type === "JSXExpressionContainer" ? jsx.expression : jsx;
     program.body = [
       {
         type: "ExportNamedDeclaration",
         declaration: {
           type: "FunctionDeclaration",
           id: { type: "Identifier", name: componentName },
-          params: [{ type: "Identifier", name: "props" }],
+          params: [],
+          // params: [{ type: "Identifier", name: "props" }],
           generator: false,
           async: false,
           body: {
             type: "BlockStatement",
-            body: [{ type: "ReturnStatement", argument: jsx }],
+            body: [{ type: "ReturnStatement", argument: returns }],
           },
         },
         attributes: [],

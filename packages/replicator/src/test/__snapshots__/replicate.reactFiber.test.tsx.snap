@@ -1,28 +1,28 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`replicate with react fiber > naming > should TitleCase component name 1`] = `
-"export function ComponentName(props) {
+"export function ComponentName() {
   return <div>{"Hello"}</div>;
 }
 "
 `;
 
 exports[`replicate with react fiber > naming > should put component with . in the name in a directory 1`] = `
-"export function Div(props) {
+"export function Div() {
   return <div>{"Hello"}</div>;
 }
 "
 `;
 
 exports[`replicate with react fiber > naming > should support multiple components with same name 1`] = `
-"export function Dupe1(props) {
+"export function Dupe1() {
   return <div>{"Hello"}</div>;
 }
 "
 `;
 
 exports[`replicate with react fiber > naming > should support multiple components with same name 2`] = `
-"export function Dupe2(props) {
+"export function Dupe2() {
   return <div>{"Yellow"}</div>;
 }
 "
@@ -31,7 +31,7 @@ exports[`replicate with react fiber > naming > should support multiple component
 exports[`replicate with react fiber > naming > should support multiple components with same name 3`] = `
 "import { Dupe1 } from "@/components/Dupe1";
 import { Dupe2 } from "@/components/Dupe2";
-export function App(props) {
+export function App() {
   return (
     <>
       <Dupe1 />
@@ -43,7 +43,7 @@ export function App(props) {
 `;
 
 exports[`replicate with react fiber > naming > should use default name if component name length < 3 1`] = `
-"export function Component1(props) {
+"export function Component1() {
   return <div>{"Hello"}</div>;
 }
 "
@@ -51,7 +51,7 @@ exports[`replicate with react fiber > naming > should use default name if compon
 
 exports[`replicate with react fiber > props > children > should escape weird JS property names 1`] = `
 "import { Comp } from "@/components/Comp";
-export function App(props) {
+export function App() {
   return (
     <Comp
       style={{
@@ -69,7 +69,7 @@ export function App(props) {
 exports[`replicate with react fiber > props > children > should recreate react element children 1`] = `
 "import { CompA } from "@/components/CompA";
 import { CompB } from "@/components/CompB";
-export function App(props) {
+export function App() {
   return (
     <CompA>
       <CompB>
@@ -83,7 +83,7 @@ export function App(props) {
 
 exports[`replicate with react fiber > props > children > should recreate react fragment children 1`] = `
 "import { Comp } from "@/components/Comp";
-export function App(props) {
+export function App() {
   return (
     <Comp>
       <>
@@ -97,7 +97,7 @@ export function App(props) {
 `;
 
 exports[`replicate with react fiber > props > processor dependency ordering > should not get stuck if core component creates what looks like circular deps 1`] = `
-"export function Common(props) {
+"export function Common() {
   return (
     <div role="common">
       <div role="common">{"child"}</div>
@@ -109,7 +109,7 @@ exports[`replicate with react fiber > props > processor dependency ordering > sh
 
 exports[`replicate with react fiber > props > processor dependency ordering > should not get stuck if core component creates what looks like circular deps 2`] = `
 "import { Common } from "@/components/Common";
-export function Child(props) {
+export function Child() {
   return <Common>{"child"}</Common>;
 }
 "
@@ -118,7 +118,7 @@ export function Child(props) {
 exports[`replicate with react fiber > props > processor dependency ordering > should not get stuck if core component creates what looks like circular deps 3`] = `
 "import { Common } from "@/components/Common";
 import { Child } from "@/components/Child";
-export function Parent(props) {
+export function Parent() {
   return (
     <div>
       <Common>
@@ -132,21 +132,21 @@ export function Parent(props) {
 
 exports[`replicate with react fiber > props > processor dependency ordering > should not get stuck if core component creates what looks like circular deps 4`] = `
 "import { Parent } from "@/components/Parent";
-export function App(props) {
+export function App() {
   return <Parent />;
 }
 "
 `;
 
 exports[`replicate with react fiber > props > should convert tabIndex to number 1`] = `
-"export function App(props) {
+"export function App() {
   return <div tabIndex={1} />;
 }
 "
 `;
 
 exports[`replicate with react fiber > props > should not get stuck if core component creates what looks like circular deps 1`] = `
-"export function Common(props) {
+"export function Common() {
   return (
     <div role="common">
       <div role="common">{"child"}</div>
@@ -158,7 +158,7 @@ exports[`replicate with react fiber > props > should not get stuck if core compo
 
 exports[`replicate with react fiber > props > should not get stuck if core component creates what looks like circular deps 2`] = `
 "import { Common } from "@/components/Common";
-export function Child(props) {
+export function Child() {
   return <Common>{"child"}</Common>;
 }
 "
@@ -167,7 +167,7 @@ export function Child(props) {
 exports[`replicate with react fiber > props > should not get stuck if core component creates what looks like circular deps 3`] = `
 "import { Common } from "@/components/Common";
 import { Child } from "@/components/Child";
-export function Parent(props) {
+export function Parent() {
   return (
     <div>
       <Common>
@@ -181,7 +181,7 @@ export function Parent(props) {
 
 exports[`replicate with react fiber > props > should not get stuck if core component creates what looks like circular deps 4`] = `
 "import { Parent } from "@/components/Parent";
-export function App(props) {
+export function App() {
   return <Parent />;
 }
 "
@@ -190,7 +190,7 @@ export function App(props) {
 exports[`replicate with react fiber > props > should recreate children that are react elements 1`] = `
 "import { CompA } from "@/components/CompA";
 import { CompB } from "@/components/CompB";
-export function App(props) {
+export function App() {
   return (
     <CompA>
       <CompB>
@@ -203,7 +203,7 @@ export function App(props) {
 `;
 
 exports[`replicate with react fiber > props > should render JSX in props correctly 1`] = `
-"export function Comp(props) {
+"export function Comp() {
   return <div>{"Hello"}</div>;
 }
 "
@@ -211,7 +211,7 @@ exports[`replicate with react fiber > props > should render JSX in props correct
 
 exports[`replicate with react fiber > props > should render JSX in props correctly 2`] = `
 "import { Comp } from "@/components/Comp";
-export function App(props) {
+export function App() {
   return (
     <Comp
       prop={{
@@ -230,7 +230,7 @@ export function App(props) {
 `;
 
 exports[`replicate with react fiber > props > simple props are defined in call site 1`] = `
-"export function Comp(props) {
+"export function Comp() {
   return <div />;
 }
 "
@@ -238,7 +238,7 @@ exports[`replicate with react fiber > props > simple props are defined in call s
 
 exports[`replicate with react fiber > props > simple props are defined in call site 2`] = `
 "import { Comp } from "@/components/Comp";
-export function App(props) {
+export function App() {
   return (
     <Comp
       enabled
@@ -256,7 +256,7 @@ export function App(props) {
 `;
 
 exports[`replicate with react fiber > should allow the same component to be nested multiple times 1`] = `
-"export function Row(props) {
+"export function Row() {
   return (
     <div>
       <div>{"hello"}</div>
@@ -270,7 +270,7 @@ exports[`replicate with react fiber > should allow the same component to be nest
 
 exports[`replicate with react fiber > should allow the same component to be nested multiple times 2`] = `
 "import { Row } from "@/components/Row";
-export function App(props) {
+export function App() {
   return (
     <Row>
       <Row>{"hello"}</Row>
@@ -283,14 +283,14 @@ export function App(props) {
 `;
 
 exports[`replicate with react fiber > should create App.tsx 1`] = `
-"export function App(props) {
+"export function App() {
   return <div>{"Hello"}</div>;
 }
 "
 `;
 
 exports[`replicate with react fiber > should create a component 1`] = `
-"export function Comp(props) {
+"export function Comp() {
   return <div>{"Hello"}</div>;
 }
 "
@@ -298,7 +298,7 @@ exports[`replicate with react fiber > should create a component 1`] = `
 
 exports[`replicate with react fiber > should create a component 2`] = `
 "import { Comp } from "@/components/Comp";
-export function App(props) {
+export function App() {
   return <Comp />;
 }
 "
@@ -306,21 +306,21 @@ export function App(props) {
 
 exports[`replicate with react fiber > should create component when one instance returns null and another returns jsx 1`] = `
 "import { Comp } from "@/components/Comp";
-export function App(props) {
+export function App() {
   return <Comp enabled />;
 }
 "
 `;
 
 exports[`replicate with react fiber > should create component when one instance returns null and another returns jsx 2`] = `
-"export function Comp(props) {
+"export function Comp() {
   return <div>{"Hello"}</div>;
 }
 "
 `;
 
 exports[`replicate with react fiber > should create nested components 1`] = `
-"export function CompA(props) {
+"export function CompA() {
   return <div>{"Hello"}</div>;
 }
 "
@@ -328,7 +328,7 @@ exports[`replicate with react fiber > should create nested components 1`] = `
 
 exports[`replicate with react fiber > should create nested components 2`] = `
 "import { CompA } from "@/components/CompA";
-export function CompB(props) {
+export function CompB() {
   return (
     <div>
       <CompA />
@@ -340,21 +340,21 @@ export function CompB(props) {
 
 exports[`replicate with react fiber > should create nested components 3`] = `
 "import { CompB } from "@/components/CompB";
-export function App(props) {
+export function App() {
   return <CompB />;
 }
 "
 `;
 
 exports[`replicate with react fiber > should not create a component when returning null 1`] = `
-"export function App(props) {
+"export function App() {
   return <div />;
 }
 "
 `;
 
 exports[`replicate with react fiber > should only create one component for memo(forwardRef(function)) 1`] = `
-"export function Comp(props) {
+"export function Comp() {
   return <div>{"Hello"}</div>;
 }
 "
@@ -362,14 +362,14 @@ exports[`replicate with react fiber > should only create one component for memo(
 
 exports[`replicate with react fiber > should only create one component for memo(forwardRef(function)) 2`] = `
 "import { Comp } from "@/components/Comp";
-export function App(props) {
+export function App() {
   return <Comp />;
 }
 "
 `;
 
 exports[`replicate with react fiber > should only create one component if renders same component multiple times 1`] = `
-"export function CompA(props) {
+"export function CompA() {
   return <div>{"Hello"}</div>;
 }
 "
@@ -377,7 +377,7 @@ exports[`replicate with react fiber > should only create one component if render
 
 exports[`replicate with react fiber > should only create one component if renders same component multiple times 2`] = `
 "import { CompA } from "@/components/CompA";
-export function App(props) {
+export function App() {
   return (
     <>
       <CompA />
@@ -389,7 +389,7 @@ export function App(props) {
 `;
 
 exports[`replicate with react fiber > should support inline functions 1`] = `
-"export function Comp(props) {
+"export function Comp() {
   return (
     <>
       <div>{"1"}</div>
@@ -404,7 +404,7 @@ exports[`replicate with react fiber > should support inline functions 1`] = `
 
 exports[`replicate with react fiber > should support inline functions 2`] = `
 "import { Comp } from "@/components/Comp";
-export function App(props) {
+export function App() {
   return <Comp />;
 }
 "

@@ -191,7 +191,7 @@ describe("reactFiber", () => {
         expect(n.value).toEqual({
           componentId: "C1",
           parentId: "N0",
-          props: { onClick: "[Function]" },
+          props: { onClick: undefined },
         });
       });
     });
@@ -286,6 +286,20 @@ describe("reactFiber", () => {
         props: null,
       });
       expectElementNodeId("div", nodes.Cdiv.id);
+    });
+
+    test("should have name set on function within forwardRef", async () => {
+      const Inner = () => <div>Hello</div>;
+      Inner.displayName = "Inner";
+      const C = forwardRef(Inner);
+      const metadata = await run(<C />);
+      const comp = component(metadata, 1);
+
+      expect(comp.value).toEqual({
+        tag: Tag.ForwardRef,
+        name: "Inner",
+        codeId: "F0",
+      });
     });
   });
 

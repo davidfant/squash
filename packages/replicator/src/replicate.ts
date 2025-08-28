@@ -37,7 +37,7 @@ async function writeFile(
   sink: FileSink
 ) {
   const processor = unified()
-    // .use(rehypeStripSquashAttribute)
+    .use(rehypeStripSquashAttribute)
     .use(rehypeRecma)
     .use(recmaJsx)
     .use(recmaRemoveRedundantFragment)
@@ -173,8 +173,12 @@ export async function replicate(snapshot: Snapshot, sink: FileSink<any>) {
             sink
           );
 
+          // text
+          // if (group.id === "C24") {
           // typography
-          if (group.id === "C24") {
+          // if (group.id === "C24") {
+          // icon
+          if (group.id === "C40") {
             console.log("CODE", m.code[group.component.codeId]);
             const htmlProcessor = unified()
               .use(rehypeStripSquashAttribute)
@@ -184,6 +188,7 @@ export async function replicate(snapshot: Snapshot, sink: FileSink<any>) {
               .use(rehypeRecma)
               .use(recmaJsx)
               .use(recmaRemoveRedundantFragment)
+              .use(recmaWrapAsComponent, "Sample")
               .use(recmaReplaceRefs)
               .use(recmaFixProperties)
               .use(recmaStringify);

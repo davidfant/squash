@@ -7,7 +7,7 @@ import recmaStringify from "recma-stringify";
 import { unified } from "unified";
 import { addImport } from "./replaceRefs";
 
-interface Context {
+export interface CreateRefContext {
   codeIdToComponentImport: Map<string, RefImport>;
 }
 
@@ -22,7 +22,7 @@ function wrapInJSX(exp: Expression): NodeMap["JSXElement"]["children"][number] {
 function toExpression(
   value: any,
   imports: RefImport[],
-  ctx: Context
+  ctx: CreateRefContext
 ): Expression {
   if (Array.isArray(value)) {
     const replaced: Expression[] = [];
@@ -93,7 +93,7 @@ function toExpression(
 const buildAttributes = (
   props: Record<string, unknown>,
   imports: RefImport[],
-  ctx: Context
+  ctx: CreateRefContext
 ): NodeMap["JSXAttribute"][] =>
   Object.entries(props).map(([k, v]): NodeMap["JSXAttribute"] => {
     if (v === true) {
@@ -124,7 +124,7 @@ function createComponentElement(
   component: { module?: string; name: string },
   props: Record<string, unknown>,
   imports: RefImport[],
-  ctx: Context
+  ctx: CreateRefContext
 ): NodeMap["JSXElement"] {
   if (component.module) {
     addImport({ module: component.module, name: component.name }, imports);
@@ -167,7 +167,7 @@ export function createRef({
   component: RefImport;
   props: Record<string, unknown>;
   children: ElementContent[];
-  ctx: Context;
+  ctx: CreateRefContext;
 }) {
   const imports: RefImport[] = [];
   const element = createComponentElement(component, props, imports, ctx);

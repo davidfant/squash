@@ -59,7 +59,6 @@ async function renderSample(
   });
 
   ctx.module = { exports: {} };
-
   vm.runInContext(code, ctx, { filename: `sample-${index}.cjs` });
   const element = React.createElement(ctx.module.exports.Sample);
   return renderToStaticMarkup(element);

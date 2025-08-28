@@ -18,7 +18,7 @@ import { recmaRemoveRedundantFragment } from "./lib/recma/removeRedundantFragmen
 import { recmaReplaceRefs } from "./lib/recma/replaceRefs";
 import { rehypeStripSquashAttribute } from "./lib/rehype/stripSquashAttribute";
 import { recmaWrapAsComponent } from "./lib/rehype/wrapAsComponent";
-import { rewriteComponent } from "./lib/rewriteComponent";
+import { generateComponent } from "./lib/rewriteComponent/generate";
 import type { FileSink } from "./lib/sinks/base";
 import { uniquePathsForComponents } from "./lib/uniquePathsForComponents";
 import { Metadata, type Snapshot } from "./types";
@@ -160,6 +160,41 @@ export async function replicate(snapshot: Snapshot, sink: FileSink<any>) {
             return;
           }
 
+          // text
+          // if (group.id === "C24") {
+          // typography
+          // if (group.id === "C24") {
+          // icon
+          if (group.id === "C40") {
+            const rewritten = await generateComponent({
+              code: m.code[group.component.codeId]!,
+              component: {
+                name: compPath.name,
+                module: path.join("@/components", compPath.dir, compPath.name),
+              },
+              createRefContext: { codeIdToComponentImport },
+              instances: Object.entries(group.nodes).map(([nid, node]) => {
+                const nodeId = nid as NodeId;
+                const elements = (elementsByNodeId.get(nodeId) ?? []).map(
+                  (e) => e.element
+                );
+                return { nodeId, node, elements: clone(elements) };
+              }),
+            });
+
+            // TODO: create some kind of old => new name mapping so that we can update this later...
+            await sink.writeText(
+              path.join(
+                "src",
+                "components",
+                compPath.dir,
+                `${rewritten.name}.tsx`
+              ),
+              rewritten.code
+            );
+            return;
+          }
+
           await writeFile(
             compPath.name,
             path.join("src", "components", compPath.dir),
@@ -173,155 +208,6 @@ export async function replicate(snapshot: Snapshot, sink: FileSink<any>) {
             },
             sink
           );
-
-          // text
-          // if (group.id === "C24") {
-          // typography
-          // if (group.id === "C24") {
-          // icon
-          if (group.id === "C40") {
-            // console.log(
-            //   "### CODE",
-            //   "\n",
-            //   await prettier.js(`(${m.code[group.component.codeId]!})`)
-            // );
-            const htmlProcessor = unified()
-              .use(rehypeStripSquashAttribute)
-              .use(rehypeStringify);
-            const jsxProcessor = unified()
-              .use(rehypeStripSquashAttribute)
-              .use(rehypeRecma)
-              .use(recmaJsx)
-              .use(recmaRemoveRedundantFragment)
-              .use(recmaWrapAsComponent, "Sample")
-              .use(recmaReplaceRefs)
-              .use(recmaFixProperties)
-              .use(recmaStringify);
-
-            await rewriteComponent({
-              code: await prettier.js(`(${m.code[group.component.codeId]!})`),
-              component: {
-                name: compPath.name,
-                module: path.join("@/components", compPath.dir, compPath.name),
-              },
-              instances: await Promise.all(
-                Object.entries(group.nodes).map(async ([nid, n]) => {
-                  const elements = (elementsByNodeId.get(nid as any) ?? []).map(
-                    (e) => e.element
-                  );
-                  const tree: Root = {
-                    type: "root",
-                    children: clone(elements),
-                  };
-                  const jsx = await prettier.ts(
-                    jsxProcessor.stringify(
-                      await jsxProcessor.run({
-                        type: "root",
-                        children: [
-                          createRef({
-                            component: {
-                              module: path.join(
-                                "@/components",
-                                compPath.dir,
-                                compPath.name
-                              ),
-                              name: compPath.name,
-                            },
-                            props: n.props as Record<string, unknown>,
-                            nodeId: nid,
-                            ctx: { codeIdToComponentImport },
-                            children: [],
-                          }),
-                        ],
-                      })
-                    )
-                  );
-                  const html = await prettier.html(
-                    htmlProcessor.stringify(
-                      (await htmlProcessor.run(tree)) as Root
-                    )
-                  );
-                  return { jsx, html };
-                })
-              ),
-            });
-
-            // await Promise.all(
-            //   Object.entries(group.nodes).map(async ([nid, n]) => {
-            //     const elements = (elementsByNodeId.get(nid as any) ?? []).map(
-            //       (e) => e.element
-            //     );
-            //     const tree: Root = {
-            //       type: "root",
-            //       children: clone(elements),
-            //     };
-            //     const jsx = await prettier.ts(
-            //       jsxProcessor.stringify(
-            //         await jsxProcessor.run({
-            //           type: "root",
-            //           children: [
-            //             createRef({
-            //               component: {
-            //                 module: path.join(
-            //                   "@/components",
-            //                   compPath.dir,
-            //                   compPath.name
-            //                 ),
-            //                 name: compPath.name,
-            //               },
-            //               props: n.props as Record<string, unknown>,
-            //               nodeId: nid,
-            //               ctx: { codeIdToComponentImport },
-            //               children: [],
-            //             }),
-            //           ],
-            //         })
-            //       )
-            //     );
-            //     const html = await prettier.html(
-            //       htmlProcessor.stringify(
-            //         (await htmlProcessor.run(tree)) as Root
-            //       )
-            //     );
-            //     console.log("---", nid);
-            //     // console.log("PROPS", n.props);
-            //     console.log("### JSX");
-            //     console.log(jsx);
-            //     console.log("### HTML");
-            //     console.log(html);
-            //     // return {
-            //     //   props: n.props,
-            //     //   html: htmlProcessor.stringify(
-            //     //     (await htmlProcessor.run(tree)) as Root
-            //     //   ),
-            //     //   jsx: await prettier.ts(
-            //     //     jsxProcessor.stringify(
-            //     //       await jsxProcessor.run({
-            //     //         type: "root",
-            //     //         children: [
-            //     //           createRef({
-            //     //             component: {
-            //     //               module: path.join(
-            //     //                 "@/components",
-            //     //                 compPath.dir,
-            //     //                 compPath.name
-            //     //               ),
-            //     //               name: compPath.name,
-            //     //             },
-            //     //             props: n.props as Record<string, unknown>,
-            //     //             nodeId: nid,
-            //     //             ctx: { codeIdToComponentImport },
-            //     //             children: [],
-            //     //           }),
-            //     //         ],
-            //     //       })
-            //     //     )
-            //     //   ),
-            //     // };
-            //   })
-            // );
-            // 1) get code, 2) for each node get the props + rendered HTML
-          }
 
           const elementsOrderedByDepth = [...elementsByNodeId.entries()]
             .map(([nodeId, elements]) => ({ nodeId, elements }))

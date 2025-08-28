@@ -200,7 +200,10 @@ export async function replicate(snapshot: Snapshot, sink: FileSink<any>) {
 
             await rewriteComponent({
               code: await prettier.js(`(${m.code[group.component.codeId]!})`),
-              componentName: compPath.name,
+              component: {
+                name: compPath.name,
+                module: path.join("@/components", compPath.dir, compPath.name),
+              },
               instances: await Promise.all(
                 Object.entries(group.nodes).map(async ([nid, n]) => {
                   const elements = (elementsByNodeId.get(nid as any) ?? []).map(

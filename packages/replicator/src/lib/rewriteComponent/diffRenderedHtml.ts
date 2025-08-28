@@ -1,7 +1,5 @@
 import { diff } from "jest-diff";
 import * as parse5 from "parse5";
-import type { ReactNode } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
 
 const normText = (s: string) => s.replace(/\s+/g, " ").trim();
 
@@ -33,18 +31,15 @@ function canonicalise(html: string) {
   return simplify(dom);
 }
 
-export function diffRenderedHtml(html: string, node: ReactNode) {
-  const rendered = renderToStaticMarkup(node);
-
-  const lhs = canonicalise(html);
-  const rhs = canonicalise(rendered);
-
-  const string = diff(lhs, rhs, {
+export function diffRenderedHtml(a: string, b: string) {
+  const lhs = canonicalise(a);
+  const rhs = canonicalise(b);
+  const diffString = diff(lhs, rhs, {
     aColor: (x) => x,
     bColor: (x) => x,
     commonColor: (x) => x,
   });
-  return string === "Compared values have no visual difference."
+  return diffString === "Compared values have no visual difference."
     ? null
-    : string;
+    : diffString;
 }

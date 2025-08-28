@@ -1,14 +1,19 @@
+import type { ReactNode } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { diffRenderedHtml } from "./diffRenderedHtml";
+
+const diff = (html: string, node: ReactNode) =>
+  diffRenderedHtml(html, renderToStaticMarkup(node));
 
 describe("diffRenderedHtml", () => {
   describe("null", () => {
     test("identical", () => {
-      expect(diffRenderedHtml("<div>Hello</div>", <div>Hello</div>)).toBeNull();
+      expect(diff("<div>Hello</div>", <div>Hello</div>)).toBeNull();
     });
 
     test("attribute order is different", () => {
       expect(
-        diffRenderedHtml(
+        diff(
           "<div class='a' id='b'>Hello</div>",
           <div id="b" className="a">
             Hello
@@ -19,7 +24,7 @@ describe("diffRenderedHtml", () => {
 
     test("attribute is empty string vs true", () => {
       expect(
-        diffRenderedHtml(
+        diff(
           `<button disabled="">Hello</button>`,
           <button disabled>Hello</button>
         )
@@ -27,7 +32,7 @@ describe("diffRenderedHtml", () => {
     });
     test("whitespace is different", () => {
       expect(
-        diffRenderedHtml(
+        diff(
           `
             <div>
               Hello
@@ -41,7 +46,7 @@ describe("diffRenderedHtml", () => {
 
   describe("diff", () => {
     test("attribute is missing", () => {
-      const diff = diffRenderedHtml(
+      const diff = diff(
         `<button disabled>Hello</button>`,
         <button>Hello</button>
       );
@@ -71,7 +76,7 @@ describe("diffRenderedHtml", () => {
     });
 
     test("tag is different", () => {
-      expect(diffRenderedHtml(`<button>Hello</button>`, <div>Hello</div>)).toBe(
+      expect(diff(`<button>Hello</button>`, <div>Hello</div>)).toBe(
         `
 - Expected
 + Received
@@ -95,13 +100,13 @@ describe("diffRenderedHtml", () => {
     });
 
     test("child is missing", () => {
-      const diff = diffRenderedHtml(
+      const d = diff(
         `<div>Hello</div>`,
         <div>
           <div>Hello</div>
         </div>
       );
-      expect(diff).toBe(
+      expect(d).toBe(
         `
 - Expected
 + Received

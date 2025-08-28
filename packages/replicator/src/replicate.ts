@@ -77,8 +77,6 @@ export async function replicate(snapshot: Snapshot, sink: FileSink<any>) {
     )
   );
 
-  // download every img src tag
-
   const m = snapshot.metadata;
   if (!m) throw new Error("Metadata is required");
   fuseMemoForwardRef(m);

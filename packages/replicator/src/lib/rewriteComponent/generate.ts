@@ -15,6 +15,7 @@ import { recmaRemoveRedundantFragment } from "../recma/removeRedundantFragment";
 import { recmaReplaceRefs } from "../recma/replaceRefs";
 import { rehypeStripSquashAttribute } from "../rehype/stripSquashAttribute";
 import { recmaWrapAsComponent } from "../rehype/wrapAsComponent";
+import { diffRenderedHtml } from "./diffRenderedHtml";
 import * as Prompts from "./prompts";
 import { render } from "./render";
 
@@ -132,25 +133,14 @@ export async function generateComponent(opts: {
   });
 
   const rewritten = parseGeneratedComponent(text);
-  console.log("NAME", rewritten.name);
-  console.log("-----------------");
-  console.log(rewritten.code);
-  console.log("-----------------");
-
   const rendered = await render({
     original: opts.component,
     rewritten,
     instances,
   });
 
-  for (let i = 0; i < rendered.length; i++) {
-    console.log("EXAMPLE", i);
-    console.log("---");
-    console.log(await prettier.html(rendered[i]!));
-    console.log("---");
-    console.log(instances[i]?.html);
-    console.log("---");
-  }
+  const diffs = rendered.map((r, i) => diffRenderedHtml(instances[i]!.html, r));
+  console.log(diffs);
 
   return rewritten;
 }

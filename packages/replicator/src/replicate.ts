@@ -18,6 +18,7 @@ import { recmaRemoveRedundantFragment } from "./lib/recma/removeRedundantFragmen
 import { recmaReplaceRefs } from "./lib/recma/replaceRefs";
 import { rehypeStripSquashAttribute } from "./lib/rehype/stripSquashAttribute";
 import { recmaWrapAsComponent } from "./lib/rehype/wrapAsComponent";
+import { rewriteComponent } from "./lib/rewriteComponent";
 import type { FileSink } from "./lib/sinks/base";
 import { uniquePathsForComponents } from "./lib/uniquePathsForComponents";
 import { Metadata, type Snapshot } from "./types";
@@ -179,7 +180,11 @@ export async function replicate(snapshot: Snapshot, sink: FileSink<any>) {
           // if (group.id === "C24") {
           // icon
           if (group.id === "C40") {
-            console.log("CODE", m.code[group.component.codeId]);
+            // console.log(
+            //   "### CODE",
+            //   "\n",
+            //   await prettier.js(`(${m.code[group.component.codeId]!})`)
+            // );
             const htmlProcessor = unified()
               .use(rehypeStripSquashAttribute)
               .use(rehypeStringify);
@@ -192,80 +197,126 @@ export async function replicate(snapshot: Snapshot, sink: FileSink<any>) {
               .use(recmaReplaceRefs)
               .use(recmaFixProperties)
               .use(recmaStringify);
-            await Promise.all(
-              Object.entries(group.nodes).map(async ([nid, n]) => {
-                const elements = (elementsByNodeId.get(nid as any) ?? []).map(
-                  (e) => e.element
-                );
-                const tree: Root = {
-                  type: "root",
-                  children: clone(elements),
-                };
-                const jsx = await prettier.ts(
-                  jsxProcessor.stringify(
-                    await jsxProcessor.run({
-                      type: "root",
-                      children: [
-                        createRef({
-                          component: {
-                            module: path.join(
-                              "@/components",
-                              compPath.dir,
-                              compPath.name
-                            ),
-                            name: compPath.name,
-                          },
-                          props: n.props as Record<string, unknown>,
-                          nodeId: nid,
-                          ctx: { codeIdToComponentImport },
-                          children: [],
-                        }),
-                      ],
-                    })
-                  )
-                );
-                const html = await prettier.html(
-                  htmlProcessor.stringify(
-                    (await htmlProcessor.run(tree)) as Root
-                  )
-                );
-                console.log("---", nid);
-                console.log("PROPS", n.props);
-                console.log("JSX");
-                console.log(jsx);
-                console.log("HTML");
-                console.log(html);
-                // return {
-                //   props: n.props,
-                //   html: htmlProcessor.stringify(
-                //     (await htmlProcessor.run(tree)) as Root
-                //   ),
-                //   jsx: await prettier.ts(
-                //     jsxProcessor.stringify(
-                //       await jsxProcessor.run({
-                //         type: "root",
-                //         children: [
-                //           createRef({
-                //             component: {
-                //               module: path.join(
-                //                 "@/components",
-                //                 compPath.dir,
-                //                 compPath.name
-                //               ),
-                //               name: compPath.name,
-                //             },
-                //             props: n.props as Record<string, unknown>,
-                //             nodeId: nid,
-                //             ctx: { codeIdToComponentImport },
-                //             children: [],
-                //           }),
-                //         ],
-                //       })
-                //     )
-                //   ),
-                // };
-              })
-            );
+
+            await rewriteComponent({
+              code: await prettier.js(`(${m.code[group.component.codeId]!})`),
+              componentName: compPath.name,
+              instances: await Promise.all(
+                Object.entries(group.nodes).map(async ([nid, n]) => {
+                  const elements = (elementsByNodeId.get(nid as any) ?? []).map(
+                    (e) => e.element
+                  );
+                  const tree: Root = {
+                    type: "root",
+                    children: clone(elements),
+                  };
+                  const jsx = await prettier.ts(
+                    jsxProcessor.stringify(
+                      await jsxProcessor.run({
+                        type: "root",
+                        children: [
+                          createRef({
+                            component: {
+                              module: path.join(
+                                "@/components",
+                                compPath.dir,
+                                compPath.name
+                              ),
+                              name: compPath.name,
+                            },
+                            props: n.props as Record<string, unknown>,
+                            nodeId: nid,
+                            ctx: { codeIdToComponentImport },
+                            children: [],
+                          }),
+                        ],
+                      })
+                    )
+                  );
+                  const html = await prettier.html(
+                    htmlProcessor.stringify(
+                      (await htmlProcessor.run(tree)) as Root
+                    )
+                  );
+                  return { jsx, html };
+                })
+              ),
+            });
+
+            // await Promise.all(
+            //   Object.entries(group.nodes).map(async ([nid, n]) => {
+            //     const elements = (elementsByNodeId.get(nid as any) ?? []).map(
+            //       (e) => e.element
+            //     );
+            //     const tree: Root = {
+            //       type: "root",
+            //       children: clone(elements),
+            //     };
+            //     const jsx = await prettier.ts(
+            //       jsxProcessor.stringify(
+            //         await jsxProcessor.run({
+            //           type: "root",
+            //           children: [
+            //             createRef({
+            //               component: {
+            //                 module: path.join(
+            //                   "@/components",
+            //                   compPath.dir,
+            //                   compPath.name
+            //                 ),
+            //                 name: compPath.name,
+            //               },
+            //               props: n.props as Record<string, unknown>,
+            //               nodeId: nid,
+            //               ctx: { codeIdToComponentImport },
+            //               children: [],
+            //             }),
+            //           ],
+            //         })
+            //       )
+            //     );
+            //     const html = await prettier.html(
+            //       htmlProcessor.stringify(
+            //         (await htmlProcessor.run(tree)) as Root
+            //       )
+            //     );
+            //     console.log("---", nid);
+            //     // console.log("PROPS", n.props);
+            //     console.log("### JSX");
+            //     console.log(jsx);
+            //     console.log("### HTML");
+            //     console.log(html);
+            //     // return {
+            //     //   props: n.props,
+            //     //   html: htmlProcessor.stringify(
+            //     //     (await htmlProcessor.run(tree)) as Root
+            //     //   ),
+            //     //   jsx: await prettier.ts(
+            //     //     jsxProcessor.stringify(
+            //     //       await jsxProcessor.run({
+            //     //         type: "root",
+            //     //         children: [
+            //     //           createRef({
+            //     //             component: {
+            //     //               module: path.join(
+            //     //                 "@/components",
+            //     //                 compPath.dir,
+            //     //                 compPath.name
+            //     //               ),
+            //     //               name: compPath.name,
+            //     //             },
+            //     //             props: n.props as Record<string, unknown>,
+            //     //             nodeId: nid,
+            //     //             ctx: { codeIdToComponentImport },
+            //     //             children: [],
+            //     //           }),
+            //     //         ],
+            //     //       })
+            //     //     )
+            //     //   ),
+            //     // };
+            //   })
+            // );
             // 1) get code, 2) for each node get the props + rendered HTML
           }
 

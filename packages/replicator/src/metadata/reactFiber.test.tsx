@@ -62,6 +62,7 @@ describe("reactFiber", () => {
   });
 
   test.todo("should await loading lazy module");
+  test.todo("should add data-squash-text wrapper to text nodes");
 
   describe("FunctionComponent", () => {
     test("should register component and tag its child", async () => {

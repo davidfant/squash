@@ -37,7 +37,7 @@ async function writeFile(
   sink: FileSink
 ) {
   const processor = unified()
-    .use(rehypeStripSquashAttribute)
+    // .use(rehypeStripSquashAttribute)
     .use(rehypeRecma)
     .use(recmaJsx)
     .use(recmaRemoveRedundantFragment)
@@ -172,6 +172,97 @@ export async function replicate(snapshot: Snapshot, sink: FileSink<any>) {
             },
             sink
           );
+
+          // typography
+          if (group.id === "C24") {
+            console.log("CODE", m.code[group.component.codeId]);
+            const htmlProcessor = unified()
+              .use(rehypeStripSquashAttribute)
+              .use(rehypeStringify);
+            const jsxProcessor = unified()
+              .use(rehypeStripSquashAttribute)
+              .use(rehypeRecma)
+              .use(recmaJsx)
+              .use(recmaRemoveRedundantFragment)
+              .use(recmaReplaceRefs)
+              .use(recmaFixProperties)
+              .use(recmaStringify);
+            await Promise.all(
+              Object.entries(group.nodes).map(async ([nid, n]) => {
+                const elements = (elementsByNodeId.get(nid as any) ?? []).map(
+                  (e) => e.element
+                );
+                const tree: Root = {
+                  type: "root",
+                  children: clone(elements),
+                };
+                const jsx = await prettier.ts(
+                  jsxProcessor.stringify(
+                    await jsxProcessor.run({
+                      type: "root",
+                      children: [
+                        createRef({
+                          component: {
+                            module: path.join(
+                              "@/components",
+                              compPath.dir,
+                              compPath.name
+                            ),
+                            name: compPath.name,
+                          },
+                          props: n.props as Record<string, unknown>,
+                          nodeId: nid,
+                          ctx: { codeIdToComponentImport },
+                          children: [],
+                        }),
+                      ],
+                    })
+                  )
+                );
+                const html = await prettier.html(
+                  htmlProcessor.stringify(
+                    (await htmlProcessor.run(tree)) as Root
+                  )
+                );
+                console.log("---", nid);
+                console.log("PROPS", n.props);
+                console.log("JSX");
+                console.log(jsx);
+                console.log("HTML");
+                console.log(html);
+                // return {
+                //   props: n.props,
+                //   html: htmlProcessor.stringify(
+                //     (await htmlProcessor.run(tree)) as Root
+                //   ),
+                //   jsx: await prettier.ts(
+                //     jsxProcessor.stringify(
+                //       await jsxProcessor.run({
+                //         type: "root",
+                //         children: [
+                //           createRef({
+                //             component: {
+                //               module: path.join(
+                //                 "@/components",
+                //                 compPath.dir,
+                //                 compPath.name
+                //               ),
+                //               name: compPath.name,
+                //             },
+                //             props: n.props as Record<string, unknown>,
+                //             nodeId: nid,
+                //             ctx: { codeIdToComponentImport },
+                //             children: [],
+                //           }),
+                //         ],
+                //       })
+                //     )
+                //   ),
+                // };
+              })
+            );
+            // 1) get code, 2) for each node get the props + rendered HTML
+          }
 
           const elementsOrderedByDepth = [...elementsByNodeId.entries()]
             .map(([nodeId, elements]) => ({ nodeId, elements }))

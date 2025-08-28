@@ -219,7 +219,8 @@ async function sanitize(value: any, ctx: SanitizeContext): Promise<any> {
     );
   }
   if (typeof value === "function") {
-    return "[Function]";
+    return undefined;
+    // return { $$typeof: "function", function: value.toString() };
   }
   return value;
 }
@@ -314,6 +315,14 @@ export async function reactFiber(): Promise<Metadata.ReactFiber | null> {
             props: text,
             key: `${Tag.HostText}:text`,
           });
+          const span = document.createElement("span");
+          span.setAttribute("data-squash-text", "");
+          span.setAttribute("data-squash-node-id", ids.node);
+          span.style.display = "contents";
+          const textNode = fiber.stateNode as Text;
+          const clonedText = textNode.cloneNode(true);
+          span.appendChild(clonedText);
+          textNode.parentNode?.replaceChild(span, textNode);
           return ids.node;
         }
         case Tag.DOMElement: {

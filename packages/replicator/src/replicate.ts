@@ -186,6 +186,15 @@ export async function replicate(snapshot: Snapshot, sink: FileSink<any>) {
           for (const { nodeId, elements } of elementsOrderedByDepth) {
             if (!elements.length) continue;
 
+            // const compName = compPath.name;
+            const compName = `${compPath.name}_${nodeId}`;
+            await writeFile(
+              compName,
+              path.join("src", "components", compPath.dir),
+              { type: "root", children: elements.map((e) => e.element) ?? [] },
+              sink
+            );
+
             const { index, parent } = elements[0]!;
             const props = nodes.find((n) => n.id === nodeId)!.props as Record<
               string,
@@ -197,12 +206,8 @@ export async function replicate(snapshot: Snapshot, sink: FileSink<any>) {
               parent.children[index]!,
               createRef({
                 component: {
-                  module: path.join(
-                    "@/components",
-                    compPath.dir,
-                    compPath.name
-                  ),
-                  name: compPath.name,
+                  module: path.join("@/components", compPath.dir, compName),
+                  name: compName,
                 },
                 props,
                 nodeId,

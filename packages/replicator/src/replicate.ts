@@ -174,6 +174,8 @@ export const replicate = (
                 component: {
                   id: resolved.id,
                   code: m.code[group.component.codeId]!,
+                  // TODO: how to resolve this shit????? should include all children
+                  deps: new Set(["C80", "C81"]),
                 },
                 instances: Object.entries(group.nodes).map(([nid, node]) => {
                   const nodeId = nid as NodeId;
@@ -195,7 +197,7 @@ export const replicate = (
                 componentRegistry: componentRegistryForRewrite,
               });
 
-              Object.assign(resolved, rewritten.registry);
+              Object.assign(resolved, rewritten);
               await sink.writeText(resolved.path, rewritten.code);
 
               const elementsOrderedByDepth = [...elementsByNodeId.entries()]

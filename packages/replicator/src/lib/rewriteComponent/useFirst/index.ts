@@ -32,5 +32,5 @@ export const rewriteComponentUseFirstStrategy: RewriteComponentStrategy =
       children: opts.instances[0]!.children,
     });
     const code = await prettier.ts(processor.stringify(estree));
-    return { code, registry: registryItem };
+    return { ...registryItem, code };
   };

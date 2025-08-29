@@ -1,3 +1,5 @@
+import type { ComponentRegistry } from "@/lib/componentRegistry";
+import type { Metadata } from "@/types";
 import esbuild from "esbuild";
 import { createRequire } from "node:module";
 import vm from "node:vm";
@@ -5,9 +7,13 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { ComponentInstance } from "./types";
 
+type ComponentId = Metadata.ReactFiber.ComponentId;
+
 interface RenderOptions {
-  rewritten: { name: string; code: string };
+  component: { name: string; code: string };
+  deps: Set<Metadata.ReactFiber.ComponentId>;
   instances: ComponentInstance[];
+  componentRegistry: ComponentRegistry;
 }
 
 async function compileComponent(esmCode: string): Promise<string> {
@@ -20,35 +26,47 @@ async function compileComponent(esmCode: string): Promise<string> {
   return code;
 }
 
-function makeContext(component: { code: string; name: string }): vm.Context {
-  const nodeRequire = createRequire(import.meta.url);
+async function buildDepModules(
+  deps: Set<ComponentId>,
+  registry: ComponentRegistry,
+  nodeRequire: NodeJS.Require
+): Promise<Record<string, any>> {
+  const moduleMap: Record<string, any> = {};
+  await Promise.all(
+    [...deps].map(async (depId) => {
+      const regItem = registry.get(depId);
+      if (!regItem) throw new Error(`Unknown dep ${depId}`);
+      const compiled = await compileComponent(regItem.code);
+      const mod = { exports: {} };
+      vm.runInNewContext(compiled, { module: mod, require: nodeRequire });
+      moduleMap[regItem.module] = mod.exports;
+    })
+  );
 
-  const compModule: any = { exports: {} };
-  vm.runInNewContext(component.code, {
-    module: compModule,
-    require: nodeRequire,
-  });
+  return moduleMap;
+}
 
-  const moduleMap: Record<string, any> = {
+async function buildComponentToRewriteModule(
+  component: { name: string; code: string },
+  nodeRequire: NodeJS.Require
+) {
+  const compiled = await compileComponent(component.code);
+  const mod = { exports: {} as Record<string, any> };
+  vm.runInNewContext(compiled, { module: mod, require: nodeRequire });
+  return {
     "./ComponentToRewrite": {
-      ComponentToRewrite: compModule.exports[component.name],
+      ComponentToRewrite: mod.exports[component.name],
     },
-    // [`@/components/${opts.rewritten.name}`]: compModule.exports,
-    // "@/components/rewritten/C81/RouteAnnouncer": compModule.exports,
   };
-
-  return vm.createContext({
-    require: (spec: string) => moduleMap[spec] ?? nodeRequire(spec),
-  });
 }
 
 async function renderSample(
   ctx: vm.Context,
-  sampleSrc: string,
+  sampleCode: string,
   index: number
 ): Promise<string> {
   // esbuild just turns TSX → CJS; we don't bundle so 'require' calls stay.
-  const { code } = await esbuild.transform(sampleSrc, {
+  const { code } = await esbuild.transform(sampleCode, {
     loader: "tsx",
     format: "cjs",
     jsx: "automatic",
@@ -61,8 +79,15 @@ async function renderSample(
 }
 
 export async function render(opts: RenderOptions): Promise<string[]> {
-  const compiled = await compileComponent(opts.rewritten.code);
-  const ctx = makeContext({ name: opts.rewritten.name, code: compiled });
+  const require = createRequire(import.meta.url);
+  const [compModule, depModules] = await Promise.all([
+    buildComponentToRewriteModule(opts.component, require),
+    buildDepModules(opts.deps, opts.componentRegistry, require),
+  ]);
+  const modules = { ...depModules, ...compModule } as Record<string, any>;
+  const ctx = vm.createContext({
+    require: (spec: string) => modules[spec] ?? require(spec),
+  });
   return Promise.all(
     opts.instances.map((inst, i) => renderSample(ctx, inst.jsx, i))
   );

@@ -6,11 +6,15 @@ import type {
 } from "../componentRegistry";
 
 export interface RewriteComponentOptions {
-  component: { id: Metadata.ReactFiber.ComponentId; code: string };
+  component: {
+    id: Metadata.ReactFiber.ComponentId;
+    code: string;
+    deps: Set<Metadata.ReactFiber.ComponentId>;
+  };
   instances: Array<{ ref: Element; children: Element[] }>;
   componentRegistry: ComponentRegistry;
 }
 
 export type RewriteComponentStrategy = (
   opts: RewriteComponentOptions
-) => Promise<{ code: string; registry: ComponentRegistryItem }>;
+) => Promise<ComponentRegistryItem>;

@@ -162,7 +162,13 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
   console.log("---");
 
   const rewritten = parseGeneratedComponent(text);
-  const rendered = await render({ rewritten, instances });
+  registryItem.code = rewritten.code;
+  const rendered = await render({
+    component: { name: rewritten.name, code: rewritten.code },
+    deps: opts.component.deps,
+    instances,
+    componentRegistry: registry,
+  });
 
   const diffs = rendered.map((r, i) => diffRenderedHtml(instances[i]!.html, r));
   if (diffs.some((d) => !!d)) {
@@ -182,20 +188,18 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
   }
 
   return {
+    id: opts.component.id,
+    name: { value: rewritten.name, isFallback: false },
     code: rewritten.code,
-    registry: {
-      id: opts.component.id,
-      name: { value: rewritten.name, isFallback: false },
-      path: path.join(
-        "src/components/rewritten",
-        opts.component.id,
-        `${rewritten.name}.tsx`
-      ),
-      module: path.join(
-        "@/components/rewritten",
-        opts.component.id,
-        rewritten.name
-      ),
-    },
+    path: path.join(
+      "src/components/rewritten",
+      opts.component.id,
+      `${rewritten.name}.tsx`
+    ),
+    module: path.join(
+      "@/components/rewritten",
+      opts.component.id,
+      rewritten.name
+    ),
   };
 };

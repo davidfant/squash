@@ -137,15 +137,6 @@ async function renderSample(
 export async function render(opts: RenderOptions): Promise<string[]> {
   const compiled = await compileComponent(opts.rewritten.code);
   const ctx = makeContext(compiled, opts);
-  console.log(
-    "RENDER",
-    "❤️",
-    opts.rewritten.code,
-    "❤️",
-    opts.instances[0]!.jsx,
-    "❤️",
-    await renderSample(ctx, opts.instances[0]!.jsx, 0)
-  );
   return Promise.all(
     opts.instances.map((inst, i) => renderSample(ctx, inst.jsx, i))
   );

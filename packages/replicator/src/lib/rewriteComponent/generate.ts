@@ -167,11 +167,6 @@ export async function generateComponent(opts: {
   });
 
   const diffs = rendered.map((r, i) => diffRenderedHtml(instances[i]!.html, r));
-  console.log("🔥🔥🔥🔥 diffs");
-  console.log(rendered[0]);
-  console.log("---");
-  console.log(instances[0]!.html);
-  console.log("🔥🔥🔥🔥 /diffs");
   if (diffs.some((d) => !!d)) {
     diffs.forEach((d, i) => {
       if (d === null) return;

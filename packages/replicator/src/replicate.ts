@@ -188,7 +188,7 @@ export async function replicate(snapshot: Snapshot, sink: FileSink<any>) {
               // "C29",
               // "C74",
               // "C79",
-              // "C80",
+              "C80",
               "C81",
               //
               // "C17", // fails
@@ -228,11 +228,6 @@ export async function replicate(snapshot: Snapshot, sink: FileSink<any>) {
                 return { nodeId, ref, children: elements };
               }),
             });
-
-            console.log("REWRITE", group.id, rewritten.name);
-            console.log("---");
-            console.log(rewritten.code);
-            console.log("---");
 
             compPath.dir = path.join("rewritten", group.id, compPath.dir);
             compPath.name = rewritten.name;

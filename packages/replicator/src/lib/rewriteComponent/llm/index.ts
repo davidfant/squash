@@ -1,31 +1,18 @@
 import { generateText } from "@/lib/ai";
-import * as prettier from "@/lib/prettier";
+import type { Metadata } from "@/types";
 import { anthropic } from "@ai-sdk/anthropic";
-import { wrapLanguageModel } from "ai";
-import type { Root } from "hast";
+import { wrapLanguageModel, type ModelMessage } from "ai";
 import path from "node:path";
-import recmaJsx from "recma-jsx";
-import recmaStringify from "recma-stringify";
-import rehypeRecma from "rehype-recma";
-import rehypeStringify from "rehype-stringify";
-import { unified } from "unified";
 import { filesystemCacheMiddleware } from "../../filesystemCacheMiddleware";
-import { recmaFixProperties } from "../../recma/fixProperties";
-import { recmaRemoveRedundantFragment } from "../../recma/removeRedundantFragment";
-import { recmaReplaceRefs } from "../../recma/replaceRefs";
-import { rehypeStripSquashAttribute } from "../../rehype/stripSquashAttribute";
-import { rehypeUnwrapRefs } from "../../rehype/unwrapRefs";
-import { recmaWrapAsComponent } from "../../rehype/wrapAsComponent";
 import type { RewriteComponentStrategy } from "../types";
+import { buildInstanceExamples } from "./buildInstanceExamples";
 import { diffRenderedHtml } from "./diffRenderedHtml";
 import * as Prompts from "./prompts";
 import { render } from "./render";
 
-// TODO: is this needed?
-const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
+type ComponentId = Metadata.ReactFiber.ComponentId;
 
 const model = wrapLanguageModel({
-  // model: openai("gpt-5"),
   model: anthropic("claude-sonnet-4-20250514"),
   middleware: filesystemCacheMiddleware(),
 });
@@ -55,6 +42,18 @@ function parseGeneratedComponent(md: string): {
   return { name, code };
 }
 
+const buildComponentRegistryItem = (
+  id: ComponentId,
+  name: string,
+  code: string
+) => ({
+  id,
+  name: { value: name, isFallback: false },
+  code,
+  path: path.join("src/components/rewritten", id, `${name}.tsx`),
+  module: path.join("@/components/rewritten", id, name),
+});
+
 export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
   opts
 ) => {
@@ -64,145 +63,71 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
     throw new Error(`Component ${opts.component.id} not found in registry`);
   }
 
-  // const pp = unified()
-  //   .use(rehypeStripSquashAttribute)
-  //   .use(rehypeUnwrapRefs)
-
-  //   .use(rehypeRecma)
-  //   .use(recmaJsx)
-  //   .use(recmaRemoveRedundantFragment)
-  //   .use(recmaStringify);
-  // console.log(
-  //   "XXXXXXXX",
-  //   await pp
-  //     .run({ type: "root", children: opts.instances[0]!.children })
-  //     .then((t) => pp.stringify(t))
-  //   // .use(() => (tree) => toHast(tree, { space: "html" }))
-  // );
-  const processors = {
-    html: unified()
-      .use(rehypeStripSquashAttribute)
-      .use(rehypeUnwrapRefs)
-
-      // .use(rehypeRecma)
-      // .use(recmaJsx)
-      // .use(() => (tree) => toHast(tree, { space: "html" }))
-
-      .use(rehypeStringify),
-    jsx: unified()
-      .use(rehypeStripSquashAttribute)
-      .use(rehypeRecma)
-      .use(recmaJsx)
-      .use(recmaRemoveRedundantFragment)
-      .use(recmaWrapAsComponent, "Sample")
-      .use(recmaReplaceRefs, { componentRegistry: registry })
-      .use(recmaFixProperties)
-      .use(recmaStringify),
-  };
-
-  const [code, instances] = await Promise.all([
-    prettier.js(`(${opts.component.code})`),
-    Promise.all(
-      opts.instances.map(async (i) => {
-        const [jsx, html] = await Promise.all([
-          processors.jsx
-            .run({ type: "root", children: [i.ref] })
-            .then((estree) => processors.jsx.stringify(estree))
-            .then(prettier.ts),
-          processors.html
-            .run({ type: "root", children: i.children } as Root)
-            .then((t: any) => processors.html.stringify(t as Root))
-            .then(prettier.html),
-        ]);
-        return { jsx, html };
-      })
-    ),
-  ]);
-
-  const uniqueInstances = instances.filter(
-    (instance, index, self) =>
-      index ===
-      self.findIndex((t) => t.jsx === instance.jsx && t.html === instance.html)
+  const examples = await buildInstanceExamples(opts.instances, registry);
+  const content = await Prompts.initialUserMessage(
+    opts.component.code,
+    examples
   );
+  const messages: ModelMessage[] = [
+    { role: "system", content: Prompts.instructions },
+    { role: "user", content },
+  ];
 
-  const numExamples = Math.min(uniqueInstances.length, 5);
-  const content = [
-    "# Code",
-    "```javascript",
-    code,
-    "```",
-    "",
-    "# Examples",
-    `Showing ${numExamples} of ${uniqueInstances.length} examples`,
-    ...uniqueInstances
-      .slice(0, numExamples)
-      .flatMap((instance, index) => [
-        `## Example ${index + 1}`,
-        "Input JSX",
-        `\`\`\`javascript\n${instance.jsx}\`\`\``,
-        "",
-        "Output HTML",
-        `\`\`\`html\n${instance.html}\`\`\``,
-        "",
-      ]),
-  ].join("\n");
-  console.log("---");
-  console.log(content);
-  console.log("--- WOW");
-  const { text } = await generateText({
-    model,
-    messages: [
-      { role: "system", content: Prompts.instructions },
-      { role: "user", content },
-    ],
-  });
+  let rewritten: { name: string; code: string } | undefined = undefined;
 
-  console.log("---", "LLM OUTPUT");
-  console.log(text);
-  console.log("---");
-
-  const rewritten = parseGeneratedComponent(text);
-  registryItem.code = rewritten.code;
-  const rendered = await render({
-    component: { name: rewritten.name, code: rewritten.code },
-    deps: opts.component.deps,
-    instances,
-    componentRegistry: registry,
-  });
-
-  const diffs = rendered.map((r, i) => diffRenderedHtml(instances[i]!.html, r));
-  if (diffs.some((d) => !!d)) {
-    diffs.forEach((d, i) => {
-      if (d === null) {
-        console.log("### DIFF", i, "SUCCESS");
-        return;
-      }
-      const expected = instances[i]!.html;
-      const actual = rendered[i];
-      console.log("### DIFF", i, "ERROR");
-      console.log(actual);
-      console.log("---");
-      console.log(expected);
-      console.log("---");
-      console.log(d);
-      console.log("---");
+  let attempt = 0;
+  while (true) {
+    const { text, response } = await generateText({ model, messages });
+    rewritten = parseGeneratedComponent(text);
+    registryItem.code = rewritten.code;
+    const rendered = await render({
+      component: { name: rewritten.name, code: rewritten.code },
+      deps: opts.component.deps,
+      instances: examples,
+      componentRegistry: registry,
     });
-    throw new Error("Failed to write correct component");
+    messages.push(...response.messages);
+
+    const diffs = rendered.map((r, i) =>
+      diffRenderedHtml(examples[i]!.html, r)
+    );
+    if (diffs.every((d) => d === null)) break;
+
+    attempt++;
+    if (attempt === 3) {
+      throw new Error("Failed to write correct component");
+    }
+
+    messages.push({
+      role: "user",
+      content: await Prompts.diffUserMessage(diffs, examples),
+    });
   }
 
-  return {
-    id: opts.component.id,
-    name: { value: rewritten.name, isFallback: false },
-    code: rewritten.code,
-    path: path.join(
-      "src/components/rewritten",
-      opts.component.id,
-      `${rewritten.name}.tsx`
-    ),
-    module: path.join(
-      "@/components/rewritten",
-      opts.component.id,
-      rewritten.name
-    ),
-  };
+  return buildComponentRegistryItem(
+    opts.component.id,
+    rewritten.name,
+    rewritten.code
+  );
+
+  // throw new Error("dauym");
+
+  // if (diffs.some((d) => !!d)) {
+  //   diffs.forEach((d, i) => {
+  //     if (d === null) {
+  //       console.log("### DIFF", i, "SUCCESS");
+  //       return;
+  //     }
+  //     const expected = examples[i]!.html;
+  //     const actual = rendered[i];
+  //     console.log("### DIFF", i, "ERROR");
+  //     console.log(actual);
+  //     console.log("---");
+  //     console.log(expected);
+  //     console.log("---");
+  //     console.log(d);
+  //     console.log("---");
+  //   });
+  //   throw new Error("Failed to write correct component");
+  // }
 };

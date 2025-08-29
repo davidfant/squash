@@ -5,13 +5,18 @@ import type {
   ComponentRegistryItem,
 } from "../componentRegistry";
 
+export interface RewriteComponentInstance {
+  ref: Element;
+  children: Element[];
+}
+
 export interface RewriteComponentOptions {
   component: {
     id: Metadata.ReactFiber.ComponentId;
     code: string;
     deps: Set<Metadata.ReactFiber.ComponentId>;
   };
-  instances: Array<{ ref: Element; children: Element[] }>;
+  instances: RewriteComponentInstance[];
   componentRegistry: ComponentRegistry;
 }
 

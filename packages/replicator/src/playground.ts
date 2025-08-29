@@ -3,6 +3,7 @@ import { ChildProcess, spawn } from "node:child_process";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { langsmith } from "./lib/ai";
 import { FileSystemSink } from "./lib/sinks/fs";
 import { logFileTree } from "./logFileTree";
 import { replicate } from "./replicate";
@@ -64,7 +65,11 @@ await Promise.all(
 
 // const sink = new TarSink();
 const sink = new FileSystemSink(PATH_TO_TEMPLATE);
-await replicate(snapshot, sink);
+try {
+  await replicate(snapshot, sink);
+} finally {
+  await langsmith.awaitPendingTraceBatches();
+}
 
 // const out = await sink.finalize();
 // await fs.writeFile("replicated.tar.gz", out);

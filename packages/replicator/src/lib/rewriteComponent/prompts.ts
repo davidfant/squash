@@ -19,12 +19,14 @@ You are NOT allowed to import any other libraries or dependencies. If the origin
 Input format:
 ---
 # Code
+\`\`\`javascript
 [minified JavaScript code]
+\`\`\`
 
 # Examples
 ## Example 1
 Input JSX
-\`\`\`jsx
+\`\`\`javascript
 [input JSX]
 \`\`\`
 
@@ -38,14 +40,19 @@ Output HTML
 ---
 
 Output format:
+[reasoning about the component you will write]
+
 # ComponentName
-\`\`\`tsx
+\`\`\`typescript
 [component code]
 \`\`\`
 
 Example output:
 ---
+[reasoning about the component you will write]
+
 # MyComponent
+\`\`\`typescript
 interface Props {
   // ...
 }
@@ -53,5 +60,6 @@ interface Props {
 export function MyComponent({}: Props) {
   return <div />;
 }
+  \`\`\`
 ---
 `.trim();

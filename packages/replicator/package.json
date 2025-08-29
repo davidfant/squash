@@ -58,6 +58,7 @@
     "hast-util-to-html": "^9.0.5",
     "hastscript": "^9.0.1",
     "jest-diff": "^30.0.5",
+    "langsmith": "^0.3.66",
     "lodash.camelcase": "^4.3.0",
     "lodash.kebabcase": "^4.1.1",
     "lodash.upperfirst": "^4.3.1",

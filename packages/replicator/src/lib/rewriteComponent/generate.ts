@@ -1,7 +1,8 @@
+import { generateText } from "@/lib/ai";
 import * as prettier from "@/lib/prettier";
 import type { Metadata, RefImport } from "@/types";
 import { anthropic } from "@ai-sdk/anthropic";
-import { generateText, wrapLanguageModel } from "ai";
+import { wrapLanguageModel } from "ai";
 import type { Element, Root } from "hast";
 import recmaJsx from "recma-jsx";
 import recmaStringify from "recma-stringify";
@@ -128,7 +129,9 @@ export async function generateComponent(opts: {
   const numExamples = Math.min(uniqueInstances.length, 5);
   const content = [
     "# Code",
+    "```javascript",
     code,
+    "```",
     "",
     "# Examples",
     `Showing ${numExamples} of ${uniqueInstances.length} examples`,
@@ -137,7 +140,7 @@ export async function generateComponent(opts: {
       .flatMap((instance, index) => [
         `## Example ${index + 1}`,
         "Input JSX",
-        `\`\`\`jsx\n${instance.jsx}\`\`\``,
+        `\`\`\`javascript\n${instance.jsx}\`\`\``,
         "",
         "Output HTML",
         `\`\`\`html\n${instance.html}\`\`\``,

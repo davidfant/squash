@@ -1,3 +1,4 @@
+import { rewriteComponentUseFirstStrategy } from "@/lib/rewriteComponent/useFirst";
 import type { Asset, FileSink } from "@/lib/sinks/base";
 import { load } from "cheerio";
 import { replicate } from "..";
@@ -19,7 +20,8 @@ const run = async (html: string) => {
   const sink = new TestSink();
   await replicate(
     { page: { url: "http://localhost", title: "Test", html }, metadata: null },
-    sink
+    sink,
+    rewriteComponentUseFirstStrategy
   );
   return sink.finalize();
 };

@@ -1,3 +1,4 @@
+import { rewriteComponentUseFirstStrategy } from "@/lib/rewriteComponent/useFirst";
 import { reactFiber } from "@/metadata/reactFiber";
 import { forwardRef, memo, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -25,7 +26,7 @@ describe("replicate with react fiber", () => {
     const metadata = await reactFiber();
     const html = document.documentElement.innerHTML;
     const page = { url: "http://localhost", title: "Test", html };
-    await replicate({ page, metadata }, sink);
+    await replicate({ page, metadata }, sink, rewriteComponentUseFirstStrategy);
     return sink.finalize();
   };
 

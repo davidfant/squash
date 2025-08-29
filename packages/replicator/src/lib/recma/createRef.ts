@@ -1,14 +1,19 @@
-import type { Metadata, RefImport } from "@/types";
+import type { Metadata } from "@/types";
 import type { Expression, NodeMap } from "estree";
 import type { ElementContent } from "hast";
 import { h } from "hastscript";
 import recmaJsx from "recma-jsx";
 import recmaStringify from "recma-stringify";
 import { unified } from "unified";
-import { addImport } from "./replaceRefs";
+import type { ComponentRegistryItem } from "../componentRegistry";
+
+type CodeId = Metadata.ReactFiber.CodeId;
+type ComponentId = Metadata.ReactFiber.ComponentId;
 
 export interface CreateRefContext {
-  codeIdToComponentImport: Map<string, RefImport>;
+  deps: Set<ComponentId>;
+  codeIdToComponentId: Map<CodeId, ComponentId>;
+  componentRegistry: Map<ComponentId, ComponentRegistryItem>;
 }
 
 function wrapInJSX(exp: Expression): NodeMap["JSXElement"]["children"][number] {
@@ -19,15 +24,11 @@ function wrapInJSX(exp: Expression): NodeMap["JSXElement"]["children"][number] {
   }
 }
 
-function toExpression(
-  value: any,
-  imports: RefImport[],
-  ctx: CreateRefContext
-): Expression {
+function toExpression(value: any, ctx: CreateRefContext): Expression {
   if (Array.isArray(value)) {
     const replaced: Expression[] = [];
     for (const v of value) {
-      const r = toExpression(v, imports, ctx);
+      const r = toExpression(v, ctx);
       replaced.push(r);
     }
     return { type: "ArrayExpression", elements: replaced };
@@ -35,36 +36,32 @@ function toExpression(
     switch (value.$$typeof) {
       case "react.code": {
         const el = value as Metadata.ReactFiber.Element.Code;
+        const componentId = ctx.codeIdToComponentId.get(el.codeId!);
+        const component = ctx.componentRegistry.get(componentId!);
         return createComponentElement(
-          ctx.codeIdToComponentImport.get(el.codeId!) ?? {
-            module: undefined,
-            name: "unknown",
-          },
+          component
+            ? { id: component.id, name: component.name.value }
+            : { id: undefined, name: "unknown" },
           el.props,
-          imports,
           ctx
         );
       }
       case "react.tag": {
         const el = value as Metadata.ReactFiber.Element.Tag;
         return createComponentElement(
-          { module: undefined, name: el.tagName },
+          { id: undefined, name: el.tagName },
           value.props,
-          imports,
           ctx
         );
       }
       case "react.fragment": {
         const f = value as Metadata.ReactFiber.Element.Fragment;
         const children = f.children
-          .map((c) => toExpression(c, imports, ctx))
+          .map((c) => toExpression(c, ctx))
           .map(wrapInJSX);
         return {
           type: "JSXFragment",
-          openingFragment: {
-            type: "JSXOpeningFragment",
-            // selfClosing: false,
-          },
+          openingFragment: { type: "JSXOpeningFragment" },
           children,
           closingFragment: { type: "JSXClosingFragment" },
         };
@@ -78,7 +75,7 @@ function toExpression(
         // Note(fant): prettier will later unwrap the key if it's possible
         // key: { type: "Identifier", name: k },
         key: { type: "Literal", value: k },
-        value: toExpression(v, imports, ctx),
+        value: toExpression(v, ctx),
         kind: "init",
         computed: false,
         shorthand: false,
@@ -92,12 +89,10 @@ function toExpression(
 
 const buildAttributes = (
   props: Record<string, unknown>,
-  imports: RefImport[],
   ctx: CreateRefContext
 ): NodeMap["JSXAttribute"][] =>
   Object.entries(props).map(([k, v]): NodeMap["JSXAttribute"] => {
     if (v === true) {
-      // boolean true → <tag attr />
       return {
         type: "JSXAttribute",
         name: { type: "JSXIdentifier", name: k },
@@ -111,8 +106,7 @@ const buildAttributes = (
         value: { type: "Literal", value: v },
       };
     }
-    // everything else becomes an expression
-    const replaced = toExpression(v, imports, ctx);
+    const replaced = toExpression(v, ctx);
     return {
       type: "JSXAttribute",
       name: { type: "JSXIdentifier", name: k },
@@ -121,28 +115,25 @@ const buildAttributes = (
   });
 
 function createComponentElement(
-  component: { module?: string; name: string },
+  comp: { id: ComponentId | undefined; name: string },
   props: Record<string, unknown>,
-  imports: RefImport[],
   ctx: CreateRefContext
 ): NodeMap["JSXElement"] {
-  if (component.module) {
-    addImport({ module: component.module, name: component.name }, imports);
-  }
+  if (comp.id) ctx.deps.add(comp.id);
 
   const { children, ...rest } = props;
   const childNodes: NodeMap["JSXElement"]["children"] = [children]
     .flat(Infinity)
     .filter((c) => !!c)
-    .map((child) => toExpression(child, imports, ctx))
+    .map((child) => toExpression(child, ctx))
     .map(wrapInJSX);
 
   return {
     type: "JSXElement",
     openingElement: {
       type: "JSXOpeningElement",
-      name: { type: "JSXIdentifier", name: component.name },
-      attributes: buildAttributes(rest, imports, ctx),
+      name: { type: "JSXIdentifier", name: comp.name },
+      attributes: buildAttributes(rest, ctx),
       selfClosing: childNodes.length === 0,
     },
     closingElement:
@@ -150,7 +141,7 @@ function createComponentElement(
         ? null
         : {
             type: "JSXClosingElement",
-            name: { type: "JSXIdentifier", name: component.name },
+            name: { type: "JSXIdentifier", name: comp.name },
           },
     children: childNodes,
   };
@@ -163,19 +154,18 @@ export function createRef({
   children,
   ctx,
 }: {
-  nodeId: string;
-  component: RefImport;
+  nodeId?: string;
+  component: { id: ComponentId; name: string };
   props: Record<string, unknown>;
   children: ElementContent[];
   ctx: CreateRefContext;
 }) {
-  const imports: RefImport[] = [];
-  const element = createComponentElement(component, props, imports, ctx);
+  const element = createComponentElement(component, props, ctx);
   return h(
     "ref",
     {
       dataSquashNodeId: nodeId,
-      imports: JSON.stringify(imports),
+      deps: JSON.stringify([...ctx.deps]),
       jsx: unified()
         .use(recmaJsx)
         .use(recmaStringify)

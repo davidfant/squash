@@ -1,22 +1,22 @@
 import { generateText } from "@/lib/ai";
 import * as prettier from "@/lib/prettier";
-import type { Metadata, RefImport } from "@/types";
 import { anthropic } from "@ai-sdk/anthropic";
 import { wrapLanguageModel } from "ai";
-import type { Element, Root } from "hast";
+import type { Root } from "hast";
+import path from "node:path";
 import recmaJsx from "recma-jsx";
 import recmaStringify from "recma-stringify";
 import rehypeRecma from "rehype-recma";
 import rehypeStringify from "rehype-stringify";
 import { unified } from "unified";
-import { filesystemCacheMiddleware } from "../filesystemCacheMiddleware";
-import { type CreateRefContext } from "../recma/createRef";
-import { recmaFixProperties } from "../recma/fixProperties";
-import { recmaRemoveRedundantFragment } from "../recma/removeRedundantFragment";
-import { recmaReplaceRefs } from "../recma/replaceRefs";
-import { rehypeStripSquashAttribute } from "../rehype/stripSquashAttribute";
-import { rehypeUnwrapRefs } from "../rehype/unwrapRefs";
-import { recmaWrapAsComponent } from "../rehype/wrapAsComponent";
+import { filesystemCacheMiddleware } from "../../filesystemCacheMiddleware";
+import { recmaFixProperties } from "../../recma/fixProperties";
+import { recmaRemoveRedundantFragment } from "../../recma/removeRedundantFragment";
+import { recmaReplaceRefs } from "../../recma/replaceRefs";
+import { rehypeStripSquashAttribute } from "../../rehype/stripSquashAttribute";
+import { rehypeUnwrapRefs } from "../../rehype/unwrapRefs";
+import { recmaWrapAsComponent } from "../../rehype/wrapAsComponent";
+import type { RewriteComponentStrategy } from "../types";
 import { diffRenderedHtml } from "./diffRenderedHtml";
 import * as Prompts from "./prompts";
 import { render } from "./render";
@@ -55,16 +55,15 @@ function parseGeneratedComponent(md: string): {
   return { name, code };
 }
 
-export async function generateComponent(opts: {
-  code: string;
-  component: RefImport;
-  createRefContext: CreateRefContext;
-  instances: Array<{
-    nodeId: Metadata.ReactFiber.NodeId;
-    ref: Element;
-    children: Element[];
-  }>;
-}): Promise<{ name: string; code: string }> {
+export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
+  opts
+) => {
+  const registry = opts.componentRegistry;
+  const registryItem = registry.get(opts.component.id);
+  if (!registryItem) {
+    throw new Error(`Component ${opts.component.id} not found in registry`);
+  }
+
   // const pp = unified()
   //   .use(rehypeStripSquashAttribute)
   //   .use(rehypeUnwrapRefs)
@@ -96,13 +95,13 @@ export async function generateComponent(opts: {
       .use(recmaJsx)
       .use(recmaRemoveRedundantFragment)
       .use(recmaWrapAsComponent, "Sample")
-      .use(recmaReplaceRefs)
+      .use(recmaReplaceRefs, { componentRegistry: registry })
       .use(recmaFixProperties)
       .use(recmaStringify),
   };
 
   const [code, instances] = await Promise.all([
-    prettier.js(`(${opts.code})`),
+    prettier.js(`(${opts.component.code})`),
     Promise.all(
       opts.instances.map(async (i) => {
         const [jsx, html] = await Promise.all([
@@ -163,11 +162,7 @@ export async function generateComponent(opts: {
   console.log("---");
 
   const rewritten = parseGeneratedComponent(text);
-  const rendered = await render({
-    original: opts.component,
-    rewritten,
-    instances,
-  });
+  const rendered = await render({ rewritten, instances });
 
   const diffs = rendered.map((r, i) => diffRenderedHtml(instances[i]!.html, r));
   if (diffs.some((d) => !!d)) {
@@ -186,5 +181,21 @@ export async function generateComponent(opts: {
     throw new Error("Failed to write correct component");
   }
 
-  return rewritten;
-}
+  return {
+    code: rewritten.code,
+    registry: {
+      id: opts.component.id,
+      name: { value: rewritten.name, isFallback: false },
+      path: path.join(
+        "src/components/rewritten",
+        opts.component.id,
+        `${rewritten.name}.tsx`
+      ),
+      module: path.join(
+        "@/components/rewritten",
+        opts.component.id,
+        rewritten.name
+      ),
+    },
+  };
+};

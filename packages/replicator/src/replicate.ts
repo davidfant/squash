@@ -1,7 +1,6 @@
 import * as prettier from "@/lib/prettier";
 import { load } from "cheerio";
 import { traceable } from "langsmith/traceable";
-import path from "path";
 import recmaJsx from "recma-jsx";
 import recmaStringify from "recma-stringify";
 import rehypeParse from "rehype-parse";
@@ -12,18 +11,21 @@ import { SKIP, visit } from "unist-util-visit";
 import { langsmith } from "./lib/ai";
 import { downloadRemoteUrl } from "./lib/assets/downloadRemoteAsset";
 import { identifyUrlsToDownload } from "./lib/assets/identifyRemoveAssetsToDownload";
+import {
+  buildInitialComponentRegistry,
+  type ComponentRegistry,
+} from "./lib/componentRegistry";
 import { fuseMemoForwardRef } from "./lib/fuseMemoForwardRef";
-import { buildAncestorsMap, metadataProcessor } from "./lib/metadataProcessor";
 import { createRef } from "./lib/recma/createRef";
 import { recmaFixProperties } from "./lib/recma/fixProperties";
 import { recmaRemoveRedundantFragment } from "./lib/recma/removeRedundantFragment";
 import { recmaReplaceRefs } from "./lib/recma/replaceRefs";
 import { rehypeStripSquashAttribute } from "./lib/rehype/stripSquashAttribute";
 import { recmaWrapAsComponent } from "./lib/rehype/wrapAsComponent";
-import { generateComponent } from "./lib/rewriteComponent/generate";
+import type { RewriteComponentStrategy } from "./lib/rewriteComponent/types";
 import type { FileSink } from "./lib/sinks/base";
-import { uniquePathsForComponents } from "./lib/uniquePathsForComponents";
-import { Metadata, type RefImport, type Snapshot } from "./types";
+import { buildAncestorsMap, visitComponent } from "./lib/visitComponent";
+import { Metadata, type Snapshot } from "./types";
 
 type Root = import("hast").Root;
 type Element = import("hast").Element;
@@ -33,32 +35,37 @@ type ComponentId = Metadata.ReactFiber.ComponentId;
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
 
-async function writeFile(
-  componentName: string,
-  dir: string,
-  root: Root,
-  sink: FileSink
-) {
+async function writeFile(opts: {
+  componentName: string;
+  path: string;
+  root: Root;
+  sink: FileSink;
+  componentRegistry: ComponentRegistry;
+}) {
   const processor = unified()
     .use(rehypeStripSquashAttribute)
     .use(rehypeRecma)
     .use(recmaJsx)
     .use(recmaRemoveRedundantFragment)
-    .use(recmaWrapAsComponent, componentName)
-    .use(recmaReplaceRefs)
+    .use(recmaWrapAsComponent, opts.componentName)
+    .use(recmaReplaceRefs, { componentRegistry: opts.componentRegistry })
     .use(recmaFixProperties)
     .use(recmaStringify);
 
-  const estree = await processor.run(clone(root));
-  await sink.writeText(
-    path.join(dir, `${componentName}.tsx`),
+  const estree = await processor.run(clone(opts.root));
+  await opts.sink.writeText(
+    opts.path,
     await prettier.ts(processor.stringify(estree))
   );
 }
 
-export const replicate = (snapshot: Snapshot, sink: FileSink<any>) =>
+export const replicate = (
+  snapshot: Snapshot,
+  sink: FileSink<any>,
+  rewriteComponentStrategy: RewriteComponentStrategy
+) =>
   traceable(
-    async (url: string) => {
+    async (_url: string) => {
       const $ = load(snapshot.page.html);
       const html = $("html") ?? $("html");
       const head = $("head") ?? $("head");
@@ -94,15 +101,10 @@ export const replicate = (snapshot: Snapshot, sink: FileSink<any>) =>
         ...c,
       }));
 
-      const compPathById = uniquePathsForComponents(m.components);
-      const codeIdToComponentImport = new Map(
+      const componentRegistry = buildInitialComponentRegistry(m.components);
+      const codeIdToComponentId = new Map(
         comps
-          .map((c) => {
-            if (!("codeId" in c)) return;
-            const p = compPathById.get(c.id)!;
-            const m = path.join("@/components", p.dir, p.name);
-            return [c.codeId, { module: m, name: p.name }] as const;
-          })
+          .map((c) => ("codeId" in c ? ([c.codeId, c.id] as const) : undefined))
           .filter((v) => !!v)
       );
 
@@ -110,7 +112,7 @@ export const replicate = (snapshot: Snapshot, sink: FileSink<any>) =>
       await unified()
         .use(rehypeParse, { fragment: true })
         .use(() => (tree: Root) => {
-          return metadataProcessor(m, async (group) => {
+          return visitComponent(m, async (group) => {
             if ("codeId" in group.component) {
               // const code = m.code[group.component.codeId]!;
 
@@ -143,126 +145,44 @@ export const replicate = (snapshot: Snapshot, sink: FileSink<any>) =>
                 });
               }
 
-              if (group.id === "C53") {
-                console.log(group, elementsByNodeId);
-              }
+              const resolved = componentRegistry.get(group.id)!;
 
-              const compPath = compPathById.get(group.id)!;
-
-              // TODO: what do we do about this? The component never has a node, however it
-              // might still be called in some react element props somewhere.
-              if (![...elementsByNodeId.values()].flat().length) {
+              // The component never has a node, however it might still be called in some react element props somewhere
+              if (!elementsByNodeId.size) {
                 await sink.writeText(
-                  path.join(
-                    "src",
-                    "components",
-                    compPath.dir,
-                    `${compPath.name}.tsx`
-                  ),
-                  `export const ${compPath.name} = () => null;`
+                  resolved.path,
+                  `export const ${resolved.name} = () => null;`
                 );
                 return;
               }
 
-              // typography: C23, text: C24, ant icon: C40
-              // if (group.id === "C24") {
-              // typography
-              // if (group.id === "C24") {
-              // icon
-              if (
-                [
-                  // "C52",
-                  // "C41",
-                  // "C30",
-                  // "C81",
-                  // "C19",
-                  // "C6",
-                  // "C31",
-                  // "C40",
-                  // "C67",
-                  // "C42",
-                  // "C80",
-                  // "C57",
-                  // "C64",
-                  // "C65",
-                  // "C39",
-                  // "C66",
-                  // "C68",
-                  // "C69",
-                  // "C70",
-                  // "C71",
-                  // "C18",
-                  // "C29",
-                  // "C74",
-                  // "C79",
-                  "C80",
-                  "C81",
-                  //
-                  // "C17", // fails
-                ].includes(group.id)
-              ) {
-                if (group.id === "C80") {
-                }
-
-                const component: RefImport = {
-                  name: compPath.name,
-                  module: path.join(
-                    "@/components/rewritten",
-                    group.id,
-                    compPath.dir,
-                    compPath.name
-                  ),
-                };
-                const rewritten = await generateComponent({
+              const rewritten = await rewriteComponentStrategy({
+                component: {
+                  id: resolved.id,
                   code: m.code[group.component.codeId]!,
-                  component,
-                  createRefContext: { codeIdToComponentImport },
-                  instances: Object.entries(group.nodes).map(([nid, node]) => {
-                    const nodeId = nid as NodeId;
-                    const elements = (elementsByNodeId.get(nodeId) ?? []).map(
-                      (e) => clone(e.element)
-                    );
-                    const ref = createRef({
-                      component: {
-                        name: "ComponentToRewrite",
-                        module: "./ComponentToRewrite",
-                      },
-                      props: node.props as Record<string, unknown>,
-                      nodeId,
-                      ctx: { codeIdToComponentImport },
-                      children: [],
-                    });
-                    return { nodeId, ref, children: elements };
-                  }),
-                });
+                },
+                instances: Object.entries(group.nodes).map(([nid, node]) => {
+                  const nodeId = nid as NodeId;
+                  const elements = (elementsByNodeId.get(nodeId) ?? []).map(
+                    (e) => clone(e.element)
+                  );
+                  const ref = createRef({
+                    component: { id: "C1", name: "ComponentToRewrite" },
+                    props: node.props as Record<string, unknown>,
+                    ctx: {
+                      deps: new Set(),
+                      codeIdToComponentId,
+                      componentRegistry,
+                    },
+                    children: [],
+                  });
+                  return { ref, children: elements };
+                }),
+                componentRegistry,
+              });
 
-                compPath.dir = path.join("rewritten", group.id, compPath.dir);
-                compPath.name = rewritten.name;
-
-                // TODO: create some kind of old => new name mapping so that we can update this later...
-                await sink.writeText(
-                  path.join(
-                    "src/components",
-                    compPath.dir,
-                    `${rewritten.name}.tsx`
-                  ),
-                  rewritten.code
-                );
-              } else {
-                await writeFile(
-                  compPath.name,
-                  path.join("src", "components", compPath.dir),
-                  {
-                    type: "root",
-                    children:
-                      elementsByNodeId
-                        .values()
-                        .next()
-                        .value?.map((e) => e.element) ?? [],
-                  },
-                  sink
-                );
-              }
+              Object.assign(resolved, rewritten.registry);
+              await sink.writeText(resolved.path, rewritten.code);
 
               const elementsOrderedByDepth = [...elementsByNodeId.entries()]
                 .map(([nodeId, elements]) => ({ nodeId, elements }))
@@ -277,15 +197,6 @@ export const replicate = (snapshot: Snapshot, sink: FileSink<any>) =>
               for (const { nodeId, elements } of elementsOrderedByDepth) {
                 if (!elements.length) continue;
 
-                const compName = compPath.name;
-                // const compName = `${compPath.name}_${nodeId}`;
-                // await writeFile(
-                //   compName,
-                //   path.join("src", "components", compPath.dir),
-                //   { type: "root", children: elements.map((e) => e.element) ?? [] },
-                //   sink
-                // );
-
                 const { index, parent } = elements[0]!;
                 const props = nodes.find((n) => n.id === nodeId)!
                   .props as Record<string, unknown>;
@@ -295,12 +206,16 @@ export const replicate = (snapshot: Snapshot, sink: FileSink<any>) =>
                   parent.children[index]!,
                   createRef({
                     component: {
-                      module: path.join("@/components", compPath.dir, compName),
-                      name: compName,
+                      id: resolved.id,
+                      name: resolved.name.value,
                     },
                     props,
                     nodeId,
-                    ctx: { codeIdToComponentImport },
+                    ctx: {
+                      deps: new Set(),
+                      codeIdToComponentId,
+                      componentRegistry,
+                    },
                     // Note(fant): for now we keep the children within the ref, so that in the processor loop we still can find elements of a certain node.
                     children: clone(elements.map((e) => e.element)),
                   })
@@ -316,7 +231,13 @@ export const replicate = (snapshot: Snapshot, sink: FileSink<any>) =>
             } else if (
               group.component.tag === Metadata.ReactFiber.Component.Tag.HostRoot
             ) {
-              await writeFile("App", "src", clone(tree), sink);
+              await writeFile({
+                componentName: "App",
+                path: "src/App.tsx",
+                root: clone(tree),
+                sink,
+                componentRegistry,
+              });
             }
           });
         })

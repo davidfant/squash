@@ -165,7 +165,7 @@ function buildComponentNodesMap(
   return groups;
 }
 
-export async function metadataProcessor(
+export async function visitComponent(
   metadata: Metadata.ReactFiber,
   process: (group: {
     id: ComponentId;
@@ -237,11 +237,11 @@ export async function metadataProcessor(
 
   let g: { componentId: ComponentId; nodes: NodeId[] } | undefined;
   while ((g = next())) {
-    console.log(
-      "✅✅✅✅✅✅✅✅✅ process...",
-      g.componentId,
-      componentDepsExclProps.get(g.componentId)?.size
-    );
+    // console.log(
+    //   "✅✅✅✅✅✅✅✅✅ process...",
+    //   g.componentId,
+    //   componentDepsExclProps.get(g.componentId)?.size
+    // );
     await process({
       id: g.componentId,
       component: metadata.components[g.componentId]!,

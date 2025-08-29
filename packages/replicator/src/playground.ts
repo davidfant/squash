@@ -4,6 +4,8 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { langsmith } from "./lib/ai";
+import { rewriteComponentWithLLMStrategy } from "./lib/rewriteComponent/llm";
+import { rewriteComponentUseFirstStrategy } from "./lib/rewriteComponent/useFirst";
 import { FileSystemSink } from "./lib/sinks/fs";
 import { logFileTree } from "./logFileTree";
 import { replicate } from "./replicate";
@@ -66,7 +68,13 @@ await Promise.all(
 // const sink = new TarSink();
 const sink = new FileSystemSink(PATH_TO_TEMPLATE);
 try {
-  await replicate(snapshot, sink);
+  await replicate(snapshot, sink, (opts) => {
+    if (["C80", "C81"].includes(opts.component.id)) {
+      return rewriteComponentWithLLMStrategy(opts);
+    } else {
+      return rewriteComponentUseFirstStrategy(opts);
+    }
+  });
 } finally {
   await langsmith.awaitPendingTraceBatches();
 }

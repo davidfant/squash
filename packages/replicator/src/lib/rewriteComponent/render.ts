@@ -29,16 +29,86 @@ function makeContext(
   const nodeRequire = createRequire(import.meta.url);
 
   const compModule: any = { exports: {} };
+  //   vm.runInNewContext(
+  //     `
+  // var __defProp = Object.defineProperty;
+  // var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+  // var __getOwnPropNames = Object.getOwnPropertyNames;
+  // var __hasOwnProp = Object.prototype.hasOwnProperty;
+  // var __export = (target, all) => {
+  //   for (var name in all)
+  //     __defProp(target, name, { get: all[name], enumerable: true });
+  // };
+  // var __copyProps = (to, from, except, desc) => {
+  //   if (from && typeof from === "object" || typeof from === "function") {
+  //     for (let key of __getOwnPropNames(from))
+  //       if (!__hasOwnProp.call(to, key) && key !== except)
+  //         __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  //   }
+  //   return to;
+  // };
+  // var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+  // var stdin_exports = {};
+  // __export(stdin_exports, {
+  //   RouteAnnouncer: () => RouteAnnouncer
+  // });
+  // module.exports = __toCommonJS(stdin_exports);
+  // var import_jsx_runtime = require("react/jsx-runtime");
+  // var import_react = require("react");
+  // function RouteAnnouncer({}) {
+  //   const [announcement, setAnnouncement] = (0, import_react.useState)("");
+  //   const hasInitialized = (0, import_react.useRef)(false);
+  //   const asPath = typeof window !== "undefined" ? window.location.pathname : "/";
+  //   (0, import_react.useEffect)(() => {
+  //     if (hasInitialized.current) {
+  //       if (document.title) {
+  //         setAnnouncement(document.title);
+  //       } else {
+  //         const h1 = document.querySelector("h1");
+  //         const text = h1?.innerText || h1?.textContent;
+  //         setAnnouncement(text || asPath);
+  //       }
+  //     } else {
+  //       hasInitialized.current = true;
+  //     }
+  //   }, [asPath]);
+  //   return /* @__PURE__ */ (0, import_jsx_runtime.jsx)(
+  //     "p",
+  //     {
+  //       "aria-live": "assertive",
+  //       id: "__next-route-announcer__",
+  //       role: "alert",
+  //       style: {
+  //         border: 0,
+  //         clip: "rect(0 0 0 0)",
+  //         height: "1px",
+  //         margin: "-1px",
+  //         overflow: "hidden",
+  //         padding: 0,
+  //         position: "absolute",
+  //         width: "1px",
+  //         whiteSpace: "nowrap",
+  //         wordWrap: "normal"
+  //       },
+  //       children: announcement
+  //     }
+  //   );
+  // }
+  //     `,
+  //     { module: compModule, require: nodeRequire }
+  //   );
+
   vm.runInNewContext(compiledComponent, {
     module: compModule,
     require: nodeRequire,
   });
 
   const moduleMap: Record<string, any> = {
-    [`@/components/${opts.original.name}`]: {
-      [opts.original.name]: compModule.exports[opts.rewritten.name],
+    "./ComponentToRewrite": {
+      ComponentToRewrite: compModule.exports[opts.rewritten.name],
     },
-    [`@/components/${opts.rewritten.name}`]: compModule.exports,
+    // [`@/components/${opts.rewritten.name}`]: compModule.exports,
+    // "@/components/rewritten/C81/RouteAnnouncer": compModule.exports,
   };
 
   return vm.createContext({
@@ -67,6 +137,15 @@ async function renderSample(
 export async function render(opts: RenderOptions): Promise<string[]> {
   const compiled = await compileComponent(opts.rewritten.code);
   const ctx = makeContext(compiled, opts);
+  console.log(
+    "RENDER",
+    "❤️",
+    opts.rewritten.code,
+    "❤️",
+    opts.instances[0]!.jsx,
+    "❤️",
+    await renderSample(ctx, opts.instances[0]!.jsx, 0)
+  );
   return Promise.all(
     opts.instances.map((inst, i) => renderSample(ctx, inst.jsx, i))
   );

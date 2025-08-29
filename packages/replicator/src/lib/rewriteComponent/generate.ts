@@ -14,10 +14,14 @@ import { recmaFixProperties } from "../recma/fixProperties";
 import { recmaRemoveRedundantFragment } from "../recma/removeRedundantFragment";
 import { recmaReplaceRefs } from "../recma/replaceRefs";
 import { rehypeStripSquashAttribute } from "../rehype/stripSquashAttribute";
+import { rehypeUnwrapRefs } from "../rehype/unwrapRefs";
 import { recmaWrapAsComponent } from "../rehype/wrapAsComponent";
 import { diffRenderedHtml } from "./diffRenderedHtml";
 import * as Prompts from "./prompts";
 import { render } from "./render";
+
+// TODO: is this needed?
+const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
 
 const model = wrapLanguageModel({
   // model: openai("gpt-5"),
@@ -60,8 +64,31 @@ export async function generateComponent(opts: {
     children: Element[];
   }>;
 }): Promise<{ name: string; code: string }> {
+  // const pp = unified()
+  //   .use(rehypeStripSquashAttribute)
+  //   .use(rehypeUnwrapRefs)
+
+  //   .use(rehypeRecma)
+  //   .use(recmaJsx)
+  //   .use(recmaRemoveRedundantFragment)
+  //   .use(recmaStringify);
+  // console.log(
+  //   "XXXXXXXX",
+  //   await pp
+  //     .run({ type: "root", children: opts.instances[0]!.children })
+  //     .then((t) => pp.stringify(t))
+  //   // .use(() => (tree) => toHast(tree, { space: "html" }))
+  // );
   const processors = {
-    html: unified().use(rehypeStripSquashAttribute).use(rehypeStringify),
+    html: unified()
+      .use(rehypeStripSquashAttribute)
+      .use(rehypeUnwrapRefs)
+
+      // .use(rehypeRecma)
+      // .use(recmaJsx)
+      // .use(() => (tree) => toHast(tree, { space: "html" }))
+
+      .use(rehypeStringify),
     jsx: unified()
       .use(rehypeStripSquashAttribute)
       .use(rehypeRecma)
@@ -79,12 +106,12 @@ export async function generateComponent(opts: {
       opts.instances.map(async (i) => {
         const [jsx, html] = await Promise.all([
           processors.jsx
-            .run({ type: "root", children: i.children })
+            .run({ type: "root", children: [i.ref] })
             .then((estree) => processors.jsx.stringify(estree))
             .then(prettier.ts),
           processors.html
             .run({ type: "root", children: i.children } as Root)
-            .then((t) => processors.html.stringify(t as Root))
+            .then((t: any) => processors.html.stringify(t as Root))
             .then(prettier.html),
         ]);
         return { jsx, html };
@@ -98,7 +125,7 @@ export async function generateComponent(opts: {
       self.findIndex((t) => t.jsx === instance.jsx && t.html === instance.html)
   );
 
-  const numExamples = Math.min(uniqueInstances.length, 10);
+  const numExamples = Math.min(uniqueInstances.length, 5);
   const content = [
     "# Code",
     code,
@@ -119,7 +146,7 @@ export async function generateComponent(opts: {
   ].join("\n");
   console.log("---");
   console.log(content);
-  console.log("---");
+  console.log("--- WOW");
   const { text } = await generateText({
     model,
     messages: [
@@ -127,6 +154,10 @@ export async function generateComponent(opts: {
       { role: "user", content },
     ],
   });
+
+  console.log("---", "LLM OUTPUT");
+  console.log(text);
+  console.log("---");
 
   const rewritten = parseGeneratedComponent(text);
   const rendered = await render({
@@ -136,8 +167,24 @@ export async function generateComponent(opts: {
   });
 
   const diffs = rendered.map((r, i) => diffRenderedHtml(instances[i]!.html, r));
+  console.log("🔥🔥🔥🔥 diffs");
+  console.log(rendered[0]);
+  console.log("---");
+  console.log(instances[0]!.html);
+  console.log("🔥🔥🔥🔥 /diffs");
   if (diffs.some((d) => !!d)) {
-    console.log(diffs);
+    diffs.forEach((d, i) => {
+      if (d === null) return;
+      const expected = instances[i]!.html;
+      const actual = rendered[i];
+      console.log("### ERROR ###", i);
+      console.log(actual);
+      console.log("---");
+      console.log(expected);
+      console.log("---");
+      console.log(d);
+      console.log("---");
+    });
     throw new Error("Failed to write correct component");
   }
 

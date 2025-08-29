@@ -11,7 +11,10 @@ Guidelines when writing the component:
 - Give the component a descriptive name
 
 When writing the component you are only allowed to import from the following libraries:
-- React
+- 'react'
+- 'react-dom'
+
+You are NOT allowed to import any other libraries or dependencies. If the original code looks like it's using a library, you DONT have access to the library and must make a best effort guess to map the input JSX to output HTML.
 
 Input format:
 ---

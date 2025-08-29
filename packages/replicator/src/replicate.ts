@@ -18,9 +18,10 @@ import { recmaRemoveRedundantFragment } from "./lib/recma/removeRedundantFragmen
 import { recmaReplaceRefs } from "./lib/recma/replaceRefs";
 import { rehypeStripSquashAttribute } from "./lib/rehype/stripSquashAttribute";
 import { recmaWrapAsComponent } from "./lib/rehype/wrapAsComponent";
+import { generateComponent } from "./lib/rewriteComponent/generate";
 import type { FileSink } from "./lib/sinks/base";
 import { uniquePathsForComponents } from "./lib/uniquePathsForComponents";
-import { Metadata, type Snapshot } from "./types";
+import { Metadata, type RefImport, type Snapshot } from "./types";
 
 type Root = import("hast").Root;
 type Element = import("hast").Element;
@@ -161,52 +162,105 @@ export async function replicate(snapshot: Snapshot, sink: FileSink<any>) {
           // typography
           // if (group.id === "C24") {
           // icon
-          if (["C52"].includes(group.id)) {
-            // const rewritten = await generateComponent({
-            //   code: m.code[group.component.codeId]!,
-            //   component: {
-            //     name: compPath.name,
-            //     module: path.join("@/components", compPath.dir, compPath.name),
-            //   },
-            //   createRefContext: { codeIdToComponentImport },
-            //   instances: Object.entries(group.nodes).map(([nid, node]) => {
-            //     const nodeId = nid as NodeId;
-            //     const elements = (elementsByNodeId.get(nodeId) ?? []).map((e) =>
-            //       clone(e.element)
-            //     );
-            //     return { nodeId, ref: elements[0]!, children: elements };
-            //   }),
-            // });
-            // console.log("REWRITE", group.id, rewritten.name);
-            // console.log("---");
-            // console.log(rewritten.code);
-            // console.log("---");
-            // // TODO: create some kind of old => new name mapping so that we can update this later...
-            // await sink.writeText(
-            //   path.join(
-            //     "src",
-            //     "components",
-            //     compPath.dir,
-            //     `${rewritten.name}.tsx`
-            //   ),
-            //   rewritten.code
-            // );
-            // return;
-          }
+          if (
+            [
+              // "C52",
+              // "C41",
+              // "C30",
+              // "C81",
+              // "C19",
+              // "C6",
+              // "C31",
+              // "C40",
+              // "C67",
+              // "C42",
+              // "C80",
+              // "C57",
+              // "C64",
+              // "C65",
+              // "C39",
+              // "C66",
+              // "C68",
+              // "C69",
+              // "C70",
+              // "C71",
+              // "C18",
+              // "C29",
+              // "C74",
+              // "C79",
+              // "C80",
+              "C81",
+              //
+              // "C17", // fails
+            ].includes(group.id)
+          ) {
+            if (group.id === "C80") {
+            }
 
-          await writeFile(
-            compPath.name,
-            path.join("src", "components", compPath.dir),
-            {
-              type: "root",
-              children:
-                elementsByNodeId
-                  .values()
-                  .next()
-                  .value?.map((e) => e.element) ?? [],
-            },
-            sink
-          );
+            const component: RefImport = {
+              name: compPath.name,
+              module: path.join(
+                "@/components/rewritten",
+                group.id,
+                compPath.dir,
+                compPath.name
+              ),
+            };
+            const rewritten = await generateComponent({
+              code: m.code[group.component.codeId]!,
+              component,
+              createRefContext: { codeIdToComponentImport },
+              instances: Object.entries(group.nodes).map(([nid, node]) => {
+                const nodeId = nid as NodeId;
+                const elements = (elementsByNodeId.get(nodeId) ?? []).map((e) =>
+                  clone(e.element)
+                );
+                const ref = createRef({
+                  component: {
+                    name: "ComponentToRewrite",
+                    module: "./ComponentToRewrite",
+                  },
+                  props: node.props as Record<string, unknown>,
+                  nodeId,
+                  ctx: { codeIdToComponentImport },
+                  children: [],
+                });
+                return { nodeId, ref, children: elements };
+              }),
+            });
+
+            console.log("REWRITE", group.id, rewritten.name);
+            console.log("---");
+            console.log(rewritten.code);
+            console.log("---");
+
+            compPath.dir = path.join("rewritten", group.id, compPath.dir);
+            compPath.name = rewritten.name;
+
+            // TODO: create some kind of old => new name mapping so that we can update this later...
+            await sink.writeText(
+              path.join(
+                "src/components",
+                compPath.dir,
+                `${rewritten.name}.tsx`
+              ),
+              rewritten.code
+            );
+          } else {
+            await writeFile(
+              compPath.name,
+              path.join("src", "components", compPath.dir),
+              {
+                type: "root",
+                children:
+                  elementsByNodeId
+                    .values()
+                    .next()
+                    .value?.map((e) => e.element) ?? [],
+              },
+              sink
+            );
+          }
 
           const elementsOrderedByDepth = [...elementsByNodeId.entries()]
             .map(([nodeId, elements]) => ({ nodeId, elements }))

@@ -40,7 +40,7 @@ export namespace Metadata {
         tag: Tag.HostRoot;
       }
 
-      interface WithCode<T extends Tag> {
+      export interface WithCode<T extends Tag> {
         tag: T;
         name: string | undefined;
         codeId: CodeId;

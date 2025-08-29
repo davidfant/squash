@@ -10,6 +10,7 @@ Guidelines when writing the component:
 - Always start by importing React
 - The component should be written in TypeScript
 - The implementation should be as minimal as possible while still mapping the JSX to the HTML
+- You will be provided with a list of internally used components. You should attempt to figure out which components  use these components as much as possible.
 - The minified JavaScript code can be used as inspiration, but you should not use it directly as there might be redundant code in the JavaScript.
 - Give the component a descriptive name
 
@@ -25,6 +26,15 @@ Input format:
 \`\`\`javascript
 [minified JavaScript code]
 \`\`\`
+
+# Internally used components
+## InternalComponentName1
+\`\`\`typescript
+[internally used components]
+\`\`\`
+
+## InternalComponentName2
+...
 
 # Examples
 ## Example 1
@@ -71,6 +81,7 @@ export function MyComponent({}: Props) {
 
 export const initialUserMessage = async (
   code: string,
+  internalDeps: Array<{ name: string; module: string; code: string }>,
   examples: Array<{ jsx: string; html: string }>
 ) => {
   const unique = examples.filter(
@@ -84,6 +95,15 @@ export const initialUserMessage = async (
     "```javascript",
     await prettier.js(`(${code})`),
     "```",
+    "",
+    "# Internally used components",
+    ...internalDeps.flatMap((dep) => [
+      `## ${dep.name} (${dep.module})`,
+      "```typescript",
+      dep.code,
+      "```",
+    ]),
+    ...(!internalDeps.length ? ["No internally used components"] : []),
     "",
     "# Examples",
     `Showing ${numExamples} of ${unique.length} examples`,

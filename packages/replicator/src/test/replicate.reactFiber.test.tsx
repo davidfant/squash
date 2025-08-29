@@ -1,9 +1,12 @@
+import { buildInstanceExamples } from "@/lib/rewriteComponent/llm/buildInstanceExamples";
+import type { RewriteComponentStrategy } from "@/lib/rewriteComponent/types";
 import { rewriteComponentUseFirstStrategy } from "@/lib/rewriteComponent/useFirst";
 import { reactFiber } from "@/metadata/reactFiber";
+import { component } from "@/metadata/reactFiber.test";
 import { forwardRef, memo, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { describe, test } from "vitest";
-import { replicate } from "..";
+import { describe, expect, test, vi } from "vitest";
+import { Metadata, replicate } from "..";
 import { expectFileToMatchSnapshot, TestSink } from "./replicate.test";
 
 describe("replicate with react fiber", () => {
@@ -14,7 +17,10 @@ describe("replicate with react fiber", () => {
   });
   afterEach(() => root.unmount());
 
-  const run = async (node: ReactNode) => {
+  const run = async (
+    node: ReactNode,
+    rewriteStrategy: RewriteComponentStrategy = rewriteComponentUseFirstStrategy
+  ) => {
     root.render(node);
     await new Promise<void>((r) => {
       const check = () =>
@@ -26,26 +32,18 @@ describe("replicate with react fiber", () => {
     const metadata = await reactFiber();
     const html = document.documentElement.innerHTML;
     const page = { url: "http://localhost", title: "Test", html };
-    await replicate({ page, metadata }, sink, rewriteComponentUseFirstStrategy);
-    return sink.finalize();
+    await replicate({ page, metadata }, sink, rewriteStrategy);
+    return { metadata, files: await sink.finalize() };
   };
 
   test("should create App.tsx", async () => {
-    // const A = () => <div>Hello</div>;
-    // const B = ({ children }: { children: ReactNode }) => <div>{children}</div>;
-    // const files = await test([
-    //   <A key="a" />,
-    //   <B key="b">
-    //     <A />
-    //   </B>,
-    // ]);
-    const files = await run(<div>Hello</div>);
+    const { files } = await run(<div>Hello</div>);
     expectFileToMatchSnapshot(files, "src/App.tsx");
   });
 
   test("should create a component", async () => {
     const Comp = () => <div>Hello</div>;
-    const files = await run(<Comp />);
+    const { files } = await run(<Comp />);
     expectFileToMatchSnapshot(files, "src/components/Comp.tsx");
     expectFileToMatchSnapshot(files, "src/App.tsx");
   });
@@ -54,7 +52,7 @@ describe("replicate with react fiber", () => {
 
   test("should only create one component if renders same component multiple times", async () => {
     const CompA = () => <div>Hello</div>;
-    const files = await run([<CompA key="1" />, <CompA key="2" />]);
+    const { files } = await run([<CompA key="1" />, <CompA key="2" />]);
     expectFileToMatchSnapshot(files, "src/components/CompA.tsx");
     expectFileToMatchSnapshot(files, "src/App.tsx");
   });
@@ -62,7 +60,7 @@ describe("replicate with react fiber", () => {
   test("should only create one component for memo(forwardRef(function))", async () => {
     const Comp = memo(forwardRef(() => <div>Hello</div>));
     Comp.displayName = "Comp";
-    const files = await run(<Comp />);
+    const { files } = await run(<Comp />);
     expect(files.length).toBe(3); // index.html + Comp + App.tsx
     expectFileToMatchSnapshot(files, "src/components/Comp.tsx");
     expectFileToMatchSnapshot(files, "src/App.tsx");
@@ -70,7 +68,7 @@ describe("replicate with react fiber", () => {
 
   test("should not create a component when returning null", async () => {
     const CompA = () => null;
-    const files = await run(
+    const { files } = await run(
       <div>
         <CompA />
       </div>
@@ -81,7 +79,7 @@ describe("replicate with react fiber", () => {
   test("should create component when one instance returns null and another returns jsx", async () => {
     const Comp = ({ enabled }: { enabled: boolean }) =>
       enabled ? <div>Hello</div> : null;
-    const files = await run([
+    const { files } = await run([
       <Comp key="1" enabled={true} />,
       <Comp key="2" enabled={false} />,
     ]);
@@ -98,7 +96,7 @@ describe("replicate with react fiber", () => {
         <CompA />
       </div>
     );
-    const files = await run(<CompB />);
+    const { files } = await run(<CompB />);
     expectFileToMatchSnapshot(files, "src/components/CompA.tsx");
     expectFileToMatchSnapshot(files, "src/components/CompB.tsx");
     expectFileToMatchSnapshot(files, "src/App.tsx");
@@ -115,7 +113,7 @@ describe("replicate with react fiber", () => {
         ))()}
       </>
     );
-    const files = await run(<Comp />);
+    const { files } = await run(<Comp />);
     expectFileToMatchSnapshot(files, "src/components/Comp.tsx");
     expectFileToMatchSnapshot(files, "src/App.tsx");
   });
@@ -124,7 +122,7 @@ describe("replicate with react fiber", () => {
     const Row = ({ children }: { children: ReactNode }) => (
       <div>{children}</div>
     );
-    const files = await run(
+    const { files } = await run(
       <Row>
         <Row>hello</Row>
         <Row>world</Row>
@@ -146,7 +144,7 @@ describe("replicate with react fiber", () => {
   describe("props", () => {
     test("simple props are defined in call site", async () => {
       const Comp = (_: any) => <div />;
-      const files = await run(
+      const { files } = await run(
         <Comp
           enabled
           string="text"
@@ -163,7 +161,7 @@ describe("replicate with react fiber", () => {
       test("should recreate react element children", async () => {
         const CompA = ({ children }: { children: ReactNode }) => children;
         const CompB = ({ children }: { children: ReactNode }) => children;
-        const files = await run(
+        const { files } = await run(
           <CompA>
             <CompB>
               <div>Hello</div>
@@ -178,7 +176,7 @@ describe("replicate with react fiber", () => {
 
       test("should recreate react fragment children", async () => {
         const Comp = ({ children }: { children: ReactNode }) => children;
-        const files = await run(
+        const { files } = await run(
           <Comp>
             <>
               <div>Hello</div>
@@ -191,7 +189,7 @@ describe("replicate with react fiber", () => {
 
       test("should escape weird JS property names", async () => {
         const Comp = (_props: any) => <div />;
-        const files = await run(
+        const { files } = await run(
           <Comp
             style={{ "--color": "red" }}
             obj={{ ":::wow what a key--?? ": 123 }}
@@ -211,7 +209,7 @@ describe("replicate with react fiber", () => {
 
     test("should render JSX in props correctly", async () => {
       const Comp = (_props: any) => <div>Hello</div>;
-      const files = await run(
+      const { files } = await run(
         <Comp
           prop={{
             key: {
@@ -229,7 +227,7 @@ describe("replicate with react fiber", () => {
     });
 
     test("should convert tabIndex to number", async () => {
-      const files = await run(<div tabIndex={"1" as any} />);
+      const { files } = await run(<div tabIndex={"1" as any} />);
       expectFileToMatchSnapshot(files, "src/App.tsx");
     });
 
@@ -247,7 +245,7 @@ describe("replicate with react fiber", () => {
             </Common>
           </div>
         );
-        const files = await run(<Parent />);
+        const { files } = await run(<Parent />);
         expectFileToMatchSnapshot(files, "src/components/Common.tsx");
         expectFileToMatchSnapshot(files, "src/components/Child.tsx");
         expectFileToMatchSnapshot(files, "src/components/Parent.tsx");
@@ -257,36 +255,151 @@ describe("replicate with react fiber", () => {
   });
 
   describe("naming", () => {
-    test("should support multiple components with same name", async () => {
-      const CompA = () => <div>Hello</div>;
-      CompA.displayName = "Dupe";
-      const CompB = () => <div>Yellow</div>;
-      CompB.displayName = "Dupe";
+    describe("default name", () => {
+      test("should support multiple components with same name", async () => {
+        const CompA = () => <div>Hello</div>;
+        CompA.displayName = "Dupe";
+        const CompB = () => <div>Yellow</div>;
+        CompB.displayName = "Dupe";
 
-      const files = await run([<CompA key="a" />, <CompB key="b" />]);
-      expectFileToMatchSnapshot(files, "src/components/Dupe1.tsx");
-      expectFileToMatchSnapshot(files, "src/components/Dupe2.tsx");
-      expectFileToMatchSnapshot(files, "src/App.tsx");
+        const { files } = await run([<CompA key="a" />, <CompB key="b" />]);
+        expectFileToMatchSnapshot(files, "src/components/Dupe1.tsx");
+        expectFileToMatchSnapshot(files, "src/components/Dupe2.tsx");
+        expectFileToMatchSnapshot(files, "src/App.tsx");
+      });
+
+      test("should use default name if component name length < 3", async () => {
+        const A = () => <div>Hello</div>;
+        const { files } = await run(<A />);
+        expectFileToMatchSnapshot(files, "src/components/Component1.tsx");
+      });
+
+      test("should TitleCase component name", async () => {
+        const Comp = () => <div>Hello</div>;
+        Comp.displayName = "componentName";
+        const { files } = await run(<Comp />);
+        expectFileToMatchSnapshot(files, "src/components/ComponentName.tsx");
+      });
+
+      test("should put component with . in the name in a directory", async () => {
+        const Comp = () => <div>Hello</div>;
+        Comp.displayName = "Primitive.div";
+        const { files } = await run(<Comp />);
+        expectFileToMatchSnapshot(files, "src/components/primitive/Div.tsx");
+      });
     });
 
-    test("should use default name if component name length < 3", async () => {
-      const A = () => <div>Hello</div>;
-      const files = await run(<A />);
-      expectFileToMatchSnapshot(files, "src/components/Component1.tsx");
-    });
+    describe("LLM", () => {
+      describe("component to rewrite name", () => {
+        test("should be ComponentToRewrite if name is fallback", async () => {
+          const rewrite = vi.fn(rewriteComponentUseFirstStrategy);
+          const C = () => <div>Hello</div>;
+          await run(<C />, rewrite);
 
-    test("should TitleCase component name", async () => {
-      const Comp = () => <div>Hello</div>;
-      Comp.displayName = "componentName";
-      const files = await run(<Comp />);
-      expectFileToMatchSnapshot(files, "src/components/ComponentName.tsx");
-    });
+          expect(rewrite).toHaveBeenCalledOnce();
+          const args = rewrite.mock.calls[0]![0];
+          expect(
+            args.componentRegistry.get(args.component.id)!.name.value
+          ).toBe("ComponentToRewrite");
+        });
 
-    test("should put component with . in the name in a directory", async () => {
-      const Comp = () => <div>Hello</div>;
-      Comp.displayName = "Primitive.div";
-      const files = await run(<Comp />);
-      expectFileToMatchSnapshot(files, "src/components/primitive/Div.tsx");
+        test("should be actual component name if not fallback", async () => {
+          const rewrite = vi.fn(rewriteComponentUseFirstStrategy);
+          const NamedComponent = () => <div>Hello</div>;
+          await run(<NamedComponent />, rewrite);
+
+          expect(rewrite).toHaveBeenCalledOnce();
+          const args = rewrite.mock.calls[0]![0];
+          expect(
+            args.componentRegistry.get(args.component.id)!.name.value
+          ).toBe("NamedComponent");
+        });
+      });
+
+      describe("createRef", () => {
+        test("should be correct for component without deps", async () => {
+          const rewrite = vi.fn(rewriteComponentUseFirstStrategy);
+          const Comp = () => <div>Hello</div>;
+          await run(<Comp />, rewrite);
+
+          expect(rewrite).toHaveBeenCalledOnce();
+          const args = rewrite.mock.calls[0]![0];
+          const examples = await buildInstanceExamples(
+            args.instances,
+            args.componentRegistry
+          );
+          expect(examples).toHaveLength(1);
+          expect(examples[0]!.jsx).toMatchSnapshot();
+        });
+
+        test("should contain child component", async () => {
+          const rewrite = vi.fn(rewriteComponentUseFirstStrategy);
+          const Child = () => <div>Hello</div>;
+          const Parent = ({ children }: { children: ReactNode }) => children;
+          await run(
+            <Parent>
+              <Child />
+            </Parent>,
+            rewrite
+          );
+
+          expect(rewrite).toHaveBeenCalledTimes(2);
+          const childArgs = rewrite.mock.calls[0]![0];
+          const childExamples = await buildInstanceExamples(
+            childArgs.instances,
+            childArgs.componentRegistry
+          );
+          expect(childExamples[0]!.jsx).toMatchSnapshot();
+
+          const parentArgs = rewrite.mock.calls[1]![0];
+          const parentExamples = await buildInstanceExamples(
+            parentArgs.instances,
+            parentArgs.componentRegistry
+          );
+          expect(parentExamples[0]!.jsx).toMatchSnapshot();
+        });
+
+        test("should only include direct internal deps", async () => {
+          const rewrite = vi.fn(rewriteComponentUseFirstStrategy);
+          const Child = () => <div>Hello</div>;
+          const Parent = ({ children }: { children: ReactNode }) => children;
+          const GrandParent = ({ children }: { children: ReactNode }) =>
+            children;
+          const { metadata: m } = await run(
+            <GrandParent>
+              <Parent>
+                <Child />
+              </Parent>
+            </GrandParent>,
+            rewrite
+          );
+
+          type Fn = Metadata.ReactFiber.Component.Function;
+          const components = {
+            grandParent: component<Fn>(m!, 1),
+            parent: component<Fn>(m!, 2),
+            child: component<Fn>(m!, 3),
+          };
+          expect(components.child.value.name).toBe("Child");
+          expect(components.parent.value.name).toBe("Parent");
+          expect(components.grandParent.value.name).toBe("GrandParent");
+
+          expect(rewrite).toHaveBeenCalledTimes(3);
+
+          const child = rewrite.mock.calls[0]![0];
+          expect(child.component.deps.internal).toEqual(new Set());
+
+          const parent = rewrite.mock.calls[1]![0];
+          expect(parent.component.deps.internal).toEqual(
+            new Set([components.child.id])
+          );
+
+          const grandParent = rewrite.mock.calls[2]![0];
+          expect(grandParent.component.deps.internal).toEqual(
+            new Set([components.parent.id])
+          );
+        });
+      });
     });
 
     test.todo("should rewrite component", () => {});

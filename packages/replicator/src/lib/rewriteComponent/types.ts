@@ -14,7 +14,10 @@ export interface RewriteComponentOptions {
   component: {
     id: Metadata.ReactFiber.ComponentId;
     code: string;
-    deps: Set<Metadata.ReactFiber.ComponentId>;
+    deps: {
+      internal: Set<Metadata.ReactFiber.ComponentId>;
+      all: Set<Metadata.ReactFiber.ComponentId>;
+    };
   };
   instances: RewriteComponentInstance[];
   componentRegistry: ComponentRegistry;

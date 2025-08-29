@@ -1,5 +1,82 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`replicate with react fiber > naming > LLM > createRef > should be correct for component without deps 1`] = `
+"import { Comp } from "./Comp";
+export function Sample() {
+  return <Comp />;
+}
+"
+`;
+
+exports[`replicate with react fiber > naming > LLM > createRef > should contain child component 1`] = `
+"import { Child } from "./Child";
+export function Sample() {
+  return <Child />;
+}
+"
+`;
+
+exports[`replicate with react fiber > naming > LLM > createRef > should contain child component 2`] = `
+"import { Parent } from "./Parent";
+import { Child } from "./Child";
+export function Sample() {
+  return (
+    <Parent>
+      <Child />
+    </Parent>
+  );
+}
+"
+`;
+
+exports[`replicate with react fiber > naming > default name > should TitleCase component name 1`] = `
+"export function ComponentName() {
+  return <div>{"Hello"}</div>;
+}
+"
+`;
+
+exports[`replicate with react fiber > naming > default name > should put component with . in the name in a directory 1`] = `
+"export function Div() {
+  return <div>{"Hello"}</div>;
+}
+"
+`;
+
+exports[`replicate with react fiber > naming > default name > should support multiple components with same name 1`] = `
+"export function ComponentToRewrite() {
+  return <div>{"Hello"}</div>;
+}
+"
+`;
+
+exports[`replicate with react fiber > naming > default name > should support multiple components with same name 2`] = `
+"export function ComponentToRewrite() {
+  return <div>{"Yellow"}</div>;
+}
+"
+`;
+
+exports[`replicate with react fiber > naming > default name > should support multiple components with same name 3`] = `
+"import { ComponentToRewrite } from "./ComponentToRewrite";
+export function App() {
+  return (
+    <>
+      <ComponentToRewrite />
+      <ComponentToRewrite />
+    </>
+  );
+}
+"
+`;
+
+exports[`replicate with react fiber > naming > default name > should use default name if component name length < 3 1`] = `
+"export function ComponentToRewrite() {
+  return <div>{"Hello"}</div>;
+}
+"
+`;
+
 exports[`replicate with react fiber > naming > should TitleCase component name 1`] = `
 "export function ComponentName() {
   return <div>{"Hello"}</div>;

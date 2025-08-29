@@ -125,8 +125,7 @@ function buildComponentsProvidedViaPropsMap(
 function buildComponentDeps(
   nodes: Record<NodeId, Metadata.ReactFiber.Node>,
   components: Record<ComponentId, Metadata.ReactFiber.Component.Any>,
-  descendants: Map<NodeId, Set<NodeId>>,
-  componentsProvidedViaPropsMap: Map<ComponentId, Set<ComponentId>>
+  descendants: Map<NodeId, Set<NodeId>>
 ): Map<ComponentId, Set<ComponentId>> {
   const deps = new Map<ComponentId, Set<ComponentId>>();
   for (const n of Object.values(nodes)) deps.set(n.componentId, new Set());
@@ -139,10 +138,6 @@ function buildComponentDeps(
       const childComp = nodes[descId]!.componentId;
       if (childComp !== parentComp) targetSet.add(childComp);
     }
-  }
-
-  for (const [cid, viaProps] of componentsProvidedViaPropsMap) {
-    viaProps.forEach((c) => deps.get(c)!.delete(cid));
   }
 
   for (const d of deps.values()) {
@@ -171,7 +166,7 @@ export async function visitComponent(
     id: ComponentId;
     component: Metadata.ReactFiber.Component.Any;
     nodes: Record<NodeId, Metadata.ReactFiber.Node>;
-    deps: Set<ComponentId>;
+    deps: { internal: Set<ComponentId>; all: Set<ComponentId> };
   }) => unknown
 ) {
   if (!metadata) return;
@@ -179,22 +174,22 @@ export async function visitComponent(
   const { nodes, components } = metadata;
   const descendants = buildDescendantsMap(nodes, buildChildMap(nodes));
   const componentNodes = buildComponentNodesMap(nodes);
-  const componentsProvidedViaPropsMap = buildComponentsProvidedViaPropsMap(
+  const componentsProvidedViaProps = buildComponentsProvidedViaPropsMap(
     nodes,
     components
   );
-  const componentDepsInclProps = buildComponentDeps(
-    nodes,
-    components,
-    descendants,
-    new Map()
+  const componentDepsAll = buildComponentDeps(nodes, components, descendants);
+  const componentDepsInternal = new Map<ComponentId, Set<ComponentId>>(
+    [...componentDepsAll.entries()].map(([cid, deps]) => [
+      cid,
+      new Set([...deps]),
+    ])
   );
-  const componentDepsExclProps = buildComponentDeps(
-    nodes,
-    components,
-    descendants,
-    componentsProvidedViaPropsMap
-  );
+  for (const [cid, viaProps] of componentsProvidedViaProps) {
+    viaProps.forEach((c) => componentDepsInternal.get(c)!.delete(cid));
+  }
+
+  // copy componentDepsAll, and then remove all deps that are provided via props
 
   // console.log("Metadata", metadata);
   // console.log("Component Nodes Map", componentNodes);
@@ -218,15 +213,15 @@ export async function visitComponent(
     .map(([componentId, nodes]) => ({ componentId, nodes }))
     .sort(
       (a, b) =>
-        (componentDepsInclProps.get(a.componentId)?.size ?? 0) -
-        (componentDepsInclProps.get(b.componentId)?.size ?? 0)
+        (componentDepsAll.get(a.componentId)?.size ?? 0) -
+        (componentDepsAll.get(b.componentId)?.size ?? 0)
     );
   const processed = new Set<ComponentId>();
 
   const next = () => {
     // TODO: when common processing, we want to get the component where the most amount of deps + children have been processed. We e.g. don't want to process a component where lots of children provided through props are not yet processed.
     const idx = remaining.findIndex(({ componentId }) =>
-      [...componentDepsExclProps.get(componentId)!].every((cid) =>
+      [...componentDepsInternal.get(componentId)!].every((cid) =>
         processed.has(cid)
       )
     );
@@ -247,7 +242,13 @@ export async function visitComponent(
       id: g.componentId,
       component: metadata.components[g.componentId]!,
       nodes: Object.fromEntries(g.nodes.map((id) => [id, nodes[id]!])),
-      deps: componentDepsInclProps.get(g.componentId)!,
+      deps: {
+        // TODO: should this maybe only include components up until
+        // a component uses another component? in that case it's no
+        // longer a direct internal dependency
+        internal: componentDepsInternal.get(g.componentId)!,
+        all: componentDepsAll.get(g.componentId)!,
+      },
     });
     processed.add(g.componentId);
   }
@@ -257,7 +258,7 @@ export async function visitComponent(
       console.log(
         componentId,
         // componentDeps.get(id),
-        [...componentDepsExclProps.get(componentId)!].filter(
+        [...componentDepsInternal.get(componentId)!].filter(
           (id) => !processed.has(id)
         )
       );

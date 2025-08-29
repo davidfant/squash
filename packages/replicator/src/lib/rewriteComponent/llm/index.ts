@@ -66,6 +66,10 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
   const examples = await buildInstanceExamples(opts.instances, registry);
   const content = await Prompts.initialUserMessage(
     opts.component.code,
+    [...opts.component.deps.internal]
+      .map((id) => registry.get(id))
+      .filter((v) => !!v)
+      .map((r) => ({ name: r.name.value, module: r.module, code: r.code })),
     examples
   );
   const messages: ModelMessage[] = [
@@ -73,8 +77,7 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
     { role: "user", content },
   ];
 
-  let rewritten: { name: string; code: string } | undefined = undefined;
-
+  let rewritten: { name: string; code: string };
   let attempt = 0;
   while (true) {
     const { text, response } = await generateText({ model, messages });
@@ -86,7 +89,7 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
         name: rewritten.name,
         code: rewritten.code,
       },
-      deps: opts.component.deps,
+      deps: opts.component.deps.all,
       instances: examples,
       componentRegistry: registry,
     });

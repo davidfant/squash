@@ -173,7 +173,10 @@ export const replicate = (
                 }
               }
 
-              console.log("DATUYM", resolved.id, group.deps.size);
+              console.log("DATUYM", resolved.id, {
+                internal: group.deps.internal.size,
+                all: group.deps.all.size,
+              });
 
               const rewritten = await rewriteComponentStrategy({
                 component: {

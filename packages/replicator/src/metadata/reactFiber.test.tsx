@@ -5,21 +5,24 @@ import { Metadata } from "../types";
 import { reactFiber } from "./reactFiber";
 import Tag = Metadata.ReactFiber.Component.Tag;
 
-function code(metadata: Metadata.ReactFiber, id: number) {
+export function code(metadata: Metadata.ReactFiber, id: number) {
   const codeId = `F${id}` as const;
   const c = metadata.code[codeId];
   if (!c) throw new Error(`Code ${id} not found`);
   return { value: c, id: codeId };
 }
 
-function component(metadata: Metadata.ReactFiber, id: number) {
+export function component<T extends Metadata.ReactFiber.Component.Any>(
+  metadata: Metadata.ReactFiber,
+  id: number
+) {
   const compId = `C${id}` as const;
   const c = metadata.components[compId];
   if (!c) throw new Error(`Component ${id} not found`);
-  return { value: c, id: compId };
+  return { value: c as T, id: compId };
 }
 
-function node(metadata: Metadata.ReactFiber, id: number) {
+export function node(metadata: Metadata.ReactFiber, id: number) {
   const nodeId = `N${id}` as const;
   const n = metadata.nodes[nodeId];
   if (!n) throw new Error(`Node ${id} not found`);

@@ -1,7 +1,4 @@
-import type {
-  ComponentRegistry,
-  ComponentRegistryItem,
-} from "@/lib/componentRegistry";
+import type { ComponentRegistry } from "@/lib/componentRegistry";
 import type { Metadata } from "@/types";
 import esbuild from "esbuild";
 import { createRequire } from "node:module";
@@ -11,6 +8,11 @@ import { renderToStaticMarkup } from "react-dom/server";
 import type { ComponentInstance } from "./types";
 
 type ComponentId = Metadata.ReactFiber.ComponentId;
+
+interface Module {
+  code: string;
+  transform?(module: Record<string, any>): Record<string, any>;
+}
 
 interface RenderOptions {
   component: { id: ComponentId; name: string; code: string };
@@ -29,36 +31,23 @@ async function compileComponent(esmCode: string): Promise<string> {
   return code;
 }
 
-async function buildDepModules(
-  deps: Set<ComponentId>,
-  registry: ComponentRegistry,
-  nodeRequire: NodeJS.Require
-): Promise<Record<string, any>> {
-  const moduleMap: Record<string, any> = {};
-  await Promise.all(
-    [...deps].map(async (depId) => {
-      const regItem = registry.get(depId);
-      if (!regItem) throw new Error(`Unknown dep ${depId}`);
-      const compiled = await compileComponent(regItem.code);
-      const mod = { exports: {} };
-      vm.runInNewContext(compiled, { module: mod, require: nodeRequire });
-      moduleMap[regItem.module] = mod.exports;
-    })
-  );
+function makeLazyRequire(modules: Record<string, Module>) {
+  const hostRequire = createRequire(import.meta.url);
+  const cache: Record<string, any> = {};
+  return function lazyRequire(spec: string) {
+    if (cache[spec]) return cache[spec];
+    const mod = modules[spec];
+    if (!mod) return hostRequire(spec);
 
-  return moduleMap;
-}
-
-async function buildComponentToRewriteModule(
-  component: { name: string; code: string },
-  registry: ComponentRegistryItem,
-  nodeRequire: NodeJS.Require
-) {
-  const compiled = await compileComponent(component.code);
-  const mod = { exports: {} as Record<string, any> };
-  vm.runInNewContext(compiled, { module: mod, require: nodeRequire });
-  return {
-    [registry.module]: { [registry.name.value]: mod.exports[component.name] },
+    const m = { exports: {} };
+    const ctx = vm.createContext({
+      module: m,
+      exports: m.exports,
+      require: lazyRequire,
+    });
+    vm.runInContext(modules[spec]!.code, ctx, { filename: spec });
+    cache[spec] = mod.transform ? mod.transform(m.exports) : m.exports;
+    return cache[spec];
   };
 }
 
@@ -76,24 +65,35 @@ async function renderSample(
 
   ctx.module = { exports: {} };
   vm.runInContext(code, ctx, { filename: `sample-${index}.cjs` });
+  // TODO: listen to console logs happening when creating this element.
+  // E.g. "Each child in a list should have a unique key prop". These
+  // errors should be reported back to the LLM
   const element = React.createElement(ctx.module.exports.Sample);
   return renderToStaticMarkup(element);
 }
 
 export async function render(opts: RenderOptions): Promise<string[]> {
-  const require = createRequire(import.meta.url);
-  const [compModule, depModules] = await Promise.all([
-    buildComponentToRewriteModule(
-      opts.component,
-      opts.componentRegistry.get(opts.component.id)!,
-      require
-    ),
-    buildDepModules(opts.deps, opts.componentRegistry, require),
+  const modules: Record<string, Module> = {};
+  await Promise.all([
+    (async () => {
+      const item = opts.componentRegistry.get(opts.component.id);
+      if (!item) throw new Error(`Unknown component ${opts.component.id}`);
+      const code = await compileComponent(item.code);
+      modules[item.module] = {
+        code,
+        transform: (m) => ({ [item.name.value]: m[opts.component.name] }),
+      };
+    })(),
+    ...[...opts.deps].map(async (cid) => {
+      const item = opts.componentRegistry.get(cid);
+      if (!item) throw new Error(`Unknown dep ${cid}`);
+      const code = await compileComponent(item.code);
+      modules[item.module] = { code };
+    }),
   ]);
-  const modules = { ...depModules, ...compModule } as Record<string, any>;
-  const ctx = vm.createContext({
-    require: (spec: string) => modules[spec] ?? require(spec),
-  });
+
+  const require = makeLazyRequire(modules);
+  const ctx = vm.createContext({ require });
   return Promise.all(
     opts.instances.map((inst, i) => renderSample(ctx, inst.jsx, i))
   );

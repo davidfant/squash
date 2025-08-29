@@ -42,7 +42,11 @@ function findReactRoot() {
 
 async function walkFrom<T>(
   root: Fiber,
-  visit: (fiber: Fiber, depth: number, parent?: T) => Promise<T | undefined>
+  visit: (
+    fiber: Fiber,
+    depth: number,
+    parent?: T
+  ) => Promise<{ parent?: T; skip?: boolean } | void>
 ) {
   let node: Fiber | null = root;
   let depth = 0;
@@ -51,9 +55,10 @@ async function walkFrom<T>(
   while (node) {
     const currParent = parents.at(-1);
     const produced = await visit(node, depth, currParent);
-    const nextParent = produced ?? currParent;
+    const nextParent = produced?.parent ?? currParent;
+    const shouldSkip = produced?.skip ?? false;
 
-    if (node.child) {
+    if (node.child && !shouldSkip) {
       parents.push(nextParent);
       node = node.child;
       depth++;
@@ -278,7 +283,7 @@ export async function reactFiber(): Promise<Metadata.ReactFiber | null> {
             component: { tag: fiber.tag },
             key: `${Tag.HostRoot}:host`,
           });
-          return ids.node;
+          return { parent: ids.node };
         }
         case Tag.FunctionComponent:
         case Tag.MemoComponent:
@@ -306,7 +311,7 @@ export async function reactFiber(): Promise<Metadata.ReactFiber | null> {
               ancestors: [],
             }),
           });
-          return id.node;
+          return { parent: id.node };
         }
         case Tag.HostText: {
           const text = fiber.memoizedProps as string;
@@ -323,7 +328,7 @@ export async function reactFiber(): Promise<Metadata.ReactFiber | null> {
           const clonedText = textNode.cloneNode(true);
           span.appendChild(clonedText);
           textNode.parentNode?.replaceChild(span, textNode);
-          return ids.node;
+          return { parent: ids.node };
         }
         case Tag.DOMElement: {
           const ids = add({
@@ -334,10 +339,11 @@ export async function reactFiber(): Promise<Metadata.ReactFiber | null> {
             "data-squash-node-id",
             ids.node.toString()
           );
-          return ids.node;
+          return { parent: ids.node };
         }
-        case Tag.ClassComponent: // TODO...
         case Tag.HostPortal:
+          return { skip: true };
+        case Tag.ClassComponent: // TODO...
         case Tag.Fragment:
         case Tag.SuspenseComponent:
         case Tag.SuspenseListComponent:

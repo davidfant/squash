@@ -1,4 +1,5 @@
 import { forwardRef, lazy, memo, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
 import { Metadata } from "../types";
 import { reactFiber } from "./reactFiber";
@@ -312,7 +313,7 @@ describe("reactFiber", () => {
     });
   });
 
-  describe("memo", () => {
+  describe("Memo", () => {
     test("should register simple memo", async () => {
       const C = memo(() => <div>Hello</div>);
       const metadata = await run(<C />);
@@ -349,6 +350,39 @@ describe("reactFiber", () => {
         name: undefined,
         codeId: c.id,
       });
+    });
+  });
+
+  describe("Portal", () => {
+    let portalRoot: HTMLElement | undefined = undefined;
+    beforeEach(() => {
+      portalRoot = document.createElement("portal");
+      document.documentElement.appendChild(portalRoot);
+    });
+
+    afterEach(() => portalRoot?.remove());
+
+    test("should ignore traversing portals", async () => {
+      const Portal = ({ children }: { children: ReactNode }) =>
+        createPortal(children, portalRoot!);
+      const metadata = await run(
+        <div>
+          <Portal>Hello</Portal>
+        </div>
+      );
+
+      const portal = {
+        component: component(metadata, 2),
+        node: node(metadata, 2),
+      };
+      expect(portal.component.value).toEqual({
+        tag: Tag.FunctionComponent,
+        name: "Portal",
+        codeId: "F0",
+      });
+      expect(
+        Object.values(metadata.nodes).map((n) => n.parentId)
+      ).not.toContain(portal.node.id);
     });
   });
 });

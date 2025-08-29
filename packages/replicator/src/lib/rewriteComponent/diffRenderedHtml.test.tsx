@@ -44,21 +44,41 @@ describe("diffRenderedHtml", () => {
       ).toBeNull();
     });
 
-    test("style order is different", () => {
-      expect(
-        diff(
-          `<div style="position:absolute; top:0; left:0; right:0; bottom:0" />`,
-          <div
-            style={{
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              position: "absolute",
-            }}
-          />
-        )
-      ).toBeNull();
+    describe("style invariants", () => {
+      test("order", () => {
+        expect(
+          diff(
+            `<div style="position:absolute; top:0; left:0; right:0; bottom:0" />`,
+            <div
+              style={{
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                position: "absolute",
+              }}
+            />
+          )
+        ).toBeNull();
+      });
+
+      test("0px <=> 0", () => {
+        expect(
+          diff(
+            `<div style="width: 0px; clip: rect(0px, 0px, 0px, 0px)" />`,
+            <div style={{ width: 0, clip: "rect(0 0 0 0)" }} />
+          )
+        ).toBeNull();
+      });
+
+      test("overflow-wrap <=> word-wrap", () => {
+        expect(
+          diff(
+            `<div style="overflow-wrap: break-word" />`,
+            <div style={{ wordWrap: "break-word" }} />
+          )
+        ).toBeNull();
+      });
     });
   });
 

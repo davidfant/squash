@@ -1,24 +1,47 @@
+import { generate, parse, walk, type DeclarationList } from "css-tree";
 import { diff } from "jest-diff";
 import * as parse5 from "parse5";
 
 const normText = (s: string) => s.replace(/\s+/g, " ").trim();
 
-const inlineStyleToObj = (style: string) =>
-  style
-    .split(";")
-    .map((p) => p.trim())
-    .filter(Boolean)
+const CSS_PROPERTY_ALIAS: Record<string, string> = {
+  "word-wrap": "overflow-wrap",
+};
+const OPTIONAL_COMMA_FUNCTIONS = ["rect", "inset", "matrix", "matrix3d"];
+
+export function canonicaliseStyle(style: string): Record<string, string> {
+  const ast = parse(style, { context: "declarationList" }) as DeclarationList;
+
+  walk(ast, (n) => {
+    if (n.type === "Dimension") {
+      if (n.value === "0") n.unit = "";
+    }
+
+    if (n.type === "Declaration") {
+      n.property = CSS_PROPERTY_ALIAS[n.property] ?? n.property;
+    }
+
+    if (
+      n.type === "Function" &&
+      OPTIONAL_COMMA_FUNCTIONS.includes(n.name.toLowerCase())
+    ) {
+      n.children.forEach((child, item, list) => {
+        if (child.type === "Operator" && child.value === ",") {
+          list.remove(item);
+        }
+      });
+    }
+  });
+
+  return ast.children
+    .toArray()
+    .filter((d) => d.type === "Declaration")
+    .sort((a, b) => a.property.localeCompare(b.property))
     .reduce(
-      (obj, chunk) => {
-        const [rawProp, ...rest] = chunk.split(":");
-        if (!rawProp || rest.length === 0) return obj;
-        const prop = rawProp.trim();
-        const value = rest.join(":").trim();
-        if (prop) obj[prop] = value;
-        return obj;
-      },
+      (acc, d) => ({ ...acc, [d.property]: generate(d.value) }),
       {} as Record<string, string>
     );
+}
 
 function simplify(
   node: parse5.DefaultTreeAdapterMap[keyof parse5.DefaultTreeAdapterMap]
@@ -36,7 +59,7 @@ function simplify(
   if ("attrs" in node) {
     for (const { name, value } of node.attrs) {
       if (name === "style") {
-        attrs[name] = inlineStyleToObj(value);
+        attrs[name] = canonicaliseStyle(value);
       } else {
         attrs[name] = value;
       }

@@ -149,18 +149,26 @@ function createComponentElement(
 
 export function createRef({
   nodeId,
-  component,
+  componentId,
   props,
   children,
   ctx,
 }: {
   nodeId?: string;
-  component: { id: ComponentId; name: string };
+  componentId: ComponentId;
   props: Record<string, unknown>;
   children: ElementContent[];
   ctx: CreateRefContext;
 }) {
-  const element = createComponentElement(component, props, ctx);
+  const comp = ctx.componentRegistry.get(componentId);
+  if (!comp) {
+    throw new Error(`Component ${componentId} not found in registry`);
+  }
+  const element = createComponentElement(
+    { id: comp.id, name: comp.name.value },
+    props,
+    ctx
+  );
   return h(
     "ref",
     {

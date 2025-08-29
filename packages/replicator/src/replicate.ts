@@ -156,6 +156,20 @@ export const replicate = (
                 return;
               }
 
+              const componentRegistryForRewrite: ComponentRegistry = new Map();
+              for (const [id, c] of componentRegistry.entries()) {
+                if (id === resolved.id) {
+                  const name = "ComponentToRewrite";
+                  componentRegistryForRewrite.set(id, {
+                    ...c,
+                    name: { value: name, isFallback: true },
+                    module: `./${name}`,
+                  });
+                } else {
+                  componentRegistryForRewrite.set(id, c);
+                }
+              }
+
               const rewritten = await rewriteComponentStrategy({
                 component: {
                   id: resolved.id,
@@ -167,18 +181,18 @@ export const replicate = (
                     (e) => clone(e.element)
                   );
                   const ref = createRef({
-                    component: { id: "C1", name: "ComponentToRewrite" },
+                    componentId: resolved.id,
                     props: node.props as Record<string, unknown>,
                     ctx: {
                       deps: new Set(),
                       codeIdToComponentId,
-                      componentRegistry,
+                      componentRegistry: componentRegistryForRewrite,
                     },
                     children: [],
                   });
                   return { ref, children: elements };
                 }),
-                componentRegistry,
+                componentRegistry: componentRegistryForRewrite,
               });
 
               Object.assign(resolved, rewritten.registry);
@@ -205,10 +219,7 @@ export const replicate = (
                 Object.assign(
                   parent.children[index]!,
                   createRef({
-                    component: {
-                      id: resolved.id,
-                      name: resolved.name.value,
-                    },
+                    componentId: resolved.id,
                     props,
                     nodeId,
                     ctx: {

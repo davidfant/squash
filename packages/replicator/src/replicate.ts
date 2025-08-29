@@ -156,10 +156,13 @@ export const replicate = (
                 return;
               }
 
+              const componentNameToRewrite = resolved.name.isFallback
+                ? "ComponentToRewrite"
+                : resolved.name.value;
               const componentRegistryForRewrite: ComponentRegistry = new Map();
               for (const [id, c] of componentRegistry.entries()) {
                 if (id === resolved.id) {
-                  const name = "ComponentToRewrite";
+                  const name = componentNameToRewrite;
                   componentRegistryForRewrite.set(id, {
                     ...c,
                     name: { value: name, isFallback: true },

@@ -1,4 +1,7 @@
-import type { ComponentRegistry } from "@/lib/componentRegistry";
+import type {
+  ComponentRegistry,
+  ComponentRegistryItem,
+} from "@/lib/componentRegistry";
 import type { Metadata } from "@/types";
 import esbuild from "esbuild";
 import { createRequire } from "node:module";
@@ -10,7 +13,7 @@ import type { ComponentInstance } from "./types";
 type ComponentId = Metadata.ReactFiber.ComponentId;
 
 interface RenderOptions {
-  component: { name: string; code: string };
+  component: { id: ComponentId; name: string; code: string };
   deps: Set<Metadata.ReactFiber.ComponentId>;
   instances: ComponentInstance[];
   componentRegistry: ComponentRegistry;
@@ -48,15 +51,14 @@ async function buildDepModules(
 
 async function buildComponentToRewriteModule(
   component: { name: string; code: string },
+  registry: ComponentRegistryItem,
   nodeRequire: NodeJS.Require
 ) {
   const compiled = await compileComponent(component.code);
   const mod = { exports: {} as Record<string, any> };
   vm.runInNewContext(compiled, { module: mod, require: nodeRequire });
   return {
-    "./ComponentToRewrite": {
-      ComponentToRewrite: mod.exports[component.name],
-    },
+    [registry.module]: { [registry.name.value]: mod.exports[component.name] },
   };
 }
 
@@ -81,7 +83,11 @@ async function renderSample(
 export async function render(opts: RenderOptions): Promise<string[]> {
   const require = createRequire(import.meta.url);
   const [compModule, depModules] = await Promise.all([
-    buildComponentToRewriteModule(opts.component, require),
+    buildComponentToRewriteModule(
+      opts.component,
+      opts.componentRegistry.get(opts.component.id)!,
+      require
+    ),
     buildDepModules(opts.deps, opts.componentRegistry, require),
   ]);
   const modules = { ...depModules, ...compModule } as Record<string, any>;

@@ -81,7 +81,11 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
     rewritten = parseGeneratedComponent(text);
     registryItem.code = rewritten.code;
     const rendered = await render({
-      component: { name: rewritten.name, code: rewritten.code },
+      component: {
+        id: opts.component.id,
+        name: rewritten.name,
+        code: rewritten.code,
+      },
       deps: opts.component.deps,
       instances: examples,
       componentRegistry: registry,

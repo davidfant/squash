@@ -69,7 +69,8 @@ await Promise.all(
 const sink = new FileSystemSink(PATH_TO_TEMPLATE);
 try {
   await replicate(snapshot, sink, (opts) => {
-    if (["C80", "C41"].includes(opts.component.id)) {
+    // if (["C80", "C41", "C30", "C40"].includes(opts.component.id)) {
+    if (["C41", "C40"].includes(opts.component.id)) {
       return rewriteComponentWithLLMStrategy(opts);
     } else {
       return rewriteComponentUseFirstStrategy(opts);

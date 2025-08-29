@@ -151,7 +151,7 @@ export const replicate = (
               if (!elementsByNodeId.size) {
                 await sink.writeText(
                   resolved.path,
-                  `export const ${resolved.name} = () => null;`
+                  `export const ${resolved.name.value} = () => null;`
                 );
                 return;
               }
@@ -170,12 +170,13 @@ export const replicate = (
                 }
               }
 
+              console.log("DATUYM", resolved.id, group.deps.size);
+
               const rewritten = await rewriteComponentStrategy({
                 component: {
                   id: resolved.id,
                   code: m.code[group.component.codeId]!,
-                  // TODO: how to resolve this shit????? should include all children
-                  deps: new Set(["C80", "C81"]),
+                  deps: group.deps,
                 },
                 instances: Object.entries(group.nodes).map(([nid, node]) => {
                   const nodeId = nid as NodeId;

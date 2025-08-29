@@ -171,6 +171,7 @@ export async function visitComponent(
     id: ComponentId;
     component: Metadata.ReactFiber.Component.Any;
     nodes: Record<NodeId, Metadata.ReactFiber.Node>;
+    deps: Set<ComponentId>;
   }) => unknown
 ) {
   if (!metadata) return;
@@ -246,6 +247,7 @@ export async function visitComponent(
       id: g.componentId,
       component: metadata.components[g.componentId]!,
       nodes: Object.fromEntries(g.nodes.map((id) => [id, nodes[id]!])),
+      deps: componentDepsInclProps.get(g.componentId)!,
     });
     processed.add(g.componentId);
   }

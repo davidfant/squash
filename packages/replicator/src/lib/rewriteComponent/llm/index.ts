@@ -173,10 +173,13 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
   const diffs = rendered.map((r, i) => diffRenderedHtml(instances[i]!.html, r));
   if (diffs.some((d) => !!d)) {
     diffs.forEach((d, i) => {
-      if (d === null) return;
+      if (d === null) {
+        console.log("### DIFF", i, "SUCCESS");
+        return;
+      }
       const expected = instances[i]!.html;
       const actual = rendered[i];
-      console.log("### ERROR ###", i);
+      console.log("### DIFF", i, "ERROR");
       console.log(actual);
       console.log("---");
       console.log(expected);

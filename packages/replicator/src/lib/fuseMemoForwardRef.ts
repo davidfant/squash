@@ -1,5 +1,5 @@
 import { Metadata } from "@/types";
-import { buildChildMap } from "./visitComponent";
+import { buildChildMap } from "./traversal/util";
 
 export function fuseMemoForwardRef(metadata: Metadata.ReactFiber) {
   const childMap = buildChildMap(metadata.nodes);

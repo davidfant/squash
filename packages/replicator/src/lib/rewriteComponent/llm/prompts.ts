@@ -11,7 +11,7 @@ Guidelines when writing the component:
 - The component should be written in TypeScript
 - Use JSX syntax instead of React.createElement whenever possible
 - The implementation should be as minimal as possible while still mapping the JSX to the HTML
-- You will be provided with a list of internally used components. These components are used by the component you are writing. You must figure out how to use these components as much as possible, so that we minimize reimplementation of the same logic.
+- You will be provided with a list of internally used components. These components are used by the component you are writing. You must figure out how to use these components as much as possible, so that we minimize reimplementation of the same logic. Make sure to import internally used components, don't redeclare them in the TypeScript.
 - The minified JavaScript code can be used as inspiration, but you should not use it directly as there might be redundant code in the JavaScript.
 - If instructed, give the component a descriptive name. Otherwise, just use the name of the component.
 

@@ -70,10 +70,10 @@ const sink = new FileSystemSink(PATH_TO_TEMPLATE);
 try {
   await replicate(snapshot, sink, (opts) => {
     // if (["C80", "C41", "C30", "C40"].includes(opts.component.id)) {
+
+    // complex w many unprocessed children: C55
     if (
-      ["C41", "C40", "C64", "C17", "C56", "C28", "C55"].includes(
-        opts.component.id
-      )
+      ["C41", "C40", "C64", "C17", "C56", "C28"].includes(opts.component.id)
     ) {
       return rewriteComponentWithLLMStrategy(opts);
     } else {

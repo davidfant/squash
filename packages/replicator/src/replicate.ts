@@ -24,7 +24,8 @@ import { rehypeStripSquashAttribute } from "./lib/rehype/stripSquashAttribute";
 import { recmaWrapAsComponent } from "./lib/rehype/wrapAsComponent";
 import type { RewriteComponentStrategy } from "./lib/rewriteComponent/types";
 import type { FileSink } from "./lib/sinks/base";
-import { buildAncestorsMap, visitComponent } from "./lib/visitComponent";
+import { traverseComponents } from "./lib/traversal/components";
+import { buildAncestorsMap } from "./lib/traversal/util";
 import { Metadata, type Snapshot } from "./types";
 
 type Root = import("hast").Root;
@@ -112,7 +113,7 @@ export const replicate = (
       await unified()
         .use(rehypeParse, { fragment: true })
         .use(() => (tree: Root) => {
-          return visitComponent(m, async (group) => {
+          return traverseComponents(m, async (group) => {
             if ("codeId" in group.component) {
               const component = group.component;
               // const code = m.code[group.component.codeId]!;
@@ -157,10 +158,10 @@ export const replicate = (
                 return;
               }
 
-              console.log("DATUYM", resolved.id, {
-                internal: group.deps.internal.size,
-                all: group.deps.all.size,
-              });
+              // console.log("DATUYM", resolved.id, {
+              //   internal: group.deps.internal.size,
+              //   all: group.deps.all.size,
+              // });
 
               const rewritten = await traceable(
                 () =>

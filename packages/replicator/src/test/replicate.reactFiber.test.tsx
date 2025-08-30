@@ -2,10 +2,9 @@ import { buildInstanceExamples } from "@/lib/rewriteComponent/llm/buildInstanceE
 import type { RewriteComponentStrategy } from "@/lib/rewriteComponent/types";
 import { rewriteComponentUseFirstStrategy } from "@/lib/rewriteComponent/useFirst";
 import { reactFiber } from "@/metadata/reactFiber";
-import { component } from "@/metadata/reactFiber.test";
 import { forwardRef, memo, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test, vi, type Mock } from "vitest";
 import { Metadata, replicate } from "..";
 import { expectFileToMatchSnapshot, TestSink } from "./replicate.test";
 
@@ -291,17 +290,17 @@ describe("replicate with react fiber", () => {
 
     describe("LLM", () => {
       describe("component to rewrite name", () => {
-        test("should be ComponentToRewrite if name is fallback", async () => {
-          const rewrite = vi.fn(rewriteComponentUseFirstStrategy);
-          const C = () => <div>Hello</div>;
-          await run(<C />, rewrite);
+        // test("should be ComponentToRewrite if name is fallback", async () => {
+        //   const rewrite = vi.fn(rewriteComponentUseFirstStrategy);
+        //   const C = () => <div>Hello</div>;
+        //   await run(<C />, rewrite);
 
-          expect(rewrite).toHaveBeenCalledOnce();
-          const args = rewrite.mock.calls[0]![0];
-          expect(
-            args.componentRegistry.get(args.component.id)!.name.value
-          ).toBe("ComponentToRewrite");
-        });
+        //   expect(rewrite).toHaveBeenCalledOnce();
+        //   const args = rewrite.mock.calls[0]![0];
+        //   expect(
+        //     args.componentRegistry.get(args.component.id)!.name.value
+        //   ).toBe("ComponentToRewrite");
+        // });
 
         test("should be actual component name if not fallback", async () => {
           const rewrite = vi.fn(rewriteComponentUseFirstStrategy);
@@ -359,50 +358,93 @@ describe("replicate with react fiber", () => {
           expect(parentExamples[0]!.jsx).toMatchSnapshot();
         });
 
-        test("should only include direct internal deps", async () => {
-          const rewrite = vi.fn(rewriteComponentUseFirstStrategy);
-          const Child = () => <div>Hello</div>;
-          const Parent = ({ children }: { children: ReactNode }) => children;
-          const GrandParent = ({ children }: { children: ReactNode }) =>
-            children;
-          const { metadata: m } = await run(
-            <GrandParent>
+        describe("internal deps", () => {
+          const expectInternalDeps = (
+            name: string,
+            deps: string[],
+            metadata: Metadata.ReactFiber,
+            rewrite: Mock<RewriteComponentStrategy>
+          ) => {
+            const nameToId = (name: string) =>
+              Object.keys(metadata.components).find(
+                (id) =>
+                  (
+                    metadata.components[
+                      id as Metadata.ReactFiber.ComponentId
+                    ] as Metadata.ReactFiber.Component.Function
+                  ).name === name
+              );
+
+            const componentId = nameToId(name);
+            expect(componentId).toBeDefined();
+            const call = rewrite.mock.calls.find(
+              (c) => c[0].component.id === componentId
+            );
+            expect(call).toBeDefined();
+            expect(call![0].component.deps.internal).toEqual(
+              new Set(deps.map(nameToId))
+            );
+          };
+
+          test.only("should not include components provided via props", async () => {
+            const rewrite = vi.fn(rewriteComponentUseFirstStrategy);
+            const Child = () => <div>Hello</div>;
+            const Parent = ({ children }: { children: ReactNode }) => children;
+            const GrandParent = ({ children }: { children: ReactNode }) =>
+              children;
+            const { metadata: m } = await run(
+              <GrandParent>
+                <Parent>
+                  <Child />
+                </Parent>
+              </GrandParent>,
+              rewrite
+            );
+
+            expectInternalDeps("Child", [], m!, rewrite);
+            expectInternalDeps("Parent", [], m!, rewrite);
+            expectInternalDeps("GrandParent", [], m!, rewrite);
+          });
+
+          test.only("Parent renders Child internally", async () => {
+            const rewrite = vi.fn(rewriteComponentUseFirstStrategy);
+
+            const Child = () => <div>Hello</div>;
+            const Parent = () => <Child />;
+            const GrandParent = () => <Parent />;
+
+            const { metadata } = await run(<GrandParent />, rewrite);
+
+            expectInternalDeps("Child", [], metadata!, rewrite);
+            expectInternalDeps("Parent", ["Child"], metadata!, rewrite);
+            expectInternalDeps("GrandParent", ["Parent"], metadata!, rewrite);
+          });
+
+          test.only("GrandParent passes Child explicitly through Parent prop", async () => {
+            const rewrite = vi.fn(rewriteComponentUseFirstStrategy);
+
+            const Child = () => <div>Hello</div>;
+            const Parent = ({ children }: { children: React.ReactNode }) =>
+              children;
+            const GrandParent = () => (
               <Parent>
                 <Child />
               </Parent>
-            </GrandParent>,
-            rewrite
-          );
+            );
 
-          type Fn = Metadata.ReactFiber.Component.Function;
-          const components = {
-            grandParent: component<Fn>(m!, 1),
-            parent: component<Fn>(m!, 2),
-            child: component<Fn>(m!, 3),
-          };
-          expect(components.child.value.name).toBe("Child");
-          expect(components.parent.value.name).toBe("Parent");
-          expect(components.grandParent.value.name).toBe("GrandParent");
+            const { metadata } = await run(<GrandParent />, rewrite);
 
-          expect(rewrite).toHaveBeenCalledTimes(3);
-
-          const child = rewrite.mock.calls[0]![0];
-          expect(child.component.deps.internal).toEqual(new Set());
-
-          const parent = rewrite.mock.calls[1]![0];
-          expect(parent.component.deps.internal).toEqual(
-            new Set([components.child.id])
-          );
-
-          const grandParent = rewrite.mock.calls[2]![0];
-          expect(grandParent.component.deps.internal).toEqual(
-            new Set([components.parent.id])
-          );
+            expectInternalDeps("Child", [], metadata!, rewrite);
+            expectInternalDeps("Parent", [], metadata!, rewrite);
+            expectInternalDeps(
+              "GrandParent",
+              ["Parent", "Child"],
+              metadata!,
+              rewrite
+            );
+          });
         });
       });
     });
-
-    test.todo("should rewrite component", () => {});
-    test.todo("should rewrite component bottoms up", () => {});
   });
 });

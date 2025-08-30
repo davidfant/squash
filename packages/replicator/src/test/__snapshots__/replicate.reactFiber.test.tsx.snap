@@ -1,7 +1,7 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`replicate with react fiber > naming > LLM > createRef > should be correct for component without deps 1`] = `
-"import { Comp } from "./Comp";
+"import { Comp } from "@/components/Comp";
 export function Sample() {
   return <Comp />;
 }
@@ -9,7 +9,7 @@ export function Sample() {
 `;
 
 exports[`replicate with react fiber > naming > LLM > createRef > should contain child component 1`] = `
-"import { Child } from "./Child";
+"import { Child } from "@/components/Child";
 export function Sample() {
   return <Child />;
 }
@@ -17,8 +17,8 @@ export function Sample() {
 `;
 
 exports[`replicate with react fiber > naming > LLM > createRef > should contain child component 2`] = `
-"import { Parent } from "./Parent";
-import { Child } from "./Child";
+"import { Parent } from "@/components/Parent";
+import { Child } from "@/components/Child";
 export function Sample() {
   return (
     <Parent>
@@ -44,26 +44,27 @@ exports[`replicate with react fiber > naming > default name > should put compone
 `;
 
 exports[`replicate with react fiber > naming > default name > should support multiple components with same name 1`] = `
-"export function ComponentToRewrite() {
+"export function Dupe1() {
   return <div>{"Hello"}</div>;
 }
 "
 `;
 
 exports[`replicate with react fiber > naming > default name > should support multiple components with same name 2`] = `
-"export function ComponentToRewrite() {
+"export function Dupe2() {
   return <div>{"Yellow"}</div>;
 }
 "
 `;
 
 exports[`replicate with react fiber > naming > default name > should support multiple components with same name 3`] = `
-"import { ComponentToRewrite } from "./ComponentToRewrite";
+"import { Dupe1 } from "@/components/Dupe1";
+import { Dupe2 } from "@/components/Dupe2";
 export function App() {
   return (
     <>
-      <ComponentToRewrite />
-      <ComponentToRewrite />
+      <Dupe1 />
+      <Dupe2 />
     </>
   );
 }
@@ -71,7 +72,7 @@ export function App() {
 `;
 
 exports[`replicate with react fiber > naming > default name > should use default name if component name length < 3 1`] = `
-"export function ComponentToRewrite() {
+"export function Component1() {
   return <div>{"Hello"}</div>;
 }
 "

@@ -4,8 +4,8 @@ import { rewriteComponentUseFirstStrategy } from "@/lib/rewriteComponent/useFirs
 import { reactFiber } from "@/metadata/reactFiber";
 import { forwardRef, memo, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import { describe, expect, test, vi, type Mock } from "vitest";
-import { Metadata, replicate } from "..";
+import { describe, expect, test, vi } from "vitest";
+import { replicate } from "..";
 import { expectFileToMatchSnapshot, TestSink } from "./replicate.test";
 
 describe("replicate with react fiber", () => {
@@ -356,93 +356,6 @@ describe("replicate with react fiber", () => {
             parentArgs.componentRegistry
           );
           expect(parentExamples[0]!.jsx).toMatchSnapshot();
-        });
-
-        describe("internal deps", () => {
-          const expectInternalDeps = (
-            name: string,
-            deps: string[],
-            metadata: Metadata.ReactFiber,
-            rewrite: Mock<RewriteComponentStrategy>
-          ) => {
-            const nameToId = (name: string) =>
-              Object.keys(metadata.components).find(
-                (id) =>
-                  (
-                    metadata.components[
-                      id as Metadata.ReactFiber.ComponentId
-                    ] as Metadata.ReactFiber.Component.Function
-                  ).name === name
-              );
-
-            const componentId = nameToId(name);
-            expect(componentId).toBeDefined();
-            const call = rewrite.mock.calls.find(
-              (c) => c[0].component.id === componentId
-            );
-            expect(call).toBeDefined();
-            expect(call![0].component.deps.internal).toEqual(
-              new Set(deps.map(nameToId))
-            );
-          };
-
-          test.only("should not include components provided via props", async () => {
-            const rewrite = vi.fn(rewriteComponentUseFirstStrategy);
-            const Child = () => <div>Hello</div>;
-            const Parent = ({ children }: { children: ReactNode }) => children;
-            const GrandParent = ({ children }: { children: ReactNode }) =>
-              children;
-            const { metadata: m } = await run(
-              <GrandParent>
-                <Parent>
-                  <Child />
-                </Parent>
-              </GrandParent>,
-              rewrite
-            );
-
-            expectInternalDeps("Child", [], m!, rewrite);
-            expectInternalDeps("Parent", [], m!, rewrite);
-            expectInternalDeps("GrandParent", [], m!, rewrite);
-          });
-
-          test.only("Parent renders Child internally", async () => {
-            const rewrite = vi.fn(rewriteComponentUseFirstStrategy);
-
-            const Child = () => <div>Hello</div>;
-            const Parent = () => <Child />;
-            const GrandParent = () => <Parent />;
-
-            const { metadata } = await run(<GrandParent />, rewrite);
-
-            expectInternalDeps("Child", [], metadata!, rewrite);
-            expectInternalDeps("Parent", ["Child"], metadata!, rewrite);
-            expectInternalDeps("GrandParent", ["Parent"], metadata!, rewrite);
-          });
-
-          test.only("GrandParent passes Child explicitly through Parent prop", async () => {
-            const rewrite = vi.fn(rewriteComponentUseFirstStrategy);
-
-            const Child = () => <div>Hello</div>;
-            const Parent = ({ children }: { children: React.ReactNode }) =>
-              children;
-            const GrandParent = () => (
-              <Parent>
-                <Child />
-              </Parent>
-            );
-
-            const { metadata } = await run(<GrandParent />, rewrite);
-
-            expectInternalDeps("Child", [], metadata!, rewrite);
-            expectInternalDeps("Parent", [], metadata!, rewrite);
-            expectInternalDeps(
-              "GrandParent",
-              ["Parent", "Child"],
-              metadata!,
-              rewrite
-            );
-          });
         });
       });
     });

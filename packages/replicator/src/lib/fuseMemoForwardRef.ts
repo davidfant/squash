@@ -1,8 +1,8 @@
 import { Metadata } from "@/types";
-import { buildChildMap } from "./traversal/util";
+import { buildChildMap, nodesMap } from "./traversal/util";
 
 export function fuseMemoForwardRef(metadata: Metadata.ReactFiber) {
-  const childMap = buildChildMap(metadata.nodes);
+  const childMap = buildChildMap(nodesMap(metadata.nodes));
   const componentsToDelete = new Set<Metadata.ReactFiber.ComponentId>();
 
   Object.entries(metadata.nodes).forEach(([_parentNodeId, parentNode]) => {

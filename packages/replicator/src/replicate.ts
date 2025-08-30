@@ -25,7 +25,7 @@ import { recmaWrapAsComponent } from "./lib/rehype/wrapAsComponent";
 import type { RewriteComponentStrategy } from "./lib/rewriteComponent/types";
 import type { FileSink } from "./lib/sinks/base";
 import { traverseComponents } from "./lib/traversal/components";
-import { buildAncestorsMap } from "./lib/traversal/util";
+import { buildAncestorsMap, nodesMap } from "./lib/traversal/util";
 import { Metadata, type Snapshot } from "./types";
 
 type Root = import("hast").Root;
@@ -109,7 +109,7 @@ export const replicate = (
           .filter((v) => !!v)
       );
 
-      const ancestorsMap = buildAncestorsMap(m.nodes);
+      const ancestorsMap = buildAncestorsMap(nodesMap(m.nodes));
       await unified()
         .use(rehypeParse, { fragment: true })
         .use(() => (tree: Root) => {

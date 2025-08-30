@@ -114,6 +114,7 @@ export const replicate = (
         .use(() => (tree: Root) => {
           return visitComponent(m, async (group) => {
             if ("codeId" in group.component) {
+              const component = group.component;
               // const code = m.code[group.component.codeId]!;
 
               const elementsByNodeId = new Map<
@@ -156,53 +157,42 @@ export const replicate = (
                 return;
               }
 
-              const componentNameToRewrite = resolved.name.isFallback
-                ? "ComponentToRewrite"
-                : resolved.name.value;
-              const componentRegistryForRewrite: ComponentRegistry = new Map();
-              for (const [id, c] of componentRegistry.entries()) {
-                if (id === resolved.id) {
-                  const name = componentNameToRewrite;
-                  componentRegistryForRewrite.set(id, {
-                    ...c,
-                    name: { value: name, isFallback: true },
-                    module: `./${name}`,
-                  });
-                } else {
-                  componentRegistryForRewrite.set(id, c);
-                }
-              }
-
               console.log("DATUYM", resolved.id, {
                 internal: group.deps.internal.size,
                 all: group.deps.all.size,
               });
 
-              const rewritten = await rewriteComponentStrategy({
-                component: {
-                  id: resolved.id,
-                  code: m.code[group.component.codeId]!,
-                  deps: group.deps,
-                },
-                instances: Object.entries(group.nodes).map(([nid, node]) => {
-                  const nodeId = nid as NodeId;
-                  const elements = (elementsByNodeId.get(nodeId) ?? []).map(
-                    (e) => clone(e.element)
-                  );
-                  const ref = createRef({
-                    componentId: resolved.id,
-                    props: node.props as Record<string, unknown>,
-                    ctx: {
-                      deps: new Set(),
-                      codeIdToComponentId,
-                      componentRegistry: componentRegistryForRewrite,
+              const rewritten = await traceable(
+                () =>
+                  rewriteComponentStrategy({
+                    component: {
+                      id: resolved.id,
+                      code: m.code[component.codeId]!,
+                      deps: group.deps,
                     },
-                    children: [],
-                  });
-                  return { ref, children: elements };
-                }),
-                componentRegistry: componentRegistryForRewrite,
-              });
+                    instances: Object.entries(group.nodes).map(
+                      ([nid, node]) => {
+                        const nodeId = nid as NodeId;
+                        const elements = (
+                          elementsByNodeId.get(nodeId) ?? []
+                        ).map((e) => clone(e.element));
+                        const ref = createRef({
+                          componentId: resolved.id,
+                          props: node.props as Record<string, unknown>,
+                          ctx: {
+                            deps: new Set(),
+                            codeIdToComponentId,
+                            componentRegistry,
+                          },
+                          children: [],
+                        });
+                        return { ref, children: elements };
+                      }
+                    ),
+                    componentRegistry,
+                  }),
+                { name: `Rewrite ${resolved.name.value} (${resolved.id})` }
+              )();
 
               Object.assign(resolved, rewritten);
               await sink.writeText(resolved.path, rewritten.code);

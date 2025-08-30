@@ -9,10 +9,11 @@ Your task is to write a React component that maps the example input JSX to outpu
 Guidelines when writing the component:
 - Always start by importing React
 - The component should be written in TypeScript
+- Use JSX syntax instead of React.createElement whenever possible
 - The implementation should be as minimal as possible while still mapping the JSX to the HTML
-- You will be provided with a list of internally used components. You should attempt to figure out which components  use these components as much as possible.
+- You will be provided with a list of internally used components. These components are used by the component you are writing. You must figure out how to use these components as much as possible, so that we minimize reimplementation of the same logic.
 - The minified JavaScript code can be used as inspiration, but you should not use it directly as there might be redundant code in the JavaScript.
-- Give the component a descriptive name
+- If instructed, give the component a descriptive name. Otherwise, just use the name of the component.
 
 When writing the component you are only allowed to import from the following libraries:
 - 'react'
@@ -22,6 +23,9 @@ You are NOT allowed to import any other libraries or dependencies. If the origin
 
 Input format:
 ---
+Component to rewrite: [component name]
+Should rename component? [true/false]
+
 # Code
 \`\`\`javascript
 [minified JavaScript code]
@@ -53,7 +57,7 @@ Output HTML
 ---
 
 Output format:
-[reasoning about the component you will write]
+[reasoning about the component you will write, including how you will use the internal components]
 
 # ComponentName
 \`\`\`typescript
@@ -80,7 +84,7 @@ export function MyComponent({}: Props) {
 `.trim();
 
 export const initialUserMessage = async (
-  code: string,
+  component: { name: { value: string; isFallback: boolean }; code: string },
   internalDeps: Array<{ name: string; module: string; code: string }>,
   examples: Array<{ jsx: string; html: string }>
 ) => {
@@ -91,9 +95,12 @@ export const initialUserMessage = async (
 
   const numExamples = Math.min(unique.length, 5);
   return [
+    `Component to rewrite: ${component.name.value}`,
+    `Should rename component? ${component.name.isFallback}`,
+    "",
     "# Code",
     "```javascript",
-    await prettier.js(`(${code})`),
+    await prettier.js(`(${component.code})`),
     "```",
     "",
     "# Internally used components",

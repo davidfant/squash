@@ -25,4 +25,6 @@ export interface RewriteComponentOptions {
 
 export type RewriteComponentStrategy = (
   opts: RewriteComponentOptions
-) => Promise<ComponentRegistryItem>;
+) => Promise<
+  Partial<ComponentRegistryItem> & Pick<ComponentRegistryItem, "code">
+>;

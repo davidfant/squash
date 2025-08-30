@@ -65,7 +65,7 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
 
   const examples = await buildInstanceExamples(opts.instances, registry);
   const content = await Prompts.initialUserMessage(
-    opts.component.code,
+    { code: opts.component.code, name: registryItem.name },
     [...opts.component.deps.internal]
       .map((id) => registry.get(id))
       .filter((v) => !!v)
@@ -80,7 +80,11 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
   let rewritten: { name: string; code: string };
   let attempt = 0;
   while (true) {
-    const { text, response } = await generateText({ model, messages });
+    const { text, response } = await generateText({
+      model,
+      messages,
+      maxOutputTokens: 8192,
+    });
     rewritten = parseGeneratedComponent(text);
     registryItem.code = rewritten.code;
     const rendered = await render({

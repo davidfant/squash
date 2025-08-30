@@ -95,10 +95,29 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
     });
     messages.push(...response.messages);
 
-    const diffs = rendered.map((r, i) =>
-      diffRenderedHtml(examples[i]!.html, r)
-    );
-    if (diffs.every((d) => d === null)) break;
+    const errors = rendered.map((r, i) => {
+      const errors: Array<{ message: string; description: string }> = [];
+      if (r.logs.length) {
+        errors.push({
+          message: "Warning logs",
+          description: r.logs
+            .map((l) => `[${l.level}] ${l.message}`)
+            .join("\n"),
+        });
+      }
+
+      const diff = diffRenderedHtml(examples[i]!.html, r.html);
+      if (!!diff) {
+        errors.push({
+          message: "Differences in rendered HTML",
+          description: `\`\`\`diff\n${diff}\n\`\`\``,
+        });
+      }
+
+      return errors;
+    });
+
+    if (errors.every((e) => !e.length)) break;
 
     attempt++;
     if (attempt === 3) {
@@ -107,7 +126,7 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
 
     messages.push({
       role: "user",
-      content: await Prompts.diffUserMessage(diffs, examples),
+      content: await Prompts.errorsUserMessage(errors, examples),
     });
   }
 

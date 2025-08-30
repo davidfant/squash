@@ -14,6 +14,11 @@ interface Module {
   transform?(module: Record<string, any>): Record<string, any>;
 }
 
+interface Log {
+  level: "warn" | "error";
+  message: string;
+}
+
 interface RenderOptions {
   component: { id: ComponentId; name: string; code: string };
   deps: Set<Metadata.ReactFiber.ComponentId>;
@@ -51,11 +56,33 @@ function makeLazyRequire(modules: Record<string, Module>) {
   };
 }
 
+function withConsoleCapture<T>(fn: () => T): { result: T; logs: Log[] } {
+  const logs: Log[] = [];
+
+  const origError = console.error;
+  const origWarn = console.warn;
+
+  const capture =
+    (level: "error" | "warn") =>
+    (...args: unknown[]) =>
+      logs.push({ level, message: args.map(String).join(" ") });
+
+  console.error = capture("error");
+  console.warn = capture("warn");
+
+  try {
+    return { result: fn(), logs };
+  } finally {
+    console.error = origError;
+    console.warn = origWarn;
+  }
+}
+
 async function renderSample(
   ctx: vm.Context,
   sampleCode: string,
   index: number
-): Promise<string> {
+): Promise<{ html: string; logs: Log[] }> {
   // esbuild just turns TSX → CJS; we don't bundle so 'require' calls stay.
   const { code } = await esbuild.transform(sampleCode, {
     loader: "tsx",
@@ -69,10 +96,13 @@ async function renderSample(
   // E.g. "Each child in a list should have a unique key prop". These
   // errors should be reported back to the LLM
   const element = React.createElement(ctx.module.exports.Sample);
-  return renderToStaticMarkup(element);
+  const output = withConsoleCapture(() => renderToStaticMarkup(element));
+  return { html: output.result, logs: output.logs };
 }
 
-export async function render(opts: RenderOptions): Promise<string[]> {
+export async function render(
+  opts: RenderOptions
+): Promise<Array<{ html: string; logs: Log[] }>> {
   const modules: Record<string, Module> = {};
   await Promise.all([
     (async () => {

@@ -98,7 +98,7 @@ export const initialUserMessage = async (
     "",
     "# Internally used components",
     ...internalDeps.flatMap((dep) => [
-      `## ${dep.name} (${dep.module})`,
+      `## \`import { ${dep.name} } from "${dep.module}"\``,
       "```typescript",
       dep.code,
       "```",
@@ -121,8 +121,8 @@ export const initialUserMessage = async (
   ].join("\n");
 };
 
-export const diffUserMessage = async (
-  diffs: Array<string | null>,
+export const errorsUserMessage = async (
+  errors: Array<{ message: string; description: string }>[],
   examples: Array<{ jsx: string; html: string }>
 ) => {
   return [
@@ -138,18 +138,16 @@ Error: when rendering the component, the rendered HTML does not match the expect
     "# Examples",
     ...examples.flatMap((ex, index) => [
       `## Example ${index + 1}`,
-      ...(diffs[index] === null
-        ? ["Status: Success"]
-        : [
-            "Status: Error",
-            "```diff",
-            diffs[index],
-            "```",
+      ...(errors[index]?.length
+        ? [
+            "Found errors while rendering the component",
+            ...errors[index]!.flatMap((e) => [`- ${e.message}`, e.description]),
             "Input JSX",
             "```javascript",
             examples[index]?.jsx,
             "```",
-          ]),
+          ]
+        : ["Status: Success"]),
     ]),
   ].join("\n");
 };

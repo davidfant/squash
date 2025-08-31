@@ -75,4 +75,16 @@ describe("getInternalDeps", () => {
     expect(deps["Parent"]).toEqual([]);
     expect(deps["GrandParent"]).toEqual(["Parent", "Child"]);
   });
+
+  test("child wrapped in DOM element is internal dep", async () => {
+    const Child = () => <div>Hello</div>;
+    const Parent = () => (
+      <div>
+        <Child />
+      </div>
+    );
+    const deps = await run(<Parent />);
+    expect(deps["Child"]).toEqual([]);
+    expect(deps["Parent"]).toEqual(["Child"]);
+  });
 });

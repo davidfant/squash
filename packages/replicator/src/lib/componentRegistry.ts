@@ -12,7 +12,7 @@ export interface ComponentRegistryItem {
   path: string;
   module: string;
   name: { value: string; isFallback: boolean };
-  code: string;
+  code: string | undefined;
 }
 
 export type ComponentRegistry = Map<ComponentId, ComponentRegistryItem>;
@@ -75,13 +75,7 @@ export function buildInitialComponentRegistry(
 
         const m = path.join("@/components", dir, name.value);
         const p = path.join("src/components", dir, `${name.value}.tsx`);
-        result.set(id, {
-          id,
-          path: p,
-          module: m,
-          name,
-          code: `export const ${name.value} = () => null;`,
-        });
+        result.set(id, { id, path: p, module: m, name, code: undefined });
       }
     }
   }

@@ -114,6 +114,9 @@ export function getInternalDeps(
       .filter((componentId) => componentHasCode(components.get(componentId)!));
 
     const nodeDescendantInternalDeps = [...nodeDescendants]
+      .filter((nodeId) =>
+        componentHasCode(components.get(nodes.get(nodeId)!.componentId)!)
+      )
       .map((nodeId) => nodeInternalDeps.get(nodeId) ?? new Set<ComponentId>())
       .reduce(
         (acc, curr) => new Set([...acc, ...curr]),

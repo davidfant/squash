@@ -84,7 +84,7 @@ export async function traverseComponents(
   const nodeInternalDeps = getInternalDeps(metadata);
   const componentInternalDeps = new Map<ComponentId, Set<ComponentId>>();
   for (const [componentId, nodes] of componentNodes) {
-    if (componentInternalDeps.has(componentId)) {
+    if (!componentInternalDeps.has(componentId)) {
       componentInternalDeps.set(componentId, new Set());
     }
     nodes.forEach((nodeId) =>
@@ -104,18 +104,46 @@ export async function traverseComponents(
     }
     descNodeIds.forEach((descNodeId) => {
       const descCompId = nodes.get(descNodeId)!.componentId;
-      componentAllDeps.get(componentId)?.add(descCompId);
+      if (componentHasCode(components.get(descCompId)!)) {
+        componentAllDeps.get(componentId)?.add(descCompId);
+      }
     });
   });
 
+  const sortOrder = new Map(
+    [...componentNodes.keys()].map((componentId) => [
+      componentId,
+      {
+        maxDepth: componentMaxDepths.get(componentId) ?? 0,
+        internalDeps: componentInternalDeps.get(componentId)?.size ?? 0,
+        allDeps: componentAllDeps.get(componentId)?.size ?? 0,
+      },
+    ])
+  );
+
   const remaining = [...componentNodes]
     .map(([componentId, nodes]) => ({ componentId, nodes }))
-    .sort(
-      (a, b) =>
-        (componentMaxDepths.get(b.componentId) ?? 0) -
-        (componentMaxDepths.get(a.componentId) ?? 0)
-    );
+    // .sort(
+    //   (a, b) =>
+    //     (componentMaxDepths.get(b.componentId) ?? 0) -
+    //     (componentMaxDepths.get(a.componentId) ?? 0)
+    // );
+    .sort((compA, compB) => {
+      const a = sortOrder.get(compA.componentId)!;
+      const b = sortOrder.get(compB.componentId)!;
+      if (a.maxDepth !== b.maxDepth) return b.maxDepth - a.maxDepth;
+      if (a.internalDeps !== b.internalDeps)
+        return a.internalDeps - b.internalDeps;
+      if (a.allDeps !== b.allDeps) return a.allDeps - b.allDeps;
+      return 0;
+    });
   const processed = new Set<ComponentId>();
+  console.log(
+    "Sorting components",
+    Object.fromEntries(
+      remaining.map((m) => [m.componentId, sortOrder.get(m.componentId)])
+    )
+  );
 
   const next = () => {
     // TODO: when common processing, we want to get the component where the most amount of deps + children have been processed. We e.g. don't want to process a component where lots of children provided through props are not yet processed.

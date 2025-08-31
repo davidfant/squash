@@ -20,19 +20,17 @@ const model = wrapLanguageModel({
 function parseGeneratedComponent(md: string): {
   name: string;
   code: string;
-} {
+} | null {
   // 1️⃣  Component name – first markdown H1 (`#`) we encounter
   const nameMatch = md.match(/^\s*#\s+([A-Za-z0-9_.-]+)/m);
   if (!nameMatch) {
-    console.error(
+    console.warn(
       "Could not find a '# ComponentName' heading in the model output"
     );
     console.error("---");
     console.error(md);
     console.error("---");
-    throw new Error(
-      "Could not find a '# ComponentName' heading in model output"
-    );
+    return null;
   }
   const name = nameMatch[1]!.trim();
 
@@ -77,8 +75,11 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
     { code: opts.component.code, name: registryItem.name },
     [...opts.component.deps.internal]
       .map((id) => registry.get(id))
-      .filter((v) => !!v)
-      .map((r) => ({ name: r.name.value, module: r.module, code: r.code })),
+      .filter((i) => !!i)
+      .map((i) => {
+        if (!i.code) throw new Error(`Component ${i.id} has no code`);
+        return { name: i.name.value, module: i.module, code: i.code };
+      }),
     examples
   );
   const messages: ModelMessage[] = [
@@ -86,7 +87,7 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
     { role: "user", content },
   ];
 
-  let rewritten: { name: string; code: string };
+  let rewritten: { name: string; code: string } | null;
   let attempt = 0;
   while (true) {
     const { text, response } = await generateText({
@@ -95,6 +96,8 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
       maxOutputTokens: 8192,
     });
     rewritten = parseGeneratedComponent(text);
+    if (!rewritten) break;
+
     registryItem.code = rewritten.code;
     const rendered = await render({
       component: {
@@ -102,7 +105,7 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
         name: rewritten.name,
         code: rewritten.code,
       },
-      deps: opts.component.deps.all,
+      deps: opts.component.deps,
       instances: examples,
       componentRegistry: registry,
     });
@@ -142,6 +145,8 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
       content: await Prompts.errorsUserMessage(errors, examples),
     });
   }
+
+  if (!rewritten) throw new Error("TODO: what do we do if rewriting fails?");
 
   return buildComponentRegistryItem(
     opts.component.id,

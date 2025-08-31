@@ -150,19 +150,21 @@ export const replicate = (
               const resolved = componentRegistry.get(group.id)!;
 
               // The component never has a node, however it might still be called in some react element props somewhere
-              if (!elementsByNodeId.size) {
-                await sink.writeText(
-                  resolved.path,
-                  `export const ${resolved.name.value} = () => null;`
-                );
-                return;
-              }
+              // if (!elementsByNodeId.size) {
+              //   const code = `export const ${resolved.name.value} = () => null;`;
+              //   Object.assign(resolved, { code });
+              //   await sink.writeText(resolved.path,
+              //     code
+              //   );
+              //   return;
+              // }
 
               // console.log("DATUYM", resolved.id, {
               //   internal: group.deps.internal.size,
               //   all: group.deps.all.size,
               // });
 
+              // console.log("REWRITING", resolved.id, group.deps);
               const rewritten = await traceable(
                 () =>
                   rewriteComponentStrategy({
@@ -187,6 +189,8 @@ export const replicate = (
                           },
                           children: [],
                         });
+
+                        // console.log("REF", ref);
                         return { ref, children: elements };
                       }
                     ),
@@ -196,7 +200,7 @@ export const replicate = (
               )();
 
               Object.assign(resolved, rewritten);
-              await sink.writeText(resolved.path, rewritten.code);
+              await sink.writeText(resolved.path, rewritten.code!);
 
               const elementsOrderedByDepth = [...elementsByNodeId.entries()]
                 .map(([nodeId, elements]) => ({ nodeId, elements }))

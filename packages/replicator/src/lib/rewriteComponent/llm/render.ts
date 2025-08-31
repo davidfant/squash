@@ -21,7 +21,10 @@ interface Log {
 
 interface RenderOptions {
   component: { id: ComponentId; name: string; code: string };
-  deps: Set<Metadata.ReactFiber.ComponentId>;
+  deps: {
+    internal: Set<Metadata.ReactFiber.ComponentId>;
+    all: Set<Metadata.ReactFiber.ComponentId>;
+  };
   instances: ComponentInstance[];
   componentRegistry: ComponentRegistry;
 }
@@ -103,12 +106,15 @@ async function renderSample(
 export async function render(
   opts: RenderOptions
 ): Promise<Array<{ html: string; logs: Log[] }>> {
-  console.log("RENDER", opts.component.id, opts.deps);
   const modules: Record<string, Module> = {};
+  console.log("RENDER", opts.component.id, opts.deps);
   await Promise.all([
     (async () => {
       const item = opts.componentRegistry.get(opts.component.id);
       if (!item) throw new Error(`Unknown component ${opts.component.id}`);
+      if (!item.code) {
+        throw new Error(`Component ${opts.component.id} missing code`);
+      }
       const code = await compileComponent(item.code);
       modules[item.module] = {
         code,
@@ -127,11 +133,14 @@ export async function render(
 
       modules["@/lib/utils"] = { code };
     })(),
-    ...[...opts.deps]
+    ...[...opts.deps.all]
       .filter((cid) => cid !== opts.component.id)
       .map(async (cid) => {
         const item = opts.componentRegistry.get(cid);
         if (!item) throw new Error(`Unknown dep ${cid}`);
+        if (!item.code) {
+          throw new Error(`Component ${cid} missing code`);
+        }
         const code = await compileComponent(item.code);
         modules[item.module] = { code };
       }),

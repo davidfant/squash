@@ -134,7 +134,7 @@ export const errorsUserMessage = async (
 ) => {
   return [
     `
-Error: when rendering the component, the rendered HTML does not match the expected HTML. Below you can see which examples succeeded and which failed. First, identify what went wrong, and then think about how to fix it. If it's not possible to fix it, just say so. If you think you can fix it, provide the updated code following the same format as the original code:
+Error: when rendering the component, the rendered HTML output of one or more of the examples does not match the expected HTML. Below you can see which examples succeeded and which failed. First, analyze the differences between the expected and actual HTML, and then identify what went wrong. Thereafter reason about potential ways of fixing it. If it's not possible to fix it, just say so. If you think you can fix it, implement the fix and provide an updated version of the component following the below format:
 
 # ComponentName
 \`\`\`typescript

@@ -99,12 +99,12 @@ export async function traverseComponents(
   const componentAllDeps = new Map<ComponentId, Set<ComponentId>>();
   descendants.forEach((descNodeIds, nodeId) => {
     const componentId = nodes.get(nodeId)!.componentId;
-    if (componentAllDeps.has(componentId)) {
+    if (!componentAllDeps.has(componentId)) {
       componentAllDeps.set(componentId, new Set());
     }
     descNodeIds.forEach((descNodeId) => {
       const descCompId = nodes.get(descNodeId)!.componentId;
-      componentAllDeps.get(descCompId)?.add(descCompId);
+      componentAllDeps.get(componentId)?.add(descCompId);
     });
   });
 
@@ -140,8 +140,8 @@ export async function traverseComponents(
         // TODO: should this maybe only include components up until
         // a component uses another component? in that case it's no
         // longer a direct internal dependency
-        internal: componentInternalDeps.get(g.componentId)!,
-        all: componentAllDeps.get(g.componentId)!,
+        internal: componentInternalDeps.get(g.componentId) ?? new Set(),
+        all: componentAllDeps.get(g.componentId) ?? new Set(),
       },
     });
     processed.add(g.componentId);

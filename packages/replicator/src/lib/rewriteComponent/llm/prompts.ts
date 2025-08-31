@@ -1,6 +1,5 @@
 import * as prettier from "@/lib/prettier";
 
-// - import { cn } from "@/lib/utils"
 export const instructions = `
 You are a senior TypeScript developer. Your job is to create a React component in TypeScript. You will be given a minified JavaScript code snippet of the component, as well as one or more examples of how JSX is rendered to HTML.
 
@@ -18,6 +17,7 @@ Guidelines when writing the component:
 When writing the component you are only allowed to import from the following libraries:
 - 'react'
 - 'react-dom'
+- \`import { cn } from "@/lib/utils"\`
 
 You are NOT allowed to import any other libraries or dependencies. If the original code looks like it's using a library, you DONT have access to the library and must make a best effort guess to map the input JSX to output HTML.
 

@@ -103,6 +103,7 @@ async function renderSample(
 export async function render(
   opts: RenderOptions
 ): Promise<Array<{ html: string; logs: Log[] }>> {
+  console.log("RENDER", opts.component.id, opts.deps);
   const modules: Record<string, Module> = {};
   await Promise.all([
     (async () => {
@@ -114,12 +115,26 @@ export async function render(
         transform: (m) => ({ [item.name.value]: m[opts.component.name] }),
       };
     })(),
-    ...[...opts.deps].map(async (cid) => {
-      const item = opts.componentRegistry.get(cid);
-      if (!item) throw new Error(`Unknown dep ${cid}`);
-      const code = await compileComponent(item.code);
-      modules[item.module] = { code };
-    }),
+    (async () => {
+      const code = await compileComponent(`
+        import { clsx, type ClassValue } from "clsx";
+        import { twMerge } from "tailwind-merge";
+
+        export function cn(...inputs: ClassValue[]) {
+          return twMerge(clsx(inputs))
+        }
+      `);
+
+      modules["@/lib/utils"] = { code };
+    })(),
+    ...[...opts.deps]
+      .filter((cid) => cid !== opts.component.id)
+      .map(async (cid) => {
+        const item = opts.componentRegistry.get(cid);
+        if (!item) throw new Error(`Unknown dep ${cid}`);
+        const code = await compileComponent(item.code);
+        modules[item.module] = { code };
+      }),
   ]);
 
   const require = makeLazyRequire(modules);

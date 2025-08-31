@@ -24,6 +24,12 @@ function parseGeneratedComponent(md: string): {
   // 1️⃣  Component name – first markdown H1 (`#`) we encounter
   const nameMatch = md.match(/^\s*#\s+([A-Za-z0-9_.-]+)/m);
   if (!nameMatch) {
+    console.error(
+      "Could not find a '# ComponentName' heading in the model output"
+    );
+    console.error("---");
+    console.error(md);
+    console.error("---");
     throw new Error(
       "Could not find a '# ComponentName' heading in model output"
     );
@@ -31,7 +37,10 @@ function parseGeneratedComponent(md: string): {
   const name = nameMatch[1]!.trim();
 
   // 2️⃣  Code fence – first ```tsx / ```typescript / ```ts block
-  const codeMatch = md.match(/```(?:tsx|typescript|ts)\s*([\s\S]*?)```/);
+  const codeRegex = /```(?:tsx|typescript|ts)\s*([\s\S]*?)```/g;
+  const codeMatch =
+    nameMatch &&
+    [...md.matchAll(codeRegex)].find((m) => m.index! > nameMatch.index!);
   if (!codeMatch) {
     throw new Error(
       "Could not find a TSX/TypeScript code block in model output"

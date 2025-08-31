@@ -7,6 +7,7 @@ import { langsmith } from "./lib/ai";
 import { rewriteComponentWithLLMStrategy } from "./lib/rewriteComponent/llm";
 import { rewriteComponentUseFirstStrategy } from "./lib/rewriteComponent/useFirst";
 import { FileSystemSink } from "./lib/sinks/fs";
+import { describeSVGWithLLM } from "./lib/svg/alias";
 import { logFileTree } from "./logFileTree";
 import { replicate } from "./replicate";
 import type { Snapshot } from "./types";
@@ -68,20 +69,25 @@ await Promise.all(
 // const sink = new TarSink();
 const sink = new FileSystemSink(PATH_TO_TEMPLATE);
 try {
-  await replicate(snapshot, sink, (opts) => {
-    // if (["C80", "C41", "C30", "C40"].includes(opts.component.id)) {
+  await replicate(
+    snapshot,
+    sink,
+    (opts) => {
+      // if (["C80", "C41", "C30", "C40"].includes(opts.component.id)) {
 
-    // complex w many unprocessed children: C55
-    if (
-      ["C41", "C40", "C64", "C17", "C56", "C28", "C18", "C19"].includes(
-        opts.component.id
-      )
-    ) {
-      return rewriteComponentWithLLMStrategy(opts);
-    } else {
-      return rewriteComponentUseFirstStrategy(opts);
-    }
-  });
+      // complex w many unprocessed children: C55
+      if (
+        ["C41", "C40", "C64", "C17", "C56", "C28", "C18", "C19"].includes(
+          opts.component.id
+        )
+      ) {
+        return rewriteComponentWithLLMStrategy(opts);
+      } else {
+        return rewriteComponentUseFirstStrategy(opts);
+      }
+    },
+    describeSVGWithLLM
+  );
 } finally {
   await langsmith.awaitPendingTraceBatches();
 }

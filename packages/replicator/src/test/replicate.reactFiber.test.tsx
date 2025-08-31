@@ -1,6 +1,7 @@
 import { buildInstanceExamples } from "@/lib/rewriteComponent/llm/buildInstanceExamples";
 import type { RewriteComponentStrategy } from "@/lib/rewriteComponent/types";
 import { rewriteComponentUseFirstStrategy } from "@/lib/rewriteComponent/useFirst";
+import { describeSVGPlaceholder } from "@/lib/svg/alias";
 import { reactFiber } from "@/metadata/reactFiber";
 import { forwardRef, memo, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
@@ -31,7 +32,12 @@ describe("replicate with react fiber", () => {
     const metadata = await reactFiber();
     const html = document.documentElement.innerHTML;
     const page = { url: "http://localhost", title: "Test", html };
-    await replicate({ page, metadata }, sink, rewriteStrategy);
+    await replicate(
+      { page, metadata },
+      sink,
+      rewriteStrategy,
+      describeSVGPlaceholder
+    );
     return { metadata, files: await sink.finalize() };
   };
 
@@ -358,6 +364,21 @@ describe("replicate with react fiber", () => {
           expect(parentExamples[0]!.jsx).toMatchSnapshot();
         });
       });
+    });
+  });
+
+  describe("SVG path aliasing", () => {
+    test("should initially write file with replaced SVG path, and then rewrite file with aliased path", async () => {
+      const { files } = await run(
+        <svg>
+          <path d="replace me" />
+        </svg>
+      );
+
+      const appWrites = files.filter((f) => f.path === "src/App.tsx");
+      expect(appWrites).toHaveLength(2);
+      expect(new TextDecoder().decode(appWrites[0]!.bytes)).toMatchSnapshot();
+      expect(new TextDecoder().decode(appWrites[1]!.bytes)).toMatchSnapshot();
     });
   });
 });

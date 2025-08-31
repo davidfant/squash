@@ -1,5 +1,27 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`replicate with react fiber > SVG path aliasing > should initially write file with replaced SVG path, and then rewrite file with aliased path 1`] = `
+"export function App() {
+  return (
+    <svg>
+      <path d="[[SVG:0|PATH:0|NAME:N|DESCRIPTION:D]]" />
+    </svg>
+  );
+}
+"
+`;
+
+exports[`replicate with react fiber > SVG path aliasing > should initially write file with replaced SVG path, and then rewrite file with aliased path 2`] = `
+"export function App() {
+  return (
+    <svg>
+      <path d="replace me" />
+    </svg>
+  );
+}
+"
+`;
+
 exports[`replicate with react fiber > naming > LLM > createRef > should be correct for component without deps 1`] = `
 "import { Comp } from "@/components/Comp";
 export function Sample() {

@@ -24,6 +24,8 @@ import { rehypeStripSquashAttribute } from "./lib/rehype/stripSquashAttribute";
 import { recmaWrapAsComponent } from "./lib/rehype/wrapAsComponent";
 import type { RewriteComponentStrategy } from "./lib/rewriteComponent/types";
 import type { FileSink } from "./lib/sinks/base";
+import { aliasSVGPaths, type DescribeSVGStrategy } from "./lib/svg/alias";
+import { replaceSVGPathsInFiles } from "./lib/svg/replace";
 import { traverseComponents } from "./lib/traversal/components";
 import { buildAncestorsMap, nodesMap } from "./lib/traversal/util";
 import { Metadata, type Snapshot } from "./types";
@@ -63,7 +65,8 @@ async function writeFile(opts: {
 export const replicate = (
   snapshot: Snapshot,
   sink: FileSink<any>,
-  rewriteComponentStrategy: RewriteComponentStrategy
+  rewriteComponentStrategy: RewriteComponentStrategy,
+  describeSVGStrategy: DescribeSVGStrategy
 ) =>
   traceable(
     async (_url: string) => {
@@ -89,7 +92,14 @@ export const replicate = (
         )
       );
 
-      const m = snapshot.metadata;
+      const svgAliased = await traceable(
+        () => aliasSVGPaths($, snapshot.metadata, describeSVGStrategy),
+        { name: "Alias SVG paths" }
+      )();
+
+      console.dir(svgAliased, { depth: null });
+
+      const m = svgAliased.metadata;
       if (!m) throw new Error("Metadata is required");
       fuseMemoForwardRef(m);
 
@@ -257,7 +267,7 @@ export const replicate = (
           });
         })
         .use(rehypeStringify)
-        .process(snapshot.page.html);
+        .process(svgAliased.html);
 
       const replicatedHtml = `
 <!DOCTYPE html>
@@ -268,9 +278,11 @@ export const replicate = (
   <script type="module" src="/src/main.tsx"></script>
 </html>
   `.trim();
+      await replaceSVGPathsInFiles(sink, svgAliased.dPathMapping);
       await prettier
         .html(replicatedHtml)
         .then((text) => sink.writeText("index.html", text));
+
       await urlsToDownloadP;
     },
     { name: "Replicator", client: langsmith }

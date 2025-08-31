@@ -3,5 +3,9 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   plugins: [tsconfigPaths()],
-  test: { environment: "happy-dom", globals: true },
+  test: {
+    environment: "happy-dom",
+    globals: true,
+    setupFiles: ["./vitest.setup.ts"],
+  },
 });

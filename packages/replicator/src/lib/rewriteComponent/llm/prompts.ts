@@ -135,11 +135,30 @@ export const errorsUserMessage = async (
 ) => {
   return [
     `
-Error: when rendering the component, the rendered HTML output of one or more of the examples does not match the expected HTML. Below you can see which examples succeeded and which failed. First, analyze the differences between the expected and actual HTML, and then identify what went wrong. Thereafter reason about potential ways of fixing it. If it's not possible to fix it, just say so. If you think you can fix it, implement the fix and provide an updated version of the component following the below format:
+Heres a clearer rewrite of your prompt, with the diff convention emphasized up front:
+
+---
+
+**Error Report:**
+When rendering the component, the HTML output of one or more examples does not match the expected HTML.
+
+**Instructions:**
+
+* The differences are shown as a **git diff**:
+  * Lines prefixed with \`+\` represent what **should be present** (expected output).
+  * Lines prefixed with \`-\` represent what **is currently rendered but should not be** (actual incorrect output).
+* First, analyze the diff to understand the discrepancies between expected and actual HTML.
+* Next, explain what went wrong in the component.
+* Then, propose potential solutions.
+  * If it cannot be fixed, state that clearly.
+  * If it can be fixed, create a brief outline for how to solve it. Thereafter provide the corrected component code with the fix implemented, following the below output format.
+
+**Output Format:**
+Follow the format below when providing the updated version of the component:
 
 # ComponentName
 \`\`\`typescript
-[component code]
+<your updated component code here>
 \`\`\`
 `.trim(),
     ``,

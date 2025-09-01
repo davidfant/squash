@@ -41,24 +41,29 @@ export async function aliasSVGPaths(
   const svgs = $("svg")
     .filter((_, svg) => !!$(svg).find("path[d]").length)
     .toArray()
-    .map((svg) => $(svg).clone());
+    .map((svg) => ({
+      original: $(svg),
+      cloned: $(svg).clone(),
+    }));
 
   svgs.forEach((svg) => {
-    svg.removeAttr("data-squash-node-id");
-    svg.find("*").removeAttr("data-squash-node-id");
+    svg.cloned.removeAttr("data-squash-node-id");
+    svg.cloned.find("*").removeAttr("data-squash-node-id");
   });
 
-  const hashes = await Promise.all(svgs.map((svg) => createSVGHash(svg)));
+  const hashes = await Promise.all(
+    svgs.map((svg) => createSVGHash(svg.cloned))
+  );
   const svgsByHash = svgs.reduce((acc, svg, i) => {
     const hash = hashes[i]!;
-    acc.set(hash, [...(acc.get(hash) || []), $(svg)]);
+    acc.set(hash, [...(acc.get(hash) || []), svg]);
     return acc;
-  }, new Map<string, Cheerio<Element>[]>());
+  }, new Map<string, Array<{ original: Cheerio<Element>; cloned: Cheerio<Element> }>>());
   const uniqHashes = [...new Set(hashes)];
 
   const details = await Promise.all(
     uniqHashes.map(
-      traceable((hash: string) => describe(svgsByHash.get(hash)![0]!), {
+      traceable((hash: string) => describe(svgsByHash.get(hash)![0]!.cloned), {
         name: "Describe SVG",
       })
     )
@@ -69,18 +74,20 @@ export async function aliasSVGPaths(
 
   uniqHashes.forEach((hash, svgIndex) =>
     svgsByHash.get(hash)?.forEach((svg) => {
-      const paths = $(svg).find("path[d]");
+      const paths = svg.original.find("path[d]");
 
-      paths.each((pathIndex, pathElement) => {
+      const ds = paths.map((_, pathElement) => {
         const $path = $(pathElement);
+        return $path.attr("d")!;
+      });
+      const uniqDs = [...new Set(ds)];
+
+      paths.each((_, path) => {
+        const $path = $(path);
         const originalD = $path.attr("d")!;
-        // const placeholder = JSON.stringify({
-        //   svgId: svgIndex,
-        //   pathIndex,
-        //   ...details[svgIndex],
-        // });
+        const idx = uniqDs.indexOf(originalD);
         const d = details[svgIndex]!;
-        const placeholder = `[[SVG:${svgIndex}|PATH:${pathIndex}|NAME:${d.name}|DESCRIPTION:${d.description}]]`;
+        const placeholder = `[[SVG:${svgIndex}|PATH:${idx}|NAME:${d.name}|DESCRIPTION:${d.description}]]`;
         dPathMapping.set(originalD, placeholder);
         $path.attr("d", placeholder);
       });

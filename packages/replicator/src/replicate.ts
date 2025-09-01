@@ -97,8 +97,6 @@ export const replicate = (
         { name: "Alias SVG paths" }
       )();
 
-      console.dir(svgAliased, { depth: null });
-
       const m = svgAliased.metadata;
       if (!m) throw new Error("Metadata is required");
       fuseMemoForwardRef(m);
@@ -174,7 +172,6 @@ export const replicate = (
               //   all: group.deps.all.size,
               // });
 
-              // console.log("REWRITING", resolved.id, group.deps);
               const rewritten = await traceable(
                 () =>
                   rewriteComponentStrategy({

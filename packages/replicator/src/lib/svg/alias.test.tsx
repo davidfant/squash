@@ -82,6 +82,17 @@ describe("aliasSVGPaths", () => {
     );
   });
 
+  test("should use same placeholder if path is the same", async () => {
+    const res = await run(
+      <svg>
+        <path d="replace me"></path>
+        <path d="replace me"></path>
+      </svg>
+    );
+
+    expect(res.html).toMatchSnapshot();
+  });
+
   describe("metadata", () => {
     test("should replace SVG paths in metadata", async () => {
       const Child = ({ path }: { path: string }) => (

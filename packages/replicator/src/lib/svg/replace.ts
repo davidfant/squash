@@ -35,12 +35,6 @@ export async function replaceSVGPathsInFiles(
   await Promise.all(
     files.map(async (filePath) => {
       const original = await sink.readText(filePath);
-      console.log(
-        "replace SVG paths in files...",
-        filePath,
-        original,
-        dPathMapping
-      );
       let updated = original;
       for (const [key, placeholder] of dPathMapping.entries()) {
         updated = updated.replaceAll(placeholder, key);

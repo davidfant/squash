@@ -1,6 +1,7 @@
 import type { Metadata } from "@/types";
 import {
   buildChildMap,
+  buildComponentNodesMap,
   buildDescendantsMap,
   calcNodeDepths,
   componentsMap,
@@ -65,7 +66,7 @@ function buildNodeComponentsFromProps(
   return provided;
 }
 
-export function getInternalDeps(
+export function getNodeInternalDeps(
   metadata: Metadata.ReactFiber
 ): Map<NodeId, Set<ComponentId>> {
   const nodes = nodesMap(metadata.nodes);
@@ -77,31 +78,6 @@ export function getInternalDeps(
     components
   );
   const nodeDepths = calcNodeDepths(nodes);
-
-  // console.log("metadata", metadata);
-  // console.log("children", children);
-  // console.log("descendants", descendants);
-  // console.log("componentNodes", componentNodes);
-  // console.log("nodeComponentsFromProps", nodeComponentsFromProps);
-  // console.log("nodeDepths", nodeDepths);
-
-  // const nodeInternalDeps = new Map<NodeId, Set<ComponentId>>();
-  // for (const [nodeId, node] of nodes.entries()) {
-  //   const nodeDescendants = descendants.get(nodeId) ?? [];
-  //   const componentDescendants = [...nodeDescendants]
-  //     .map((nodeId) => nodes.get(nodeId)!.componentId)
-  //     .filter((componentId) => componentHasCode(components.get(componentId)!));
-
-  //   const componentsFromProps =
-  //     nodeComponentsFromProps.get(nodeId) ?? new Set();
-
-  //   const internalComponents = new Set(
-  //     [...componentDescendants].filter((id) => !componentsFromProps.has(id))
-  //   );
-
-  //   nodeInternalDeps.set(nodeId, internalComponents);
-  // }
-
   const nodesByDepth = [...nodes.entries()].sort(
     ([a], [b]) => nodeDepths.get(b)! - nodeDepths.get(a)!
   );
@@ -132,17 +108,71 @@ export function getInternalDeps(
           !componentsFromProps.has(id) && !nodeDescendantInternalDeps.has(id)
       )
     );
-    // console.log("---\nIterate", nodeId);
-    // console.log("nodeInternalDeps", nodeInternalDeps);
-    // console.log("componentDescendants", componentDescendants);
-    // console.log("internalComponents", internalComponents);
-    // console.log("componentsFromProps", componentsFromProps);
-    // console.log("nodeDescendantInternalDeps", nodeDescendantInternalDeps);
 
     nodeInternalDeps.set(nodeId, internalComponents);
   }
 
-  // console.log("nodeInternalDeps", nodeInternalDeps);
-
   return nodeInternalDeps;
+}
+
+export function getComponentInternalDeps(
+  metadata: Metadata.ReactFiber,
+  nodeInternalDeps: Map<NodeId, Set<ComponentId>>
+) {
+  const nodes = nodesMap(metadata.nodes);
+  const componentNodes = buildComponentNodesMap(nodes);
+  const componentInternalDeps = new Map<ComponentId, Set<ComponentId>>();
+  for (const [componentId, nodes] of componentNodes) {
+    if (!componentInternalDeps.has(componentId)) {
+      componentInternalDeps.set(componentId, new Set());
+    }
+    nodes.forEach((nodeId) =>
+      nodeInternalDeps
+        .get(nodeId)
+        ?.forEach((cid) => componentInternalDeps.get(componentId)?.add(cid))
+    );
+  }
+
+  return componentInternalDeps;
+}
+
+export function getAllDeps(
+  metadata: Metadata.ReactFiber,
+  internalDeps: Map<ComponentId, Set<ComponentId>>
+): Map<ComponentId, Set<ComponentId>> {
+  const nodes = nodesMap(metadata.nodes);
+  const components = componentsMap(metadata.components);
+  const children = buildChildMap(nodes);
+  const descendants = buildDescendantsMap(children);
+
+  const allDeps = new Map<ComponentId, Set<ComponentId>>();
+  descendants.forEach((descNodeIds, nodeId) => {
+    const componentId = nodes.get(nodeId)!.componentId;
+    if (!allDeps.has(componentId)) {
+      allDeps.set(componentId, new Set());
+    }
+    descNodeIds.forEach((descNodeId) => {
+      const descCompId = nodes.get(descNodeId)!.componentId;
+      if (componentHasCode(components.get(descCompId)!)) {
+        allDeps.get(componentId)?.add(descCompId);
+      }
+    });
+  });
+
+  nodes.forEach((node, nodeId) => {
+    const compId = node.componentId;
+    if (!allDeps.has(compId)) {
+      allDeps.set(compId, new Set());
+    }
+
+    descendants.get(nodeId)?.forEach((descendantId) => {
+      const descendant = nodes.get(descendantId);
+      if (!descendant) return;
+      internalDeps
+        .get(descendant.componentId)
+        ?.forEach((internalCompId) => allDeps.get(compId)?.add(internalCompId));
+    });
+  });
+
+  return allDeps;
 }

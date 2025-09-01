@@ -1,9 +1,11 @@
 import { Metadata } from "../..";
-import { getInternalDeps } from "./getInternalDeps";
 import {
-  buildChildMap,
+  getAllDeps,
+  getComponentInternalDeps,
+  getNodeInternalDeps,
+} from "./deps";
+import {
   buildComponentNodesMap,
-  buildDescendantsMap,
   calcNodeDepths,
   componentsMap,
   nodesMap,
@@ -81,34 +83,13 @@ export async function traverseComponents(
     );
   }
 
-  const nodeInternalDeps = getInternalDeps(metadata);
-  const componentInternalDeps = new Map<ComponentId, Set<ComponentId>>();
-  for (const [componentId, nodes] of componentNodes) {
-    if (!componentInternalDeps.has(componentId)) {
-      componentInternalDeps.set(componentId, new Set());
-    }
-    nodes.forEach((nodeId) =>
-      nodeInternalDeps
-        .get(nodeId)
-        ?.forEach((cid) => componentInternalDeps.get(componentId)?.add(cid))
-    );
-  }
+  const nodeInternalDeps = getNodeInternalDeps(metadata);
+  const componentInternalDeps = getComponentInternalDeps(
+    metadata,
+    nodeInternalDeps
+  );
 
-  const children = buildChildMap(nodes);
-  const descendants = buildDescendantsMap(children);
-  const componentAllDeps = new Map<ComponentId, Set<ComponentId>>();
-  descendants.forEach((descNodeIds, nodeId) => {
-    const componentId = nodes.get(nodeId)!.componentId;
-    if (!componentAllDeps.has(componentId)) {
-      componentAllDeps.set(componentId, new Set());
-    }
-    descNodeIds.forEach((descNodeId) => {
-      const descCompId = nodes.get(descNodeId)!.componentId;
-      if (componentHasCode(components.get(descCompId)!)) {
-        componentAllDeps.get(componentId)?.add(descCompId);
-      }
-    });
-  });
+  const componentAllDeps = getAllDeps(metadata, componentInternalDeps);
 
   const sortOrder = new Map(
     [...componentNodes.keys()].map((componentId) => [
@@ -144,6 +125,11 @@ export async function traverseComponents(
       remaining.map((m) => [m.componentId, sortOrder.get(m.componentId)])
     )
   );
+
+  console.log("C28 all deps", componentAllDeps.get("C28"));
+  console.log("C28 internal deps", componentInternalDeps.get("C28"));
+  console.log("C18 all deps", componentAllDeps.get("C18"));
+  console.log("C18 internal deps", componentInternalDeps.get("C18"));
 
   const next = () => {
     // TODO: when common processing, we want to get the component where the most amount of deps + children have been processed. We e.g. don't want to process a component where lots of children provided through props are not yet processed.

@@ -1,5 +1,6 @@
 import { generate, parse, walk, type DeclarationList } from "css-tree";
 import { diff } from "jest-diff";
+// import { diffLines } from "diff";
 import * as parse5 from "parse5";
 
 const normText = (s: string) => s.replace(/\s+/g, " ").trim();
@@ -79,10 +80,38 @@ function canonicalise(html: string) {
   return simplify(dom);
 }
 
+// export function diffRenderedHtml(a: string, b: string) {
+//   const lhs = canonicalise(a);
+//   const rhs = canonicalise(b);
+//   const diffString = diff(lhs, rhs, {
+//     aColor: (x) => x,
+//     bColor: (x) => x,
+//     commonColor: (x) => x,
+//   });
+//   return diffString === "Compared values have no visual difference."
+//     ? null
+//     : diffString;
+// }
 export function diffRenderedHtml(a: string, b: string) {
   const lhs = canonicalise(a);
   const rhs = canonicalise(b);
+  // const lhs = JSON.stringify(canonicalise(a), null, 2);
+  // const rhs = JSON.stringify(canonicalise(b), null, 2);
+
+  // const changes = diffLines(lhs, rhs);
+  // if (changes.every((part) => !part.added && !part.removed)) return null;
+  // return changes
+  //   .flatMap((part) => {
+  //     const prefix = part.added ? "+" : part.removed ? "-" : " ";
+  //     return part.value.split("\n").map((line) => `${prefix} ${line}`);
+  //   })
+  //   .join("\n");
+
   const diffString = diff(lhs, rhs, {
+    aAnnotation: "Expected",
+    bAnnotation: "Actual",
+    aIndicator: "+",
+    bIndicator: "-",
     aColor: (x) => x,
     bColor: (x) => x,
     commonColor: (x) => x,

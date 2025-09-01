@@ -1,17 +1,17 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`diffRenderedHtml > diff > attribute is missing 1`] = `
-"- Expected
-+ Received
+"+ Expected
+- Actual
 
   Object {
     "attrs": Object {},
     "children": Array [
       Object {
--       "attrs": Object {
--         "disabled": "",
--       },
-+       "attrs": Object {},
++       "attrs": Object {
++         "disabled": "",
++       },
+-       "attrs": Object {},
         "children": Array [
           "Hello",
         ],
@@ -23,8 +23,8 @@ exports[`diffRenderedHtml > diff > attribute is missing 1`] = `
 `;
 
 exports[`diffRenderedHtml > diff > child is missing 1`] = `
-"- Expected
-+ Received
+"+ Expected
+- Actual
 
   Object {
     "attrs": Object {},
@@ -32,13 +32,13 @@ exports[`diffRenderedHtml > diff > child is missing 1`] = `
       Object {
         "attrs": Object {},
         "children": Array [
-+         Object {
-+           "attrs": Object {},
-+           "children": Array [
+-         Object {
+-           "attrs": Object {},
+-           "children": Array [
               "Hello",
-+           ],
-+           "tag": "div",
-+         },
+-           ],
+-           "tag": "div",
+-         },
         ],
         "tag": "div",
       },
@@ -48,8 +48,8 @@ exports[`diffRenderedHtml > diff > child is missing 1`] = `
 `;
 
 exports[`diffRenderedHtml > diff > tag is different 1`] = `
-"- Expected
-+ Received
+"+ Expected
+- Actual
 
   Object {
     "attrs": Object {},
@@ -59,8 +59,8 @@ exports[`diffRenderedHtml > diff > tag is different 1`] = `
         "children": Array [
           "Hello",
         ],
--       "tag": "button",
-+       "tag": "div",
++       "tag": "button",
+-       "tag": "div",
       },
     ],
     "tag": "#document-fragment",

@@ -4,12 +4,7 @@ import {
   getComponentInternalDeps,
   getNodeInternalDeps,
 } from "./deps";
-import {
-  buildComponentNodesMap,
-  calcNodeDepths,
-  componentsMap,
-  nodesMap,
-} from "./util";
+import { buildComponentNodesMap, calcNodeDepths, nodesMap } from "./util";
 
 type NodeId = Metadata.ReactFiber.NodeId;
 type ComponentId = Metadata.ReactFiber.ComponentId;
@@ -70,7 +65,6 @@ export async function traverseComponents(
   if (!metadata) return;
 
   const nodes = nodesMap(metadata.nodes);
-  const components = componentsMap(metadata.components);
   const componentNodes = buildComponentNodesMap(nodes);
 
   const nodeDepths = calcNodeDepths(nodes);
@@ -126,22 +120,28 @@ export async function traverseComponents(
     )
   );
 
-  console.log("C28 all deps", componentAllDeps.get("C28"));
-  console.log("C28 internal deps", componentInternalDeps.get("C28"));
-  console.log("C18 all deps", componentAllDeps.get("C18"));
-  console.log("C18 internal deps", componentInternalDeps.get("C18"));
-
   const next = () => {
-    // TODO: when common processing, we want to get the component where the most amount of deps + children have been processed. We e.g. don't want to process a component where lots of children provided through props are not yet processed.
-    const idx = remaining.findIndex(({ componentId }) =>
+    const woAllDeps = remaining.filter(({ componentId }) =>
+      [...(componentAllDeps.get(componentId) ?? [])].every((cid) =>
+        processed.has(cid)
+      )
+    );
+    if (woAllDeps.length) {
+      const next = woAllDeps[0]!;
+      remaining.splice(remaining.indexOf(next), 1);
+      return next;
+    }
+
+    const wointernalDeps = remaining.filter(({ componentId }) =>
       [...(componentInternalDeps.get(componentId) ?? [])].every((cid) =>
         processed.has(cid)
       )
     );
-
-    if (idx === -1) return;
-    const [spliced] = remaining.splice(idx, 1);
-    return spliced!;
+    if (wointernalDeps.length) {
+      const next = wointernalDeps[0]!;
+      remaining.splice(remaining.indexOf(next), 1);
+      return next;
+    }
   };
 
   let g: { componentId: ComponentId; nodes: NodeId[] } | undefined;

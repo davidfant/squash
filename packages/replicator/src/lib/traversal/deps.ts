@@ -16,7 +16,7 @@ const componentHasCode = (
 ): c is Metadata.ReactFiber.Component.WithCode<any> =>
   "codeId" in c && c.codeId != null;
 
-function buildNodeComponentsFromProps(
+export function buildNodeComponentsFromProps(
   nodes: Map<NodeId, Metadata.ReactFiber.Node>,
   components: Map<ComponentId, Metadata.ReactFiber.Component.Any>
 ): Map<NodeId, Set<ComponentId>> {
@@ -144,13 +144,17 @@ export function getAllDeps(
   const components = componentsMap(metadata.components);
   const children = buildChildMap(nodes);
   const descendants = buildDescendantsMap(children);
+  const nodeComponentsFromProps = buildNodeComponentsFromProps(
+    nodes,
+    components
+  );
 
-  const allDeps = new Map<ComponentId, Set<ComponentId>>();
+  const allDeps = new Map<ComponentId, Set<ComponentId>>(
+    [...components.keys()].map((id) => [id, new Set()])
+  );
+
   descendants.forEach((descNodeIds, nodeId) => {
     const componentId = nodes.get(nodeId)!.componentId;
-    if (!allDeps.has(componentId)) {
-      allDeps.set(componentId, new Set());
-    }
     descNodeIds.forEach((descNodeId) => {
       const descCompId = nodes.get(descNodeId)!.componentId;
       if (componentHasCode(components.get(descCompId)!)) {
@@ -160,22 +164,22 @@ export function getAllDeps(
   });
 
   nodes.forEach((node, nodeId) => {
-    const compId = node.componentId;
-    if (!allDeps.has(compId)) {
-      allDeps.set(compId, new Set());
-    }
-
+    const allDepsForComponent = allDeps.get(node.componentId);
     descendants.get(nodeId)?.forEach((descendantId) => {
       const descendant = nodes.get(descendantId);
       if (!descendant) return;
       if (componentHasCode(components.get(descendant.componentId)!)) {
         internalDeps
           .get(descendant.componentId)
-          ?.forEach((internalCompId) =>
-            allDeps.get(compId)?.add(internalCompId)
-          );
+          ?.forEach((cid) => allDepsForComponent?.add(cid));
       }
     });
+  });
+
+  nodeComponentsFromProps.forEach((compIdsFromProps, nodeId) => {
+    const compId = nodes.get(nodeId)!.componentId;
+    const deps = allDeps.get(compId);
+    compIdsFromProps.forEach((cid) => deps?.add(cid));
   });
 
   return allDeps;

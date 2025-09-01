@@ -2,7 +2,6 @@ import { reactFiber } from "@/metadata/reactFiber";
 import type { Metadata } from "@/types";
 import type { ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
-import type { ComponentId } from "../recma/replaceRefs";
 import {
   getAllDeps,
   getComponentInternalDeps,
@@ -28,7 +27,7 @@ describe("deps", () => {
     const internalDeps = getNodeInternalDeps(m!);
     const allDeps = getAllDeps(m!, getComponentInternalDeps(m!, internalDeps));
 
-    const componentIdToName = (id: ComponentId) =>
+    const componentIdToName = (id: Metadata.ReactFiber.ComponentId) =>
       (m?.components[id] as Metadata.ReactFiber.Component.WithCode<any>).name;
     return {
       internal: Object.fromEntries(
@@ -145,6 +144,22 @@ describe("deps", () => {
       expect(deps.all["False"]).toEqual([]);
       expect(deps.all["Parent"]).toEqual(["True", "False"]);
       expect(deps.all["GrandParent"]).toEqual(["Parent", "True", "False"]);
+    });
+
+    test("should include component provided in props but not rendered", async () => {
+      const NotRenderedInComp = () => "not rendered";
+      const Comp = (_: { children: ReactNode }) => <div />;
+
+      const deps = await run(
+        <>
+          <Comp>
+            <NotRenderedInComp />
+          </Comp>
+          <NotRenderedInComp />
+        </>
+      );
+      expect(deps.all["NotRenderedInComp"]).toEqual([]);
+      expect(deps.all["Comp"]).toEqual(["NotRenderedInComp"]);
     });
   });
 });

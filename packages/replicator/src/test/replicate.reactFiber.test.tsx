@@ -321,6 +321,35 @@ describe("replicate with react fiber", () => {
         });
       });
 
+      // test.only("should not replace refs to components that do not have code yet", async () => {
+      //   const rewrite = vi.fn(rewriteComponentUseFirstStrategy);
+
+      //   const Child = () => "child";
+      //   const Parent = ({ children }: { children: ReactNode }) => children;
+
+      //   await run(
+      //     <>
+      //       <Parent>
+      //         <Child />
+      //       </Parent>
+      //       <div>
+      //         <div>
+      //           <Parent>
+      //             <span>deeper</span>
+      //           </Parent>
+      //         </div>
+      //       </div>
+      //     </>,
+      //     rewrite
+      //   );
+
+      //   expect(rewrite).toHaveBeenCalledTimes(2);
+      //   const parentArgs = rewrite.mock.calls[0]![0];
+      //   expect(parentArgs.component.code).toEqual(Parent.toString());
+      //   expect(parentArgs.instances).toHaveLength(2);
+      //   expect(parentArgs.instances.map((i) => i.ref)).toMatchSnapshot();
+      // });
+
       describe("createRef", () => {
         test("should be correct for component without deps", async () => {
           const rewrite = vi.fn(rewriteComponentUseFirstStrategy);

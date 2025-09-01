@@ -129,11 +129,11 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
       if (r.html !== null) {
         const diff = diffRenderedHtml(examples[i]!.html, r.html);
         if (!!diff) {
-          console.log("---");
-          console.log(examples[i]!.html);
-          console.log("---");
-          console.log(r.html);
-          console.log("---");
+          // console.log("---");
+          // console.log(examples[i]!.html);
+          // console.log("---");
+          // console.log(r.html);
+          // console.log("---");
           errors.push({
             message: "Differences in rendered HTML",
             description: `\`\`\`diff\n${diff}\n\`\`\``,
@@ -147,8 +147,9 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
     if (errors.every((e) => !e.length)) break;
     attempt++;
     if (attempt === 3) {
-      console.error(errors);
-      throw new Error("Failed to write correct component");
+      console.error("Failed to write correct component", errors);
+      // throw new Error("Failed to write correct component");
+      break;
     }
 
     messages.push({

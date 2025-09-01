@@ -6,7 +6,7 @@ import { SKIP, visit } from "estree-util-visit";
 import type { Plugin } from "unified";
 import type { ComponentRegistry } from "../componentRegistry";
 
-export type ComponentId = Metadata.ReactFiber.ComponentId;
+type ComponentId = Metadata.ReactFiber.ComponentId;
 
 interface ReplaceRefsOptions {
   componentRegistry: ComponentRegistry;

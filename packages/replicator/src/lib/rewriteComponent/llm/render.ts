@@ -81,7 +81,6 @@ function withConsoleCapture<T>(fn: () => T): { result: T | null; logs: Log[] } {
       const stack = error.stack.replace(/\((.+node_modules)/g, "(node_modules");
       return { result: null, logs: [{ level: "error", message: stack }] };
     } else {
-      console.log("UNKNOWN ERROR", error);
       throw error;
     }
   } finally {
@@ -116,7 +115,6 @@ export async function render(
   opts: RenderOptions
 ): Promise<Array<{ html: string | null; logs: Log[] }>> {
   const modules: Record<string, Module> = {};
-  console.log("RENDER", opts.component.id, opts.deps);
   await Promise.all([
     (async () => {
       const item = opts.componentRegistry.get(opts.component.id);

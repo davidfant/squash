@@ -5,6 +5,8 @@ import type {
   ComponentRegistryItem,
 } from "../componentRegistry";
 
+type ComponentId = Metadata.ReactFiber.ComponentId;
+
 export interface RewriteComponentInstance {
   ref: Element;
   children: Element[];
@@ -28,3 +30,10 @@ export type RewriteComponentStrategy = (
 ) => Promise<
   Partial<ComponentRegistryItem> & Pick<ComponentRegistryItem, "code">
 >;
+// ) => Promise<{
+//   registry: Map<
+//     ComponentId,
+//     Partial<ComponentRegistryItem> & Pick<ComponentRegistryItem, "code">
+//   >;
+//   nodeComponents?: Map<ComponentId, ComponentRegistryItem>;
+// }>;

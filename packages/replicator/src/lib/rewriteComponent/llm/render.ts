@@ -59,7 +59,7 @@ function makeLazyRequire(modules: Record<string, Module>) {
   };
 }
 
-function withConsoleCapture<T>(fn: () => T): { result: T; logs: Log[] } {
+function withConsoleCapture<T>(fn: () => T): { result: T | null; logs: Log[] } {
   const logs: Log[] = [];
 
   const origError = console.error;
@@ -75,6 +75,15 @@ function withConsoleCapture<T>(fn: () => T): { result: T; logs: Log[] } {
 
   try {
     return { result: fn(), logs };
+  } catch (_error) {
+    const error = _error as Error;
+    if (error.stack) {
+      const stack = error.stack.replace(/\((.+node_modules)/g, "(node_modules");
+      return { result: null, logs: [{ level: "error", message: stack }] };
+    } else {
+      console.log("UNKNOWN ERROR", error);
+      throw error;
+    }
   } finally {
     console.error = origError;
     console.warn = origWarn;
@@ -85,7 +94,7 @@ async function renderSample(
   ctx: vm.Context,
   sampleCode: string,
   index: number
-): Promise<{ html: string; logs: Log[] }> {
+): Promise<{ html: string | null; logs: Log[] }> {
   // esbuild just turns TSX → CJS; we don't bundle so 'require' calls stay.
   const { code } = await esbuild.transform(sampleCode, {
     loader: "tsx",
@@ -105,7 +114,7 @@ async function renderSample(
 
 export async function render(
   opts: RenderOptions
-): Promise<Array<{ html: string; logs: Log[] }>> {
+): Promise<Array<{ html: string | null; logs: Log[] }>> {
   const modules: Record<string, Module> = {};
   console.log("RENDER", opts.component.id, opts.deps);
   await Promise.all([

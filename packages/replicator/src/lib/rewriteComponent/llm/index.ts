@@ -10,6 +10,9 @@ import { diffRenderedHtml } from "./diffRenderedHtml";
 import * as Prompts from "./prompts";
 import { render } from "./render";
 
+const MAX_NUM_EXAMPLES_IN_INITIAL_PROMPT = 5;
+const MAX_NUM_EXAMPLES_IN_ERROR_PROMPT = 10;
+
 type ComponentId = Metadata.ReactFiber.ComponentId;
 
 const model = wrapLanguageModel({
@@ -80,7 +83,8 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
         if (!i.code) throw new Error(`Component ${i.id} has no code`);
         return { name: i.name.value, module: i.module, code: i.code };
       }),
-    examples
+    examples,
+    { maxNumExamples: MAX_NUM_EXAMPLES_IN_INITIAL_PROMPT }
   );
   const messages: ModelMessage[] = [
     { role: "system", content: Prompts.instructions },
@@ -122,27 +126,36 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
         });
       }
 
-      const diff = diffRenderedHtml(examples[i]!.html, r.html);
-      if (!!diff) {
-        errors.push({
-          message: "Differences in rendered HTML",
-          description: `\`\`\`diff\n${diff}\n\`\`\``,
-        });
+      if (r.html !== null) {
+        const diff = diffRenderedHtml(examples[i]!.html, r.html);
+        if (!!diff) {
+          console.log("---");
+          console.log(examples[i]!.html);
+          console.log("---");
+          console.log(r.html);
+          console.log("---");
+          errors.push({
+            message: "Differences in rendered HTML",
+            description: `\`\`\`diff\n${diff}\n\`\`\``,
+          });
+        }
       }
 
       return errors;
     });
 
     if (errors.every((e) => !e.length)) break;
-
     attempt++;
     if (attempt === 3) {
+      console.error(errors);
       throw new Error("Failed to write correct component");
     }
 
     messages.push({
       role: "user",
-      content: await Prompts.errorsUserMessage(errors, examples),
+      content: await Prompts.errorsUserMessage(errors, examples, {
+        maxNumExamples: MAX_NUM_EXAMPLES_IN_ERROR_PROMPT,
+      }),
     });
   }
 

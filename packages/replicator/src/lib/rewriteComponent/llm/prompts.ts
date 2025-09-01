@@ -87,14 +87,15 @@ export function MyComponent({}: Props) {
 export const initialUserMessage = async (
   component: { name: { value: string; isFallback: boolean }; code: string },
   internalDeps: Array<{ name: string; module: string; code: string }>,
-  examples: Array<{ jsx: string; html: string }>
+  examples: Array<{ jsx: string; html: string }>,
+  options: { maxNumExamples: number }
 ) => {
   const unique = examples.filter(
     (ex, index, self) =>
       index === self.findIndex((t) => t.jsx === ex.jsx && t.html === ex.html)
   );
 
-  const numExamples = Math.min(unique.length, 5);
+  const numExamples = Math.min(unique.length, options.maxNumExamples);
   return [
     `Component to rewrite: ${component.name.value}`,
     `Should rename component? ${component.name.isFallback}`,
@@ -131,16 +132,21 @@ export const initialUserMessage = async (
 
 export const errorsUserMessage = async (
   errors: Array<{ message: string; description: string }>[],
-  examples: Array<{ jsx: string; html: string }>
+  examples: Array<{ jsx: string; html: string }>,
+  options: { maxNumExamples: number }
 ) => {
+  const { errors: errorsToShow } = errors.reduce(
+    ({ errors, count }, e) =>
+      count === options.maxNumExamples
+        ? { errors, count }
+        : { errors: [...errors, e], count: count + Number(!!e.length) },
+    { errors: [] as typeof errors, count: 0 }
+  );
+
   return [
     `
-Heres a clearer rewrite of your prompt, with the diff convention emphasized up front:
-
----
-
 **Error Report:**
-When rendering the component, the HTML output of one or more examples does not match the expected HTML.
+When rendering the component, the HTML output of ${errors.length} does not match the expected HTML. Below are the first ${errorsToShow.length} examples.
 
 **Instructions:**
 
@@ -163,12 +169,12 @@ Follow the format below when providing the updated version of the component:
 `.trim(),
     ``,
     "# Examples",
-    ...examples.flatMap((ex, index) => [
+    ...errorsToShow.flatMap((error, index) => [
       `## Example ${index + 1}`,
-      ...(errors[index]?.length
+      ...(error.length
         ? [
             "Found errors while rendering the component",
-            ...errors[index]!.flatMap((e) => [`- ${e.message}`, e.description]),
+            ...error.flatMap((e) => [`- ${e.message}`, e.description]),
             "Input JSX",
             "```javascript",
             examples[index]?.jsx,

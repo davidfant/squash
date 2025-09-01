@@ -85,9 +85,18 @@ try {
 
       // complex w many unprocessed children: C55
       if (
-        ["C41", "C40", "C64", "C17", "C56", "C28", "C18", "C19"].includes(
-          opts.component.id
-        )
+        [
+          "C41",
+          "C40",
+          "C64",
+          "C17",
+          "C56",
+          "C28",
+          "C18",
+          "C19",
+          "C22",
+        ].includes(opts.component.id) ||
+        true
       ) {
         return rewriteComponentWithLLMStrategy(opts);
       } else {

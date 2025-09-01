@@ -1,8 +1,10 @@
+import { initWasm } from "@resvg/resvg-wasm";
 import { AwsClient } from "aws4fetch";
 import { ChildProcess, spawn } from "node:child_process";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { langsmith } from "./lib/ai";
 import { rewriteComponentWithLLMStrategy } from "./lib/rewriteComponent/llm";
 import { rewriteComponentUseFirstStrategy } from "./lib/rewriteComponent/useFirst";
@@ -65,6 +67,12 @@ await Promise.all(
     path.join(PATH_TO_TEMPLATE, "public"),
   ].map((p) => fs.rm(p, { recursive: true }).catch(() => {}))
 );
+
+const wasmPath = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../node_modules/@resvg/resvg-wasm/index_bg.wasm"
+);
+await initWasm(await fs.readFile(wasmPath));
 
 // const sink = new TarSink();
 const sink = new FileSystemSink(PATH_TO_TEMPLATE);

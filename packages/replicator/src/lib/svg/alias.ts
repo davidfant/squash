@@ -18,7 +18,11 @@ const model = wrapLanguageModel({
 });
 
 const describePrompt = `
-You will be given an SVG as text and as an image. Your job is to give the SVG a name and a short description one sentence description.
+You will be given an SVG as text and as an image. Your job is to give the SVG a PamelCase name and a short description one sentence description. If the SVG looks like a logo you recognize, use that. The default currentColor when rendering the SVG is white, so in the description don't mention if the icon is white.
+
+Example:
+Name: CirclePlay
+Description: A circle with a play button in the center
 `.trim();
 
 export type DescribeSVGStrategy = (
@@ -36,9 +40,15 @@ export async function aliasSVGPaths(
 }> {
   const svgs = $("svg")
     .filter((_, svg) => !!$(svg).find("path[d]").length)
-    .toArray();
+    .toArray()
+    .map((svg) => $(svg).clone());
 
-  const hashes = await Promise.all(svgs.map((svg) => createSVGHash(svg, $)));
+  svgs.forEach((svg) => {
+    svg.removeAttr("data-squash-node-id");
+    svg.find("*").removeAttr("data-squash-node-id");
+  });
+
+  const hashes = await Promise.all(svgs.map((svg) => createSVGHash(svg)));
   const svgsByHash = svgs.reduce((acc, svg, i) => {
     const hash = hashes[i]!;
     acc.set(hash, [...(acc.get(hash) || []), $(svg)]);
@@ -49,7 +59,7 @@ export async function aliasSVGPaths(
   const details = await Promise.all(
     uniqHashes.map(
       traceable((hash: string) => describe(svgsByHash.get(hash)![0]!), {
-        name: "Create SVG details",
+        name: "Describe SVG",
       })
     )
   );
@@ -84,16 +94,26 @@ export async function aliasSVGPaths(
   };
 }
 
-const createSVGHash = async (svg: Element, $: CheerioAPI) =>
+const createSVGHash = async (svg: Cheerio<Element>) =>
   createHash("md5")
-    .update(await prettier.html($(svg).html()!))
+    .update(await prettier.html(svg.html()!))
     .digest("hex");
 
 export const describeSVGWithLLM: DescribeSVGStrategy = async (
   svg: Cheerio<Element>
 ): Promise<{ name: string; description: string }> => {
+  svg.attr("color", "white");
+  if (!svg.attr("xmlns")) {
+    svg.attr("xmlns", "http://www.w3.org/2000/svg");
+  }
+
   const svgString = svg.toString();
-  const resvg = new Resvg(svgString);
+  const measure = new Resvg(svgString);
+  const scale = Math.max(128 / measure.width, 128 / measure.height);
+
+  const resvg = new Resvg(svgString, {
+    fitTo: { mode: "zoom", value: scale },
+  });
   const pngData = resvg.render().asPng();
 
   const { object } = await generateObject({
@@ -103,7 +123,7 @@ export const describeSVGWithLLM: DescribeSVGStrategy = async (
       {
         role: "user",
         content: [
-          { type: "text", text: await prettier.html(svgString) },
+          // { type: "text", text: await prettier.html(svgString) },
           { type: "image", image: pngData, mediaType: "image/png" },
         ],
       },

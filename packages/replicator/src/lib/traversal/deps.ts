@@ -168,9 +168,13 @@ export function getAllDeps(
     descendants.get(nodeId)?.forEach((descendantId) => {
       const descendant = nodes.get(descendantId);
       if (!descendant) return;
-      internalDeps
-        .get(descendant.componentId)
-        ?.forEach((internalCompId) => allDeps.get(compId)?.add(internalCompId));
+      if (componentHasCode(components.get(descendant.componentId)!)) {
+        internalDeps
+          .get(descendant.componentId)
+          ?.forEach((internalCompId) =>
+            allDeps.get(compId)?.add(internalCompId)
+          );
+      }
     });
   });
 

@@ -4,6 +4,8 @@ V1 done
 - [ ] When rewriting component with unprocessed children, how to we render?
 - [ ] Parallel rewrite whenever possible
 
+- [ ] In samples, limit depth of sample JSX and expected HTML
+
 SVG optimizations
 
 - [ ] SVG block replacement

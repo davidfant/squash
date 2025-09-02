@@ -23,7 +23,7 @@ export const rewriteComponentUseFirstStrategy: RewriteComponentStrategy =
       .use(recmaJsx)
       .use(recmaRemoveRedundantFragment)
       .use(recmaWrapAsComponent, registryItem.name.value)
-      .use(recmaReplaceRefs, { componentRegistry: registry })
+      .use(recmaReplaceRefs, registry)
       .use(recmaFixProperties)
       .use(recmaStringify);
 

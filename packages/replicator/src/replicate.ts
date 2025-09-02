@@ -51,7 +51,7 @@ async function writeFile(opts: {
     .use(recmaJsx)
     .use(recmaRemoveRedundantFragment)
     .use(recmaWrapAsComponent, opts.componentName)
-    .use(recmaReplaceRefs, { componentRegistry: opts.componentRegistry })
+    .use(recmaReplaceRefs, opts.componentRegistry)
     .use(recmaFixProperties)
     .use(recmaStringify);
 

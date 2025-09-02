@@ -8,10 +8,6 @@ import type { ComponentRegistry } from "../componentRegistry";
 
 type ComponentId = Metadata.ReactFiber.ComponentId;
 
-interface ReplaceRefsOptions {
-  componentRegistry: ComponentRegistry;
-}
-
 const JSXParser = acorn.Parser.extend(acornJsx());
 function parseJSX(code: string) {
   const ast = JSXParser.parse(code, {
@@ -27,8 +23,8 @@ function parseJSX(code: string) {
   }
 }
 
-export const recmaReplaceRefs: Plugin<[ReplaceRefsOptions], Program> =
-  (opts) => (tree: Program) => {
+export const recmaReplaceRefs: Plugin<[registry: ComponentRegistry], Program> =
+  (registry) => (tree: Program) => {
     const imports = new Map<string, RefImport>();
     const addImport = (i: RefImport) => imports.set(JSON.stringify(i), i);
 
@@ -68,8 +64,8 @@ export const recmaReplaceRefs: Plugin<[ReplaceRefsOptions], Program> =
         if (!!depsString) {
           const deps = JSON.parse(depsString) as ComponentId[];
           for (const dep of deps) {
-            const c = opts.componentRegistry.get(dep);
-            if (c) {
+            const c = registry.get(dep);
+            if (c?.code) {
               addImport({ module: c.module, name: c.name.value });
             } else {
               throw new Error(`Component ${dep} not found in registry`);

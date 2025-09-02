@@ -60,16 +60,6 @@ const rehypeLimitDepth: Plugin<
       !isComponentElement(node);
 
     if ((exceedsComponentDepth || exceedsDomDepth) && !!node.children.length) {
-      console.log("redacting", {
-        ancestors,
-        componentDepth,
-        domDepth,
-        inComponent,
-        exceedsComponentDepth,
-        exceedsDomDepth,
-        children: node.children,
-      });
-      // prune by wiping children and add placeholder comment
       node.children = [{ type: "comment", value: " children redacted " }];
     }
   });
@@ -143,7 +133,7 @@ export async function buildInstanceExamples(
         .use(recmaJsx)
         .use(recmaRemoveRedundantFragment)
         .use(recmaWrapAsComponent, "Sample")
-        .use(recmaReplaceRefs, { componentRegistry: registry })
+        .use(recmaReplaceRefs, registry)
         .use(recmaFixProperties)
         .use(recmaStringify),
       limited: unified()
@@ -152,7 +142,7 @@ export async function buildInstanceExamples(
         .use(recmaJsx)
         .use(recmaRemoveRedundantFragment)
         .use(recmaWrapAsComponent, "Sample")
-        .use(recmaReplaceRefs, { componentRegistry: registry })
+        .use(recmaReplaceRefs, registry)
         .use(recmaLimitDepth, limitDepthConfig)
         .use(recmaFixProperties)
         .use(recmaStringify),

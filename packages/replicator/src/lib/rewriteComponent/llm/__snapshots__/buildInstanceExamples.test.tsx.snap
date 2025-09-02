@@ -125,9 +125,7 @@ export function Sample() {
 
 exports[`buildInstanceExamples > limit depth > max 2 levels of react components 1`] = `
 "<div>
-  <div data-depth="1">
-    <div data-depth="2"><div data-depth="3">bottom</div></div>
-  </div>
+  <div data-depth="1"><div data-depth="2">to be redacted</div></div>
 </div>"
 `;
 
@@ -146,9 +144,7 @@ export function Sample() {
   return (
     <Parent>
       <Child depth={1}>
-        <Child depth={2}>
-          <Child depth={3}>{"bottom"}</Child>
-        </Child>
+        <Child depth={2}>{"to be redacted"}</Child>
       </Child>
     </Parent>
   );
@@ -273,6 +269,21 @@ export function Sample() {
           </div>
         </div>
       </div>
+    </Parent>
+  );
+}
+"
+`;
+
+exports[`buildInstanceExamples > limit depth > should not redact children if component has no children 1`] = `
+"import { Parent } from "@/components/Parent";
+import { Child } from "@/components/Child";
+export function Sample() {
+  return (
+    <Parent>
+      <Child depth={1}>
+        <Child depth={2} />
+      </Child>
     </Parent>
   );
 }

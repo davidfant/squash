@@ -3,7 +3,7 @@ import { createRef } from "@/lib/recma/createRef";
 import { reactFiber } from "@/metadata/reactFiber";
 import type { Metadata } from "@/types";
 import type { Element } from "hast";
-import type { ReactNode } from "react";
+import { createElement, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import rehypeParse from "rehype-parse";
 import { unified } from "unified";
@@ -106,9 +106,7 @@ describe("buildInstanceExamples", () => {
         "Parent",
         <Parent>
           <Child depth={1}>
-            <Child depth={2}>
-              <Child depth={3}>bottom</Child>
-            </Child>
+            <Child depth={2}>to be redacted</Child>
           </Child>
         </Parent>
       );
@@ -119,6 +117,56 @@ describe("buildInstanceExamples", () => {
       expect(res[0]?.html.limited).toMatchSnapshot();
       expect(res[0]?.jsx.full).toMatchSnapshot();
       expect(res[0]?.jsx.limited).toMatchSnapshot();
+    });
+
+    test.only("should not count ref tags in HTML", async () => {
+      const Child = ({ children }: { children: ReactNode }) => children;
+      const Parent = ({ children }: { children: ReactNode }) => (
+        <div>{children}</div>
+      );
+      const ref = (children: ReactNode) => createElement("ref", null, children);
+      const res = await run(
+        "Parent",
+        <Parent>
+          <Child>
+            {Array.from({ length: 10 }).reduce<ReactNode>(
+              (acc) => ref(acc),
+              "not redacted"
+            )}
+          </Child>
+        </Parent>
+      );
+      expect(res.length).toBe(1);
+      expect(res[0]?.html.full).toEqual(`<div>not redacted</div>`);
+      expect(res[0]?.html.limited).toEqual(`<div>not redacted</div>`);
+    });
+
+    test("should not redact children if component has no children", async () => {
+      const Child = ({
+        children,
+        depth,
+      }: {
+        children?: ReactNode;
+        depth: number;
+      }) => <div data-depth={depth}>{children}</div>;
+      const Parent = ({ children }: { children: ReactNode }) => (
+        <div>{children}</div>
+      );
+      const res = await run(
+        "Parent",
+        <Parent>
+          <Child depth={1}>
+            <Child depth={2}></Child>
+          </Child>
+        </Parent>
+      );
+      expect(res.length).toBe(1);
+      expect(res[0]?.jsx.full).toEqual(res[0]?.jsx.limited);
+      expect(res[0]?.jsx.full).toMatchSnapshot();
+    });
+
+    test("should reset the limit for props that are not children", async () => {
+      throw new Error("TODO");
     });
 
     test("max 10 levels of DOM elements, if at least one react component is present", async () => {

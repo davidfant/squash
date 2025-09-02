@@ -105,6 +105,7 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
     });
     rewritten = parseGeneratedComponent(text);
     if (!rewritten) break;
+    messages.push(...response.messages);
 
     registryItem.code = rewritten.code;
     const rendered = await render({
@@ -117,55 +118,60 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
       instances: examples.map((e) => ({ jsx: e.jsx.full, html: e.html.full })),
       componentRegistry: registry,
     });
-    messages.push(...response.messages);
 
-    const errors = rendered.map((r, i) => {
-      const errors: Array<{ message: string; description: string }> = [];
-      if (r.logs.length) {
-        errors.push({
-          message: "Warning logs",
-          description: r.logs
-            .map((l) => `[${l.level}] ${l.message}`)
-            .join("\n"),
-        });
-      }
-
-      if (r.html !== null) {
-        const diff = diffRenderedHtml(examples[i]!.html.full, r.html);
-        if (!!diff) {
-          // console.log("---");
-          // console.log(examples[i]!.html);
-          // console.log("---");
-          // console.log(r.html);
-          // console.log("---");
+    if (!rendered.ok) {
+      messages.push({
+        role: "user",
+        content: Prompts.buildErrorsUserMessage(rendered.errors),
+      });
+    } else {
+      const errors = rendered.results.map((r, i) => {
+        const errors: Array<{ message: string; description: string }> = [];
+        if (r.logs.length) {
           errors.push({
-            message: "Differences in rendered HTML",
-            description: `\`\`\`diff\n${diff}\n\`\`\``,
+            message: "Warning logs",
+            description: r.logs
+              .map((l) => `[${l.level}] ${l.message}`)
+              .join("\n"),
           });
         }
-      }
 
-      return errors;
-    });
+        if (r.html !== null) {
+          const diff = diffRenderedHtml(examples[i]!.html.full, r.html);
+          if (!!diff) {
+            // console.log("---");
+            // console.log(examples[i]!.html);
+            // console.log("---");
+            // console.log(r.html);
+            // console.log("---");
+            errors.push({
+              message: "Differences in rendered HTML",
+              description: `\`\`\`diff\n${diff}\n\`\`\``,
+            });
+          }
+        }
 
-    if (errors.every((e) => !e.length)) break;
+        return errors;
+      });
+
+      if (errors.every((e) => !e.length)) break;
+
+      messages.push({
+        role: "user",
+        content: Prompts.renderErrorsUserMessage(
+          errors,
+          examples.map((e) => ({ jsx: e.jsx.limited, html: e.html.full })),
+          { maxNumExamples: MAX_NUM_EXAMPLES_IN_ERROR_PROMPT }
+        ),
+      });
+    }
+
     attempt++;
     if (attempt === 3) {
-      console.error("Failed to write correct component", errors);
+      console.error("Failed to write correct component", rendered);
       // throw new Error("Failed to write correct component");
       break;
     }
-
-    messages.push({
-      role: "user",
-      content: await Prompts.errorsUserMessage(
-        errors,
-        examples.map((e) => ({ jsx: e.jsx.limited, html: e.html.full })),
-        {
-          maxNumExamples: MAX_NUM_EXAMPLES_IN_ERROR_PROMPT,
-        }
-      ),
-    });
   }
 
   if (!rewritten) throw new Error("TODO: what do we do if rewriting fails?");

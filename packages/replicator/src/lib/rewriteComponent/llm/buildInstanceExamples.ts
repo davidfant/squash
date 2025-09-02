@@ -36,6 +36,7 @@ const rehypeLimitDepth: Plugin<
   Root
 > = (metadata) => (tree) => {
   function isComponentElement(el: Element) {
+    if (el.tagName === "ref") return false;
     const nodeId = el.properties["dataSquashNodeId"];
     const node = metadata.nodes[nodeId as Metadata.ReactFiber.NodeId];
     const parent = metadata.nodes[node?.parentId!];
@@ -44,22 +45,11 @@ const rehypeLimitDepth: Plugin<
   }
 
   visitParents(tree, "element", (node, ancestors) => {
-    const componentDepth = ancestors
-      .filter((a) => a.type === "element")
-      .filter((el) => isComponentElement(el)).length;
-
+    const componentDepth =
+      ancestors.filter((a) => a.type === "element").filter(isComponentElement)
+        .length - 1;
     const domDepth = ancestors.length;
-    // const domDepthSinceLastComponent = (() => {
-    //   let n = 0;
-    //   for (let i = ancestors.length - 1; i >= 0; i--) {
-    //     const el = ancestors[i] as Element;
-    //     if (isComponentElement(el)) break;
-    //     n++;
-    //   }
-    //   return n;
-    // })();
-
-    const inComponent = componentDepth > 1;
+    const inComponent = !!componentDepth;
 
     const exceedsComponentDepth =
       componentDepth >= limitDepthConfig.maxComponents &&
@@ -69,7 +59,16 @@ const rehypeLimitDepth: Plugin<
       domDepth >= limitDepthConfig.maxDom &&
       !isComponentElement(node);
 
-    if (exceedsComponentDepth || exceedsDomDepth) {
+    if ((exceedsComponentDepth || exceedsDomDepth) && !!node.children.length) {
+      console.log("redacting", {
+        ancestors,
+        componentDepth,
+        domDepth,
+        inComponent,
+        exceedsComponentDepth,
+        exceedsDomDepth,
+        children: node.children,
+      });
       // prune by wiping children and add placeholder comment
       node.children = [{ type: "comment", value: " children redacted " }];
     }
@@ -102,12 +101,7 @@ const recmaLimitDepth: Plugin<[config: LimitDepthConfig], Program> =
             (componentDepth >= config.maxComponents && isComp) ||
             (componentDepth > 0 && domDepth >= config.maxDom && !isComp);
 
-          if (exceeds) {
-            const comment = {
-              type: "Block",
-              value: " children redacted ",
-            } as const;
-
+          if (exceeds && !!node.children.length) {
             const commentId = `CHILDREN_REDACTED:${crypto.randomUUID()}`;
             program.comments?.push({ type: "Block", value: commentId });
             node.children = [
@@ -171,7 +165,8 @@ export async function buildInstanceExamples(
         processors.jsx.full
           .run({ type: "root", children: [i.ref] })
           .then((estree) => processors.jsx.limited.stringify(estree))
-          .then(prettier.ts),
+          .then(prettier.ts)
+          .then((s) => s.trim()),
         processors.jsx.limited
           .run({ type: "root", children: [i.ref] })
           .then(async (estree) => {
@@ -184,7 +179,8 @@ export async function buildInstanceExamples(
             });
             return ts;
           })
-          .then(prettier.ts),
+          .then(prettier.ts)
+          .then((s) => s.trim()),
         processors.html.full
           .run({ type: "root", children: clone(i.children) } as Root)
           .then((t: any) => processors.html.full.stringify(t as Root))
@@ -196,6 +192,16 @@ export async function buildInstanceExamples(
           .then(prettier.html)
           .then((s) => s.trim()),
       ]);
+
+      if (
+        htmlLimited ===
+        `<span class="ant-typography font-semibold"><!-- children redacted --></span>`
+      ) {
+        console.log(htmlFull);
+        console.log("---");
+        console.log(htmlLimited);
+        throw new Error("check...");
+      }
       return {
         jsx: { full: jsxFull, limited: jsxLimited },
         html: { full: htmlFull, limited: htmlLimited },

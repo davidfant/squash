@@ -10,3 +10,7 @@ SVG optimizations
 
 - [ ] SVG block replacement
 - [ ] SVG path d identification and replacement during rewrite
+
+Misc
+
+- [ ] Make code gen have create/edit tools instead of writing a file

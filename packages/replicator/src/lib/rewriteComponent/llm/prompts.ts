@@ -121,16 +121,24 @@ export const initialUserMessage = async (
       .flatMap((instance, index) => [
         `## Example ${index + 1}`,
         "Input JSX",
-        `\`\`\`javascript\n${instance.jsx}\`\`\``,
+        `\`\`\`javascript\n${instance.jsx}\n\`\`\``,
         "",
         "Output HTML",
-        `\`\`\`html\n${instance.html}\`\`\``,
+        `\`\`\`html\n${instance.html}\n\`\`\``,
         "",
       ]),
   ].join("\n");
 };
 
-export const errorsUserMessage = async (
+export const buildErrorsUserMessage = (errors: string[]) =>
+  [
+    "**Error Report:**",
+    "When compiling the code of the component, the following errors were encountered:",
+    "",
+    ...errors,
+  ].join("\n");
+
+export const renderErrorsUserMessage = (
   errors: Array<{ message: string; description: string }>[],
   examples: Array<{ jsx: string; html: string }>,
   options: { maxNumExamples: number }

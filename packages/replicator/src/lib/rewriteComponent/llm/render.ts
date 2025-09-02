@@ -29,14 +29,21 @@ interface RenderOptions {
   componentRegistry: ComponentRegistry;
 }
 
-async function compileComponent(esmCode: string): Promise<string> {
-  const { code } = await esbuild.transform(esmCode, {
-    loader: "tsx",
-    format: "cjs",
-    jsx: "automatic",
-    sourcemap: false,
-  });
-  return code;
+async function compileComponent(
+  esmCode: string
+): Promise<{ ok: true; code: string } | { ok: false; errors: string[] }> {
+  try {
+    const { code } = await esbuild.transform(esmCode, {
+      loader: "tsx",
+      format: "cjs",
+      jsx: "automatic",
+      sourcemap: false,
+    });
+    return { ok: true, code };
+  } catch (err) {
+    const bf = err as esbuild.BuildFailure;
+    return { ok: false, errors: bf.errors.map((e) => e.text) };
+  }
 }
 
 function makeLazyRequire(modules: Record<string, Module>) {
@@ -113,8 +120,12 @@ async function renderSample(
 
 export async function render(
   opts: RenderOptions
-): Promise<Array<{ html: string | null; logs: Log[] }>> {
+): Promise<
+  | { ok: true; results: Array<{ html: string | null; logs: Log[] }> }
+  | { ok: false; errors: string[] }
+> {
   const modules: Record<string, Module> = {};
+  let codeBuildErrors: string[] | undefined = undefined;
   await Promise.all([
     (async () => {
       const item = opts.componentRegistry.get(opts.component.id);
@@ -122,14 +133,18 @@ export async function render(
       if (!item.code) {
         throw new Error(`Component ${opts.component.id} missing code`);
       }
-      const code = await compileComponent(item.code);
-      modules[item.module] = {
-        code,
-        transform: (m) => ({ [item.name.value]: m[opts.component.name] }),
-      };
+      const compiled = await compileComponent(item.code);
+      if (compiled.ok) {
+        modules[item.module] = {
+          code: compiled.code,
+          transform: (m) => ({ [item.name.value]: m[opts.component.name] }),
+        };
+      } else {
+        codeBuildErrors = compiled.errors;
+      }
     })(),
     (async () => {
-      const code = await compileComponent(`
+      const compiled = await compileComponent(`
         import { clsx, type ClassValue } from "clsx";
         import { twMerge } from "tailwind-merge";
 
@@ -138,7 +153,8 @@ export async function render(
         }
       `);
 
-      modules["@/lib/utils"] = { code };
+      if (!compiled.ok) throw new Error("Failed to compile utils");
+      modules["@/lib/utils"] = { code: compiled.code };
     })(),
     ...[...opts.deps.all]
       .filter((cid) => cid !== opts.component.id)
@@ -148,14 +164,18 @@ export async function render(
         if (!item.code) {
           throw new Error(`Component ${cid} missing code`);
         }
-        const code = await compileComponent(item.code);
-        modules[item.module] = { code };
+        const compiled = await compileComponent(item.code);
+        if (!compiled.ok) throw new Error(`Failed to compile ${item.id}`);
+        modules[item.module] = { code: compiled.code };
       }),
   ]);
 
+  if (codeBuildErrors) return { ok: false, errors: codeBuildErrors };
+
   const require = makeLazyRequire(modules);
   const ctx = vm.createContext({ require });
-  return Promise.all(
+  const results = await Promise.all(
     opts.instances.map((inst, i) => renderSample(ctx, inst.jsx, i))
   );
+  return { ok: true, results };
 }

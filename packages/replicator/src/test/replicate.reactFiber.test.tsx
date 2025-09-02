@@ -38,7 +38,7 @@ describe("replicate with react fiber", () => {
       rewriteStrategy,
       describeSVGPlaceholder
     );
-    return { metadata, files: await sink.finalize() };
+    return { metadata: metadata!, files: await sink.finalize() };
   };
 
   test("should create App.tsx", async () => {
@@ -354,13 +354,14 @@ describe("replicate with react fiber", () => {
         test("should be correct for component without deps", async () => {
           const rewrite = vi.fn(rewriteComponentUseFirstStrategy);
           const Comp = () => <div>Hello</div>;
-          await run(<Comp />, rewrite);
+          const { metadata } = await run(<Comp />, rewrite);
 
           expect(rewrite).toHaveBeenCalledOnce();
           const args = rewrite.mock.calls[0]![0];
           const examples = await buildInstanceExamples(
             args.instances,
-            args.componentRegistry
+            args.componentRegistry,
+            metadata
           );
           expect(examples).toHaveLength(1);
           expect(examples[0]!.jsx).toMatchSnapshot();
@@ -370,7 +371,7 @@ describe("replicate with react fiber", () => {
           const rewrite = vi.fn(rewriteComponentUseFirstStrategy);
           const Child = () => <div>Hello</div>;
           const Parent = ({ children }: { children: ReactNode }) => children;
-          await run(
+          const { metadata } = await run(
             <Parent>
               <Child />
             </Parent>,
@@ -381,14 +382,16 @@ describe("replicate with react fiber", () => {
           const childArgs = rewrite.mock.calls[0]![0];
           const childExamples = await buildInstanceExamples(
             childArgs.instances,
-            childArgs.componentRegistry
+            childArgs.componentRegistry,
+            metadata
           );
           expect(childExamples[0]!.jsx).toMatchSnapshot();
 
           const parentArgs = rewrite.mock.calls[1]![0];
           const parentExamples = await buildInstanceExamples(
             parentArgs.instances,
-            parentArgs.componentRegistry
+            parentArgs.componentRegistry,
+            metadata
           );
           expect(parentExamples[0]!.jsx).toMatchSnapshot();
         });

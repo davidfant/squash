@@ -73,7 +73,11 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
     throw new Error(`Component ${opts.component.id} not found in registry`);
   }
 
-  const examples = await buildInstanceExamples(opts.instances, registry);
+  const examples = await buildInstanceExamples(
+    opts.instances,
+    registry,
+    opts.metadata
+  );
   const content = await Prompts.initialUserMessage(
     { code: opts.component.code, name: registryItem.name },
     [...opts.component.deps.internal]
@@ -83,7 +87,7 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
         if (!i.code) throw new Error(`Component ${i.id} has no code`);
         return { name: i.name.value, module: i.module, code: i.code };
       }),
-    examples,
+    examples.map((e) => ({ jsx: e.jsx, html: e.html.redacted })),
     { maxNumExamples: MAX_NUM_EXAMPLES_IN_INITIAL_PROMPT }
   );
   const messages: ModelMessage[] = [
@@ -110,7 +114,7 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
         code: rewritten.code,
       },
       deps: opts.component.deps,
-      instances: examples,
+      instances: examples.map((e) => ({ jsx: e.jsx, html: e.html.full })),
       componentRegistry: registry,
     });
     messages.push(...response.messages);
@@ -127,7 +131,7 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
       }
 
       if (r.html !== null) {
-        const diff = diffRenderedHtml(examples[i]!.html, r.html);
+        const diff = diffRenderedHtml(examples[i]!.html.full, r.html);
         if (!!diff) {
           // console.log("---");
           // console.log(examples[i]!.html);
@@ -154,9 +158,13 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
 
     messages.push({
       role: "user",
-      content: await Prompts.errorsUserMessage(errors, examples, {
-        maxNumExamples: MAX_NUM_EXAMPLES_IN_ERROR_PROMPT,
-      }),
+      content: await Prompts.errorsUserMessage(
+        errors,
+        examples.map((e) => ({ jsx: e.jsx, html: e.html.full })),
+        {
+          maxNumExamples: MAX_NUM_EXAMPLES_IN_ERROR_PROMPT,
+        }
+      ),
     });
   }
 

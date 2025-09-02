@@ -202,6 +202,7 @@ export const replicate = (
                       }
                     ),
                     componentRegistry,
+                    metadata: m,
                   }),
                 { name: `Rewrite ${resolved.name.value} (${resolved.id})` }
               )();

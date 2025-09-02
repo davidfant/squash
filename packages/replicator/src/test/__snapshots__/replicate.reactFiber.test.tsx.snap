@@ -26,16 +26,14 @@ exports[`replicate with react fiber > naming > LLM > createRef > should be corre
 "import { Comp } from "@/components/Comp";
 export function Sample() {
   return <Comp />;
-}
-"
+}"
 `;
 
 exports[`replicate with react fiber > naming > LLM > createRef > should contain child component 1`] = `
 "import { Child } from "@/components/Child";
 export function Sample() {
   return <Child />;
-}
-"
+}"
 `;
 
 exports[`replicate with react fiber > naming > LLM > createRef > should contain child component 2`] = `
@@ -47,8 +45,7 @@ export function Sample() {
       <Child />
     </Parent>
   );
-}
-"
+}"
 `;
 
 exports[`replicate with react fiber > naming > LLM > should not replace refs to components that do not have code yet 1`] = `

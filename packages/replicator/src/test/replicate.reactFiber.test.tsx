@@ -364,7 +364,7 @@ describe("replicate with react fiber", () => {
             metadata
           );
           expect(examples).toHaveLength(1);
-          expect(examples[0]!.jsx).toMatchSnapshot();
+          expect(examples[0]!.jsx.full).toMatchSnapshot();
         });
 
         test("should contain child component", async () => {
@@ -385,7 +385,7 @@ describe("replicate with react fiber", () => {
             childArgs.componentRegistry,
             metadata
           );
-          expect(childExamples[0]!.jsx).toMatchSnapshot();
+          expect(childExamples[0]!.jsx.full).toMatchSnapshot();
 
           const parentArgs = rewrite.mock.calls[1]![0];
           const parentExamples = await buildInstanceExamples(
@@ -393,7 +393,7 @@ describe("replicate with react fiber", () => {
             parentArgs.componentRegistry,
             metadata
           );
-          expect(parentExamples[0]!.jsx).toMatchSnapshot();
+          expect(parentExamples[0]!.jsx.full).toMatchSnapshot();
         });
       });
     });

@@ -87,7 +87,7 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
         if (!i.code) throw new Error(`Component ${i.id} has no code`);
         return { name: i.name.value, module: i.module, code: i.code };
       }),
-    examples.map((e) => ({ jsx: e.jsx, html: e.html.redacted })),
+    examples.map((e) => ({ jsx: e.jsx.limited, html: e.html.limited })),
     { maxNumExamples: MAX_NUM_EXAMPLES_IN_INITIAL_PROMPT }
   );
   const messages: ModelMessage[] = [
@@ -114,7 +114,7 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
         code: rewritten.code,
       },
       deps: opts.component.deps,
-      instances: examples.map((e) => ({ jsx: e.jsx, html: e.html.full })),
+      instances: examples.map((e) => ({ jsx: e.jsx.full, html: e.html.full })),
       componentRegistry: registry,
     });
     messages.push(...response.messages);
@@ -160,7 +160,7 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
       role: "user",
       content: await Prompts.errorsUserMessage(
         errors,
-        examples.map((e) => ({ jsx: e.jsx, html: e.html.full })),
+        examples.map((e) => ({ jsx: e.jsx.limited, html: e.html.full })),
         {
           maxNumExamples: MAX_NUM_EXAMPLES_IN_ERROR_PROMPT,
         }

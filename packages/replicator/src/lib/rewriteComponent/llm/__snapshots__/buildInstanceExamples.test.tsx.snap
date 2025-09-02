@@ -1,6 +1,21 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`buildInstanceExamples > html > limit depth > DOM elements not limited if no react components are present 1`] = `
+exports[`buildInstanceExamples > basic component 1`] = `
+{
+  "full": "import { Comp } from "@/components/Comp";
+export function Sample() {
+  return <Comp />;
+}
+",
+  "limited": "import { Comp } from "@/components/Comp";
+export function Sample() {
+  return <Comp />;
+}
+",
+}
+`;
+
+exports[`buildInstanceExamples > limit depth > DOM elements not limited if no react components are present 1`] = `
 "<div class="1">
   <div class="2">
     <div class="3">
@@ -22,7 +37,101 @@ exports[`buildInstanceExamples > html > limit depth > DOM elements not limited i
 </div>"
 `;
 
-exports[`buildInstanceExamples > html > limit depth > max 2 levels of react components 1`] = `
+exports[`buildInstanceExamples > limit depth > DOM elements not limited if no react components are present 2`] = `
+"<div class="1">
+  <div class="2">
+    <div class="3">
+      <div class="4">
+        <div class="5">
+          <div class="6">
+            <div class="7">
+              <div class="8">
+                <div class="9">
+                  <div class="10"><div class="not redacted"></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>"
+`;
+
+exports[`buildInstanceExamples > limit depth > DOM elements not limited if no react components are present 3`] = `
+"import { Parent } from "@/components/Parent";
+export function Sample() {
+  return (
+    <Parent>
+      <div className="1">
+        <div className="2">
+          <div className="3">
+            <div className="4">
+              <div className="5">
+                <div className="6">
+                  <div className="7">
+                    <div className="8">
+                      <div className="9">
+                        <div className="10">
+                          <div className="not redacted" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Parent>
+  );
+}
+"
+`;
+
+exports[`buildInstanceExamples > limit depth > DOM elements not limited if no react components are present 4`] = `
+"import { Parent } from "@/components/Parent";
+export function Sample() {
+  return (
+    <Parent>
+      <div className="1">
+        <div className="2">
+          <div className="3">
+            <div className="4">
+              <div className="5">
+                <div className="6">
+                  <div className="7">
+                    <div className="8">
+                      <div className="9">
+                        <div className="10">
+                          <div className="not redacted" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Parent>
+  );
+}
+"
+`;
+
+exports[`buildInstanceExamples > limit depth > max 2 levels of react components 1`] = `
+"<div>
+  <div data-depth="1">
+    <div data-depth="2"><div data-depth="3">bottom</div></div>
+  </div>
+</div>"
+`;
+
+exports[`buildInstanceExamples > limit depth > max 2 levels of react components 2`] = `
 "<div>
   <div data-depth="1">
     <div data-depth="2"><!-- children redacted --></div>
@@ -30,7 +139,61 @@ exports[`buildInstanceExamples > html > limit depth > max 2 levels of react comp
 </div>"
 `;
 
-exports[`buildInstanceExamples > html > limit depth > max 10 levels of DOM elements, if at least one react component is present 1`] = `
+exports[`buildInstanceExamples > limit depth > max 2 levels of react components 3`] = `
+"import { Parent } from "@/components/Parent";
+import { Child } from "@/components/Child";
+export function Sample() {
+  return (
+    <Parent>
+      <Child depth={1}>
+        <Child depth={2}>
+          <Child depth={3}>{"bottom"}</Child>
+        </Child>
+      </Child>
+    </Parent>
+  );
+}
+"
+`;
+
+exports[`buildInstanceExamples > limit depth > max 2 levels of react components 4`] = `
+"import { Parent } from "@/components/Parent";
+import { Child } from "@/components/Child";
+export function Sample() {
+  return (
+    <Parent>
+      <Child depth={1}>
+        <Child depth={2}>{/* children redacted */}</Child>
+      </Child>
+    </Parent>
+  );
+}
+"
+`;
+
+exports[`buildInstanceExamples > limit depth > max 10 levels of DOM elements, if at least one react component is present 1`] = `
+"<div class="1">
+  <div class="2">
+    <div class="3">
+      <div class="4">
+        <div class="5">
+          <div class="6">
+            <div class="7">
+              <div class="8">
+                <div class="9">
+                  <div class="10"><div class="bottom"></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>"
+`;
+
+exports[`buildInstanceExamples > limit depth > max 10 levels of DOM elements, if at least one react component is present 2`] = `
 "<div class="1">
   <div class="2">
     <div class="3">
@@ -50,4 +213,68 @@ exports[`buildInstanceExamples > html > limit depth > max 10 levels of DOM eleme
     </div>
   </div>
 </div>"
+`;
+
+exports[`buildInstanceExamples > limit depth > max 10 levels of DOM elements, if at least one react component is present 3`] = `
+"import { Parent } from "@/components/Parent";
+import { Child } from "@/components/Child";
+export function Sample() {
+  return (
+    <Parent>
+      <div className="1">
+        <div className="2">
+          <div className="3">
+            <Child>
+              <div className="4">
+                <div className="5">
+                  <div className="6">
+                    <div className="7">
+                      <div className="8">
+                        <div className="9">
+                          <div className="10">
+                            <div className="bottom" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Child>
+          </div>
+        </div>
+      </div>
+    </Parent>
+  );
+}
+"
+`;
+
+exports[`buildInstanceExamples > limit depth > max 10 levels of DOM elements, if at least one react component is present 4`] = `
+"import { Parent } from "@/components/Parent";
+import { Child } from "@/components/Child";
+export function Sample() {
+  return (
+    <Parent>
+      <div className="1">
+        <div className="2">
+          <div className="3">
+            <Child>
+              <div className="4">
+                <div className="5">
+                  <div className="6">
+                    <div className="7">
+                      <div className="8">{/* children redacted */}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Child>
+          </div>
+        </div>
+      </div>
+    </Parent>
+  );
+}
+"
 `;

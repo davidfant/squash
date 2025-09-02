@@ -75,88 +75,62 @@ describe("buildInstanceExamples", () => {
     );
   }
 
-  describe("html", () => {
-    test("should create html", async () => {
-      const Comp = () => <div>Hello</div>;
+  test("basic component", async () => {
+    const Comp = () => <div>Hello</div>;
+    const res = await run(
+      "Comp",
+      <main>
+        <Comp />
+      </main>
+    );
+    expect(res.length).toBe(1);
+    expect(res[0]?.html.full).toEqual(res[0]?.html.limited);
+    expect(res[0]?.jsx.full).toEqual(res[0]?.jsx.limited);
+    expect(res[0]?.html.full).toBe("<div>Hello</div>");
+    expect(res[0]?.jsx).toMatchSnapshot();
+  });
+
+  describe("limit depth", () => {
+    test("max 2 levels of react components", async () => {
+      const Child = ({
+        children,
+        depth,
+      }: {
+        children: ReactNode;
+        depth: number;
+      }) => <div data-depth={depth}>{children}</div>;
+      const Parent = ({ children }: { children: ReactNode }) => (
+        <div>{children}</div>
+      );
       const res = await run(
-        "Comp",
-        <main>
-          <Comp />
-        </main>
+        "Parent",
+        <Parent>
+          <Child depth={1}>
+            <Child depth={2}>
+              <Child depth={3}>bottom</Child>
+            </Child>
+          </Child>
+        </Parent>
       );
       expect(res.length).toBe(1);
-      expect(res[0]?.html.full).toBe("<div>Hello</div>");
+      expect(res[0]?.html.full).not.toEqual(res[0]?.html.limited);
+      expect(res[0]?.jsx.full).not.toEqual(res[0]?.jsx.limited);
+      expect(res[0]?.html.full).toMatchSnapshot();
+      expect(res[0]?.html.limited).toMatchSnapshot();
+      expect(res[0]?.jsx.full).toMatchSnapshot();
+      expect(res[0]?.jsx.limited).toMatchSnapshot();
     });
 
-    describe("limit depth", () => {
-      test("max 2 levels of react components", async () => {
-        const Child = ({
-          children,
-          depth,
-        }: {
-          children: ReactNode;
-          depth: number;
-        }) => <div data-depth={depth}>{children}</div>;
-        const Parent = ({ children }: { children: ReactNode }) => (
-          <div>{children}</div>
-        );
-        const res = await run(
-          "Parent",
-          <Parent>
-            <Child depth={1}>
-              <Child depth={2}>
-                <Child depth={3}>bottom</Child>
-              </Child>
-            </Child>
-          </Parent>
-        );
-        expect(res.length).toBe(1);
-        expect(res[0]?.html.full).toMatchSnapshot();
-      });
-
-      test("max 10 levels of DOM elements, if at least one react component is present", async () => {
-        const Child = ({ children }: { children: ReactNode }) => children;
-        const Parent = ({ children }: { children: ReactNode }) => children;
-        const res = await run(
-          "Parent",
-          <Parent>
-            <div className="1">
-              <div className="2">
-                <div className="3">
-                  <Child>
-                    <div className="4">
-                      <div className="5">
-                        <div className="6">
-                          <div className="7">
-                            <div className="8">
-                              <div className="9">
-                                <div className="10">
-                                  <div className="redacted" />
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </Child>
-                </div>
-              </div>
-            </div>
-          </Parent>
-        );
-        expect(res.length).toBe(1);
-        expect(res[0]?.html.full).toMatchSnapshot();
-      });
-
-      test("DOM elements not limited if no react components are present", async () => {
-        const Parent = ({ children }: { children: ReactNode }) => children;
-        const res = await run(
-          "Parent",
-          <Parent>
-            <div className="1">
-              <div className="2">
-                <div className="3">
+    test("max 10 levels of DOM elements, if at least one react component is present", async () => {
+      const Child = ({ children }: { children: ReactNode }) => children;
+      const Parent = ({ children }: { children: ReactNode }) => children;
+      const res = await run(
+        "Parent",
+        <Parent>
+          <div className="1">
+            <div className="2">
+              <div className="3">
+                <Child>
                   <div className="4">
                     <div className="5">
                       <div className="6">
@@ -164,8 +138,45 @@ describe("buildInstanceExamples", () => {
                           <div className="8">
                             <div className="9">
                               <div className="10">
-                                <div className="not redacted" />
+                                <div className="bottom" />
                               </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </Child>
+              </div>
+            </div>
+          </div>
+        </Parent>
+      );
+      expect(res.length).toBe(1);
+      expect(res[0]?.html.full).not.toEqual(res[0]?.html.limited);
+      expect(res[0]?.jsx.full).not.toEqual(res[0]?.jsx.limited);
+      expect(res[0]?.html.full).toMatchSnapshot();
+      expect(res[0]?.html.limited).toMatchSnapshot();
+      expect(res[0]?.jsx.full).toMatchSnapshot();
+      expect(res[0]?.jsx.limited).toMatchSnapshot();
+    });
+
+    test("DOM elements not limited if no react components are present", async () => {
+      const Parent = ({ children }: { children: ReactNode }) => children;
+      const res = await run(
+        "Parent",
+        <Parent>
+          <div className="1">
+            <div className="2">
+              <div className="3">
+                <div className="4">
+                  <div className="5">
+                    <div className="6">
+                      <div className="7">
+                        <div className="8">
+                          <div className="9">
+                            <div className="10">
+                              <div className="not redacted" />
                             </div>
                           </div>
                         </div>
@@ -175,21 +186,15 @@ describe("buildInstanceExamples", () => {
                 </div>
               </div>
             </div>
-          </Parent>
-        );
-        expect(res.length).toBe(1);
-        expect(res[0]?.html.full).toMatchSnapshot();
-      });
+          </div>
+        </Parent>
+      );
+      expect(res[0]?.html.full).toEqual(res[0]?.html.limited);
+      expect(res[0]?.jsx.full).toEqual(res[0]?.jsx.limited);
+      expect(res[0]?.html.full).toMatchSnapshot();
+      expect(res[0]?.html.limited).toMatchSnapshot();
+      expect(res[0]?.jsx.full).toMatchSnapshot();
+      expect(res[0]?.jsx.limited).toMatchSnapshot();
     });
   });
-
-  // describe('jsx', () => {
-  //   test('should create jsx', async () => {
-
-  //   });
-
-  //   describe('limit depth', () => {
-
-  //   });
-  // });
 });

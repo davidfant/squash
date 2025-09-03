@@ -169,6 +169,7 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
 
       if (errors.every((e) => !e.length)) break;
 
+      console.error(errors);
       messages.push({
         role: "user",
         content: Prompts.renderErrorsUserMessage(
@@ -182,8 +183,8 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
     attempt++;
     if (attempt === 3) {
       console.error("Failed to write correct component", rendered);
-      // throw new Error("Failed to write correct component");
-      break;
+      throw new Error("Failed to write correct component");
+      // break;
     }
   }
 

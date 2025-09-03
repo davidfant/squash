@@ -161,8 +161,8 @@ When rendering the component, the HTML output of ${errors.length} does not match
 **Instructions:**
 
 * The differences are shown as a **git diff**:
-  * Lines prefixed with \`+\` represent what **should be present** (expected output).
-  * Lines prefixed with \`-\` represent what **is currently rendered but should not be** (actual incorrect output).
+  * Lines prefixed with \`+\` represent what **should be present** (expected output), but is not. These should be added to make the component correct.
+  * Lines prefixed with \`-\` represent what the component in the previous message **is rendering but should not** (actual incorrect output). These should be removed to make the component correct.
 * First, analyze the diff to understand the discrepancies between expected and actual HTML.
 * Next, explain what went wrong in the component.
 * Then, propose potential solutions.

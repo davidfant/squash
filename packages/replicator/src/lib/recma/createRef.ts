@@ -68,6 +68,7 @@ function toExpression(value: any, ctx: CreateRefContext): Expression {
       }
       case "function": {
         const fn = value as Metadata.ReactFiber.Function;
+        // TODO: consider prettifying the function
         return { type: "Literal", value: `[Function: ${fn.fn}]` };
       }
     }

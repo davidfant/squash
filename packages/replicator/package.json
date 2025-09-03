@@ -16,7 +16,7 @@
     "dev": "concurrently \"pnpm dev:tsc\" \"pnpm dev:alias\"",
     "dev:tsc": "tsc --watch --preserveWatchOutput",
     "dev:alias": "tsc-alias --watch",
-    "build": "tsc",
+    "build": "tsc && tsc-alias",
     "replicate": "tsx watch --env-file .env src/playground.ts",
     "test": "vitest"
   },

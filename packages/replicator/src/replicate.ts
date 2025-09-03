@@ -1,6 +1,7 @@
 import * as prettier from "@/lib/prettier";
 import { load } from "cheerio";
 import { traceable } from "langsmith/traceable";
+import path from "path";
 import recmaJsx from "recma-jsx";
 import recmaStringify from "recma-stringify";
 import rehypeParse from "rehype-parse";
@@ -128,6 +129,9 @@ export const replicate = (
         )
       );
       const registry = buildInitialComponentRegistry(m.components);
+      const tree = unified()
+        .use(rehypeParse, { fragment: true })
+        .parse(svgAliased.html);
 
       const analyzed = await traceable(
         (components: Array<ComponentToAnalyze>) =>
@@ -146,7 +150,13 @@ export const replicate = (
           .filter((v) => !!v)
         // .slice(0, 3)
       );
-
+      analyzed.forEach((a) => {
+        const item = registry.get(a.id);
+        if (!item) return;
+        item.name = { value: a.name, isFallback: true };
+        item.path = path.join("src/components/analyzed", a.id, `${a.name}.tsx`);
+        item.module = path.join("@/components/analyzed", a.id, a.name);
+      });
       console.dir(
         analyzed
           .map((a) => ({ depCount: a.dependencies.length, ...a }))
@@ -154,123 +164,134 @@ export const replicate = (
         { depth: null }
       );
 
-      const resolved = registry.get("C19")!;
-      const component = components.get(resolved.id)!;
-      if (!("codeId" in component)) {
-        console.log("no codeId", resolved.id);
-        return;
-      }
+      await Promise.all(
+        analyzed
+          .filter((a) => a.dependencies.length === 0)
+          .filter((a) => ["C21", "C39", "C53", "C93"].includes(a.id))
+          .map(async (a) => {
+            const resolved = registry.get(a.id)!;
+            const component = components.get(resolved.id)!;
+            if (!("codeId" in component)) {
+              console.log("no codeId", resolved.id);
+              return;
+            }
 
-      const tree = await unified()
-        .use(rehypeParse, { fragment: true })
-        .parse(svgAliased.html);
+            const elementsByNodeId = new Map<
+              NodeId,
+              Array<{
+                element: Element;
+                index: number;
+                parent: Root | Element;
+                nodeId: NodeId;
+              }>
+            >();
 
-      const elementsByNodeId = new Map<
-        NodeId,
-        Array<{
-          element: Element;
-          index: number;
-          parent: Root | Element;
-          nodeId: NodeId;
-        }>
-      >();
+            const nodeIdsForComponent = [...nodes.entries()]
+              .filter(([, n]) => n.componentId === resolved.id)
+              .map(([id]) => id);
 
-      const nodeIdsForComponent = [...nodes.entries()]
-        .filter(([, n]) => n.componentId === resolved.id)
-        .map(([id]) => id);
+            for (const parentId of nodeIdsForComponent) {
+              visit(tree, "element", (element, index, parent) => {
+                if (index === undefined) return;
+                const nodeId = element.properties?.[
+                  "dataSquashNodeId"
+                ] as NodeId;
+                if (parent?.type !== "element" && parent?.type !== "root")
+                  return;
 
-      for (const parentId of nodeIdsForComponent) {
-        visit(tree, "element", (element, index, parent) => {
-          if (index === undefined) return;
-          const nodeId = element.properties?.["dataSquashNodeId"] as NodeId;
-          if (parent?.type !== "element" && parent?.type !== "root") return;
+                if (ancestorsMap.get(nodeId)?.has(parentId)) {
+                  elementsByNodeId.set(parentId, [
+                    ...(elementsByNodeId.get(parentId) ?? []),
+                    { element, index, parent, nodeId },
+                  ]);
+                  return SKIP;
+                }
+              });
+            }
 
-          if (ancestorsMap.get(nodeId)?.has(parentId)) {
-            elementsByNodeId.set(parentId, [
-              ...(elementsByNodeId.get(parentId) ?? []),
-              { element, index, parent, nodeId },
-            ]);
-            return SKIP;
-          }
-        });
-      }
+            // find all elements w this as a parent
+            const rewritten = await traceable(
+              () =>
+                rewriteComponentStrategy({
+                  component: {
+                    id: resolved.id,
+                    code: m.code[component.codeId]!,
+                    deps: { all: new Set(), internal: new Set() },
+                  },
+                  instances: nodeIdsForComponent.map((nodeId) => {
+                    const node = nodes.get(nodeId)!;
+                    const nodeProps = clone(node.props) as Record<
+                      string,
+                      unknown
+                    >;
+                    const elements = (elementsByNodeId.get(nodeId) ?? []).map(
+                      (e) => clone(e.element)
+                    );
 
-      // find all elements w this as a parent
-      const rewritten = await traceable(
-        () =>
-          rewriteComponentStrategy({
-            component: {
-              id: resolved.id,
-              code: m.code[component.codeId]!,
-              deps: { all: new Set(), internal: new Set() },
-            },
-            instances: nodeIdsForComponent.map((nodeId) => {
-              const node = nodes.get(nodeId)!;
-              const elements = (elementsByNodeId.get(nodeId) ?? []).map((e) =>
-                clone(e.element)
+                    const ref = createRef({
+                      componentId: resolved.id,
+                      props: nodeProps,
+                      ctx: {
+                        deps: new Set(),
+                        codeIdToComponentId,
+                        componentRegistry: registry,
+                      },
+                      children: [],
+                    });
+
+                    return { nodeId, ref, children: elements };
+                  }),
+                  componentRegistry: registry,
+                  metadata: m,
+                }),
+              { name: `Rewrite ${resolved.name.value} (${resolved.id})` }
+            )();
+            Object.assign(resolved, rewritten);
+            await sink.writeText(resolved.path, rewritten.code!);
+
+            const elementsOrderedByDepth = [...elementsByNodeId.entries()]
+              .map(([nodeId, elements]) => ({ nodeId, elements }))
+              .sort(
+                (a, b) =>
+                  (ancestorsMap.get(b.nodeId)?.size ?? 0) -
+                  (ancestorsMap.get(a.nodeId)?.size ?? 0)
               );
 
-              const ref = createRef({
-                componentId: resolved.id,
-                props: node.props as Record<string, unknown>,
-                ctx: {
-                  deps: new Set(),
-                  codeIdToComponentId,
-                  componentRegistry: registry,
-                },
-                children: [],
-              });
+            // Note(fant): loop over elements in reverse, so that we replace the innermost elements first.
+            // TODO: for testing, try saving all of these separately to see if it works
+            for (const { nodeId, elements } of elementsOrderedByDepth) {
+              if (!elements.length) continue;
 
-              return { nodeId, ref, children: elements };
-            }),
-            componentRegistry: registry,
-            metadata: m,
-          }),
-        { name: `Rewrite ${resolved.name.value} (${resolved.id})` }
-      )();
-      Object.assign(resolved, rewritten);
-      await sink.writeText(resolved.path, rewritten.code!);
+              const { index, parent } = elements[0]!;
+              const props = nodes.get(nodeId)!.props as Record<string, unknown>;
+              // Note(fant): we need to Object.assign instead of replace because some
+              // of the elements detected might point at the parent being replaced
+              Object.assign(
+                parent.children[index]!,
+                createRef({
+                  componentId: resolved.id,
+                  props,
+                  nodeId,
+                  ctx: {
+                    deps: new Set(),
+                    codeIdToComponentId,
+                    componentRegistry: registry,
+                  },
+                  // Note(fant): for now we keep the children within the ref, so that in the processor loop we still can find elements of a certain node.
+                  children: clone(elements.map((e) => e.element)),
+                })
+              );
+              elements.slice(1).forEach((e) => (e.element.tagName = "rm"));
+            }
 
-      const elementsOrderedByDepth = [...elementsByNodeId.entries()]
-        .map(([nodeId, elements]) => ({ nodeId, elements }))
-        .sort(
-          (a, b) =>
-            (ancestorsMap.get(b.nodeId)?.size ?? 0) -
-            (ancestorsMap.get(a.nodeId)?.size ?? 0)
-        );
-
-      // Note(fant): loop over elements in reverse, so that we replace the innermost elements first.
-      // TODO: for testing, try saving all of these separately to see if it works
-      for (const { nodeId, elements } of elementsOrderedByDepth) {
-        if (!elements.length) continue;
-
-        const { index, parent } = elements[0]!;
-        const props = nodes.get(nodeId)!.props as Record<string, unknown>;
-        // Note(fant): we need to Object.assign instead of replace because some
-        // of the elements detected might point at the parent being replaced
-        Object.assign(
-          parent.children[index]!,
-          createRef({
-            componentId: resolved.id,
-            props,
-            nodeId,
-            ctx: {
-              deps: new Set(),
-              codeIdToComponentId,
-              componentRegistry: registry,
-            },
-            // Note(fant): for now we keep the children within the ref, so that in the processor loop we still can find elements of a certain node.
-            children: clone(elements.map((e) => e.element)),
+            [...elementsByNodeId.values()].flat().forEach(({ parent }) => {
+              parent.children = parent.children.filter(
+                (el) => el.type !== "element" || el.tagName !== "rm"
+              );
+            });
           })
-        );
-        elements.slice(1).forEach((e) => (e.element.tagName = "rm"));
-      }
-
-      [...elementsByNodeId.values()].flat().forEach(({ parent }) => {
-        parent.children = parent.children.filter(
-          (el) => el.type !== "element" || el.tagName !== "rm"
-        );
-      });
+          .map((p) => p.catch(() => {}))
+      );
 
       const processor = unified()
         .use(rehypeStripSquashAttribute)

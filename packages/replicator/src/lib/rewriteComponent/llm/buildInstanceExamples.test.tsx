@@ -52,6 +52,7 @@ describe("buildInstanceExamples", () => {
       Object.entries(m!.nodes)
         .filter(([_, n]) => n.componentId === componentId)
         .map(([parentNodeId, parentNode]) => ({
+          nodeId: parentNodeId as Metadata.ReactFiber.NodeId,
           children: [
             find(
               unified().use(rehypeParse, { fragment: true }).parse(html),

@@ -7,7 +7,7 @@ export class FileSystemSink implements FileSink {
   constructor(private readonly dir: string) {}
 
   async writeText(path: string, text: string) {
-    this.writeBytes(path, Buffer.from(text));
+    await this.writeBytes(path, Buffer.from(text));
   }
   async writeBytes(filePath: string, bytes: Buffer) {
     const fullFilePath = path.join(this.dir, filePath);

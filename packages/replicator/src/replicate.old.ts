@@ -23,8 +23,8 @@ import { recmaRemoveRedundantFragment } from "./lib/recma/removeRedundantFragmen
 import { recmaReplaceRefs } from "./lib/recma/replaceRefs";
 import { rehypeStripSquashAttribute } from "./lib/rehype/stripSquashAttribute";
 import { recmaWrapAsComponent } from "./lib/rehype/wrapAsComponent";
-import { identifyChildrenFromProps } from "./lib/rewriteComponent.old/llm/identifyChildrenFromProps";
-import type { RewriteComponentStrategy } from "./lib/rewriteComponent.old/types";
+import { identifyChildrenFromProps } from "./lib/rewriteComponent/llm/identifyChildrenFromProps";
+import type { RewriteComponentStrategy } from "./lib/rewriteComponent/types";
 import type { FileSink } from "./lib/sinks/base";
 import { aliasSVGPaths, type DescribeSVGStrategy } from "./lib/svg/alias";
 import { replaceSVGPathsInFiles } from "./lib/svg/replace";

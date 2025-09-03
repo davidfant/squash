@@ -1,6 +1,6 @@
-import { buildInstanceExamples } from "@/lib/rewriteComponent.old/llm/buildInstanceExamples";
-import type { RewriteComponentStrategy } from "@/lib/rewriteComponent.old/types";
-import { rewriteComponentUseFirstStrategy } from "@/lib/rewriteComponent.old/useFirst";
+import { buildInstanceExamples } from "@/lib/rewriteComponent/llm/buildInstanceExamples";
+import type { RewriteComponentStrategy } from "@/lib/rewriteComponent/types";
+import { rewriteComponentUseFirstStrategy } from "@/lib/rewriteComponent/useFirst";
 import { describeSVGPlaceholder } from "@/lib/svg/alias";
 import { reactFiber } from "@/metadata/reactFiber";
 import { forwardRef, memo, type ReactNode } from "react";

@@ -1,4 +1,4 @@
-import { rewriteComponentUseFirstStrategy } from "@/lib/rewriteComponent.old/useFirst";
+import { rewriteComponentUseFirstStrategy } from "@/lib/rewriteComponent/useFirst";
 import type { Asset, FileSink } from "@/lib/sinks/base";
 import { describeSVGPlaceholder } from "@/lib/svg/alias";
 import { load } from "cheerio";

@@ -206,18 +206,31 @@ export const replicate = (
                               (i) => i.nodeId === nodeId
                             );
                             if (parent && i) {
-                              parent.children[index!] = h("props", {
+                              parent.children[index!] = h("placeholder", {
                                 path: i.key,
                               });
                               const last = i.key
                                 .slice(0, -1)
                                 .reduce((acc, k) => acc[k], node.props as any);
-                              last[i.key[i.key.length - 1]!] =
-                                "[[redacted, this string serves as a placeholder and will be seen as a <prop path=... /> tag in the output HTML]]";
+                              const tag: Metadata.ReactFiber.Element.Tag = {
+                                $$typeof: "react.tag",
+                                tagName: "placeholder",
+                                props: { path: i.key },
+                              };
+                              last[i.key[i.key.length - 1]!] = tag;
+                              // last[i.key[i.key.length - 1]!] =
+                              //   "[[redacted, this string serves as a placeholder and will be seen as a <prop path=... /> tag in the output HTML]]";
+                              // last[i.key[i.key.length - 1]!] =
+                              //   "[[redacted, this string serves as a placeholder and will be seen as a <prop path=... /> tag in the output HTML]]";
+                              console.log("replacing", {
+                                nodeId,
+                                i,
+                                parent,
+                                last,
+                              });
 
                               return SKIP;
                             }
-                            console.log("root", e);
                           }
                         );
 

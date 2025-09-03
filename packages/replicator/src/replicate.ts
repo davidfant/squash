@@ -211,7 +211,7 @@ export const replicate = (
                             );
                             if (parent && i) {
                               parent.children[index!] = h("placeholder", {
-                                path: i.key,
+                                path: i.key.join("/"),
                               });
                               const last = i.key
                                 .slice(0, -1)
@@ -219,7 +219,7 @@ export const replicate = (
                               const tag: Metadata.ReactFiber.Element.Tag = {
                                 $$typeof: "react.tag",
                                 tagName: "placeholder",
-                                props: { path: i.key },
+                                props: { path: i.key.join("/") },
                               };
                               last[i.key[i.key.length - 1]!] = tag;
                               // last[i.key[i.key.length - 1]!] =

@@ -74,12 +74,12 @@ describe("reactFiber", () => {
     expectElementNodeId("div", nodes.div.id);
   });
 
+  // TODO: walk all props, and identify all components and code, and register code and components that aren't rendered anywhere
   test("should register component and code used in props but not rendered", async () => {
     const NotRendered = () => <div>Hello</div>;
     const Component = (_: { children: ReactNode }) => <div />;
     const metadata = await run(<Component children={<NotRendered />} />);
 
-    console.log(metadata);
     expect(Object.keys(metadata.code)).toHaveLength(2);
 
     const notRenderedComponentId = (

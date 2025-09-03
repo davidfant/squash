@@ -50,7 +50,9 @@ function recurse(
   } else if (typeof value === "object" && value !== null) {
     if (value.$$typeof === "react.code") {
       const el = value as Metadata.ReactFiber.Element.Code;
-      if (!el.codeId) throw new Error("now what?");
+      // TODO: what do we do here?
+      if (!el.codeId) return [{ key, match: true, nodeId: null }];
+
       // starting from the parent node, find the next child that is of this block type
       const next = nextChild(
         (node) => node.componentId === ctx.codeIdToComponentId.get(el.codeId!),

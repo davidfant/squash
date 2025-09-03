@@ -9,6 +9,7 @@ import { buildInstanceExamples } from "./buildInstanceExamples";
 import { diffRenderedHtml } from "./diffRenderedHtml";
 import * as Prompts from "./prompts";
 import { render } from "./render";
+import { withCacheBreakpoints } from "./withCacheBreakpoint";
 
 const MAX_NUM_EXAMPLES_IN_INITIAL_PROMPT = 5;
 const MAX_NUM_EXAMPLES_IN_ERROR_PROMPT = 10;
@@ -100,7 +101,7 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
   while (true) {
     const { text, response } = await generateText({
       model,
-      messages,
+      messages: withCacheBreakpoints(messages),
       maxOutputTokens: 8192,
     });
     rewritten = parseGeneratedComponent(text);

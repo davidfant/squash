@@ -180,11 +180,10 @@ async function getElement(
   }
 }
 
-const sanitize = async (value: any, ctx: SanitizeContext): Promise<any> =>
-  transform(
+const sanitize = async (value: any, context: SanitizeContext): Promise<any> =>
+  transform({
     value,
-    ctx,
-    async (v, c): Promise<{ value: any } | undefined> => {
+    visit: async (v, c): Promise<{ value: any } | undefined> => {
       if (v === window) return { value: "[Window]" };
       if (typeof v === "function") return { value: undefined };
 
@@ -206,8 +205,12 @@ const sanitize = async (value: any, ctx: SanitizeContext): Promise<any> =>
         if (v instanceof Element) return { value: "[Element]" };
       }
     },
-    (v, c): SanitizeContext => ({ ...c, ancestors: [...c.ancestors, v] })
-  );
+    context,
+    buildNextContext: (v, c): SanitizeContext => ({
+      ...c,
+      ancestors: [...c.ancestors, v],
+    }),
+  });
 
 export async function reactFiber(): Promise<Metadata.ReactFiber | null> {
   const root = findReactRoot();
@@ -231,8 +234,6 @@ export async function reactFiber(): Promise<Metadata.ReactFiber | null> {
     const codeId = codeIdLookup.get(fn) ?? `F${ids.code++}`;
     codeIdLookup.set(fn, codeId);
   });
-
-  // walk all props, and identify all components and code, and register code and components that aren't rendered anywhere
 
   await walkFrom<Metadata.ReactFiber.NodeId>(
     root,

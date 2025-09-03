@@ -45,6 +45,7 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^2.0.1",
+    "@ai-sdk/google": "^2.0.11",
     "@ai-sdk/openai": "^2.0.3",
     "@resvg/resvg-wasm": "^2.6.2",
     "acorn": "^8.15.0",

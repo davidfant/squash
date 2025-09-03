@@ -1,12 +1,16 @@
 import * as prettier from "@/lib/prettier";
 import { load } from "cheerio";
 import { traceable } from "langsmith/traceable";
-import * as path from "path";
 import recmaJsx from "recma-jsx";
 import recmaStringify from "recma-stringify";
+import rehypeParse from "rehype-parse";
 import rehypeRecma from "rehype-recma";
 import { unified } from "unified";
 import { langsmith } from "./lib/ai";
+import {
+  analyzeComponent,
+  type ComponentToAnalyze,
+} from "./lib/analyzeComponent";
 import { downloadRemoteUrl } from "./lib/assets/downloadRemoteAsset";
 import { identifyUrlsToDownload } from "./lib/assets/identifyRemoveAssetsToDownload";
 import {
@@ -19,7 +23,6 @@ import { recmaRemoveRedundantFragment } from "./lib/recma/removeRedundantFragmen
 import { recmaReplaceRefs } from "./lib/recma/replaceRefs";
 import { rehypeStripSquashAttribute } from "./lib/rehype/stripSquashAttribute";
 import { recmaWrapAsComponent } from "./lib/rehype/wrapAsComponent";
-import { rewriteComponentWithLLM } from "./lib/rewriteComponent";
 import type { RewriteComponentStrategy } from "./lib/rewriteComponent.old/types";
 import type { FileSink } from "./lib/sinks/base";
 import { aliasSVGPaths, type DescribeSVGStrategy } from "./lib/svg/alias";
@@ -111,15 +114,10 @@ export const replicate = (
       );
       const registry = buildInitialComponentRegistry(m.components);
 
-      const rewritten = await traceable(
-        (
-          components: Array<{
-            id: Metadata.ReactFiber.ComponentId;
-            code: string;
-            name: string | undefined;
-          }>
-        ) => Promise.all(components.map(rewriteComponentWithLLM)),
-        { name: "Rewrite All Components" }
+      const analyzed = await traceable(
+        (components: Array<ComponentToAnalyze>) =>
+          Promise.all(components.map(analyzeComponent)),
+        { name: "Analyze All Components" }
       )(
         [...registry.values()]
           .map((c) => {
@@ -134,22 +132,44 @@ export const replicate = (
         // .slice(0, 3)
       );
 
-      rewritten.forEach((r) => {
-        const item = registry.get(r.id)!;
-        item.path = path.join(
-          "src/components/rewritten",
-          r.id,
-          `${r.name}.tsx`
-        );
-        item.module = path.join("@/components/rewritten", r.id, r.name);
-        item.code = r.typescript;
-      });
-
-      await Promise.all(
-        rewritten.map((r) =>
-          sink.writeText(registry.get(r.id)?.path!, r.typescript)
-        )
+      // sort analyzed by number of deps
+      console.dir(
+        analyzed
+          .map((a) => ({ depCount: a.dependencies.length, ...a }))
+          .sort((a, b) => a.depCount - b.depCount),
+        { depth: null }
       );
+
+      const processor = unified()
+        .use(rehypeParse, { fragment: true })
+        .use(rehypeStripSquashAttribute)
+        .use(rehypeRecma)
+        .use(recmaJsx)
+        .use(recmaRemoveRedundantFragment)
+        .use(recmaWrapAsComponent, "App")
+        // .use(recmaReplaceRefs, opts.componentRegistry)
+        .use(recmaFixProperties)
+        .use(recmaStringify);
+
+      const appstx = await processor.process(svgAliased.html);
+      await sink.writeText("src/App.tsx", await prettier.ts(appstx.toString()));
+
+      // rewritten.forEach((r) => {
+      //   const item = registry.get(r.id)!;
+      //   item.path = path.join(
+      //     "src/components/rewritten",
+      //     r.id,
+      //     `${r.name}.tsx`
+      //   );
+      //   item.module = path.join("@/components/rewritten", r.id, r.name);
+      //   item.code = r.typescript;
+      // });
+
+      // await Promise.all(
+      //   rewritten.map((r) =>
+      //     sink.writeText(registry.get(r.id)?.path!, r.typescript)
+      //   )
+      // );
 
       const replicatedHtml = `
 <!DOCTYPE html>

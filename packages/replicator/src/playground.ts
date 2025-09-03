@@ -6,12 +6,13 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { langsmith } from "./lib/ai";
-import { rewriteComponentWithLLMStrategy } from "./lib/rewriteComponent/llm";
-import { rewriteComponentUseFirstStrategy } from "./lib/rewriteComponent/useFirst";
+import { rewriteComponentWithLLMStrategy } from "./lib/rewriteComponent.old/llm";
+import { rewriteComponentUseFirstStrategy } from "./lib/rewriteComponent.old/useFirst";
 import { FileSystemSink } from "./lib/sinks/fs";
 import { describeSVGWithLLM } from "./lib/svg/alias";
 import { logFileTree } from "./logFileTree";
 import { replicate } from "./replicate";
+// import { replicate } from "./replicate.old";
 import type { Snapshot } from "./types";
 
 const SNAPSHOT_CACHE_DIR = path.join(os.tmpdir(), "squash-replicator");

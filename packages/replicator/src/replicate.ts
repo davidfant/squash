@@ -187,6 +187,10 @@ export const replicate = (
                     instances: Object.entries(group.nodes).map(
                       ([nid, node]) => {
                         const nodeId = nid as NodeId;
+                        const nodeProps = clone(node.props) as Record<
+                          string,
+                          unknown
+                        >;
                         const elements = (
                           elementsByNodeId.get(nodeId) ?? []
                         ).map((e) => clone(e.element));
@@ -211,7 +215,7 @@ export const replicate = (
                               });
                               const last = i.key
                                 .slice(0, -1)
-                                .reduce((acc, k) => acc[k], node.props as any);
+                                .reduce((acc, k) => acc[k], nodeProps as any);
                               const tag: Metadata.ReactFiber.Element.Tag = {
                                 $$typeof: "react.tag",
                                 tagName: "placeholder",
@@ -222,7 +226,7 @@ export const replicate = (
                               //   "[[redacted, this string serves as a placeholder and will be seen as a <prop path=... /> tag in the output HTML]]";
                               // last[i.key[i.key.length - 1]!] =
                               //   "[[redacted, this string serves as a placeholder and will be seen as a <prop path=... /> tag in the output HTML]]";
-                              console.log("replacing", {
+                              console.log("👀 replacing", {
                                 nodeId,
                                 i,
                                 parent,
@@ -241,7 +245,7 @@ export const replicate = (
 
                         const ref = createRef({
                           componentId: resolved.id,
-                          props: node.props as Record<string, unknown>,
+                          props: nodeProps,
                           ctx: {
                             deps: new Set(),
                             codeIdToComponentId,

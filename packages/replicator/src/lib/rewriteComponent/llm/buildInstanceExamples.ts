@@ -92,7 +92,7 @@ const recmaLimitDepth: Plugin<[config: LimitDepthConfig], Program> =
             (componentDepth > 0 && domDepth >= config.maxDom && !isComp);
 
           if (exceeds && !!node.children.length) {
-            const commentId = `CHILDREN_REDACTED:${crypto.randomUUID()}`;
+            const commentId = `COMMENT:${crypto.randomUUID()}`;
             program.comments?.push({ type: "Block", value: commentId });
             node.children = [
               {
@@ -109,48 +109,87 @@ const recmaLimitDepth: Plugin<[config: LimitDepthConfig], Program> =
     });
   };
 
-export async function buildInstanceExamples(
+export const buildInstanceExamples = (
   instances: RewriteComponentInstance[],
   registry: ComponentRegistry,
   metadata: Metadata.ReactFiber
-) {
-  const processors = {
-    html: {
-      full: unified()
-        .use(rehypeStripSquashAttribute)
-        .use(rehypeUnwrapRefs)
-        .use(rehypeStringify),
-      limited: unified()
-        .use(rehypeLimitDepth, metadata, limitDepthConfig)
-        .use(rehypeStripSquashAttribute)
-        .use(rehypeUnwrapRefs)
-        .use(rehypeStringify),
-    },
-    jsx: {
-      full: unified()
-        .use(rehypeStripSquashAttribute)
-        .use(rehypeRecma)
-        .use(recmaJsx)
-        .use(recmaRemoveRedundantFragment)
-        .use(recmaWrapAsComponent, "Sample")
-        .use(recmaReplaceRefs, registry)
-        .use(recmaFixProperties)
-        .use(recmaStringify),
-      limited: unified()
-        .use(rehypeStripSquashAttribute)
-        .use(rehypeRecma)
-        .use(recmaJsx)
-        .use(recmaRemoveRedundantFragment)
-        .use(recmaWrapAsComponent, "Sample")
-        .use(recmaReplaceRefs, registry)
-        .use(recmaLimitDepth, limitDepthConfig)
-        .use(recmaFixProperties)
-        .use(recmaStringify),
-    },
-  };
-
-  return Promise.all(
+) =>
+  Promise.all(
     instances.map(async (i) => {
+      // const childrenFromProps = identifyChildrenFromProps(i.nodeId, metadata);
+      const processors = {
+        html: {
+          full: unified()
+            .use(rehypeStripSquashAttribute)
+            .use(rehypeUnwrapRefs)
+            .use(rehypeStringify),
+          limited: unified()
+            .use(rehypeLimitDepth, metadata, limitDepthConfig)
+            .use(rehypeStripSquashAttribute)
+            .use(rehypeUnwrapRefs)
+            .use(rehypeStringify),
+        },
+        jsx: {
+          full: unified()
+            .use(rehypeStripSquashAttribute)
+            .use(rehypeRecma)
+            .use(recmaJsx)
+            .use(recmaRemoveRedundantFragment)
+            .use(recmaWrapAsComponent, "Sample")
+            .use(recmaReplaceRefs, registry)
+            .use(recmaFixProperties)
+            .use(recmaStringify),
+          limited: unified()
+            .use(rehypeStripSquashAttribute)
+            .use(rehypeRecma)
+            .use(recmaJsx)
+            .use(recmaRemoveRedundantFragment)
+            .use(recmaWrapAsComponent, "Sample")
+            .use(recmaReplaceRefs, registry)
+            .use(recmaLimitDepth, limitDepthConfig)
+            .use(recmaFixProperties)
+            .use(recmaStringify),
+        },
+      };
+
+      // if (i.nodeId === "N1011") {
+      //   const p = unified()
+      //     .use(rehypeStripSquashAttribute)
+      //     .use(rehypeRecma)
+      //     .use(recmaJsx)
+      //     .use(recmaRemoveRedundantFragment)
+      //     .use(recmaWrapAsComponent, "Sample")
+      //     .use(recmaReplaceRefs, registry)
+      //     .use(recmaFixProperties)
+      //     .use(recmaStringify);
+
+      //   console.log("RXEF", i.ref);
+
+      //   console.log(
+      //     "WHAT",
+      //     // Object.keys(group.nodes)[0],
+      //     identifyChildrenFromProps(i.nodeId, metadata)
+      //   );
+      //   console.dir(i, { depth: null });
+      //   console.log(
+      //     "JSX",
+      //     await p
+      //       .run({ type: "root", children: [i.ref] })
+      //       // .run({ type: "root", children: [{ type: "text", value: "wow" }] })
+      //       .then((estree) => p.stringify(estree))
+      //       .then(prettier.ts)
+      //       .then((s) => s.trim())
+      //   );
+      //   console.log(
+      //     "HTML",
+      //     await processors.html.full
+      //       .run({ type: "root", children: clone(i.children) } as Root)
+      //       .then((t: any) => processors.html.full.stringify(t as Root))
+      //       .then(prettier.html)
+      //       .then((s) => s.trim())
+      //   );
+      // }
+
       const [jsxFull, jsxLimited, htmlFull, htmlLimited] = await Promise.all([
         processors.jsx.full
           .run({ type: "root", children: [i.ref] })
@@ -198,4 +237,3 @@ export async function buildInstanceExamples(
       };
     })
   );
-}

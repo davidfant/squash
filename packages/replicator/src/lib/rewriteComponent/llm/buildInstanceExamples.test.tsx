@@ -90,6 +90,23 @@ describe("buildInstanceExamples", () => {
     expect(res[0]?.jsx).toMatchSnapshot();
   });
 
+  // test.only("should dedupe react element provided in props", async () => {
+  //   const Child = () => <div>Hello</div>;
+  //   const Parent = ({ children }: { children: ReactNode }) => (
+  //     <div>{children}</div>
+  //   );
+  //   const res = await run(
+  //     "Parent",
+  //     <Parent>
+  //       <Child />
+  //     </Parent>
+  //   );
+  //   expect(res.length).toBe(1);
+  //   console.log(res);
+  //   expect(res[0]?.jsx.limited).toMatchSnapshot();
+  //   expect(res[0]?.html.limited).toMatchSnapshot();
+  // });
+
   describe("limit depth", () => {
     test("max 2 levels of react components", async () => {
       const Child = ({

@@ -65,7 +65,8 @@ export const recmaReplaceRefs: Plugin<[registry: ComponentRegistry], Program> =
           const deps = JSON.parse(depsString) as ComponentId[];
           for (const dep of deps) {
             const c = registry.get(dep);
-            if (c?.code) {
+            // if (c?.code) {
+            if (c) {
               addImport({ module: c.module, name: c.name.value });
             } else {
               throw new Error(`Component ${dep} not found in registry`);

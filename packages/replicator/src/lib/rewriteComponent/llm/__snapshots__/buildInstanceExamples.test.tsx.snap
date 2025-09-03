@@ -289,3 +289,17 @@ export function Sample() {
 }
 "
 `;
+
+exports[`buildInstanceExamples > should dedupe react element provided in props 1`] = `
+"import { Parent } from "@/components/Parent";
+import { Child } from "@/components/Child";
+export function Sample() {
+  return (
+    <Parent>
+      {/* children */}
+    </Parent>
+  );
+}"
+`;
+
+exports[`buildInstanceExamples > should dedupe react element provided in props 2`] = `"<div><!-- props.children go here --></div>"`;

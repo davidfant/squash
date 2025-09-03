@@ -5,9 +5,8 @@ import type {
   ComponentRegistryItem,
 } from "../componentRegistry";
 
-type ComponentId = Metadata.ReactFiber.ComponentId;
-
 export interface RewriteComponentInstance {
+  nodeId: Metadata.ReactFiber.NodeId;
   ref: Element;
   children: Element[];
 }

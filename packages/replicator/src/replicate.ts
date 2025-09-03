@@ -1,5 +1,6 @@
 import * as prettier from "@/lib/prettier";
 import { load } from "cheerio";
+import { h } from "hastscript";
 import { traceable } from "langsmith/traceable";
 import recmaJsx from "recma-jsx";
 import recmaStringify from "recma-stringify";
@@ -22,12 +23,17 @@ import { recmaRemoveRedundantFragment } from "./lib/recma/removeRedundantFragmen
 import { recmaReplaceRefs } from "./lib/recma/replaceRefs";
 import { rehypeStripSquashAttribute } from "./lib/rehype/stripSquashAttribute";
 import { recmaWrapAsComponent } from "./lib/rehype/wrapAsComponent";
+import { identifyChildrenFromProps } from "./lib/rewriteComponent/llm/identifyChildrenFromProps";
 import type { RewriteComponentStrategy } from "./lib/rewriteComponent/types";
 import type { FileSink } from "./lib/sinks/base";
 import { aliasSVGPaths, type DescribeSVGStrategy } from "./lib/svg/alias";
 import { replaceSVGPathsInFiles } from "./lib/svg/replace";
 import { traverseComponents } from "./lib/traversal/components";
-import { buildAncestorsMap, nodesMap } from "./lib/traversal/util";
+import {
+  buildAncestorsMap,
+  componentsMap,
+  nodesMap,
+} from "./lib/traversal/util";
 import { Metadata, type Snapshot } from "./types";
 
 type Root = import("hast").Root;
@@ -101,19 +107,15 @@ export const replicate = (
       if (!m) throw new Error("Metadata is required");
       fuseMemoForwardRef(m);
 
-      const nodes = Object.entries(m.nodes).map(([id, n]) => ({
-        id: id as NodeId,
-        ...n,
-      }));
-      const comps = Object.entries(m.components).map(([id, c]) => ({
-        id: id as ComponentId,
-        ...c,
-      }));
+      const nodes = nodesMap(m.nodes);
+      const components = componentsMap(m.components);
 
       const componentRegistry = buildInitialComponentRegistry(m.components);
       const codeIdToComponentId = new Map(
-        comps
-          .map((c) => ("codeId" in c ? ([c.codeId, c.id] as const) : undefined))
+        [...components.entries()]
+          .map(([cid, c]) =>
+            "codeId" in c ? ([c.codeId, cid] as const) : undefined
+          )
           .filter((v) => !!v)
       );
 
@@ -172,6 +174,8 @@ export const replicate = (
               //   all: group.deps.all.size,
               // });
 
+              console.log("✅ REWRITING", group.id);
+
               const rewritten = await traceable(
                 () =>
                   rewriteComponentStrategy({
@@ -186,6 +190,42 @@ export const replicate = (
                         const elements = (
                           elementsByNodeId.get(nodeId) ?? []
                         ).map((e) => clone(e.element));
+
+                        // if (nodeId === "N1011") {
+                        console.log("🔥🔥🔥🔥🔥🔥 children");
+                        const identified = identifyChildrenFromProps(nodeId, m);
+                        console.log("ID", identified);
+                        visit(
+                          { type: "root", children: elements },
+                          "element",
+                          (e, index, parent) => {
+                            const nodeId = e.properties?.dataSquashNodeId;
+                            if (!nodeId) return;
+
+                            const i = identified.find(
+                              (i) => i.nodeId === nodeId
+                            );
+                            if (parent && i) {
+                              parent.children[index!] = h("props", {
+                                path: i.key,
+                              });
+                              const last = i.key
+                                .slice(0, -1)
+                                .reduce((acc, k) => acc[k], node.props as any);
+                              last[i.key[i.key.length - 1]!] =
+                                "[[redacted, this string serves as a placeholder and will be seen as a <prop path=... /> tag in the output HTML]]";
+
+                              return SKIP;
+                            }
+                            console.log("root", e);
+                          }
+                        );
+
+                        // console.log("elements");
+                        // console.dir(elements, { depth: null });
+                        // throw new Error("stop");
+                        // }
+
                         const ref = createRef({
                           componentId: resolved.id,
                           props: node.props as Record<string, unknown>,
@@ -197,8 +237,7 @@ export const replicate = (
                           children: [],
                         });
 
-                        // console.log("REF", ref);
-                        return { ref, children: elements };
+                        return { nodeId, ref, children: elements };
                       }
                     ),
                     componentRegistry,
@@ -209,6 +248,8 @@ export const replicate = (
 
               Object.assign(resolved, rewritten);
               await sink.writeText(resolved.path, rewritten.code!);
+
+              if (group.id === "C23") throw new Error("done...");
 
               const elementsOrderedByDepth = [...elementsByNodeId.entries()]
                 .map(([nodeId, elements]) => ({ nodeId, elements }))
@@ -224,8 +265,10 @@ export const replicate = (
                 if (!elements.length) continue;
 
                 const { index, parent } = elements[0]!;
-                const props = nodes.find((n) => n.id === nodeId)!
-                  .props as Record<string, unknown>;
+                const props = nodes.get(nodeId)!.props as Record<
+                  string,
+                  unknown
+                >;
                 // Note(fant): we need to Object.assign instead of replace because some
                 // of the elements detected might point at the parent being replaced
                 Object.assign(

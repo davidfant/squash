@@ -266,7 +266,7 @@ export const replicate = (
               Object.assign(resolved, rewritten);
               await sink.writeText(resolved.path, rewritten.code!);
 
-              if (group.id === "C23") throw new Error("done...");
+              // if (group.id === "C23") throw new Error("done...");
 
               const elementsOrderedByDepth = [...elementsByNodeId.entries()]
                 .map(([nodeId, elements]) => ({ nodeId, elements }))

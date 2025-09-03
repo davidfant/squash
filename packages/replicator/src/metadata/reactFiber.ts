@@ -1,3 +1,4 @@
+import { transform } from "@/lib/traversal/transform";
 import type { Fiber } from "react-reconciler";
 import { Metadata } from "../types";
 import Tag = Metadata.ReactFiber.Component.Tag;
@@ -179,56 +180,34 @@ async function getElement(
   }
 }
 
-async function sanitize(value: any, ctx: SanitizeContext): Promise<any> {
-  if (value === null) return null;
-  if (value === undefined) return undefined;
-  if (value === window) return "[Window]";
-  if (Array.isArray(value)) {
-    return Promise.all(
-      value.map((v) =>
-        sanitize(v, { ...ctx, ancestors: [...ctx.ancestors, value] })
-      )
-    );
-  }
-  if (typeof value === "object" && value !== null) {
-    if (ctx.seen.has(value)) return "[Circular]";
-    ctx.seen.add(value);
+const sanitize = async (value: any, ctx: SanitizeContext): Promise<any> =>
+  transform(
+    value,
+    ctx,
+    async (v, c): Promise<{ value: any } | undefined> => {
+      if (v === window) return { value: "[Window]" };
+      if (typeof v === "function") return { value: undefined };
 
-    if (typeof value.$$typeof === "symbol") {
-      const el = await getElement(value, {
-        ...ctx,
-        ancestors: [...ctx.ancestors, value],
-      });
-      if (el) return el;
-      // if (el === undefined) {
-      console.warn("Failed to extract React element", value);
-      // }
-      return `[$$typeof: ${value.$$typeof.toString()}]`;
-    }
-    if (value instanceof Element) {
-      return "[Element]";
-    }
-    return Object.fromEntries(
-      await Promise.all(
-        Object.entries(value).map(
-          async ([k, v]) =>
-            [
-              k,
-              await sanitize(v, {
-                ...ctx,
-                ancestors: [...ctx.ancestors, value],
-              }),
-            ] as const
-        )
-      )
-    );
-  }
-  if (typeof value === "function") {
-    return undefined;
-    // return { $$typeof: "function", function: value.toString() };
-  }
-  return value;
-}
+      if (typeof v === "object" && v !== null) {
+        if (c.seen.has(v)) return { value: "[Circular]" };
+        c.seen.add(v);
+
+        if (typeof (v as any)?.$$typeof === "symbol") {
+          const el = await getElement(v, {
+            ...c,
+            ancestors: [...c.ancestors, v],
+          });
+          if (el !== undefined) return { value: el };
+
+          console.warn("Failed to extract React element", v);
+          return { value: `[$$typeof: ${(v as any).$$typeof.toString()}]` };
+        }
+
+        if (v instanceof Element) return { value: "[Element]" };
+      }
+    },
+    (v, c): SanitizeContext => ({ ...c, ancestors: [...c.ancestors, v] })
+  );
 
 export async function reactFiber(): Promise<Metadata.ReactFiber | null> {
   const root = findReactRoot();
@@ -252,6 +231,8 @@ export async function reactFiber(): Promise<Metadata.ReactFiber | null> {
     const codeId = codeIdLookup.get(fn) ?? `F${ids.code++}`;
     codeIdLookup.set(fn, codeId);
   });
+
+  // walk all props, and identify all components and code, and register code and components that aren't rendered anywhere
 
   await walkFrom<Metadata.ReactFiber.NodeId>(
     root,
@@ -331,14 +312,15 @@ export async function reactFiber(): Promise<Metadata.ReactFiber | null> {
           return { parent: ids.node };
         }
         case Tag.DOMElement: {
+          const stateNode = fiber.stateNode as HTMLElement;
           const ids = add({
-            component: { tag: fiber.tag },
-            key: `${Tag.DOMElement}:native`,
+            component: {
+              tag: fiber.tag,
+              tagName: stateNode.tagName.toLowerCase(),
+            },
+            key: `${Tag.DOMElement}:${stateNode.tagName}`,
           });
-          (fiber.stateNode as HTMLElement).setAttribute(
-            "data-squash-node-id",
-            ids.node.toString()
-          );
+          stateNode.setAttribute("data-squash-node-id", ids.node.toString());
           return { parent: ids.node };
         }
         case Tag.HostPortal:

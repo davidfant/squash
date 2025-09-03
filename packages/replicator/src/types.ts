@@ -57,6 +57,7 @@ export namespace Metadata {
 
       export interface DOMElement {
         tag: Tag.DOMElement;
+        tagName: string;
       }
 
       export type Any =

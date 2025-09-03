@@ -74,6 +74,29 @@ describe("reactFiber", () => {
     expectElementNodeId("div", nodes.div.id);
   });
 
+  test("should register component and code used in props but not rendered", async () => {
+    const NotRendered = () => <div>Hello</div>;
+    const Component = (_: { children: ReactNode }) => <div />;
+    const metadata = await run(<Component children={<NotRendered />} />);
+
+    console.log(metadata);
+    expect(Object.keys(metadata.code)).toHaveLength(2);
+
+    const notRenderedComponentId = (
+      Object.keys(metadata.components) as Metadata.ReactFiber.ComponentId[]
+    ).find((id) => {
+      const c = metadata.components[id];
+      return !!c && "name" in c && c.name === "NotRendered";
+    });
+    expect(notRenderedComponentId).toBeDefined();
+    expect(Object.values(metadata.nodes)).not.toContain(
+      expect.objectContaining({ componentId: notRenderedComponentId })
+    );
+    expect(Object.values(metadata.nodes)).toContain(
+      expect.objectContaining({ componentId: notRenderedComponentId })
+    );
+  });
+
   test.todo("should await loading lazy module");
   test.todo("should add data-squash-text wrapper to text nodes");
 
@@ -97,7 +120,10 @@ describe("reactFiber", () => {
         name: "C",
         codeId: c.id,
       });
-      expect(components.Cdiv.value).toEqual({ tag: Tag.DOMElement });
+      expect(components.Cdiv.value).toEqual({
+        tag: Tag.DOMElement,
+        tagName: "div",
+      });
 
       expect(nodes.C.value.componentId).toBe(components.C.id);
       expect(nodes.C.value.props).toEqual({});
@@ -231,7 +257,10 @@ describe("reactFiber", () => {
         name: "A",
         codeId: "F0",
       });
-      expect(components.Adiv.value).toEqual({ tag: Tag.DOMElement });
+      expect(components.Adiv.value).toEqual({
+        tag: Tag.DOMElement,
+        tagName: "div",
+      });
       expect(components.B.value).toEqual({
         tag: Tag.FunctionComponent,
         name: "B",

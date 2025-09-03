@@ -185,7 +185,11 @@ const sanitize = async (value: any, context: SanitizeContext): Promise<any> =>
     value,
     visit: async (v, c): Promise<{ value: any } | undefined> => {
       if (v === window) return { value: "[Window]" };
-      if (typeof v === "function") return { value: undefined };
+      const fn: Metadata.ReactFiber.Function = {
+        $$typeof: "function",
+        fn: v.toString(),
+      };
+      if (typeof v === "function") return { value: fn };
 
       if (typeof v === "object" && v !== null) {
         if (c.seen.has(v)) return { value: "[Circular]" };

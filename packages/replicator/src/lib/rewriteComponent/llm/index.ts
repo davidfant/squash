@@ -109,16 +109,28 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
     messages.push(...response.messages);
 
     registryItem.code = rewritten.code;
-    const rendered = await render({
-      component: {
-        id: opts.component.id,
-        name: rewritten.name,
-        code: rewritten.code,
-      },
-      deps: opts.component.deps,
-      instances: examples.map((e) => ({ jsx: e.jsx.full, html: e.html.full })),
-      componentRegistry: registry,
-    });
+    let rendered: Awaited<ReturnType<typeof render>>;
+    try {
+      rendered = await render({
+        component: {
+          id: opts.component.id,
+          name: rewritten.name,
+          code: rewritten.code,
+        },
+        deps: opts.component.deps,
+        instances: examples.map((e) => ({
+          jsx: e.jsx.full,
+          html: e.html.full,
+        })),
+        componentRegistry: registry,
+      });
+    } catch (error) {
+      console.error(
+        "Failed to render component. Will YOLO assume that this component is OK",
+        error
+      );
+      break;
+    }
 
     if (!rendered.ok) {
       messages.push({

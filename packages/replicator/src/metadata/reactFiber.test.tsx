@@ -230,7 +230,9 @@ describe("reactFiber", () => {
         expect(n.value).toEqual({
           componentId: "C1",
           parentId: "N0",
-          props: { onClick: undefined },
+          props: {
+            onClick: { $$typeof: "function", fn: "() => {\n        }" },
+          },
         });
       });
     });

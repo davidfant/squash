@@ -210,28 +210,31 @@ export const replicate = (
                               (i) => i.nodeId === nodeId
                             );
                             if (parent && i) {
-                              parent.children[index!] = h("placeholder", {
-                                path: i.key.join("/"),
-                              });
                               const last = i.key
                                 .slice(0, -1)
                                 .reduce((acc, k) => acc[k], nodeProps as any);
+                              // TODO: this shouldn't happen... but does when e.g. going into children.props.children
+                              if (last === undefined) return;
+
+                              parent.children[index!] = h("placeholder", {
+                                path: i.key.join("/"),
+                              });
                               const tag: Metadata.ReactFiber.Element.Tag = {
                                 $$typeof: "react.tag",
                                 tagName: "placeholder",
                                 props: { path: i.key.join("/") },
                               };
-                              last[i.key[i.key.length - 1]!] = tag;
-                              // last[i.key[i.key.length - 1]!] =
-                              //   "[[redacted, this string serves as a placeholder and will be seen as a <prop path=... /> tag in the output HTML]]";
-                              // last[i.key[i.key.length - 1]!] =
-                              //   "[[redacted, this string serves as a placeholder and will be seen as a <prop path=... /> tag in the output HTML]]";
                               console.log("👀 replacing", {
                                 nodeId,
                                 i,
                                 parent,
                                 last,
                               });
+                              last[i.key[i.key.length - 1]!] = tag;
+                              // last[i.key[i.key.length - 1]!] =
+                              //   "[[redacted, this string serves as a placeholder and will be seen as a <prop path=... /> tag in the output HTML]]";
+                              // last[i.key[i.key.length - 1]!] =
+                              //   "[[redacted, this string serves as a placeholder and will be seen as a <prop path=... /> tag in the output HTML]]";
 
                               return SKIP;
                             }

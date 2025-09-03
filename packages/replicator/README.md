@@ -3,8 +3,9 @@ V1 done
 - [ ] Resolve circular dependencies
 - [ ] When rewriting component with unprocessed children, how to we render?
 - [ ] Parallel rewrite whenever possible
+- [ ] For components that render children using a fn from props, we need to rewrite the component somehow so that it includes the right props. Otherwise if we just use the props from metadata, it won't have the function which returns the children.
 
-- [ ] In samples, limit depth of sample JSX and expected HTML
+- [x] In samples, limit depth of sample JSX and expected HTML
 
 SVG optimizations
 

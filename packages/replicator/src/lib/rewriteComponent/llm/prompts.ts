@@ -9,6 +9,8 @@ Guidelines when writing the component:
 - Always start by importing React
 - The component should be written in TypeScript
 - Use JSX syntax instead of React.createElement whenever possible
+- Export the component props using the name of the component, followed by the word "Props". E.g \`MyComponentProps\`
+- If your component uses the same props as an internally used component, you should import the internally used component props type instead of redeclaring the same props type.
 - The implementation should be as minimal as possible while still mapping the JSX to the HTML
 - You will be provided with a list of internally used components. These components are used by the component you are writing. You must figure out how to use these components as much as possible, so that we minimize reimplementation of the same logic. Make sure to import internally used components, don't redeclare them in the TypeScript.
 - The minified JavaScript code can be used as inspiration, but you should not use it directly as there might be redundant code in the JavaScript.
@@ -73,7 +75,7 @@ Example output:
 \`\`\`typescript
 import React from "react";
 
-interface Props {
+export interface MyComponentProps {
   // ...
 }
 

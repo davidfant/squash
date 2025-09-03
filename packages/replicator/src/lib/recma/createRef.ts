@@ -66,6 +66,10 @@ function toExpression(value: any, ctx: CreateRefContext): Expression {
           closingFragment: { type: "JSXClosingFragment" },
         };
       }
+      case "function": {
+        const fn = value as Metadata.ReactFiber.Function;
+        return { type: "Literal", value: `[Function: ${fn.fn}]` };
+      }
     }
 
     return {

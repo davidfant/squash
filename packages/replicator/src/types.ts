@@ -96,6 +96,10 @@ export namespace Metadata {
 
       export type Any = Code | Tag | Fragment;
     }
+    export interface Function {
+      $$typeof: "function";
+      fn: string;
+    }
   }
 
   export interface ReactFiber {

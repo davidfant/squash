@@ -25,8 +25,8 @@ interface LimitDepthConfig {
 }
 
 const limitDepthConfig: LimitDepthConfig = {
-  maxComponents: 2,
-  maxDom: 10,
+  maxComponents: 10,
+  maxDom: 20,
 };
 
 const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v));

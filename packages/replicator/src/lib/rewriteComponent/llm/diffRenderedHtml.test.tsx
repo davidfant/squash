@@ -80,6 +80,16 @@ describe("diffRenderedHtml", () => {
         ).toBeNull();
       });
     });
+
+    describe("class invariants", () => {
+      test("order", () => {
+        throw new Error("implement...");
+      });
+
+      test("whitespace is different", () => {
+        throw new Error("implement...");
+      });
+    });
   });
 
   describe("diff", () => {

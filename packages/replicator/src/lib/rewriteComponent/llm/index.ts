@@ -125,11 +125,8 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
         componentRegistry: registry,
       });
     } catch (error) {
-      console.error(
-        "Failed to render component. Will YOLO assume that this component is OK",
-        error
-      );
-      break;
+      console.error("Failed to render component", error);
+      throw new Error("Failed to render component");
     }
 
     if (!rendered.ok) {
@@ -183,7 +180,7 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
     attempt++;
     if (attempt === 3) {
       console.error("Failed to write correct component", rendered);
-      throw new Error("Failed to write correct component");
+      return null;
       // break;
     }
   }

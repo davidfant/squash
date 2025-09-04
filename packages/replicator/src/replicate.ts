@@ -20,6 +20,10 @@ import {
   type ComponentRegistry,
 } from "./lib/componentRegistry";
 import { fuseMemoForwardRef } from "./lib/fuseMemoForwardRef";
+import {
+  getRewritableComponents,
+  type RewritableComponentInfo,
+} from "./lib/getRewritableComponents";
 import { createRef } from "./lib/recma/createRef";
 import { recmaFixProperties } from "./lib/recma/fixProperties";
 import { recmaRemoveRedundantFragment } from "./lib/recma/removeRedundantFragment";
@@ -32,6 +36,9 @@ import { aliasSVGPaths, type DescribeSVGStrategy } from "./lib/svg/alias";
 import { replaceSVGPathsInFiles } from "./lib/svg/replace";
 import {
   buildAncestorsMap,
+  buildChildMap,
+  buildComponentNodesMap,
+  buildDescendantsMap,
   componentsMap,
   nodesMap,
 } from "./lib/traversal/util";
@@ -108,7 +115,10 @@ export const replicate = (
 
       const nodes = nodesMap(m.nodes);
       const components = componentsMap(m.components);
+      const componentNodes = buildComponentNodesMap(nodes);
+      const childMap = buildChildMap(nodes);
       const ancestorsMap = buildAncestorsMap(nodes);
+      const descendantsMap = buildDescendantsMap(childMap);
       const codeIdToComponentId = new Map(
         [...components.entries()]
           .map(([cid, c]) =>
@@ -116,6 +126,24 @@ export const replicate = (
           )
           .filter((v) => !!v)
       );
+
+      const nodeStatus = new Map<
+        Metadata.ReactFiber.NodeId,
+        "pending" | "valid" | "invalid"
+      >(
+        // [...nodes.entries()].map(([id, node]) => {
+        //   const c = components.get(node.componentId);
+        //   return [id, c && "codeId" in c ? "pending" : "valid"];
+        // })
+        [...nodes.entries()]
+          .filter(([, n]) => {
+            const c = components.get(n.componentId);
+            return c && "codeId" in c;
+          })
+          .map(([id]) => [id, "pending"])
+      );
+
+      // mark every node that's not a code node as valid
 
       const formattedCode = new Map<Metadata.ReactFiber.CodeId, string>(
         await Promise.all(
@@ -164,134 +192,167 @@ export const replicate = (
         { depth: null }
       );
 
-      await Promise.all(
-        analyzed
-          .filter((a) => a.dependencies.length === 0)
-          .filter((a) => ["C21", "C39", "C53", "C93"].includes(a.id))
-          .map(async (a) => {
-            const resolved = registry.get(a.id)!;
-            const component = components.get(resolved.id)!;
-            if (!("codeId" in component)) {
-              console.log("no codeId", resolved.id);
-              return;
-            }
+      let iteration = 0;
+      while (true) {
+        const rewritable = getRewritableComponents(m, nodeStatus);
+        console.dir(rewritable, { depth: null });
+        const infos = [...rewritable.values()].filter((c) => c.rewritable);
+        if (!infos.length) break;
 
-            const elementsByNodeId = new Map<
-              NodeId,
-              Array<{
-                element: Element;
-                index: number;
-                parent: Root | Element;
-                nodeId: NodeId;
-              }>
-            >();
-
-            const nodeIdsForComponent = [...nodes.entries()]
-              .filter(([, n]) => n.componentId === resolved.id)
-              .map(([id]) => id);
-
-            for (const parentId of nodeIdsForComponent) {
-              visit(tree, "element", (element, index, parent) => {
-                if (index === undefined) return;
-                const nodeId = element.properties?.[
-                  "dataSquashNodeId"
-                ] as NodeId;
-                if (parent?.type !== "element" && parent?.type !== "root")
-                  return;
-
-                if (ancestorsMap.get(nodeId)?.has(parentId)) {
-                  elementsByNodeId.set(parentId, [
-                    ...(elementsByNodeId.get(parentId) ?? []),
-                    { element, index, parent, nodeId },
-                  ]);
-                  return SKIP;
+        await traceable(
+          (infos: RewritableComponentInfo[]) =>
+            Promise.all(
+              infos.map(async (a) => {
+                const resolved = registry.get(a.componentId)!;
+                const component = components.get(resolved.id)!;
+                if (!("codeId" in component)) {
+                  throw new Error(
+                    "trying to rewrite component with no codeId: " + resolved.id
+                  );
                 }
-              });
-            }
 
-            // find all elements w this as a parent
-            const rewritten = await traceable(
-              () =>
-                rewriteComponentStrategy({
-                  component: {
-                    id: resolved.id,
-                    code: m.code[component.codeId]!,
-                    deps: { all: new Set(), internal: new Set() },
-                  },
-                  instances: nodeIdsForComponent.map((nodeId) => {
-                    const node = nodes.get(nodeId)!;
-                    const nodeProps = clone(node.props) as Record<
-                      string,
-                      unknown
-                    >;
-                    const elements = (elementsByNodeId.get(nodeId) ?? []).map(
-                      (e) => clone(e.element)
-                    );
+                const elementsByNodeId = new Map<
+                  NodeId,
+                  Array<{
+                    element: Element;
+                    index: number;
+                    parent: Root | Element;
+                    nodeId: NodeId;
+                  }>
+                >();
 
-                    const ref = createRef({
+                const nodeIdsForComponent = [...nodes.entries()]
+                  .filter(([, n]) => n.componentId === resolved.id)
+                  .map(([id]) => id);
+
+                for (const parentId of nodeIdsForComponent) {
+                  visit(tree, "element", (element, index, parent) => {
+                    if (index === undefined) return;
+                    const nodeId = element.properties?.[
+                      "dataSquashNodeId"
+                    ] as NodeId;
+                    if (parent?.type !== "element" && parent?.type !== "root")
+                      return;
+
+                    if (ancestorsMap.get(nodeId)?.has(parentId)) {
+                      elementsByNodeId.set(parentId, [
+                        ...(elementsByNodeId.get(parentId) ?? []),
+                        { element, index, parent, nodeId },
+                      ]);
+                      return SKIP;
+                    }
+                  });
+                }
+
+                // find all elements w this as a parent
+                const rewritten = await traceable(
+                  () =>
+                    rewriteComponentStrategy({
+                      component: {
+                        id: resolved.id,
+                        code: m.code[component.codeId]!,
+                        deps: {
+                          all: new Set(
+                            [...registry.entries()]
+                              .filter(([, c]) => c.code)
+                              .map(([id]) => id)
+                          ),
+                          internal: new Set(),
+                        },
+                      },
+                      instances: nodeIdsForComponent.map((nodeId) => {
+                        const node = nodes.get(nodeId)!;
+                        const nodeProps = clone(node.props) as Record<
+                          string,
+                          unknown
+                        >;
+                        const elements = (
+                          elementsByNodeId.get(nodeId) ?? []
+                        ).map((e) => clone(e.element));
+
+                        const ref = createRef({
+                          componentId: resolved.id,
+                          props: nodeProps,
+                          ctx: {
+                            deps: new Set(),
+                            codeIdToComponentId,
+                            componentRegistry: registry,
+                          },
+                          children: [],
+                        });
+
+                        return { nodeId, ref, children: elements };
+                      }),
+                      componentRegistry: registry,
+                      metadata: m,
+                    }),
+                  { name: `Rewrite ${resolved.name.value} (${resolved.id})` }
+                )();
+                if (!rewritten) {
+                  nodeIdsForComponent.forEach((nodeId) =>
+                    nodeStatus.set(nodeId, "invalid")
+                  );
+                  return;
+                } else {
+                  Object.assign(resolved, rewritten);
+                  await sink.writeText(resolved.path, rewritten.code!);
+                  nodeIdsForComponent.forEach((nodeId) =>
+                    nodeStatus.set(nodeId, "valid")
+                  );
+                }
+
+                const elementsOrderedByDepth = [...elementsByNodeId.entries()]
+                  .map(([nodeId, elements]) => ({ nodeId, elements }))
+                  .sort(
+                    (a, b) =>
+                      (ancestorsMap.get(b.nodeId)?.size ?? 0) -
+                      (ancestorsMap.get(a.nodeId)?.size ?? 0)
+                  );
+
+                // Note(fant): loop over elements in reverse, so that we replace the innermost elements first.
+                // TODO: for testing, try saving all of these separately to see if it works
+                for (const { nodeId, elements } of elementsOrderedByDepth) {
+                  if (!elements.length) continue;
+
+                  const { index, parent } = elements[0]!;
+                  const props = nodes.get(nodeId)!.props as Record<
+                    string,
+                    unknown
+                  >;
+                  // Note(fant): we need to Object.assign instead of replace because some
+                  // of the elements detected might point at the parent being replaced
+                  Object.assign(
+                    parent.children[index]!,
+                    createRef({
                       componentId: resolved.id,
-                      props: nodeProps,
+                      props,
+                      nodeId,
                       ctx: {
                         deps: new Set(),
                         codeIdToComponentId,
                         componentRegistry: registry,
                       },
-                      children: [],
-                    });
+                      // Note(fant): for now we keep the children within the ref, so that in the processor loop we still can find elements of a certain node.
+                      children: clone(elements.map((e) => e.element)),
+                    })
+                  );
+                  elements.slice(1).forEach((e) => (e.element.tagName = "rm"));
+                }
 
-                    return { nodeId, ref, children: elements };
-                  }),
-                  componentRegistry: registry,
-                  metadata: m,
-                }),
-              { name: `Rewrite ${resolved.name.value} (${resolved.id})` }
-            )();
-            Object.assign(resolved, rewritten);
-            await sink.writeText(resolved.path, rewritten.code!);
+                [...elementsByNodeId.values()].flat().forEach(({ parent }) => {
+                  parent.children = parent.children.filter(
+                    (el) => el.type !== "element" || el.tagName !== "rm"
+                  );
+                });
+              })
+            ),
+          {
+            name: `Rewrite Components (iteration ${iteration}, ${infos.length} components)`,
+          }
+        )(infos);
 
-            const elementsOrderedByDepth = [...elementsByNodeId.entries()]
-              .map(([nodeId, elements]) => ({ nodeId, elements }))
-              .sort(
-                (a, b) =>
-                  (ancestorsMap.get(b.nodeId)?.size ?? 0) -
-                  (ancestorsMap.get(a.nodeId)?.size ?? 0)
-              );
-
-            // Note(fant): loop over elements in reverse, so that we replace the innermost elements first.
-            // TODO: for testing, try saving all of these separately to see if it works
-            for (const { nodeId, elements } of elementsOrderedByDepth) {
-              if (!elements.length) continue;
-
-              const { index, parent } = elements[0]!;
-              const props = nodes.get(nodeId)!.props as Record<string, unknown>;
-              // Note(fant): we need to Object.assign instead of replace because some
-              // of the elements detected might point at the parent being replaced
-              Object.assign(
-                parent.children[index]!,
-                createRef({
-                  componentId: resolved.id,
-                  props,
-                  nodeId,
-                  ctx: {
-                    deps: new Set(),
-                    codeIdToComponentId,
-                    componentRegistry: registry,
-                  },
-                  // Note(fant): for now we keep the children within the ref, so that in the processor loop we still can find elements of a certain node.
-                  children: clone(elements.map((e) => e.element)),
-                })
-              );
-              elements.slice(1).forEach((e) => (e.element.tagName = "rm"));
-            }
-
-            [...elementsByNodeId.values()].flat().forEach(({ parent }) => {
-              parent.children = parent.children.filter(
-                (el) => el.type !== "element" || el.tagName !== "rm"
-              );
-            });
-          })
-          .map((p) => p.catch(() => {}))
-      );
+        iteration++;
+      }
 
       const processor = unified()
         .use(rehypeStripSquashAttribute)

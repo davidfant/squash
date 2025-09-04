@@ -34,8 +34,8 @@ function toExpression(value: any, ctx: CreateRefContext): Expression {
     return { type: "ArrayExpression", elements: replaced };
   } else if (typeof value === "object" && value !== null) {
     switch (value.$$typeof) {
-      case "react.code": {
-        const el = value as Metadata.ReactFiber.Element.Code;
+      case "react.component": {
+        const el = value as Metadata.ReactFiber.PropValue.Component;
         const componentId = ctx.codeIdToComponentId.get(el.codeId!);
         const component = ctx.componentRegistry.get(componentId!);
         return createComponentElement(
@@ -47,7 +47,7 @@ function toExpression(value: any, ctx: CreateRefContext): Expression {
         );
       }
       case "react.tag": {
-        const el = value as Metadata.ReactFiber.Element.Tag;
+        const el = value as Metadata.ReactFiber.PropValue.Tag;
         return createComponentElement(
           { id: undefined, name: el.tagName },
           value.props,
@@ -55,7 +55,7 @@ function toExpression(value: any, ctx: CreateRefContext): Expression {
         );
       }
       case "react.fragment": {
-        const f = value as Metadata.ReactFiber.Element.Fragment;
+        const f = value as Metadata.ReactFiber.PropValue.Fragment;
         const children = f.children
           .map((c) => toExpression(c, ctx))
           .map(wrapInJSX);
@@ -67,7 +67,13 @@ function toExpression(value: any, ctx: CreateRefContext): Expression {
         };
       }
       case "function": {
-        const fn = value as Metadata.ReactFiber.Function;
+        const fn = value as Metadata.ReactFiber.PropValue.Function;
+        const componentId = ctx.codeIdToComponentId.get(fn.codeId!);
+        const component = ctx.componentRegistry.get(componentId!);
+        if (component) {
+          ctx.deps.add(component.id);
+          return { type: "Identifier", name: component.name.value };
+        }
         // TODO: consider prettifying the function
         return { type: "Literal", value: `[Function: ${fn.fn}]` };
       }

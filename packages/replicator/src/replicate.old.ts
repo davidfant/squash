@@ -219,7 +219,7 @@ export const replicate = (
                               parent.children[index!] = h("placeholder", {
                                 path: i.key.join("/"),
                               });
-                              const tag: Metadata.ReactFiber.Element.Tag = {
+                              const tag: Metadata.ReactFiber.PropValue.Tag = {
                                 $$typeof: "react.tag",
                                 tagName: "placeholder",
                                 props: { path: i.key.join("/") },
@@ -267,7 +267,7 @@ export const replicate = (
               )();
 
               Object.assign(resolved, rewritten);
-              await sink.writeText(resolved.path, rewritten.code!);
+              await sink.writeText(resolved.path, rewritten!.code!);
 
               // if (group.id === "C23") throw new Error("done...");
 

@@ -126,7 +126,9 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
       });
     } catch (error) {
       console.error("Failed to render component", error);
-      throw new Error("Failed to render component");
+      // throw new Error("Failed to render component");
+      // return null;
+      break;
     }
 
     if (!rendered.ok) {

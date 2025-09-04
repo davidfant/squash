@@ -48,8 +48,8 @@ function recurse(
   if (Array.isArray(value)) {
     return value.flatMap((v) => recurse(v, key, parentNodeId, ctx));
   } else if (typeof value === "object" && value !== null) {
-    if (value.$$typeof === "react.code") {
-      const el = value as Metadata.ReactFiber.Element.Code;
+    if (value.$$typeof === "react.component") {
+      const el = value as Metadata.ReactFiber.PropValue.Component;
       // TODO: what do we do here?
       if (!el.codeId) return [{ key, match: true, nodeId: null }];
 
@@ -95,7 +95,7 @@ function recurse(
     if (Array.isArray(val)) {
       for (const v of val) collect(v, out);
     } else if (typeof val === "object" && val !== null) {
-      if (val.$$typeof === "react.code") {
+      if (val.$$typeof === "react.component") {
         const el = val as Metadata.ReactFiber.Element.Code;
         const componentId = codeIdToComponent.get(el.codeId!);
         if (componentId) out.add(componentId);

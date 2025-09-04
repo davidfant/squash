@@ -76,10 +76,11 @@ export namespace Metadata {
       props: Record<string, unknown> | string | null;
     }
 
-    export namespace Element {
-      export interface Code {
-        $$typeof: "react.code";
+    export namespace PropValue {
+      export interface Component {
+        $$typeof: "react.component";
         codeId: CodeId | null;
+        nodeId: NodeId | null;
         props: Record<string, unknown>;
       }
 
@@ -94,12 +95,19 @@ export namespace Metadata {
         children: Array<Any | null>;
       }
 
-      export type Any = Code | Tag | Fragment;
+      export interface Function {
+        $$typeof: "function";
+        fn: string;
+        codeId: CodeId | null;
+      }
+
+      export type Any = Component | Tag | Fragment | Function;
     }
-    export interface Function {
-      $$typeof: "function";
-      fn: string;
-    }
+
+    // export interface Function {
+    //   $$typeof: "function";
+    //   fn: string;
+    // }
   }
 
   export interface ReactFiber {

@@ -20,7 +20,10 @@ export interface RewritableComponentInfo {
 
   nodeStats: Map<
     Metadata.ReactFiber.NodeId,
-    Record<"valid" | "invalid" | "pending", number>
+    Record<
+      "valid" | "invalid" | "pending",
+      Set<Metadata.ReactFiber.ComponentId>
+    >
   >;
 }
 
@@ -53,8 +56,9 @@ export function getRewritableComponents(
 
   for (const [cid, component] of components) {
     if (!("codeId" in component)) continue;
-
     const nodeIds = componentNodes.get(cid) ?? [];
+    if (!nodeIds.every((id) => nodeStatus.get(id) === "pending")) continue;
+
     /* ---- (1) unique descendant nodes ---- */
     const descendantSet = new Set<Metadata.ReactFiber.NodeId>();
     for (const nid of nodeIds) {
@@ -84,20 +88,26 @@ export function getRewritableComponents(
 
     const nodeStats = new Map<
       Metadata.ReactFiber.NodeId,
-      Record<"valid" | "invalid" | "pending", number>
+      Record<
+        "valid" | "invalid" | "pending",
+        Set<Metadata.ReactFiber.ComponentId>
+      >
     >();
 
     for (const nid of nodeIds) {
-      const statusCounts: Record<"valid" | "invalid" | "pending", number> = {
-        valid: 0,
-        invalid: 0,
-        pending: 0,
+      const statusCounts: Record<
+        "valid" | "invalid" | "pending",
+        Set<Metadata.ReactFiber.ComponentId>
+      > = {
+        valid: new Set(),
+        invalid: new Set(),
+        pending: new Set(),
       };
 
       for (const d of descendants.get(nid) ?? []) {
         const status = nodeStatus.get(d);
         if (!status) continue;
-        statusCounts[status]++;
+        statusCounts[status].add(nodes.get(d)!.componentId);
       }
 
       nodeStats.set(nid, statusCounts);
@@ -106,8 +116,7 @@ export function getRewritableComponents(
     /* ---- (3) rewritable decision ---- */
     const rewritable =
       descendantValid === descendantTotal &&
-      propComponentValid === propComponentTotal &&
-      nodeIds.every((id) => nodeStatus.get(id) === "pending");
+      propComponentValid === propComponentTotal;
 
     result.set(cid, {
       componentId: cid,

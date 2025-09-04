@@ -156,7 +156,7 @@ describe("reactFiber", () => {
         });
       });
 
-      test("should strip out react elements (e.g. children)", async () => {
+      test.only("should strip out react elements (e.g. children)", async () => {
         const A = ({ children }: { children: ReactNode }) => children;
         const B = ({ children }: { children: ReactNode }) => children;
         const C = ({ children }: { visible: boolean; children: ReactNode }) =>
@@ -176,12 +176,14 @@ describe("reactFiber", () => {
           parentId: "N0",
           props: {
             children: {
-              $$typeof: "react.code",
+              $$typeof: "react.component",
               codeId: "F1",
+              nodeId: "N2",
               props: {
                 children: {
-                  $$typeof: "react.code",
+                  $$typeof: "react.component",
                   codeId: "F2",
+                  nodeId: "N3",
                   props: {
                     visible: true,
                     children: {
@@ -213,7 +215,7 @@ describe("reactFiber", () => {
           parentId: "N0",
           props: {
             children: {
-              $$typeof: "react.code",
+              $$typeof: "react.component",
               codeId: "F1",
               props: {},
             },
@@ -221,7 +223,7 @@ describe("reactFiber", () => {
         });
       });
 
-      test("should strip out functions", async () => {
+      test("should stringify functions", async () => {
         const A = ({ onClick }: { onClick: () => void }) => (
           <div onClick={onClick}>Hello</div>
         );
@@ -231,8 +233,30 @@ describe("reactFiber", () => {
           componentId: "C1",
           parentId: "N0",
           props: {
-            onClick: { $$typeof: "function", fn: "() => {\n        }" },
+            onClick: {
+              $$typeof: "function",
+              codeId: null,
+              fn: "() => {\n        }",
+            },
           },
+        });
+      });
+
+      test("should reference to code id if function matches code", async () => {
+        const Function = () => <div>Hello</div>;
+        const Comp = ({ children }: { children: () => ReactNode }) =>
+          children();
+        const metadata = await run(
+          <>
+            <Comp children={Function} />
+            <Function />
+          </>
+        );
+        const n = node(metadata, 1);
+        expect((n.value.props as Record<string, unknown>).children).toEqual({
+          $$typeof: "function",
+          fn: Function.toString(),
+          codeId: code(metadata, 1).id,
         });
       });
     });

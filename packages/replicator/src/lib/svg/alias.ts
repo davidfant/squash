@@ -87,7 +87,11 @@ export async function aliasSVGPaths(
         const originalD = $path.attr("d")!;
         const idx = uniqDs.indexOf(originalD);
         const d = details[svgIndex]!;
-        const placeholder = `[[SVG:${svgIndex}|PATH:${idx}|NAME:${d.name}|DESCRIPTION:${d.description}]]`;
+        const placeholder =
+          `[[SVG:${svgIndex}|PATH:${idx}|NAME:${d.name}|DESCRIPTION:${d.description}]]`.replace(
+            /(["\\])/g,
+            "\\$1"
+          );
         dPathMapping.set(originalD, placeholder);
         $path.attr("d", placeholder);
       });

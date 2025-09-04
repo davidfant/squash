@@ -37,14 +37,14 @@ export function buildNodeComponentsFromProps(
     if (Array.isArray(val)) {
       for (const v of val) collect(v, out);
     } else if (typeof val === "object" && val !== null) {
-      if (val.$$typeof === "react.code") {
-        const el = val as Metadata.ReactFiber.Element.Code;
+      if (val.$$typeof === "react.component") {
+        const el = val as Metadata.ReactFiber.PropValue.Component;
         const componentId = codeIdToComponent.get(el.codeId!);
         if (componentId) out.add(componentId);
       }
       // TODO: write a test to verify that this works
       if (val.$$typeof === "react.fragment") {
-        const f = val as Metadata.ReactFiber.Element.Fragment;
+        const f = val as Metadata.ReactFiber.PropValue.Fragment;
         for (const c of f.children) collect(c, out);
       }
 

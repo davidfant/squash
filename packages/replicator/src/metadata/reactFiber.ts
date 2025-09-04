@@ -4,7 +4,8 @@ import { Metadata } from "../types";
 import Tag = Metadata.ReactFiber.Component.Tag;
 
 interface SanitizeContext {
-  codeIdLookup: Map<Function, Metadata.ReactFiber.CodeId>;
+  codeIdByFn: Map<Function, Metadata.ReactFiber.CodeId>;
+  nodeIdByProps: Map<any, Metadata.ReactFiber.NodeId>;
   seen: WeakSet<any>;
   ancestors: any[];
 }
@@ -83,9 +84,10 @@ const toCode = async (
   fn: Function | null | undefined,
   props: Record<string, unknown>,
   ctx: SanitizeContext
-): Promise<Metadata.ReactFiber.Element.Code> => ({
-  $$typeof: "react.code",
-  codeId: ctx.codeIdLookup.get(fn!) ?? null,
+): Promise<Metadata.ReactFiber.PropValue.Component> => ({
+  $$typeof: "react.component",
+  codeId: ctx.codeIdByFn.get(fn!) ?? null,
+  nodeId: ctx.nodeIdByProps.get(props) ?? null,
   props: await sanitize(props, ctx),
 });
 
@@ -124,7 +126,7 @@ async function getCodeFn(el: any): Promise<Function | null | undefined> {
 async function getElement(
   el: any,
   ctx: SanitizeContext
-): Promise<Metadata.ReactFiber.Element.Any | null | undefined> {
+): Promise<Metadata.ReactFiber.PropValue.Any | null | undefined> {
   switch (el.$$typeof) {
     case Symbol.for("react.element"):
     case Symbol.for("react.transitional.element"): {
@@ -186,9 +188,10 @@ const sanitize = async (value: any, context: SanitizeContext): Promise<any> =>
     visit: async (v, c): Promise<{ value: any } | undefined> => {
       if (v === window) return { value: "[Window]" };
       if (typeof v === "function") {
-        const fn: Metadata.ReactFiber.Function = {
+        const fn: Metadata.ReactFiber.PropValue.Function = {
           $$typeof: "function",
           fn: v.toString(),
+          codeId: context.codeIdByFn.get(v) ?? null,
         };
         return { value: fn };
       }
@@ -230,20 +233,39 @@ export async function reactFiber(): Promise<Metadata.ReactFiber | null> {
   };
   const ids = { code: 0, component: 0, node: 0 };
 
-  const codeIdLookup = new Map<Function, Metadata.ReactFiber.CodeId>();
+  const codeIdByFn = new Map<Function, Metadata.ReactFiber.CodeId>();
   type CompKey = `${Tag}:${string}`; // Tag:codeId
   const compIdLookup = new Map<CompKey, Metadata.ReactFiber.ComponentId>();
+  const nodeIdByFiber = new Map<Fiber, Metadata.ReactFiber.NodeId>();
+  const nodeIdByProps = new Map<unknown, Metadata.ReactFiber.NodeId>();
 
   await walkFrom(root, async (fiber) => {
     const fn = await getCodeFn(fiber.type);
-    if (!fn) return;
-    const codeId = codeIdLookup.get(fn) ?? `F${ids.code++}`;
-    codeIdLookup.set(fn, codeId);
+    if (!!fn) {
+      const codeId = codeIdByFn.get(fn) ?? `F${ids.code++}`;
+      codeIdByFn.set(fn, codeId);
+    }
+
+    const nodeId = `N${ids.node++}` as const;
+    nodeIdByFiber.set(fiber, nodeId);
+    if (
+      [
+        Tag.FunctionComponent,
+        Tag.MemoComponent,
+        Tag.SimpleMemoComponent,
+        Tag.ForwardRef,
+      ].includes(fiber.tag)
+    ) {
+      nodeIdByProps.set(fiber.memoizedProps, nodeId);
+    }
   });
 
   await walkFrom<Metadata.ReactFiber.NodeId>(
     root,
     async (fiber, depth, parent) => {
+      const nodeId = nodeIdByFiber.get(fiber);
+      if (!nodeId) throw new Error("Node not found from fiber...");
+
       const add = <T extends Metadata.ReactFiber.Component.Any>({
         component: c,
         props = null,
@@ -256,7 +278,6 @@ export async function reactFiber(): Promise<Metadata.ReactFiber | null> {
         const componentId = compIdLookup.get(key) ?? `C${ids.component++}`;
         compIdLookup.set(key, componentId);
 
-        const nodeId = `N${ids.node++}` as const;
         metadata.components[componentId] = c;
         metadata.nodes[nodeId] = {
           componentId,
@@ -265,6 +286,7 @@ export async function reactFiber(): Promise<Metadata.ReactFiber | null> {
         };
         return { component: componentId, node: nodeId };
       };
+
       switch (fiber.tag) {
         case Tag.HostRoot: {
           const ids = add({
@@ -283,7 +305,7 @@ export async function reactFiber(): Promise<Metadata.ReactFiber | null> {
             return;
           }
 
-          const codeId = codeIdLookup.get(fn)!;
+          const codeId = codeIdByFn.get(fn)!;
           metadata.code[codeId] = fn.toString();
 
           const id = add({
@@ -294,7 +316,8 @@ export async function reactFiber(): Promise<Metadata.ReactFiber | null> {
             },
             key: `${fiber.tag}:${codeId}`,
             props: await sanitize(fiber.memoizedProps, {
-              codeIdLookup,
+              nodeIdByProps,
+              codeIdByFn,
               seen: new WeakSet<any>(),
               ancestors: [],
             }),

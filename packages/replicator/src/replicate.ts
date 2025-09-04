@@ -187,13 +187,21 @@ export const replicate = (
       });
       console.dir(
         analyzed
-          .map((a) => ({ depCount: a.dependencies.length, ...a }))
-          .sort((a, b) => a.depCount - b.depCount),
+          .map((a) => ({
+            depCount: a.dependencies.length,
+            nodeCount: componentNodes.get(a.id)!.length,
+            ...a,
+          }))
+          .sort((a, b) => b.nodeCount - a.nodeCount),
+        // .sort((a, b) => a.depCount - b.depCount),
         { depth: null }
       );
 
       let iteration = 0;
       while (true) {
+        // if (Math.random()) break;
+        if (iteration !== 0) break;
+
         const rewritable = getRewritableComponents(m, nodeStatus);
         console.dir(rewritable, { depth: null });
         const infos = [...rewritable.values()].filter((c) => c.rewritable);
@@ -202,8 +210,10 @@ export const replicate = (
         await traceable(
           (infos: RewritableComponentInfo[]) =>
             Promise.all(
-              infos.map(async (a) => {
-                const resolved = registry.get(a.componentId)!;
+              // infos.map(async (a) => {
+              //   const resolved = registry.get(a.componentId)!;
+              ["C36" as const].map(async (componentId) => {
+                const resolved = registry.get(componentId)!;
                 const component = components.get(resolved.id)!;
                 if (!("codeId" in component)) {
                   throw new Error(
@@ -292,7 +302,7 @@ export const replicate = (
                   nodeIdsForComponent.forEach((nodeId) =>
                     nodeStatus.set(nodeId, "invalid")
                   );
-                  return;
+                  return null;
                 } else {
                   Object.assign(resolved, rewritten);
                   await sink.writeText(resolved.path, rewritten.code!);
@@ -344,6 +354,8 @@ export const replicate = (
                     (el) => el.type !== "element" || el.tagName !== "rm"
                   );
                 });
+
+                return rewritten;
               })
             ),
           {

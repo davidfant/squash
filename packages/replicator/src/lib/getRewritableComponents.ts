@@ -1,5 +1,5 @@
 import type { Metadata } from "@/types";
-import { buildNodeComponentsFromProps } from "./traversal/deps";
+import { buildNodeDescendantsFromProps } from "./traversal/deps";
 import {
   buildChildMap,
   buildComponentNodesMap,
@@ -15,8 +15,8 @@ export interface RewritableComponentInfo {
   descendantValid: number;
   descendantTotal: number;
   /* Components referenced from props */
-  propComponentValid: number;
-  propComponentTotal: number;
+  // propComponentValid: number;
+  // propComponentTotal: number;
 
   nodeStats: Map<
     Metadata.ReactFiber.NodeId,
@@ -36,10 +36,7 @@ export function getRewritableComponents(
   const componentNodes = buildComponentNodesMap(nodes);
   const children = buildChildMap(nodes);
   const descendants = buildDescendantsMap(children);
-  const nodeComponentsFromProps = buildNodeComponentsFromProps(
-    nodes,
-    components
-  );
+  const nodesFromProps = buildNodeDescendantsFromProps(nodes, components);
 
   const componentIsValid = new Map<Metadata.ReactFiber.ComponentId, boolean>();
   for (const [cid, nodeIds] of componentNodes) {
@@ -68,22 +65,16 @@ export function getRewritableComponents(
         }
       }
     }
+    // remove all descendants that come from nodes provided by props
+    [...nodesFromProps.values()]
+      .flatMap((n) => [...n])
+      .flatMap((n) => [...(descendants.get(n) ?? [])])
+      .forEach((n) => descendantSet.delete(n));
+
     const descendantTotal = descendantSet.size;
     let descendantValid = 0;
     for (const d of descendantSet) {
       if (nodeStatus.get(d) === "valid") descendantValid++;
-    }
-
-    /* ---- (2) components referenced from props ---- */
-    const propComponentSet = new Set<Metadata.ReactFiber.ComponentId>();
-    for (const nid of nodeIds) {
-      for (const depCid of nodeComponentsFromProps.get(nid) ?? [])
-        propComponentSet.add(depCid);
-    }
-    const propComponentTotal = propComponentSet.size;
-    let propComponentValid = 0;
-    for (const depCid of propComponentSet) {
-      if (componentIsValid.get(depCid)) propComponentValid++;
     }
 
     const nodeStats = new Map<
@@ -114,17 +105,17 @@ export function getRewritableComponents(
     }
 
     /* ---- (3) rewritable decision ---- */
-    const rewritable =
-      descendantValid === descendantTotal &&
-      propComponentValid === propComponentTotal;
+    // const rewritable =
+    //   descendantValid === descendantTotal &&
+    //   propComponentValid === propComponentTotal;
 
     result.set(cid, {
       componentId: cid,
-      rewritable,
+      rewritable: descendantValid === descendantTotal,
       descendantValid,
       descendantTotal,
-      propComponentValid,
-      propComponentTotal,
+      // propComponentValid,
+      // propComponentTotal,
       nodeStats,
     });
   }

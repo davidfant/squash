@@ -66,6 +66,55 @@ export function buildNodeComponentsFromProps(
   return provided;
 }
 
+export function buildNodeDescendantsFromProps(
+  nodes: Map<NodeId, Metadata.ReactFiber.Node>,
+  components: Map<ComponentId, Metadata.ReactFiber.Component.Any>
+): Map<NodeId, Set<NodeId>> {
+  /* ------------------------------------------------------------------ */
+  /* 1.  codeId → componentId lookup (fast O(#components))              */
+  /* ------------------------------------------------------------------ */
+  const codeIdToComponent = new Map<Metadata.ReactFiber.CodeId, ComponentId>();
+  for (const [compId, comp] of components.entries()) {
+    if (componentHasCode(comp)) {
+      codeIdToComponent.set(comp.codeId, compId);
+    }
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* 2.  Recursive collector that walks arbitrary JS values              */
+  /* ------------------------------------------------------------------ */
+  const collect = (val: any, out: Set<NodeId>): void => {
+    if (Array.isArray(val)) {
+      for (const v of val) collect(v, out);
+    } else if (typeof val === "object" && val !== null) {
+      if (val.$$typeof === "react.component") {
+        const el = val as Metadata.ReactFiber.PropValue.Component;
+        if (el.nodeId) out.add(el.nodeId);
+      }
+      // TODO: write a test to verify that this works
+      if (val.$$typeof === "react.fragment") {
+        const f = val as Metadata.ReactFiber.PropValue.Fragment;
+        for (const c of f.children) collect(c, out);
+      }
+
+      // Recurse through all properties so nested structures are covered.
+      for (const v of Object.values(val)) collect(v, out);
+    }
+  };
+
+  /* ------------------------------------------------------------------ */
+  /* 3.  Scan every node’s props once                                    */
+  /* ------------------------------------------------------------------ */
+  const provided = new Map<NodeId, Set<NodeId>>();
+  for (const [nodeId, node] of nodes.entries()) {
+    const set = provided.get(nodeId) ?? new Set<NodeId>();
+    collect(node.props, set);
+    if (set.size > 0) provided.set(nodeId, set);
+  }
+
+  return provided;
+}
+
 export function getNodeInternalDeps(
   metadata: Metadata.ReactFiber
 ): Map<NodeId, Set<ComponentId>> {

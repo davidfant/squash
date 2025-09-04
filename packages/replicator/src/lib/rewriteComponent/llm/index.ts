@@ -127,8 +127,8 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
     } catch (error) {
       console.error("Failed to render component", error);
       // throw new Error("Failed to render component");
-      // return null;
-      break;
+      return null;
+      // break;
     }
 
     if (!rendered.ok) {
@@ -187,7 +187,10 @@ export const rewriteComponentWithLLMStrategy: RewriteComponentStrategy = async (
     }
   }
 
-  if (!rewritten) throw new Error("TODO: what do we do if rewriting fails?");
+  if (!rewritten) {
+    // throw new Error("TODO: what do we do if rewriting fails?");
+    return null;
+  }
 
   return buildComponentRegistryItem(
     opts.component.id,

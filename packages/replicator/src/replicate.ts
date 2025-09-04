@@ -210,10 +210,10 @@ export const replicate = (
         await traceable(
           (infos: RewritableComponentInfo[]) =>
             Promise.all(
-              // infos.map(async (a) => {
-              //   const resolved = registry.get(a.componentId)!;
-              ["C36" as const].map(async (componentId) => {
-                const resolved = registry.get(componentId)!;
+              infos.map(async (a) => {
+                const resolved = registry.get(a.componentId)!;
+                // ["C36" as const, "C89" as const].map(async (componentId) => {
+                //   const resolved = registry.get(componentId)!;
                 const component = components.get(resolved.id)!;
                 if (!("codeId" in component)) {
                   throw new Error(
@@ -339,6 +339,7 @@ export const replicate = (
                   >;
                   // Note(fant): we need to Object.assign instead of replace because some
                   // of the elements detected might point at the parent being replaced
+                  if (!parent.children[index]!) return null;
                   Object.assign(
                     parent.children[index]!,
                     createRef({

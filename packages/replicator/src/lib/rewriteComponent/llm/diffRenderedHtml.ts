@@ -10,7 +10,7 @@ const CSS_PROPERTY_ALIAS: Record<string, string> = {
 };
 const OPTIONAL_COMMA_FUNCTIONS = ["rect", "inset", "matrix", "matrix3d"];
 
-export function canonicaliseStyle(style: string): Record<string, string> {
+function canonicaliseStyle(style: string): Record<string, string> {
   const ast = parse(style, { context: "declarationList" }) as DeclarationList;
 
   walk(ast, (n) => {
@@ -44,6 +44,13 @@ export function canonicaliseStyle(style: string): Record<string, string> {
     );
 }
 
+const canonicaliseClass = (className: string) =>
+  className
+    .split(" ")
+    .filter((c) => !!c)
+    .sort()
+    .join(" ");
+
 function simplify(
   node: parse5.DefaultTreeAdapterMap[keyof parse5.DefaultTreeAdapterMap]
 ): unknown {
@@ -61,6 +68,8 @@ function simplify(
     for (const { name, value } of node.attrs) {
       if (name === "style") {
         attrs[name] = canonicaliseStyle(value);
+      } else if (name === "class") {
+        attrs[name] = canonicaliseClass(value);
       } else {
         attrs[name] = value;
       }

@@ -77,7 +77,18 @@ function toExpression(value: any, ctx: CreateRefContext): Expression {
             type: "root",
             children: clone(elements),
           });
-          return (estree.body[0] as ExpressionStatement).expression;
+          console.log(
+            "haxxor replace",
+            (estree.body[0] as ExpressionStatement).expression
+          );
+          const e = (estree.body[0] as ExpressionStatement).expression;
+          const maybeExpressionContainer =
+            e as unknown as NodeMap["JSXExpressionContainer"];
+          if (maybeExpressionContainer.type === "JSXExpressionContainer") {
+            return maybeExpressionContainer.expression as Expression;
+          } else {
+            return e;
+          }
         }
 
         const componentId = ctx.codeIdToComponentId.get(el.codeId!);
@@ -224,6 +235,25 @@ export function createRef({
     props,
     ctx
   );
+  const exp = unified()
+    .use(recmaJsx)
+    .use(recmaStringify)
+    .stringify({
+      type: "Program",
+      sourceType: "module",
+      body: [{ type: "ExpressionStatement", expression: element }],
+    });
+
+  if (exp.includes(`{{"Harmony"}}`)) {
+    console.log("GONNA THRO ERROR", {
+      exp,
+      nodeId,
+      componentId,
+      props,
+      children,
+    });
+    throw new Error("here...");
+  }
   return h(
     "ref",
     {

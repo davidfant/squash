@@ -83,11 +83,15 @@ describe("diffRenderedHtml", () => {
 
     describe("class invariants", () => {
       test("order", () => {
-        throw new Error("implement...");
+        expect(
+          diff(`<div class="c b a" />`, <div className="a b c" />)
+        ).toBeNull();
       });
 
       test("whitespace is different", () => {
-        throw new Error("implement...");
+        expect(
+          diff(`<div class="a b   c" />`, <div className="  a   b c " />)
+        ).toBeNull();
       });
     });
   });

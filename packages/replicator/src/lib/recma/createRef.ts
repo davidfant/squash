@@ -1,17 +1,27 @@
 import type { Metadata } from "@/types";
-import type { Expression, NodeMap } from "estree";
-import type { ElementContent } from "hast";
+import type { Expression, ExpressionStatement, NodeMap } from "estree";
+import type { Element, ElementContent, Root } from "hast";
 import { h } from "hastscript";
 import recmaJsx from "recma-jsx";
 import recmaStringify from "recma-stringify";
+import rehypeRecma from "rehype-recma";
 import { unified } from "unified";
+import { SKIP, visit } from "unist-util-visit";
 import type { ComponentRegistryItem } from "../componentRegistry";
+import { rehypeStripSquashAttribute } from "../rehype/stripSquashAttribute";
+import { buildAncestorsMap, nodesMap } from "../traversal/util";
+import { recmaFixProperties } from "./fixProperties";
+import { recmaRemoveRedundantFragment } from "./removeRedundantFragment";
 
 type CodeId = Metadata.ReactFiber.CodeId;
 type ComponentId = Metadata.ReactFiber.ComponentId;
 
+const clone = <T>(c: T): T => JSON.parse(JSON.stringify(c));
+
 export interface CreateRefContext {
   deps: Set<ComponentId>;
+  metadata: Metadata.ReactFiber;
+  tree: Root;
   codeIdToComponentId: Map<CodeId, ComponentId>;
   componentRegistry: Map<ComponentId, ComponentRegistryItem>;
 }
@@ -36,6 +46,40 @@ function toExpression(value: any, ctx: CreateRefContext): Expression {
     switch (value.$$typeof) {
       case "react.component": {
         const el = value as Metadata.ReactFiber.PropValue.Component;
+        if (el.nodeId) {
+          const elements: Element[] = [];
+          const ancestorsMap = buildAncestorsMap(nodesMap(ctx.metadata.nodes));
+
+          visit(ctx.tree, "element", (element, index, parent) => {
+            if (index === undefined) return;
+            const nodeId = element.properties?.[
+              "dataSquashNodeId"
+            ] as Metadata.ReactFiber.NodeId;
+            if (parent?.type !== "element" && parent?.type !== "root") return;
+
+            if (ancestorsMap.get(nodeId)?.has(el.nodeId!)) {
+              elements.push(element);
+              return SKIP;
+            }
+          });
+
+          const processor = unified()
+            .use(rehypeStripSquashAttribute)
+            .use(rehypeRecma)
+            .use(recmaJsx)
+            .use(recmaRemoveRedundantFragment)
+            // .use(recmaReplaceRefs, opts.componentRegistry)
+            .use(recmaFixProperties)
+            .use(recmaStringify);
+
+          // TODO: make async?
+          const estree = processor.runSync({
+            type: "root",
+            children: clone(elements),
+          });
+          return (estree.body[0] as ExpressionStatement).expression;
+        }
+
         const componentId = ctx.codeIdToComponentId.get(el.codeId!);
         const component = ctx.componentRegistry.get(componentId!);
         return createComponentElement(

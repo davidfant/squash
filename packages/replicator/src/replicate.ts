@@ -280,11 +280,19 @@ export const replicate = (
                           elementsByNodeId.get(nodeId) ?? []
                         ).map((e) => clone(e.element));
 
+                        // TODO: figure out how to replace nodes from props
+                        // console.log("ELEMENTS");
+                        // console.dir(elements, { depth: null });
+                        // console.log("NODE PROPS");
+                        // console.dir(nodeProps, { depth: null });
+
                         const ref = createRef({
                           componentId: resolved.id,
                           props: nodeProps,
                           ctx: {
                             deps: new Set(),
+                            metadata: m,
+                            tree,
                             codeIdToComponentId,
                             componentRegistry: registry,
                           },
@@ -339,6 +347,8 @@ export const replicate = (
                       nodeId,
                       ctx: {
                         deps: new Set(),
+                        metadata: m,
+                        tree,
                         codeIdToComponentId,
                         componentRegistry: registry,
                       },

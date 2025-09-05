@@ -2,7 +2,7 @@ import { logger } from "@/lib/logger";
 import * as prettier from "@/lib/prettier";
 import { recmaFixProperties } from "@/lib/recma/fixProperties";
 import { recmaRemoveRedundantFragment } from "@/lib/recma/removeRedundantFragment";
-import { rehypeStripSquashAttribute } from "@/lib/rehype/stripSquashAttribute";
+import { recmaStripSquashAttribute } from "@/lib/recma/stripSquashAttribute";
 import { recmaWrapAsComponent } from "@/lib/rehype/wrapAsComponent";
 import { load } from "cheerio";
 import { traceable } from "langsmith/traceable";
@@ -19,12 +19,9 @@ import type { FileSink } from "../lib/sinks/base";
 import { aliasSVGPaths, type DescribeSVGStrategy } from "../lib/svg/alias";
 import { replaceSVGPathsInFiles } from "../lib/svg/replace";
 import { Metadata, type Snapshot } from "../types";
+import { recmaReplaceRefs } from "./ref";
 import { rewrite } from "./rewrite/agent";
-import {
-  buildState,
-  type ComponentRegistryItem,
-  type ReplicatorNodeStatus,
-} from "./state";
+import { buildState, type ReplicatorNodeStatus } from "./state";
 
 type NodeId = Metadata.ReactFiber.NodeId;
 type ComponentId = Metadata.ReactFiber.ComponentId;
@@ -70,11 +67,7 @@ export const replicate = (
         ComponentId,
         Promise<{
           id: ComponentId;
-          result: {
-            code: string;
-            name: string;
-            nodes: Map<NodeId, ReplicatorNodeStatus>;
-          } | null;
+          result: Awaited<ReturnType<typeof rewrite>>;
         }>
       > = new Map();
 
@@ -168,19 +161,13 @@ export const replicate = (
             rewrites.delete(rewrite.id);
 
             if (rewrite.result) {
-              const registryItem: ComponentRegistryItem = {
-                id: rewrite.id,
-                dir: path.join("components", rewrite.id),
-                name: rewrite.result.name,
-                code: rewrite.result.code,
-              };
-              state.component.registry.set(rewrite.id, registryItem);
-              rewrite.result.nodes.forEach((status, nodeId) =>
-                state.node.status.set(nodeId, status)
-              );
               await sink.writeText(
-                path.join("src", registryItem.dir, `${registryItem.name}.tsx`),
-                registryItem.code
+                path.join(
+                  "src",
+                  rewrite.result.item.dir,
+                  `${rewrite.result.item.name}.tsx`
+                ),
+                rewrite.result.item.code
               );
             } else {
               state.component.nodes.get(rewrite.id)?.forEach((nodeId) => {
@@ -201,19 +188,20 @@ export const replicate = (
           Metadata.ReactFiber.Component.Tag.HostRoot
       );
       if (hostRoot) {
-        const tree = state.node.trees.get(hostRoot.id);
-        if (tree?.[0]) {
+        const tree = state.node.trees.get("App");
+        if (tree) {
           const processor = unified()
-            .use(rehypeStripSquashAttribute)
+            // .use(rehypeStripSquashAttribute)
             .use(rehypeRecma)
             .use(recmaJsx)
             .use(recmaRemoveRedundantFragment)
             .use(recmaWrapAsComponent, "App")
-            // .use(recmaReplaceRefs, registry)
+            .use(recmaReplaceRefs, state)
+            .use(recmaStripSquashAttribute)
             .use(recmaFixProperties)
             .use(recmaStringify);
 
-          const appstx = await processor.run(tree[0].tree);
+          const appstx = await processor.run(tree);
           await sink.writeText(
             "src/App.tsx",
             await prettier.ts(processor.stringify(appstx))

@@ -23,7 +23,7 @@ function parseJSX(code: string) {
   }
 }
 
-export const recmaReplaceRefs: Plugin<[state: ReplicatorState], Program> =
+const recmaReplaceRefs: Plugin<[state: ReplicatorState], Program> =
   (state) => (tree: Program) => {
     const imports = new Map<string, RefImport>();
     const addImport = (i: RefImport) => imports.set(JSON.stringify(i), i);

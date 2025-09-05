@@ -1,10 +1,22 @@
+import { recmaFixProperties } from "@/lib/recma/fixProperties";
+import { recmaRemoveRedundantFragment } from "@/lib/recma/removeRedundantFragment";
 import type { Metadata } from "@/types";
-import type { Expression, NodeMap } from "estree";
-import type { ElementContent } from "hast";
+import type {
+  Expression,
+  ExpressionStatement,
+  ImportDeclaration,
+  NodeMap,
+  Program,
+} from "estree";
+import { visit as estreeVisit } from "estree-util-visit";
+import type { Element } from "hast";
 import { h } from "hastscript";
+import path from "path";
 import recmaJsx from "recma-jsx";
 import recmaStringify from "recma-stringify";
-import { unified } from "unified";
+import rehypeRecma from "rehype-recma";
+import { unified, type Plugin } from "unified";
+import { SKIP, visit } from "unist-util-visit";
 import type { ReplicatorState } from "./state";
 
 type CodeId = Metadata.ReactFiber.CodeId;
@@ -12,8 +24,8 @@ type ComponentId = Metadata.ReactFiber.ComponentId;
 
 const clone = <T>(c: T): T => JSON.parse(JSON.stringify(c));
 
-export interface CreateRefContext {
-  deps: Set<ComponentId>;
+export interface ReplaceRefsContext {
+  imports: Set<ComponentId>;
   state: ReplicatorState;
 }
 
@@ -25,7 +37,7 @@ function wrapInJSX(exp: Expression): NodeMap["JSXElement"]["children"][number] {
   }
 }
 
-function toExpression(value: any, ctx: CreateRefContext): Expression {
+function toExpression(value: any, ctx: ReplaceRefsContext): Expression {
   if (Array.isArray(value)) {
     const replaced: Expression[] = [];
     for (const v of value) {
@@ -80,12 +92,58 @@ function toExpression(value: any, ctx: CreateRefContext): Expression {
 
         const componentId = ctx.state.component.fromCodeId.get(el.codeId!);
         const component = ctx.state.component.registry.get(componentId!);
-        return createComponentElement(
-          component
-            ? { id: component.id, name: component.name }
-            : { id: undefined, name: "unknown" },
-          el.props,
-          ctx
+        if (component) {
+          return createComponentElement(
+            component
+              ? { id: component.id, name: component.name }
+              : { id: undefined, name: "unknown" },
+            el.props,
+            ctx
+          );
+        } else if (el.nodeId) {
+          // TODO: figure out how to get the right tree..... or can we get all for now?
+          for (const tree of ctx.state.node.trees.values()) {
+            const elements: Element[] = [];
+            visit(tree, "element", (element, index, parent) => {
+              if (index === undefined) return;
+              const nodeId = element.properties?.[
+                "dataSquashNodeId"
+              ] as Metadata.ReactFiber.NodeId;
+              if (parent?.type !== "element" && parent?.type !== "root") return;
+              if (ctx.state.node.ancestors.get(nodeId)?.has(el.nodeId!)) {
+                elements.push(element);
+                return SKIP;
+              }
+            });
+
+            if (elements.length) {
+              // TODO: store in state...
+
+              // TODO: make async?
+              const estree = unified()
+                .use(rehypeRecma)
+                .use(recmaJsx)
+                .use(recmaRemoveRedundantFragment)
+                // .use(recmaReplaceRefs, opts.componentRegistry)
+                // .use(recmaStripSquashAttribute)
+                .use(recmaFixProperties)
+                .use(recmaStringify)
+                .runSync(clone({ type: "root", children: elements }));
+
+              const e = (estree.body[0] as ExpressionStatement).expression;
+              const maybeExpressionContainer =
+                e as unknown as NodeMap["JSXExpressionContainer"];
+              if (maybeExpressionContainer.type === "JSXExpressionContainer") {
+                return maybeExpressionContainer.expression as Expression;
+              } else {
+                return e;
+              }
+            }
+          }
+        }
+
+        throw new Error(
+          `Component ${componentId} not found in registry and no nodeId`
         );
       }
       case "react.tag": {
@@ -113,7 +171,7 @@ function toExpression(value: any, ctx: CreateRefContext): Expression {
         const componentId = ctx.state.component.fromCodeId.get(fn.codeId!);
         const component = ctx.state.component.registry.get(componentId!);
         if (component) {
-          ctx.deps.add(component.id);
+          ctx.imports.add(component.id);
           return { type: "Identifier", name: component.name };
         }
         // TODO: consider prettifying the function
@@ -142,7 +200,7 @@ function toExpression(value: any, ctx: CreateRefContext): Expression {
 
 const buildAttributes = (
   props: Record<string, unknown>,
-  ctx: CreateRefContext
+  ctx: ReplaceRefsContext
 ): NodeMap["JSXAttribute"][] =>
   Object.entries(props).map(([k, v]): NodeMap["JSXAttribute"] => {
     if (v === true) {
@@ -170,9 +228,9 @@ const buildAttributes = (
 function createComponentElement(
   comp: { id: ComponentId | undefined; name: string },
   props: Record<string, unknown>,
-  ctx: CreateRefContext
+  ctx: ReplaceRefsContext
 ): NodeMap["JSXElement"] {
-  if (comp.id) ctx.deps.add(comp.id);
+  if (comp.id) ctx.imports.add(comp.id);
 
   const { children, ...rest } = props;
   const childNodes: NodeMap["JSXElement"]["children"] = [children]
@@ -200,44 +258,78 @@ function createComponentElement(
   };
 }
 
-export function createRef({
+export const createRef = ({
   nodeId,
   component,
   props,
-  children,
-  ctx,
 }: {
   nodeId?: string;
   component: { id: ComponentId; name: string };
   props: Record<string, unknown>;
-  children: ElementContent[];
-  ctx: CreateRefContext;
-}) {
-  const element = createComponentElement(component, props, ctx);
-  const exp = unified()
-    .use(recmaJsx)
-    .use(recmaStringify)
-    .stringify({
-      type: "Program",
-      sourceType: "module",
-      body: [{ type: "ExpressionStatement", expression: element }],
+}) =>
+  h("ref", {
+    dataSquashNodeId: nodeId,
+    dataSquashComponentId: component.id,
+    props: JSON.stringify(props),
+  });
+
+const findAttr = <T>(element: NodeMap["JSXElement"], name: string) => {
+  const attr = element.openingElement.attributes.find(
+    (a): a is NodeMap["JSXAttribute"] =>
+      a.type === "JSXAttribute" && a.name.name === name
+  );
+  if (attr?.value?.type !== "Literal") return;
+  return attr.value.value as T;
+};
+
+export const recmaReplaceRefs: Plugin<[state: ReplicatorState], Program> =
+  (state) => (tree) => {
+    const imports = new Set<ComponentId>();
+
+    estreeVisit(tree, (node) => {
+      if (
+        node.type !== "JSXElement" ||
+        node.openingElement.name.type !== "JSXIdentifier" ||
+        node.openingElement.name.name !== "ref"
+      ) {
+        return;
+      }
+
+      const compId = findAttr<ComponentId>(node, "data-squash-component-id");
+      const propsString = findAttr<string>(node, "props");
+      if (!compId || !propsString) return;
+      const props = JSON.parse(propsString) as Record<string, unknown>;
+
+      imports.add(compId);
+      const compName = state.component.name.get(compId) ?? "Component";
+      Object.keys(node).forEach((k) => delete (node as any)[k]);
+      Object.assign(
+        node,
+        createComponentElement({ id: compId, name: compName }, props, {
+          imports: new Set(),
+          state,
+        })
+      );
     });
 
-  return h(
-    "ref",
-    {
-      dataSquashNodeId: nodeId,
-      // deps: JSON.stringify([...ctx.deps]),
-      deps: JSON.stringify([]),
-      jsx: unified()
-        .use(recmaJsx)
-        .use(recmaStringify)
-        .stringify({
-          type: "Program",
-          sourceType: "module",
-          body: [{ type: "ExpressionStatement", expression: element }],
-        }),
-    },
-    ...children
-  );
-}
+    const importDecls = [...imports]
+      .map((componentId) => state.component.registry.get(componentId))
+      .filter((r) => !!r)
+      .map((r): ImportDeclaration => {
+        const mod = path.join(`@`, r.dir, r.name);
+        return {
+          type: "ImportDeclaration",
+          source: { type: "Literal", value: mod },
+          specifiers: [
+            {
+              type: "ImportSpecifier",
+              local: { type: "Identifier", name: r.name },
+              imported: { type: "Identifier", name: r.name },
+            },
+          ],
+          attributes: [],
+        };
+      });
+
+    tree.body = [...importDecls, ...tree.body];
+  };

@@ -1,4 +1,5 @@
 import { generateText } from "@/lib/ai";
+import { clone } from "@/lib/clone";
 import { filesystemCacheMiddleware } from "@/lib/filesystemCacheMiddleware";
 import { withCacheBreakpoints } from "@/lib/rewriteComponent/llm/withCacheBreakpoint";
 import type { Metadata } from "@/types";
@@ -10,11 +11,16 @@ import {
   type ModelMessage,
 } from "ai";
 import type { Root } from "hast";
+import path from "path";
 import { SKIP, visit } from "unist-util-visit";
 import type { Logger } from "winston";
 import z from "zod";
-import type { ReplicatorNodeStatus, ReplicatorState } from "../state";
-import { buildExampleCode } from "./buildExampleCode";
+import type {
+  ComponentRegistryItem,
+  ReplicatorNodeStatus,
+  ReplicatorState,
+} from "../state";
+import { buildExampleCode, replaceExamples } from "./examples";
 import * as Prompts from "./prompts";
 import { validate } from "./validate";
 
@@ -27,9 +33,9 @@ export async function rewrite(
   state: ReplicatorState,
   logger: Logger
 ): Promise<{
-  code: string;
   name: string;
   description: string;
+  item: ComponentRegistryItem;
   reasoning: string | undefined;
   nodes: Map<NodeId, ReplicatorNodeStatus>;
 } | null> {
@@ -44,7 +50,7 @@ export async function rewrite(
     Map<Root, Array<{ element: Element; nodeId: NodeId }>>
   >();
   for (const parentId of state.component.nodes.get(componentId) ?? []) {
-    for (const { tree } of [...state.node.trees.values()].flat()) {
+    for (const tree of state.node.trees.values()) {
       visit(tree, "element", (element, index, parent) => {
         if (index === undefined) return;
         if (parent?.type !== "element" && parent?.type !== "root") return;
@@ -77,7 +83,7 @@ export async function rewrite(
       return buildExampleCode({
         component: { id: componentId, name: exampleComponentName },
         nodeId,
-        elements: [...s.values()][0]!.map((s) => s.element),
+        elements: [...s.values()][0]!.map((s) => clone(s.element)),
         state,
       });
     })
@@ -152,18 +158,34 @@ export async function rewrite(
           attempt,
           error,
         });
+
         messages.push({ role: "user", content: error });
         attempt++;
         continue;
       }
 
-      return {
+      const registryItem: ComponentRegistryItem = {
+        id: componentId,
+        dir: path.join("components", componentId),
+        name: tc.input.name,
         code: tc.input.code,
+      };
+      state.component.registry.set(componentId, registryItem);
+      state.component.name.set(componentId, tc.input.name);
+
+      const replaced = replaceExamples(
+        { id: componentId, name: tc.input.name },
+        state
+      );
+      replaced.forEach((status, nodeId) =>
+        state.node.status.set(nodeId, status)
+      );
+      return {
         name: tc.input.name,
         description: tc.input.description,
+        item: registryItem,
         reasoning: reasoningText,
-        // TODO: replace nodes...
-        nodes: new Map(),
+        nodes: replaced,
       };
     }
   }

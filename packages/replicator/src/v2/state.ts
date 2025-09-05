@@ -21,7 +21,7 @@ export interface ReplicatorState {
   metadata: Metadata.ReactFiber;
   node: {
     all: Map<NodeId, Metadata.ReactFiber.Node & { id: NodeId }>;
-    trees: Map<NodeId, Array<{ path: Array<string | number>; tree: Root }>>;
+    trees: Map<string, Root>;
     status: Map<NodeId, ReplicatorNodeStatus>;
     ancestors: Map<NodeId, Set<NodeId>>;
     descendants: {
@@ -201,17 +201,14 @@ export async function buildState(
       .map(([id]) => [id, "pending"])
   );
 
-  const trees = new Map<
-    NodeId,
-    Array<{ path: Array<string | number>; tree: Root }>
-  >();
+  const trees = new Map<string, Root>();
   const tree = unified().use(rehypeParse, { fragment: true }).parse(html);
   const hostRoot = [...nodes.values()].find(
     (n) =>
       components.get(n.componentId)?.tag ===
       Metadata.ReactFiber.Component.Tag.HostRoot
   );
-  if (hostRoot) trees.set(hostRoot.id, [{ path: [], tree }]);
+  if (hostRoot) trees.set("App", tree);
 
   return {
     metadata,

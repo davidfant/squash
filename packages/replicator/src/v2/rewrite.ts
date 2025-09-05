@@ -1,13 +1,34 @@
+import { generateText } from "@/lib/ai";
 import { clone } from "@/lib/clone";
+import { filesystemCacheMiddleware } from "@/lib/filesystemCacheMiddleware";
 import * as prettier from "@/lib/prettier";
+import { recmaFixProperties } from "@/lib/recma/fixProperties";
+import { recmaRemoveRedundantFragment } from "@/lib/recma/removeRedundantFragment";
+import { rehypeStripSquashAttribute } from "@/lib/rehype/stripSquashAttribute";
 import { rehypeUnwrapRefs } from "@/lib/rehype/unwrapRefs";
+import { recmaWrapAsComponent } from "@/lib/rehype/wrapAsComponent";
+import { withCacheBreakpoints } from "@/lib/rewriteComponent/llm/withCacheBreakpoint";
 import type { Metadata } from "@/types";
+import { anthropic, type AnthropicProviderOptions } from "@ai-sdk/anthropic";
+import {
+  InvalidToolInputError,
+  tool,
+  wrapLanguageModel,
+  type ModelMessage,
+} from "ai";
 import type { Root } from "hast";
 import { h } from "hastscript";
+import recmaJsx from "recma-jsx";
+import recmaStringify from "recma-stringify";
+import rehypeRecma from "rehype-recma";
 import rehypeStringify from "rehype-stringify";
 import { unified } from "unified";
 import { SKIP, visit } from "unist-util-visit";
 import type { Logger } from "winston";
+import z from "zod";
+import { createRef } from "./createRef";
+import * as Prompts from "./prompts";
+import { recmaReplaceRefs } from "./replaceRefs";
 import type { ReplicatorNodeStatus, ReplicatorState } from "./state";
 
 type Element = import("hast").Element;
@@ -21,9 +42,17 @@ export async function rewrite(
 ): Promise<{
   code: string;
   name: string;
+  description: string;
+  reasoning: string | undefined;
   nodes: Map<NodeId, ReplicatorNodeStatus>;
 } | null> {
-  const samples = new Map<
+  const component = state.component.all.get(
+    componentId
+  )! as Metadata.ReactFiber.Component.WithCode<any>;
+  const minifiedCode = state.code.get(component.codeId);
+  if (!minifiedCode) throw new Error("Minified code not found");
+
+  const examples = new Map<
     NodeId,
     Map<Root, Array<{ element: Element; nodeId: NodeId }>>
   >();
@@ -35,9 +64,9 @@ export async function rewrite(
 
         const nodeId = element.properties?.["dataSquashNodeId"] as NodeId;
         if (state.node.ancestors.get(nodeId)?.has(parentId)) {
-          const list = samples.get(parentId)?.get(tree) ?? [];
-          if (!samples.has(parentId)) samples.set(parentId, new Map());
-          samples.get(parentId)?.set(tree, [...list, { element, nodeId }]);
+          const list = examples.get(parentId)?.get(tree) ?? [];
+          if (!examples.has(parentId)) examples.set(parentId, new Map());
+          examples.get(parentId)?.set(tree, [...list, { element, nodeId }]);
           return SKIP;
         }
       });
@@ -47,7 +76,7 @@ export async function rewrite(
   const processors = {
     html: {
       full: unified()
-        // .use(rehypeStripSquashAttribute)
+        .use(rehypeStripSquashAttribute)
         .use(rehypeUnwrapRefs)
         .use(rehypeStringify),
       // limited: unified()
@@ -56,31 +85,41 @@ export async function rewrite(
       //   .use(rehypeUnwrapRefs)
       //   .use(rehypeStringify),
     },
-    // jsx: {
-    //   full: unified()
-    //     .use(rehypeStripSquashAttribute)
-    //     .use(rehypeRecma)
-    //     .use(recmaJsx)
-    //     .use(recmaRemoveRedundantFragment)
-    //     .use(recmaWrapAsComponent, "Sample")
-    //     .use(recmaReplaceRefs, registry)
-    //     .use(recmaFixProperties)
-    //     .use(recmaStringify),
-    //   limited: unified()
-    //     .use(rehypeStripSquashAttribute)
-    //     .use(rehypeRecma)
-    //     .use(recmaJsx)
-    //     .use(recmaRemoveRedundantFragment)
-    //     .use(recmaWrapAsComponent, "Sample")
-    //     .use(recmaReplaceRefs, registry)
-    //     .use(recmaLimitDepth, limitDepthConfig)
-    //     .use(recmaFixProperties)
-    //     .use(recmaStringify),
-    // },
+    jsx: {
+      full: unified()
+        .use(rehypeStripSquashAttribute)
+        .use(rehypeRecma)
+        .use(recmaJsx)
+        .use(recmaRemoveRedundantFragment)
+        .use(recmaWrapAsComponent, "Sample")
+        .use(recmaReplaceRefs, state)
+        .use(recmaFixProperties)
+        .use(recmaStringify),
+      // limited: unified()
+      //   .use(rehypeStripSquashAttribute)
+      //   .use(rehypeRecma)
+      //   .use(recmaJsx)
+      //   .use(recmaRemoveRedundantFragment)
+      //   .use(recmaWrapAsComponent, "Sample")
+      //   .use(recmaReplaceRefs, registry)
+      //   .use(recmaLimitDepth, limitDepthConfig)
+      //   .use(recmaFixProperties)
+      //   .use(recmaStringify),
+    },
   };
 
-  await Promise.all(
-    [...samples].map(async ([nodeId, s]) => {
+  const componentName = (() => {
+    if (state.component.registry.has(componentId)) {
+      return state.component.registry.get(componentId)!.name;
+    }
+    const component = state.component.all.get(componentId)!;
+    const name = (component as Metadata.ReactFiber.Component.WithCode<any>)
+      .name;
+    if (name && name.length > 3) return name;
+  })();
+
+  const examplesCode = await Promise.all(
+    [...examples].map(async ([nodeId, s]) => {
       if (s.size !== 1) {
         throw new Error("TODO: multiple trees");
       }
@@ -90,22 +129,13 @@ export async function rewrite(
       const node = state.node.all.get(nodeId)!;
       const nodeProps = clone(node.props) as Record<string, unknown>;
 
-      const depsFromProps = state.node.descendants.fromProps.get(nodeId);
-      console.log("depsFromProps", depsFromProps);
-
-      // TODO: BEFORE THIS CLONE SHIT... ALSO, change the samples to be tree specific. do something more similar to how descendants.fromProps works internally. For each detected descendant within props, find it in any tree, and then replace it both in the props and tree with the same placeholder!
-      // const deps = new Map<
-      //   NodeId,
-      //   Array<{ element: Element; nodeId: NodeId }>
-      // >();
-
       const sampleTree: Root = {
         type: "root",
         children: clone(items.map((s) => s.element)),
       };
 
+      const depsFromProps = state.node.descendants.fromProps.get(nodeId);
       for (const dep of depsFromProps ?? []) {
-        // for (const { tree } of [...state.node.trees.values()].flat()) {
         visit(sampleTree, "element", (element, index, parent) => {
           if (index === undefined) return;
           if (parent?.type !== "element" && parent?.type !== "root") return;
@@ -113,12 +143,8 @@ export async function rewrite(
           const nodeId = element.properties?.["dataSquashNodeId"] as NodeId;
 
           if (state.node.ancestors.get(nodeId)?.has(dep.nodeId)) {
-            // deps.set(dep.nodeId, [
-            //   ...(deps.get(dep.nodeId) ?? []),
-            //   { element, nodeId },
-            // ]);
             parent!.children[index] = h("placeholder", {
-              path: dep.keys.join("/"),
+              prop: dep.keys.join("/"),
             });
             const last = dep.keys
               .slice(0, -1)
@@ -126,95 +152,92 @@ export async function rewrite(
             const tag: Metadata.ReactFiber.PropValue.Tag = {
               $$typeof: "react.tag",
               tagName: "placeholder",
-              props: { path: dep.keys.join("/") },
+              props: { prop: dep.keys.join("/") },
             };
             last[dep.keys[dep.keys.length - 1]!] = tag;
             return SKIP;
           }
         });
-        // }
       }
 
-      // 1. get all nodes from props provided to nodeId
-      // 2. visit the items[number].element and if it has a node as an ancestor, replace it with a new placeholder
-      // 3. in the props, replace it with the same placeholder
+      const ref = createRef({
+        component: { id: componentId, name: componentName ?? "Component" },
+        props: nodeProps,
+        ctx: { deps: new Set(), state },
+        children: [],
+      });
+      const [html, jsx] = await Promise.all([
+        processors.html.full
+          .run(sampleTree)
+          .then((t) => processors.html.full.stringify(t as Root))
+          .then(prettier.html)
+          .then((s) => s.trim()),
+        processors.jsx.full
+          .run({ type: "root", children: [ref] })
+          .then((estree) => processors.jsx.full.stringify(estree))
+          .then(prettier.ts)
+          .then((s) => s.trim()),
+      ]);
 
-      /*
-      
-      export function buildDescendantsFromProps(
-  nodes: Map<NodeId, Metadata.ReactFiber.Node>
-): Map<NodeId, Set<NodeId>> {
-  const collect = (val: any, out: Set<NodeId>): void => {
-    if (Array.isArray(val)) {
-      for (const v of val) collect(v, out);
-    } else if (typeof val === "object" && val !== null) {
-      if (val.$$typeof === "react.component") {
-        const el = val as Metadata.ReactFiber.PropValue.Component;
-        if (el.nodeId) out.add(el.nodeId);
-      }
-      // TODO: write a test to verify that this works
-      if (val.$$typeof === "react.fragment") {
-        const f = val as Metadata.ReactFiber.PropValue.Fragment;
-        for (const c of f.children) collect(c, out);
-      }
-
-      for (const v of Object.values(val)) collect(v, out);
-    }
-  };
-
-  const provided = new Map<NodeId, Set<NodeId>>();
-  for (const [nodeId, node] of nodes.entries()) {
-    const set = provided.get(nodeId) ?? new Set<NodeId>();
-    collect(node.props, set);
-    if (set.size > 0) provided.set(nodeId, set);
-  }
-
-  return provided;
-}
-      
-      */
-
-      // iterate
-
-      const html = await processors.html.full
-        .run(sampleTree)
-        .then((t) => processors.html.full.stringify(t as Root))
-        .then(prettier.html)
-        .then((s) => s.trim());
-
-      // const depHtmls = await Promise.all(
-      //   [...deps].map(async ([parentId, ds]) => {
-      //     return await processors.html.full
-      //       .run({
-      //         type: "root",
-      //         children: clone(ds.map((s) => s.element)),
-      //       } as Root)
-      //       .then((t: any) => processors.html.full.stringify(t as Root))
-      //       .then(prettier.html)
-      //       .then((s) => s.trim());
-      //   })
-      // );
-
-      console.log("\n\n\n\n--- MAIN ---");
-      console.log(html);
-      console.log("--- DEPS ---");
-      // for (const html of depHtmls) {
-      //   console.log(html);
-      //   console.log("---");
-      // }
-
-      // const ref = createRef({
-      //   componentId,
-      //   props: state.node.all.get(nodeId)!.props as Record<string, unknown>,
-      //   ctx: {
-      //     deps: new Set(),
-      //     codeIdToComponentId: state.component.fromCodeId,
-      //     componentRegistry: registry,
-      //   },
-      //   children: [],
-      // });
+      return { html, jsx };
     })
   );
+
+  const messages: ModelMessage[] = [
+    { role: "system", content: Prompts.instructions },
+    {
+      role: "user",
+      content: Prompts.userMessage(minifiedCode, componentName, examplesCode),
+    },
+  ];
+  const attempt = 0;
+  const { reasoningText, toolCalls, response } = await generateText({
+    model: wrapLanguageModel({
+      model: anthropic("claude-sonnet-4-20250514"),
+      // model: google("gemini-2.5-flash"),
+      middleware: filesystemCacheMiddleware(),
+    }),
+    messages: withCacheBreakpoints(messages),
+    tools: {
+      updateComponent: tool({
+        description:
+          "Rewrite a minified React component and return the updated TypeScript code.",
+        inputSchema: z.object({
+          code: z.string(),
+          name: z.string(),
+          description: z.string(),
+        }),
+      }),
+    },
+    providerOptions:
+      attempt === 0
+        ? {
+            anthropic: {
+              thinking: { type: "enabled", budgetTokens: 1024 },
+            } satisfies AnthropicProviderOptions,
+          }
+        : undefined,
+  });
+
+  messages.push(...response.messages);
+
+  const tc = toolCalls[toolCalls.length - 1];
+  if (
+    tc &&
+    tc.toolName === "updateComponent" &&
+    tc.invalid &&
+    tc.error instanceof InvalidToolInputError
+  ) {
+    throw new Error("TC failed..... " + tc.error.message);
+    // messages.push({ role: "user", content: tc.error.message });
+    // continue;
+  }
+
+  if (tc && !tc.dynamic && tc.toolName === "updateComponent") {
+    return { ...tc.input, reasoning: reasoningText, nodes: new Map() };
+  }
+
+  console.log("WOW", { reasoningText, toolCalls });
 
   // logger.info("wow", Object.fromEntries(samples.entries()));
   return null;

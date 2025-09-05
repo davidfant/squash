@@ -1,17 +1,10 @@
 import type { Metadata } from "@/types";
-import type { Expression, ExpressionStatement, NodeMap } from "estree";
-import type { Element, ElementContent, Root } from "hast";
+import type { Expression, NodeMap } from "estree";
+import type { ElementContent } from "hast";
 import { h } from "hastscript";
 import recmaJsx from "recma-jsx";
 import recmaStringify from "recma-stringify";
-import rehypeRecma from "rehype-recma";
 import { unified } from "unified";
-import { SKIP, visit } from "unist-util-visit";
-import type { ComponentRegistryItem } from "../componentRegistry";
-import { rehypeStripSquashAttribute } from "../rehype/stripSquashAttribute";
-import { buildAncestorsMap, nodesMap } from "../traversal/util";
-import { recmaFixProperties } from "./fixProperties";
-import { recmaRemoveRedundantFragment } from "./removeRedundantFragment";
 import type { ReplicatorState } from "./state";
 
 type CodeId = Metadata.ReactFiber.CodeId;
@@ -22,10 +15,6 @@ const clone = <T>(c: T): T => JSON.parse(JSON.stringify(c));
 export interface CreateRefContext {
   deps: Set<ComponentId>;
   state: ReplicatorState;
-  metadata: Metadata.ReactFiber;
-  tree: Root;
-  codeIdToComponentId: Map<CodeId, ComponentId>;
-  componentRegistry: Map<ComponentId, ComponentRegistryItem>;
 }
 
 function wrapInJSX(exp: Expression): NodeMap["JSXElement"]["children"][number] {
@@ -48,52 +37,52 @@ function toExpression(value: any, ctx: CreateRefContext): Expression {
     switch (value.$$typeof) {
       case "react.component": {
         const el = value as Metadata.ReactFiber.PropValue.Component;
-        if (el.nodeId) {
-          const elements: Element[] = [];
-          const ancestorsMap = buildAncestorsMap(nodesMap(ctx.metadata.nodes));
+        // if (el.nodeId) {
+        //   const elements: Element[] = [];
+        //   const ancestorsMap = buildAncestorsMap(nodesMap(ctx.metadata.nodes));
 
-          visit(ctx.tree, "element", (element, index, parent) => {
-            if (index === undefined) return;
-            const nodeId = element.properties?.[
-              "dataSquashNodeId"
-            ] as Metadata.ReactFiber.NodeId;
-            if (parent?.type !== "element" && parent?.type !== "root") return;
+        //   visit(ctx.tree, "element", (element, index, parent) => {
+        //     if (index === undefined) return;
+        //     const nodeId = element.properties?.[
+        //       "dataSquashNodeId"
+        //     ] as Metadata.ReactFiber.NodeId;
+        //     if (parent?.type !== "element" && parent?.type !== "root") return;
 
-            if (ancestorsMap.get(nodeId)?.has(el.nodeId!)) {
-              elements.push(element);
-              return SKIP;
-            }
-          });
+        //     if (ancestorsMap.get(nodeId)?.has(el.nodeId!)) {
+        //       elements.push(element);
+        //       return SKIP;
+        //     }
+        //   });
 
-          const processor = unified()
-            .use(rehypeStripSquashAttribute)
-            .use(rehypeRecma)
-            .use(recmaJsx)
-            .use(recmaRemoveRedundantFragment)
-            // .use(recmaReplaceRefs, opts.componentRegistry)
-            .use(recmaFixProperties)
-            .use(recmaStringify);
+        //   const processor = unified()
+        //     .use(rehypeStripSquashAttribute)
+        //     .use(rehypeRecma)
+        //     .use(recmaJsx)
+        //     .use(recmaRemoveRedundantFragment)
+        //     // .use(recmaReplaceRefs, opts.componentRegistry)
+        //     .use(recmaFixProperties)
+        //     .use(recmaStringify);
 
-          // TODO: make async?
-          const estree = processor.runSync({
-            type: "root",
-            children: clone(elements),
-          });
-          const e = (estree.body[0] as ExpressionStatement).expression;
-          const maybeExpressionContainer =
-            e as unknown as NodeMap["JSXExpressionContainer"];
-          if (maybeExpressionContainer.type === "JSXExpressionContainer") {
-            return maybeExpressionContainer.expression as Expression;
-          } else {
-            return e;
-          }
-        }
+        //   // TODO: make async?
+        //   const estree = processor.runSync({
+        //     type: "root",
+        //     children: clone(elements),
+        //   });
+        //   const e = (estree.body[0] as ExpressionStatement).expression;
+        //   const maybeExpressionContainer =
+        //     e as unknown as NodeMap["JSXExpressionContainer"];
+        //   if (maybeExpressionContainer.type === "JSXExpressionContainer") {
+        //     return maybeExpressionContainer.expression as Expression;
+        //   } else {
+        //     return e;
+        //   }
+        // }
 
-        const componentId = ctx.codeIdToComponentId.get(el.codeId!);
-        const component = ctx.componentRegistry.get(componentId!);
+        const componentId = ctx.state.component.fromCodeId.get(el.codeId!);
+        const component = ctx.state.component.registry.get(componentId!);
         return createComponentElement(
           component
-            ? { id: component.id, name: component.name.value }
+            ? { id: component.id, name: component.name }
             : { id: undefined, name: "unknown" },
           el.props,
           ctx
@@ -121,11 +110,11 @@ function toExpression(value: any, ctx: CreateRefContext): Expression {
       }
       case "function": {
         const fn = value as Metadata.ReactFiber.PropValue.Function;
-        const componentId = ctx.codeIdToComponentId.get(fn.codeId!);
-        const component = ctx.componentRegistry.get(componentId!);
+        const componentId = ctx.state.component.fromCodeId.get(fn.codeId!);
+        const component = ctx.state.component.registry.get(componentId!);
         if (component) {
           ctx.deps.add(component.id);
-          return { type: "Identifier", name: component.name.value };
+          return { type: "Identifier", name: component.name };
         }
         // TODO: consider prettifying the function
         return { type: "Literal", value: `[Function: ${fn.fn}]` };
@@ -213,26 +202,18 @@ function createComponentElement(
 
 export function createRef({
   nodeId,
-  componentId,
+  component,
   props,
   children,
   ctx,
 }: {
   nodeId?: string;
-  componentId: ComponentId;
+  component: { id: ComponentId; name: string };
   props: Record<string, unknown>;
   children: ElementContent[];
   ctx: CreateRefContext;
 }) {
-  const comp = ctx.componentRegistry.get(componentId);
-  if (!comp) {
-    throw new Error(`Component ${componentId} not found in registry`);
-  }
-  const element = createComponentElement(
-    { id: comp.id, name: comp.name.value },
-    props,
-    ctx
-  );
+  const element = createComponentElement(component, props, ctx);
   const exp = unified()
     .use(recmaJsx)
     .use(recmaStringify)
@@ -246,7 +227,8 @@ export function createRef({
     "ref",
     {
       dataSquashNodeId: nodeId,
-      deps: JSON.stringify([...ctx.deps]),
+      // deps: JSON.stringify([...ctx.deps]),
+      deps: JSON.stringify([]),
       jsx: unified()
         .use(recmaJsx)
         .use(recmaStringify)

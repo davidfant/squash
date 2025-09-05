@@ -251,6 +251,8 @@ export const replicate = (
                           props: nodeProps,
                           ctx: {
                             deps: new Set(),
+                            metadata: m,
+                            tree,
                             codeIdToComponentId,
                             componentRegistry,
                           },
@@ -299,6 +301,8 @@ export const replicate = (
                     nodeId,
                     ctx: {
                       deps: new Set(),
+                      metadata: m,
+                      tree,
                       codeIdToComponentId,
                       componentRegistry,
                     },

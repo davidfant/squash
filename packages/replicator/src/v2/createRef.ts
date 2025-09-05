@@ -12,6 +12,7 @@ import { rehypeStripSquashAttribute } from "../rehype/stripSquashAttribute";
 import { buildAncestorsMap, nodesMap } from "../traversal/util";
 import { recmaFixProperties } from "./fixProperties";
 import { recmaRemoveRedundantFragment } from "./removeRedundantFragment";
+import type { ReplicatorState } from "./state";
 
 type CodeId = Metadata.ReactFiber.CodeId;
 type ComponentId = Metadata.ReactFiber.ComponentId;
@@ -20,6 +21,7 @@ const clone = <T>(c: T): T => JSON.parse(JSON.stringify(c));
 
 export interface CreateRefContext {
   deps: Set<ComponentId>;
+  state: ReplicatorState;
   metadata: Metadata.ReactFiber;
   tree: Root;
   codeIdToComponentId: Map<CodeId, ComponentId>;

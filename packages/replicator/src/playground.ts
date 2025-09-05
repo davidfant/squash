@@ -6,12 +6,10 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { langsmith } from "./lib/ai";
-import { rewriteComponentWithLLMStrategy } from "./lib/rewriteComponent/llm";
-import { rewriteComponentUseFirstStrategy } from "./lib/rewriteComponent/useFirst";
 import { FileSystemSink } from "./lib/sinks/fs";
 import { describeSVGWithLLM } from "./lib/svg/alias";
 import { logFileTree } from "./logFileTree";
-import { replicate } from "./replicate";
+import { replicate } from "./v2/replicate";
 // import { replicate } from "./replicate.old";
 import type { Snapshot } from "./types";
 
@@ -81,29 +79,29 @@ try {
   await replicate(
     snapshot,
     sink,
-    (opts) => {
-      // if (["C80", "C41", "C30", "C40"].includes(opts.component.id)) {
+    // (opts) => {
+    //   // if (["C80", "C41", "C30", "C40"].includes(opts.component.id)) {
 
-      // complex w many unprocessed children: C55
-      if (
-        [
-          "C41",
-          "C40",
-          "C64",
-          "C17",
-          "C56",
-          "C28",
-          "C18",
-          "C19",
-          "C22",
-        ].includes(opts.component.id) ||
-        true
-      ) {
-        return rewriteComponentWithLLMStrategy(opts);
-      } else {
-        return rewriteComponentUseFirstStrategy(opts);
-      }
-    },
+    //   // complex w many unprocessed children: C55
+    //   if (
+    //     [
+    //       "C41",
+    //       "C40",
+    //       "C64",
+    //       "C17",
+    //       "C56",
+    //       "C28",
+    //       "C18",
+    //       "C19",
+    //       "C22",
+    //     ].includes(opts.component.id) ||
+    //     true
+    //   ) {
+    //     return rewriteComponentWithLLMStrategy(opts);
+    //   } else {
+    //     return rewriteComponentUseFirstStrategy(opts);
+    //   }
+    // },
     describeSVGWithLLM
   );
 } finally {

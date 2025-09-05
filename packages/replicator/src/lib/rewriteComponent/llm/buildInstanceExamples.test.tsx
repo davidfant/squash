@@ -67,6 +67,7 @@ describe("buildInstanceExamples", () => {
           ref: createRef({
             componentId,
             props: parentNode.props as Record<string, unknown>,
+            // @ts-expect-error
             ctx: { deps: new Set(), codeIdToComponentId, componentRegistry },
             children: [],
           }),

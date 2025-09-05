@@ -38,6 +38,7 @@ export interface ReplicatorState {
       ComponentId,
       Metadata.ReactFiber.Component.Any & { id: ComponentId }
     >;
+    name: Map<ComponentId, string>;
     registry: Map<ComponentId, ComponentRegistryItem>;
     nodes: Map<ComponentId, NodeId[]>;
     fromCodeId: Map<CodeId, ComponentId>;
@@ -217,6 +218,26 @@ export async function buildState(
     node: { all: nodes, trees, status, ancestors, descendants, children },
     component: {
       all: components,
+      name: new Map(
+        [...components.entries()]
+          .map(([id, c]) => [
+            id,
+            (() => {
+              const { name } = c as Metadata.ReactFiber.Component.WithCode<any>;
+              return name && name.length > 3 ? name : undefined;
+            })(),
+          ])
+          .filter((v): v is [ComponentId, string] => !!v[1])
+      ),
+      // const componentName = (() => {
+      //   if (state.component.registry.has(componentId)) {
+      //     return state.component.registry.get(componentId)!.name;
+      //   }
+      //   const component = state.component.all.get(componentId)!;
+      //   const name = (component as Metadata.ReactFiber.Component.WithCode<any>)
+      //     .name;
+      //   if (name && name.length > 3) return name;
+      // })();
       registry: new Map(),
       nodes: componentNodes,
       fromCodeId: componentIdByCodeId,

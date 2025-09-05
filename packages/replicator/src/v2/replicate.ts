@@ -19,7 +19,7 @@ import type { FileSink } from "../lib/sinks/base";
 import { aliasSVGPaths, type DescribeSVGStrategy } from "../lib/svg/alias";
 import { replaceSVGPathsInFiles } from "../lib/svg/replace";
 import { Metadata, type Snapshot } from "../types";
-import { rewrite } from "./rewrite";
+import { rewrite } from "./rewrite/agent";
 import {
   buildState,
   type ComponentRegistryItem,

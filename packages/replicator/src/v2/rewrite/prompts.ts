@@ -42,12 +42,19 @@ import { cn } from "@/lib/utils";
 \`\`\`
 `.trim();
 
-export const userMessage = (
+export const initialUserMessage = (
   code: string,
   name: string | undefined,
-  examples: Array<{ jsx: string; html: string }>
-) =>
-  [
+  examples: Array<{ jsx: string; html: string }>,
+  options: { maxNumExamples: number }
+) => {
+  const unique = examples.filter(
+    (ex, index, self) =>
+      index === self.findIndex((t) => t.jsx === ex.jsx && t.html === ex.html)
+  );
+
+  const numExamples = Math.min(unique.length, options.maxNumExamples);
+  return [
     "# Existing Component Name",
     name ?? "N/A",
     "",
@@ -57,22 +64,80 @@ export const userMessage = (
     "```",
     "",
     "# Examples",
-    ...examples.flatMap((e, i) => [
-      `## Example ${i + 1}`,
-      "Input JSX",
-      `\`\`\`javascript\n${e.jsx}\n\`\`\``,
-      "",
-      "Output HTML",
-      `\`\`\`html\n${e.html}\n\`\`\``,
-      "",
-    ]),
+    `Showing ${numExamples} of ${unique.length} examples`,
+    ...unique
+      .slice(0, numExamples)
+      .flatMap((e, i) => [
+        `## Example ${i + 1}`,
+        "Input JSX",
+        `\`\`\`javascript\n${e.jsx}\n\`\`\``,
+        "",
+        "Output HTML",
+        `\`\`\`html\n${e.html}\n\`\`\``,
+        "",
+      ]),
+  ].join("\n");
+};
+
+export const buildErrorsUserMessage = (errors: string[]) =>
+  [
+    "**Error Report:**",
+    "When compiling the code of the component, the following errors were encountered:",
+    "",
+    ...errors,
   ].join("\n");
 
-// export const errorMessage = (error: string) =>
-//   `
-// In your previous response an error occurred. Review the provided error message, understand what went wrong and provide an updated response:
+export const renderErrorsUserMessage = (
+  errors: Array<{ message: string; description: string }>[],
+  examples: Array<{ jsx: string; html: string }>,
+  options: { maxNumExamples: number }
+) => {
+  const { errors: errorsToShow } = errors.reduce(
+    ({ errors, count }, e) =>
+      count === options.maxNumExamples
+        ? { errors, count }
+        : { errors: [...errors, e], count: count + Number(!!e.length) },
+    { errors: [] as typeof errors, count: 0 }
+  );
 
-// \`\`\`
-// ${error}
-// \`\`\`
-// `.trim();
+  return [
+    `
+  **Error Report:**
+  When rendering the component, the HTML output of ${errors.length} examples does not match the expected HTML. Below are the first ${errorsToShow.length} examples.
+  
+  **Instructions:**
+  
+  * The differences are shown as a **git diff**:
+    * Lines prefixed with \`+\` represent what **should be present** (expected output), but is not. These should be added to make the component correct.
+    * Lines prefixed with \`-\` represent what the component in the previous message **is rendering but should not** (actual incorrect output). These should be removed to make the component correct.
+  * First, analyze the diff to understand the discrepancies between expected and actual HTML.
+  * Next, explain what went wrong in the component.
+  * Then, propose potential solutions.
+    * If it cannot be fixed, state that clearly.
+    * If it can be fixed, create a brief outline for how to solve it. Thereafter provide the corrected component code with the fix implemented, following the below output format.
+  
+  **Output Format:**
+  Follow the format below when providing the updated version of the component:
+  
+  # ComponentName
+  \`\`\`typescript
+  <your updated component code here>
+  \`\`\`
+  `.trim(),
+    ``,
+    "# Examples",
+    ...errorsToShow.flatMap((error, index) => [
+      `## Example ${index + 1}`,
+      ...(error.length
+        ? [
+            "Found errors while rendering the component",
+            ...error.flatMap((e) => [`- ${e.message}`, e.description]),
+            "Input JSX",
+            "```javascript",
+            examples[index]?.jsx,
+            "```",
+          ]
+        : ["Status: Success"]),
+    ]),
+  ].join("\n");
+};

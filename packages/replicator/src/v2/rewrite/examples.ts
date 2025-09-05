@@ -152,8 +152,9 @@ export function replaceExamples(
           .slice(1)
           .reverse()
           .forEach((i) => i.parent.children.splice(i.index, 1));
-        replaced.set(parentId, "valid");
       }
+
+      replaced.set(parentId, "valid");
     }
   }
 

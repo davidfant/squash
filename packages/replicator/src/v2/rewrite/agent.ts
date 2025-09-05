@@ -78,12 +78,15 @@ export async function rewrite(
   const exampleComponentName = componentName ?? "Component";
 
   const examplesCode = await Promise.all(
-    [...examples].map(([nodeId, s]) => {
-      if (s.size !== 1) throw new Error("TODO: multiple trees");
+    [...examples].map(([nodeId, example]) => {
+      if (example.size !== 1) {
+        console.log({ example, componentId });
+        throw new Error("TODO: multiple trees");
+      }
       return buildExampleCode({
         component: { id: componentId, name: exampleComponentName },
         nodeId,
-        elements: [...s.values()][0]!.map((s) => clone(s.element)),
+        elements: [...example.values()][0]!.map((s) => clone(s.element)),
         state,
       });
     })

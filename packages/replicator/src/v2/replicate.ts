@@ -75,7 +75,9 @@ export const replicate = (
         async () => {
           const maxConcurrency = 1;
           function enqueue() {
-            for (const [componentId, component] of state.component.all) {
+            for (const [componentId, component] of [
+              ...state.component.all,
+            ].reverse()) {
               if (rewrites.size >= maxConcurrency) {
                 logger.debug(
                   "Max concurrency reached, waiting for a rewrite to finish"
@@ -85,6 +87,12 @@ export const replicate = (
 
               if (!("codeId" in component)) continue;
               if (rewrites.has(componentId)) continue;
+              if (
+                state.component.nodes
+                  .get(componentId)
+                  ?.every((n) => state.node.status.get(n) === "valid")
+              )
+                continue;
 
               const statusesByNodeId = new Map<
                 NodeId,
@@ -124,25 +132,25 @@ export const replicate = (
                   statuses.pending === 0 && statuses.invalid === 0
               );
               if (canRewrite) {
-                if (componentId === "C89") {
-                  // Card
-                  logger.info("Start rewriting component", {
-                    componentId,
-                    nodes: Object.fromEntries(statusesByNodeId.entries()),
-                  });
+                // if (componentId === "C89") {
+                // Card
+                logger.info("Start rewriting component", {
+                  componentId,
+                  nodes: Object.fromEntries(statusesByNodeId.entries()),
+                });
 
-                  const childLogger = logger.child({
-                    name: `rewrite ${componentId}`,
-                  });
-                  const promise = traceable(
-                    (id: ComponentId) => rewrite(id, state, childLogger),
-                    { name: `Rewrite ${componentId}` }
-                  )(componentId);
-                  rewrites.set(
-                    componentId,
-                    promise.then((result) => ({ id: componentId, result }))
-                  );
-                }
+                const childLogger = logger.child({
+                  name: `rewrite ${componentId}`,
+                });
+                const promise = traceable(
+                  (id: ComponentId) => rewrite(id, state, childLogger),
+                  { name: `Rewrite ${componentId}` }
+                )(componentId);
+                rewrites.set(
+                  componentId,
+                  promise.then((result) => ({ id: componentId, result }))
+                );
+                // }
               } else {
                 logger.debug("Cannot rewrite component", {
                   componentId,
@@ -175,8 +183,10 @@ export const replicate = (
               });
             }
 
-            break;
-            enqueue();
+            // break;
+            if (state.component.registry.size < 2) {
+              enqueue();
+            }
           }
         },
         { name: "Rewrite components" }

@@ -142,9 +142,9 @@ function toExpression(value: any, ctx: ReplaceRefsContext): Expression {
           }
         }
 
-        throw new Error(
-          `Component ${componentId} not found in registry and no nodeId`
-        );
+        // throw new Error(
+        //   `Code ${el.codeId} not found in registry and no nodeId`
+        // );
       }
       case "react.tag": {
         const el = value as Metadata.ReactFiber.PropValue.Tag;

@@ -246,12 +246,12 @@ export const replicate = (
 
               const can = canRewrite(componentId);
 
-              // if (can.value) {
-              // if (can.value && ["C53", "C52"].includes(componentId)) {
-              if (
-                can?.value &&
-                ["C40", "C41", "C38", "C20", "C39", "C36"].includes(componentId) // button
-              ) {
+              if (can?.value) {
+                // if (can.value && ["C53", "C52"].includes(componentId)) {
+                // if (
+                //   can?.value &&
+                //   ["C40", "C41", "C38", "C20", "C39", "C36"].includes(componentId) // button
+                // ) {
                 // if (componentId === "C89") {
                 // Card
                 logger.info("Start rewriting component", {

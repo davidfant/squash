@@ -157,11 +157,16 @@ export async function render(
       .map(async (item) => {
         const compiled = await compileComponent(item.code);
         if (!compiled.ok) throw new Error(`Failed to compile ${item.id}`);
-        modules[`@/components/${item.dir}/${item.name}`] = {
+        modules[`@/${item.dir}/${item.name}`] = {
           code: compiled.code,
         };
       }),
   ]);
+
+  // if (opts.component.id === "C30") {
+  //   console.log(opts.state.component.registry);
+  //   // process.exit(0);
+  // }
 
   if (codeBuildErrors) return { ok: false, errors: codeBuildErrors };
 

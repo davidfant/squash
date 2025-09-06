@@ -10,7 +10,6 @@ import {
   wrapLanguageModel,
   type ModelMessage,
 } from "ai";
-import type { Root } from "hast";
 import path from "path";
 import { SKIP, visit } from "unist-util-visit";
 import type { Logger } from "winston";
@@ -47,22 +46,26 @@ export async function rewrite(
 
   const examples = new Map<
     NodeId,
-    Map<Root, Array<{ element: Element; nodeId: NodeId }>>
+    Array<{ element: Element; nodeId: NodeId }>
   >();
   for (const parentId of state.component.nodes.get(componentId) ?? []) {
-    for (const tree of state.node.trees.values()) {
+    for (const tree of state.trees.values()) {
+      const items: Array<{ element: Element; nodeId: NodeId }> = [];
       visit(tree, "element", (element, index, parent) => {
         if (index === undefined) return;
         if (parent?.type !== "element" && parent?.type !== "root") return;
 
         const nodeId = element.properties?.["dataSquashNodeId"] as NodeId;
         if (state.node.ancestors.get(nodeId)?.has(parentId)) {
-          const list = examples.get(parentId)?.get(tree) ?? [];
-          if (!examples.has(parentId)) examples.set(parentId, new Map());
-          examples.get(parentId)?.set(tree, [...list, { element, nodeId }]);
+          items.push({ element, nodeId });
           return SKIP;
         }
       });
+      // TODO: is it a dangerous assumption that we'll just find the first tree that has this element? it assumes that trees are listed by depth (aka the biggest tree first). e.g. if a descendant of parentId exists in a tree, it might also exist a deeper nested descendant in a later tree.
+      if (items.length) {
+        examples.set(parentId, items);
+        break;
+      }
     }
   }
 
@@ -78,18 +81,14 @@ export async function rewrite(
   const exampleComponentName = componentName ?? "Component";
 
   const examplesCode = await Promise.all(
-    [...examples].map(([nodeId, example]) => {
-      if (example.size !== 1) {
-        console.log({ example, componentId });
-        throw new Error("TODO: multiple trees");
-      }
-      return buildExampleCode({
+    [...examples].map(([nodeId, items]) =>
+      buildExampleCode({
         component: { id: componentId, name: exampleComponentName },
         nodeId,
-        elements: [...example.values()][0]!.map((s) => clone(s.element)),
+        elements: items.map((s) => clone(s.element)),
         state,
-      });
-    })
+      })
+    )
   );
 
   const content = Prompts.initialUserMessage(

@@ -26,11 +26,13 @@ export async function buildExampleCode({
   nodeId,
   elements,
   state,
+  placeholders = true,
 }: {
   component: { id: ComponentId; name: string };
   nodeId: NodeId;
   elements: Element[];
   state: ReplicatorState;
+  placeholders?: boolean;
 }) {
   const processors = {
     html: unified()
@@ -53,31 +55,48 @@ export async function buildExampleCode({
   const nodeProps = clone(node.props) as Record<string, unknown>;
 
   const exampleTree: Root = { type: "root", children: elements };
+  if (placeholders) {
+    const depsFromProps = state.node.descendants.fromProps.get(nodeId);
+    for (const dep of depsFromProps ?? []) {
+      let found = false;
 
-  const depsFromProps = state.node.descendants.fromProps.get(nodeId);
-  for (const dep of depsFromProps ?? []) {
-    visit(exampleTree, "element", (element, index, parent) => {
-      if (index === undefined) return;
-      if (parent?.type !== "element" && parent?.type !== "root") return;
+      const parents: Array<Element | Root> = [];
+      visit(exampleTree, "element", (element, index, parent) => {
+        if (index === undefined) return;
+        if (parent?.type !== "element" && parent?.type !== "root") return;
 
-      const nodeId = element.properties?.["dataSquashNodeId"] as NodeId;
+        const nodeId = element.properties?.["dataSquashNodeId"] as NodeId;
 
-      if (state.node.ancestors.get(nodeId)?.has(dep.nodeId)) {
-        parent!.children[index] = h("placeholder", {
-          prop: dep.keys.join("/"),
-        });
-        const last = dep.keys
-          .slice(0, -1)
-          .reduce((acc, k) => acc[k], nodeProps as any);
-        const tag: Metadata.ReactFiber.PropValue.Tag = {
-          $$typeof: "react.tag",
-          tagName: "placeholder",
-          props: { prop: dep.keys.join("/") },
-        };
-        last[dep.keys[dep.keys.length - 1]!] = tag;
-        return SKIP;
-      }
-    });
+        if (state.node.ancestors.get(nodeId)?.has(dep.nodeId)) {
+          const lastKey = dep.keys[dep.keys.length - 1]!;
+          const lastValue = dep.keys
+            .slice(0, -1)
+            .reduce((acc, k) => acc[k], nodeProps as any);
+          if (!found) {
+            found = true;
+            lastValue[lastKey] = {
+              $$typeof: "react.tag",
+              tagName: "placeholder",
+              props: { prop: dep.keys.join("/") },
+            };
+            parent.children[index] = h("placeholder", {
+              prop: dep.keys.join("/"),
+            });
+          } else {
+            parents.push(parent);
+            parent.children[index] = h("rm");
+          }
+          return SKIP;
+        }
+      });
+
+      parents.forEach(
+        (p) =>
+          (p.children = p.children.filter(
+            (el) => !(el.type === "element" && el.tagName === "rm")
+          ))
+      );
+    }
   }
 
   const ref = createRef({ component, props: nodeProps });
@@ -107,7 +126,7 @@ export function replaceExamples(
 ): Map<NodeId, ReplicatorNodeStatus> {
   const replaced = new Map<NodeId, ReplicatorNodeStatus>();
   // for (const tree of state.node.trees.values()) {
-  for (const tree of [...state.node.trees.values()]) {
+  for (const tree of [...state.trees.values()]) {
     const componentNodeIds = state.component.nodes.get(component.id);
     for (const parentId of componentNodeIds ?? []) {
       const node = state.node.all.get(parentId);
@@ -137,7 +156,7 @@ export function replaceExamples(
 
       if (items.length) {
         // TODO: go through props to identify child trees???
-        state.node.trees.set(Math.random().toString(), {
+        state.trees.set(Math.random().toString(), {
           type: "root",
           children: clone(items.map((i) => i.element)),
         });

@@ -114,15 +114,7 @@ export const renderErrorsUserMessage = (
   * Next, explain what went wrong in the component.
   * Then, propose potential solutions.
     * If it cannot be fixed, state that clearly.
-    * If it can be fixed, create a brief outline for how to solve it. Thereafter provide the corrected component code with the fix implemented, following the below output format.
-  
-  **Output Format:**
-  Follow the format below when providing the updated version of the component:
-  
-  # ComponentName
-  \`\`\`typescript
-  <your updated component code here>
-  \`\`\`
+    * If it can be fixed, create a brief outline for how to solve it. Thereafter update the component
   `.trim(),
     ``,
     "# Examples",

@@ -1,8 +1,6 @@
 import * as prettier from "@/lib/prettier";
 import { Metadata } from "@/types";
 import type { Root } from "hast";
-import rehypeParse from "rehype-parse";
-import { unified } from "unified";
 
 type NodeId = Metadata.ReactFiber.NodeId;
 type ComponentId = Metadata.ReactFiber.ComponentId;
@@ -19,9 +17,10 @@ export interface ComponentRegistryItem {
 
 export interface ReplicatorState {
   metadata: Metadata.ReactFiber;
+  trees: Map<string, Root>;
   node: {
     all: Map<NodeId, Metadata.ReactFiber.Node & { id: NodeId }>;
-    trees: Map<string, Root>;
+    depth: Map<NodeId, number>;
     status: Map<NodeId, ReplicatorNodeStatus>;
     ancestors: Map<NodeId, Set<NodeId>>;
     descendants: {
@@ -38,12 +37,46 @@ export interface ReplicatorState {
       ComponentId,
       Metadata.ReactFiber.Component.Any & { id: ComponentId }
     >;
+    maxDepth: Map<ComponentId, number>;
     name: Map<ComponentId, string>;
     registry: Map<ComponentId, ComponentRegistryItem>;
     nodes: Map<ComponentId, NodeId[]>;
     fromCodeId: Map<CodeId, ComponentId>;
   };
   code: Map<CodeId, string>;
+}
+
+function buildDepthMap(
+  nodes: Map<NodeId, Metadata.ReactFiber.Node>
+): Map<NodeId, number> {
+  const memo = new Map<NodeId, number>();
+
+  const depthOf = (id: NodeId): number => {
+    if (memo.has(id)) return memo.get(id)!;
+    const n = nodes.get(id);
+    if (!n) throw new Error(`Unknown node ${id}`);
+    const d = n.parentId === null ? 0 : depthOf(n.parentId) + 1;
+    memo.set(id, d);
+    return d;
+  };
+
+  nodes.forEach((_, id) => depthOf(id));
+  return memo;
+}
+
+function buildComponentMaxDepth(
+  componentNodes: Map<ComponentId, NodeId[]>,
+  depthMap: Map<NodeId, number>
+): Map<ComponentId, number> {
+  const out = new Map<ComponentId, number>();
+  for (const [cid, nodes] of componentNodes.entries()) {
+    const max = nodes.reduce(
+      (m, nid) => Math.max(m, depthMap.get(nid) ?? 0),
+      0
+    );
+    out.set(cid, max);
+  }
+  return out;
 }
 
 function buildAncestorsMap(
@@ -101,7 +134,7 @@ function buildChildrenMap(
   return m;
 }
 
-export function buildDescendantsFromProps(
+function buildDescendantsFromProps(
   nodes: Map<NodeId, Metadata.ReactFiber.Node>
 ): Map<NodeId, Array<{ nodeId: NodeId; keys: Array<string | number> }>> {
   const collect = (
@@ -139,7 +172,7 @@ export function buildDescendantsFromProps(
   return provided;
 }
 
-export function buildComponentNodesMap(
+function buildComponentNodesMap(
   nodes: Map<NodeId, Metadata.ReactFiber.Node>
 ): Map<ComponentId, NodeId[]> {
   const groups = new Map<ComponentId, NodeId[]>();
@@ -153,7 +186,6 @@ export function buildComponentNodesMap(
 }
 
 export async function buildState(
-  html: string,
   metadata: Metadata.ReactFiber
 ): Promise<ReplicatorState> {
   const nodes = new Map(
@@ -200,21 +232,15 @@ export async function buildState(
       })
       .map(([id]) => [id, "pending"])
   );
-
-  const trees = new Map<string, Root>();
-  const tree = unified().use(rehypeParse, { fragment: true }).parse(html);
-  const hostRoot = [...nodes.values()].find(
-    (n) =>
-      components.get(n.componentId)?.tag ===
-      Metadata.ReactFiber.Component.Tag.HostRoot
-  );
-  if (hostRoot) trees.set("App", tree);
+  const depth = buildDepthMap(nodes);
 
   return {
     metadata,
-    node: { all: nodes, trees, status, ancestors, descendants, children },
+    trees: new Map(),
+    node: { all: nodes, depth, status, ancestors, descendants, children },
     component: {
       all: components,
+      maxDepth: buildComponentMaxDepth(componentNodes, depth),
       name: new Map(
         [...components.entries()]
           .map(([id, c]) => [

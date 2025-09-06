@@ -34,7 +34,6 @@ export async function aliasSVGPaths(
   metadata: Metadata.ReactFiber | null,
   describe: DescribeSVGStrategy
 ): Promise<{
-  html: string;
   metadata: Metadata.ReactFiber | null;
   dPathMapping: Map<string, string>;
 }> {
@@ -99,7 +98,6 @@ export async function aliasSVGPaths(
   );
 
   return {
-    html: $.html(),
     metadata: replaceSVGPathAliases(metadata, dPathMapping),
     dPathMapping,
   };

@@ -102,7 +102,7 @@ function toExpression(value: any, ctx: ReplaceRefsContext): Expression {
           );
         } else if (el.nodeId) {
           // TODO: figure out how to get the right tree..... or can we get all for now?
-          for (const tree of ctx.state.node.trees.values()) {
+          for (const tree of ctx.state.trees.values()) {
             const elements: Element[] = [];
             visit(tree, "element", (element, index, parent) => {
               if (index === undefined) return;

@@ -9,8 +9,10 @@ import { traceable } from "langsmith/traceable";
 import path from "path";
 import recmaJsx from "recma-jsx";
 import recmaStringify from "recma-stringify";
+import rehypeParse from "rehype-parse";
 import rehypeRecma from "rehype-recma";
 import { unified } from "unified";
+import { visit } from "unist-util-visit";
 import { langsmith } from "../lib/ai";
 import { downloadRemoteUrl } from "../lib/assets/downloadRemoteAsset";
 import { identifyUrlsToDownload } from "../lib/assets/identifyRemoveAssetsToDownload";
@@ -33,7 +35,11 @@ export const replicate = (
 ) =>
   traceable(
     async (_url: string) => {
-      const $ = load(snapshot.page.html);
+      // const $ = load(snapshot.page.html, { xmlMode: true });
+      const $ = load(
+        // TODO: this might incorrectly match with other text
+        snapshot.page.html.replace(/<(\/?)h([1-6])/gi, "<$1x-h$2")
+      );
       const html = $("html") ?? $("html");
       const head = $("head") ?? $("head");
       const body = $("body") ?? $("body");
@@ -62,7 +68,26 @@ export const replicate = (
       if (!m) throw new Error("Metadata is required");
       fuseMemoForwardRef(m);
 
-      const state = await buildState(svgAliased.html, m);
+      const state = await buildState(m);
+
+      // $("h1,h2,h3,h4,h5,h6").each((_, el) => {
+      //   el.tagName = `x-h${el.tagName.slice(1)}`;
+      // });
+      const rootTree = unified()
+        .use(rehypeParse, { fragment: true })
+        .parse($.xml());
+      visit(rootTree, "element", (n) => {
+        if (n.tagName.startsWith("x-h")) n.tagName = n.tagName.slice(2);
+      });
+      state.trees.set("App", rootTree);
+
+      const hostRoot = [...state.node.all.values()].find(
+        (n) =>
+          state.component.all.get(n.componentId)?.tag ===
+          Metadata.ReactFiber.Component.Tag.HostRoot
+      );
+      if (hostRoot) state.trees.set("App", rootTree);
+
       const rewrites: Map<
         ComponentId,
         Promise<{
@@ -71,13 +96,20 @@ export const replicate = (
         }>
       > = new Map();
 
+      const componentsByMaxDepth = [...state.component.all.entries()].sort(
+        ([, a], [, b]) =>
+          (state.component.maxDepth.get(b.id) ?? 0) -
+          (state.component.maxDepth.get(a.id) ?? 0)
+      );
+      console.log(state.component.maxDepth);
+      console.log(componentsByMaxDepth);
+
       await traceable(
         async () => {
           const maxConcurrency = 1;
           function enqueue() {
-            for (const [componentId, component] of [
-              ...state.component.all,
-            ].reverse()) {
+            // TODO: reorder by max node depth
+            for (const [componentId, component] of componentsByMaxDepth) {
               if (rewrites.size >= maxConcurrency) {
                 logger.debug(
                   "Max concurrency reached, waiting for a rewrite to finish"
@@ -132,6 +164,7 @@ export const replicate = (
                   statuses.pending === 0 && statuses.invalid === 0
               );
               if (canRewrite) {
+                // if (canRewrite && componentId === "C9") {
                 // if (componentId === "C89") {
                 // Card
                 logger.info("Start rewriting component", {
@@ -183,8 +216,7 @@ export const replicate = (
               });
             }
 
-            // break;
-            if (state.component.registry.size < 2) {
+            if (state.component.registry.size < 3) {
               enqueue();
             }
           }
@@ -192,32 +224,22 @@ export const replicate = (
         { name: "Rewrite components" }
       )();
 
-      const hostRoot = [...state.node.all.values()].find(
-        (n) =>
-          state.component.all.get(n.componentId)?.tag ===
-          Metadata.ReactFiber.Component.Tag.HostRoot
-      );
-      if (hostRoot) {
-        const tree = state.node.trees.get("App");
-        if (tree) {
-          const processor = unified()
-            // .use(rehypeStripSquashAttribute)
-            .use(rehypeRecma)
-            .use(recmaJsx)
-            .use(recmaRemoveRedundantFragment)
-            .use(recmaWrapAsComponent, "App")
-            .use(recmaReplaceRefs, state)
-            .use(recmaStripSquashAttribute)
-            .use(recmaFixProperties)
-            .use(recmaStringify);
+      const processor = unified()
+        // .use(rehypeStripSquashAttribute)
+        .use(rehypeRecma)
+        .use(recmaJsx)
+        .use(recmaRemoveRedundantFragment)
+        .use(recmaWrapAsComponent, "App")
+        .use(recmaReplaceRefs, state)
+        .use(recmaStripSquashAttribute)
+        .use(recmaFixProperties)
+        .use(recmaStringify);
 
-          const appstx = await processor.run(tree);
-          await sink.writeText(
-            "src/App.tsx",
-            await prettier.ts(processor.stringify(appstx))
-          );
-        }
-      }
+      const appstx = await processor.run(rootTree);
+      await sink.writeText(
+        "src/App.tsx",
+        await prettier.ts(processor.stringify(appstx))
+      );
 
       const replicatedHtml = `
 <!DOCTYPE html>
@@ -228,6 +250,7 @@ export const replicate = (
   <script type="module" src="/src/main.tsx"></script>
 </html>
   `.trim();
+
       await replaceSVGPathsInFiles(sink, svgAliased.dPathMapping);
       await prettier
         .html(replicatedHtml)

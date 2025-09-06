@@ -1,3 +1,7 @@
+import {
+  analyzeComponent,
+  type ComponentToAnalyze,
+} from "@/lib/analyzeComponent";
 import { logger } from "@/lib/logger";
 import * as prettier from "@/lib/prettier";
 import { recmaFixProperties } from "@/lib/recma/fixProperties";
@@ -40,6 +44,7 @@ export const replicate = (
         // TODO: this might incorrectly match with other text
         snapshot.page.html.replace(/<(\/?)h([1-6])/gi, "<$1x-h$2")
       );
+
       const html = $("html") ?? $("html");
       const head = $("head") ?? $("head");
       const body = $("body") ?? $("body");
@@ -70,12 +75,40 @@ export const replicate = (
 
       const state = await buildState(m);
 
+      const analyzed = await traceable(
+        (components: Array<ComponentToAnalyze>) =>
+          Promise.all(components.map(analyzeComponent)),
+        { name: "Analyze All Components" }
+      )(
+        [...state.component.all]
+          .map(([cid, c]) => {
+            if (!("codeId" in c)) return;
+            const code = state.code.get(c.codeId);
+            if (!code) return;
+            return { id: cid, code, name: state.component.name.get(cid) };
+          })
+          .filter((v) => !!v)
+        // .slice(0, 3)
+      );
+      const componentAnalysis = new Map<ComponentId, (typeof analyzed)[number]>(
+        analyzed.map((a) => [a.id, a])
+      );
+
+      analyzed
+        .filter((a) => a.headOnly)
+        .forEach((a) => {
+          state.component.all.delete(a.id);
+          state.component.nodes
+            .get(a.id)
+            ?.forEach((id) => state.node.all.delete(id));
+        });
+
       // $("h1,h2,h3,h4,h5,h6").each((_, el) => {
       //   el.tagName = `x-h${el.tagName.slice(1)}`;
       // });a
       const rootTree = unified()
         .use(rehypeParse, { fragment: true })
-        .parse($.xml());
+        .parse(body.html()!);
       visit(rootTree, "element", (n) => {
         if (n.tagName.startsWith("x-h")) n.tagName = n.tagName.slice(2);
       });
@@ -112,6 +145,8 @@ export const replicate = (
         if (rewrites.has(componentId)) {
           return { value: false, stats: new Map() };
         }
+
+        const analysis = componentAnalysis.get(componentId);
         if (
           state.component.nodes
             .get(componentId)

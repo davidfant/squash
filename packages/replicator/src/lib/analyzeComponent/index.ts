@@ -1,12 +1,6 @@
 import type { Metadata } from "@/types";
-import { type AnthropicProviderOptions } from "@ai-sdk/anthropic";
 import { google } from "@ai-sdk/google";
-import {
-  InvalidToolInputError,
-  tool,
-  wrapLanguageModel,
-  type ModelMessage,
-} from "ai";
+import { stepCountIs, tool, wrapLanguageModel } from "ai";
 import { traceable } from "langsmith/traceable";
 import { z } from "zod";
 import { generateText } from "../ai";
@@ -29,64 +23,62 @@ export const analyzeComponent = (component: ComponentToAnalyze) =>
       reasoning: string | undefined;
       name: string;
       description: string;
-      dependencies: Array<{ name: string; description: string }>;
+      headOnly: boolean;
+      functions: Array<{
+        jsonPath: string;
+        mayBeFunction: boolean;
+        usedInRender: boolean;
+        requiredForRender: boolean;
+      }>;
     }> => {
-      const messages: ModelMessage[] = [
-        { role: "system", content: Prompts.instructions },
-        { role: "user", content: Prompts.userMessage(comp.code, comp.name) },
-      ];
-
-      for (let attempt = 0; attempt < 2; attempt++) {
-        const { reasoningText, toolCalls, response } = await generateText({
-          model: wrapLanguageModel({
-            // model: anthropic("claude-sonnet-4-20250514"),
-            model: google("gemini-2.5-flash"),
-            middleware: filesystemCacheMiddleware(),
-          }),
-          messages: withCacheBreakpoints(messages),
-          tools: {
-            analyzeComponent: tool({
-              description:
-                "Analyze a minified React component and return metadata about the component.",
-              inputSchema: z.object({
-                name: z.string(),
-                description: z.string(),
-                dependencies: z
-                  .object({ name: z.string(), description: z.string() })
-                  .array(),
-              }),
+      const { reasoningText, toolResults } = await generateText({
+        model: wrapLanguageModel({
+          model: google("gemini-2.5-flash"),
+          middleware: filesystemCacheMiddleware(),
+        }),
+        messages: withCacheBreakpoints([
+          { role: "system", content: Prompts.instructions },
+          { role: "user", content: Prompts.userMessage(comp.code, comp.name) },
+        ]),
+        tools: {
+          analyzeComponent: tool({
+            description:
+              "Analyze a minified React component and return metadata about the component.",
+            inputSchema: z.object({
+              name: z.string(),
+              description: z.string(),
+              headOnly: z.boolean(),
+              functions: z
+                .object({
+                  jsonPath: z.string(),
+                  mayBeFunction: z.boolean(),
+                  usedInRender: z.boolean(),
+                  requiredForRender: z.boolean(),
+                })
+                .array(),
             }),
-          },
-          providerOptions:
-            attempt === 0
-              ? {
-                  anthropic: {
-                    thinking: { type: "enabled", budgetTokens: 1024 },
-                  } satisfies AnthropicProviderOptions,
-                }
-              : undefined,
-          // stopWhen: [stepCountIs(1)],
-        });
-        messages.push(...response.messages);
+            execute: () => ({ ok: true }),
+          }),
+        },
+        toolChoice: { type: "tool", toolName: "analyzeComponent" },
+        stopWhen: [
+          ({ steps }) =>
+            steps
+              .flatMap((s) => s.toolResults)
+              .some(
+                (s) =>
+                  !s.dynamic && s.toolName === "analyzeComponent" && s.output.ok
+              ),
+          stepCountIs(3),
+        ],
+      });
 
-        const tc = toolCalls[toolCalls.length - 1];
-        if (
-          tc &&
-          tc.toolName === "analyzeComponent" &&
-          tc.invalid &&
-          tc.error instanceof InvalidToolInputError
-        ) {
-          messages.push({ role: "user", content: tc.error.message });
-          continue;
-        }
-
-        if (tc && !tc.dynamic && tc.toolName === "analyzeComponent") {
-          return { ...tc.input, id: comp.id, reasoning: reasoningText };
-        }
-
-        break;
+      const tr = toolResults[toolResults.length - 1];
+      if (tr && !tr.dynamic && tr.toolName === "analyzeComponent") {
+        return { ...tr.input, id: comp.id, reasoning: reasoningText };
       }
-      throw new Error("Failed to rewrite component");
+
+      throw new Error("Failed to analyze component");
     },
     { name: `Analyze Component ${component.id}` }
   )(component);

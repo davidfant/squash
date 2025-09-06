@@ -1,32 +1,44 @@
 export const instructions = `
-You are given a minified JavaScript snippet that defines a React component.
+You are given a **minified JavaScript snippet** that defines a React component.
 
-**Your tasks**  
-1. **Understand the snippet** - de-minify it mentally and infer:  
-   • the component's name (if missing, choose a concise, Pascal-cased name)
-   • what the component does and any obvious UI/UX behaviour 
-   • whether its render output uses *only* native DOM elements (e.g. \`<div>\`, \`<span>\` …) or calls other internal React components.
-   • de-minify identifiers - choose descriptive Pascal-cased names for any obviously minified props, variables, or JSX children. For example, if there is a component \`a\` used within the component that seems to be a button, rename it to \`Button\`.
+--------------------------------------------------
+🔍 **Your mission**
+--------------------------------------------------
+1. Reverse-engineer the component.  
+2. Produce a **prop contract** that drills **deeply** into every value reachable from \`props\`, locating anything that _might be_ a **function**.  
+3. Determine if the component is **head-only** (it inserts \`<title>\`, \`<meta>\`, \`<style>\`, etc. and renders nothing visible).
+4. Call the tool \`analyzeComponent\` to submit your analysis.
 
-2. **Identify internal dependencies** - i.e. any React component *invoked* inside this component (either via JSX or \`React.createElement\`) that is not a native DOM tag. Don't include dependencies such as hooks, React contexts, imported util functions or other non-React components.
-   For each dependency, output:  
-   • its de-minified import/JSX name (e.g. \`Button\`, \`Card.Header\`)  
-   • a short, best-effort description of what it appears to be or do.
+--------------------------------------------------
+📝 **Tasks**
+--------------------------------------------------
 
-4. **Call the tool\`componentAnalysis\`** exactly once with a JSON argument that has the following shape. You MUST provide all the fields: name, description, dependencies
+### 1. Analyse the component
+• Mentally de-minify the code and infer a clear, Pascal-cased component name if one is missing.  
+• Write a concise, one-sentence description of what the component does.
 
-\`\`\`json
-{
-  "name":        "<ComponentName>",               // string
-  "description": "<What the component does>",     // short paragraph
-  "dependencies": [                               // array may be empty
-    {
-      "name": "<DependencyName>",
-      "description": "<Best-effort guess of its purpose>"
-    }
-  ]
-}
-\`\`\`
+### 2. Deep-scan all props
+Walk the entire props object **recursively**:
+
+* Follow every property, array item, and nested object encountered from the root props parameter.  
+* For every value that **can** be a function (detected via \`typeof === "function"\`, invocation, or render-prop usage), record **where** it lives using a **JSONPath** (RFC 6901-style) that starts at the root of the _incoming props object_.
+
+Example paths  
+• Root prop: \`$.onClick\`  
+• Nested object key: \`$.options.renderItem\`  
+• Function inside array items: \`$.items[*].render\`  
+
+For **each** discovered path output:
+
+| field | meaning |
+|-------|---------|
+| **jsonPath** | Path to the value (use \`$\` for root, \`[\*]\` for all indices). |
+| **mayBeFunction** | \`true\` if the value _can_ be a function. |
+| **usedInRender** | \`true\` if that function (or its return value) influences what the component's **render/return** produces. |
+| **requiredForRender** | \`true\` if omitting the function causes an error or breaks the render; otherwise \`false\`. |
+
+### 3. Detect head-only components
+If the component's sole purpose is to inject or mutate \`<head>\` elements and it returns **no visible DOM**, set **\`headOnly\`** to \`true\`; otherwise \`false\`.
 `.trim();
 
 export const userMessage = (code: string, name: string | undefined) =>
@@ -37,12 +49,3 @@ Name: ${name ?? "missing"}
 ${code}
 \`\`\`
 `.trim();
-
-// export const errorMessage = (error: string) =>
-//   `
-// In your previous response an error occurred. Review the provided error message, understand what went wrong and provide an updated response:
-
-// \`\`\`
-// ${error}
-// \`\`\`
-// `.trim();

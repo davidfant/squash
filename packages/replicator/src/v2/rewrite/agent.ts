@@ -4,7 +4,7 @@ import { filesystemCacheMiddleware } from "@/lib/filesystemCacheMiddleware";
 import { withCacheBreakpoints } from "@/lib/rewriteComponent/llm/withCacheBreakpoint";
 import type { Metadata } from "@/types";
 import { anthropic, type AnthropicProviderOptions } from "@ai-sdk/anthropic";
-import { stepCountIs, tool, wrapLanguageModel, type ModelMessage } from "ai";
+import { stepCountIs, tool, wrapLanguageModel } from "ai";
 import path from "path";
 import { SKIP, visit } from "unist-util-visit";
 import type { Logger } from "winston";
@@ -92,112 +92,102 @@ export async function rewrite(
     examplesCode,
     { maxNumExamples: 5 }
   );
-  const messages: ModelMessage[] = [
-    { role: "system", content: Prompts.instructions },
-    { role: "user", content },
-  ];
 
-  let attempt = 0;
-  while (attempt < 3) {
-    logger.debug(`Rewriting component`, { componentId, attempt });
-    const { reasoningText, toolResults, response } = await generateText({
-      model: wrapLanguageModel({
-        model: anthropic("claude-sonnet-4-20250514"),
-        // model: google("gemini-2.5-flash"),
-        middleware: filesystemCacheMiddleware(),
-      }),
-      messages: withCacheBreakpoints(messages),
-      tools: {
-        updateComponent: tool({
-          description:
-            "Rewrite a minified React component and return the updated TypeScript code.",
-          inputSchema: z.object({
-            code: z.string(),
-            name: z.string(),
-            description: z.string(),
-          }),
-          execute: async (input) => {
-            const error = await validate({
-              component: {
-                id: componentId,
-                name: { original: exampleComponentName, new: input.name },
-                code: input.code,
-              },
-              state,
-              examples: examplesCode,
-            });
-            if (error) {
-              logger.debug("Validation error after rewriting component", {
-                componentId,
-                attempt,
-                error,
-              });
-              return { ok: false, error };
-            }
-
-            return { ok: true };
-          },
+  logger.debug(`Rewriting component`, { componentId });
+  const { reasoningText, toolResults, response } = await generateText({
+    model: wrapLanguageModel({
+      model: anthropic("claude-sonnet-4-20250514"),
+      // model: google("gemini-2.5-flash"),
+      middleware: filesystemCacheMiddleware(),
+    }),
+    messages: withCacheBreakpoints([
+      { role: "system", content: Prompts.instructions },
+      { role: "user", content },
+    ]),
+    tools: {
+      updateComponent: tool({
+        description:
+          "Rewrite a minified React component and return the updated TypeScript code.",
+        inputSchema: z.object({
+          code: z.string(),
+          name: z.string(),
+          description: z.string(),
         }),
-      },
-      providerOptions: {
-        anthropic: {
-          thinking: { type: "enabled", budgetTokens: 1024 },
-        } satisfies AnthropicProviderOptions,
-      },
-      stopWhen: [
-        // ❸ — exit *only* after a non-error result for updateComponent
-        ({ steps }) =>
-          steps
-            .flatMap((s) => s.toolResults)
-            .some(
-              (s) =>
-                !s.dynamic && s.toolName === "updateComponent" && s.output.ok
-            ),
-        ({ steps }) =>
-          steps
-            .flatMap((s) => s.toolResults)
-            .filter(
-              (s) =>
-                !s.dynamic && s.toolName === "updateComponent" && !s.output.ok
-            ).length >= 3,
-        stepCountIs(5),
-      ],
-    });
-    messages.push(...response.messages);
+        execute: async (input) => {
+          const error = await validate({
+            component: {
+              id: componentId,
+              name: { original: exampleComponentName, new: input.name },
+              code: input.code,
+            },
+            state,
+            examples: examplesCode,
+          });
+          if (error) {
+            logger.debug("Validation error after rewriting component", {
+              componentId,
+              error,
+            });
+            return { ok: false, error };
+          }
 
-    const tr = toolResults[toolResults.length - 1];
-    if (!tr) return null;
+          return { ok: true };
+        },
+      }),
+    },
+    providerOptions: {
+      anthropic: {
+        thinking: { type: "enabled", budgetTokens: 1024 },
+      } satisfies AnthropicProviderOptions,
+    },
+    stopWhen: [
+      // ❸ — exit *only* after a non-error result for updateComponent
+      ({ steps }) =>
+        steps
+          .flatMap((s) => s.toolResults)
+          .some(
+            (s) => !s.dynamic && s.toolName === "updateComponent" && s.output.ok
+          ),
+      ({ steps }) =>
+        steps
+          .flatMap((s) => s.toolResults)
+          .filter(
+            (s) =>
+              !s.dynamic && s.toolName === "updateComponent" && !s.output.ok
+          ).length >= 3,
+      stepCountIs(5),
+    ],
+  });
 
-    if (!tr.dynamic && tr.toolName === "updateComponent") {
-      const registryItem: ComponentRegistryItem = {
-        id: componentId,
-        dir: path.join("components", componentId),
-        name: tr.input.name,
-        code: tr.input.code,
-      };
-      state.component.registry.set(componentId, registryItem);
-      state.component.name.set(componentId, tr.input.name);
+  const tr = toolResults[toolResults.length - 1];
+  if (!tr) return null;
 
-      const replaced = replaceExamples(
-        { id: componentId, name: tr.input.name },
-        state
-      );
-      replaced.forEach((status, nodeId) =>
-        state.node.status.set(nodeId, status)
-      );
-      return {
-        name: tr.input.name,
-        description: tr.input.description,
-        item: registryItem,
-        reasoning: reasoningText,
-        nodes: replaced,
-      };
-    }
+  if (!tr.dynamic && tr.toolName === "updateComponent") {
+    const registryItem: ComponentRegistryItem = {
+      id: componentId,
+      dir: path.join("components", componentId),
+      name: tr.input.name,
+      code: tr.input.code,
+    };
+    state.component.registry.set(componentId, registryItem);
+    state.component.name.set(componentId, tr.input.name);
+
+    const replaced = replaceExamples(
+      { id: componentId, name: tr.input.name },
+      state
+    );
+    replaced.forEach((status, nodeId) => state.node.status.set(nodeId, status));
+    return {
+      name: tr.input.name,
+      description: tr.input.description,
+      item: registryItem,
+      reasoning: reasoningText,
+      nodes: replaced,
+    };
   }
 
   logger.warn("Failed to rewrite component after all attempts", {
     componentId,
-    attempt,
   });
   return null;
 }

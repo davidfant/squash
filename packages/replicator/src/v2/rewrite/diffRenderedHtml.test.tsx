@@ -79,6 +79,10 @@ describe("diffRenderedHtml", () => {
           )
         ).toBeNull();
       });
+
+      test("empty", () => {
+        expect(diff(`<div />`, <div style={{}} />)).toBeNull();
+      });
     });
 
     describe("class invariants", () => {

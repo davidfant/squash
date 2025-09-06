@@ -159,14 +159,14 @@ export async function rewrite(
             .filter(
               (s) =>
                 !s.dynamic && s.toolName === "updateComponent" && !s.output.ok
-            ).length >= 2,
+            ).length >= 3,
         stepCountIs(5),
       ],
     });
     messages.push(...response.messages);
 
     const tr = toolResults[toolResults.length - 1];
-    if (!tr) throw new Error("No tool call found");
+    if (!tr) return null;
 
     if (!tr.dynamic && tr.toolName === "updateComponent") {
       const registryItem: ComponentRegistryItem = {

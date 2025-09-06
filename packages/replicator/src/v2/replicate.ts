@@ -72,7 +72,7 @@ export const replicate = (
 
       // $("h1,h2,h3,h4,h5,h6").each((_, el) => {
       //   el.tagName = `x-h${el.tagName.slice(1)}`;
-      // });
+      // });a
       const rootTree = unified()
         .use(rehypeParse, { fragment: true })
         .parse($.xml());
@@ -104,7 +104,7 @@ export const replicate = (
 
       await traceable(
         async () => {
-          const maxConcurrency = 10;
+          const maxConcurrency = 100;
           function enqueue() {
             // TODO: reorder by max node depth
             for (const [componentId, component] of componentsByMaxDepth) {
@@ -121,8 +121,22 @@ export const replicate = (
                 state.component.nodes
                   .get(componentId)
                   ?.every((n) => state.node.status.get(n) === "valid")
-              )
+              ) {
                 continue;
+              }
+
+              // TODO: very hacky way of excluding components with functions in props
+              if (
+                state.component.nodes
+                  .get(componentId)
+                  ?.some((id) =>
+                    JSON.stringify(state.node.all.get(id)?.props).includes(
+                      '"$$typeof":"function"'
+                    )
+                  )
+              ) {
+                continue;
+              }
 
               const statusesByNodeId = new Map<
                 NodeId,
@@ -214,9 +228,9 @@ export const replicate = (
               });
             }
 
-            // if (state.component.registry.size < 3) {
-            //   enqueue();
-            // }
+            if (state.component.registry.size < 50) {
+              enqueue();
+            }
           }
         },
         { name: "Rewrite components" }

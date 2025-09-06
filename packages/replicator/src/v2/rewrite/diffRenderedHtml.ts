@@ -67,7 +67,9 @@ function simplify(
   if ("attrs" in node) {
     for (const { name, value } of node.attrs) {
       if (name === "style") {
-        attrs[name] = canonicaliseStyle(value);
+        const canonical = canonicaliseStyle(value);
+        if (!Object.keys(canonical).length) continue;
+        attrs[name] = canonical;
       } else if (name === "class") {
         attrs[name] = canonicaliseClass(value);
       } else {

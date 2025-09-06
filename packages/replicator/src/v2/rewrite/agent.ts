@@ -4,12 +4,7 @@ import { filesystemCacheMiddleware } from "@/lib/filesystemCacheMiddleware";
 import { withCacheBreakpoints } from "@/lib/rewriteComponent/llm/withCacheBreakpoint";
 import type { Metadata } from "@/types";
 import { anthropic, type AnthropicProviderOptions } from "@ai-sdk/anthropic";
-import {
-  InvalidToolInputError,
-  tool,
-  wrapLanguageModel,
-  type ModelMessage,
-} from "ai";
+import { stepCountIs, tool, wrapLanguageModel, type ModelMessage } from "ai";
 import path from "path";
 import { SKIP, visit } from "unist-util-visit";
 import type { Logger } from "winston";
@@ -105,7 +100,7 @@ export async function rewrite(
   let attempt = 0;
   while (attempt < 3) {
     logger.debug(`Rewriting component`, { componentId, attempt });
-    const { reasoningText, toolCalls, response } = await generateText({
+    const { reasoningText, toolResults, response } = await generateText({
       model: wrapLanguageModel({
         model: anthropic("claude-sonnet-4-20250514"),
         // model: google("gemini-2.5-flash"),
@@ -121,6 +116,27 @@ export async function rewrite(
             name: z.string(),
             description: z.string(),
           }),
+          execute: async (input) => {
+            const error = await validate({
+              component: {
+                id: componentId,
+                name: { original: exampleComponentName, new: input.name },
+                code: input.code,
+              },
+              state,
+              examples: examplesCode,
+            });
+            if (error) {
+              logger.debug("Validation error after rewriting component", {
+                componentId,
+                attempt,
+                error,
+              });
+              return { ok: false, error };
+            }
+
+            return { ok: true };
+          },
         }),
       },
       providerOptions: {
@@ -128,63 +144,50 @@ export async function rewrite(
           thinking: { type: "enabled", budgetTokens: 1024 },
         } satisfies AnthropicProviderOptions,
       },
+      stopWhen: [
+        // ❸ — exit *only* after a non-error result for updateComponent
+        ({ steps }) =>
+          steps
+            .flatMap((s) => s.toolResults)
+            .some(
+              (s) =>
+                !s.dynamic && s.toolName === "updateComponent" && s.output.ok
+            ),
+        ({ steps }) =>
+          steps
+            .flatMap((s) => s.toolResults)
+            .filter(
+              (s) =>
+                !s.dynamic && s.toolName === "updateComponent" && !s.output.ok
+            ).length >= 2,
+        stepCountIs(5),
+      ],
     });
     messages.push(...response.messages);
 
-    const tc = toolCalls[toolCalls.length - 1];
-    if (!tc) throw new Error("No tool call found");
-    if (tc.invalid && tc.error instanceof InvalidToolInputError) {
-      logger.warn("Invalid tool call when rewriting component", {
-        componentId,
-        attempt,
-        toolCalls,
-      });
-      messages.push({ role: "user", content: tc.error.message });
-      continue;
-    }
+    const tr = toolResults[toolResults.length - 1];
+    if (!tr) throw new Error("No tool call found");
 
-    if (tc.dynamic) throw new Error("Dynamic tool call found");
-    if (tc.toolName === "updateComponent") {
-      const error = await validate({
-        component: {
-          id: componentId,
-          name: { original: exampleComponentName, new: tc.input.name },
-          code: tc.input.code,
-        },
-        state,
-        examples: examplesCode,
-      });
-      if (error) {
-        logger.debug("Validation error after rewriting component", {
-          componentId,
-          attempt,
-          error,
-        });
-
-        messages.push({ role: "user", content: error });
-        attempt++;
-        continue;
-      }
-
+    if (!tr.dynamic && tr.toolName === "updateComponent") {
       const registryItem: ComponentRegistryItem = {
         id: componentId,
         dir: path.join("components", componentId),
-        name: tc.input.name,
-        code: tc.input.code,
+        name: tr.input.name,
+        code: tr.input.code,
       };
       state.component.registry.set(componentId, registryItem);
-      state.component.name.set(componentId, tc.input.name);
+      state.component.name.set(componentId, tr.input.name);
 
       const replaced = replaceExamples(
-        { id: componentId, name: tc.input.name },
+        { id: componentId, name: tr.input.name },
         state
       );
       replaced.forEach((status, nodeId) =>
         state.node.status.set(nodeId, status)
       );
       return {
-        name: tc.input.name,
-        description: tc.input.description,
+        name: tr.input.name,
+        description: tr.input.description,
         item: registryItem,
         reasoning: reasoningText,
         nodes: replaced,

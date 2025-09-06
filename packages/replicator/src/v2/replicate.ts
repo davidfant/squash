@@ -101,12 +101,10 @@ export const replicate = (
           (state.component.maxDepth.get(b.id) ?? 0) -
           (state.component.maxDepth.get(a.id) ?? 0)
       );
-      console.log(state.component.maxDepth);
-      console.log(componentsByMaxDepth);
 
       await traceable(
         async () => {
-          const maxConcurrency = 1;
+          const maxConcurrency = 10;
           function enqueue() {
             // TODO: reorder by max node depth
             for (const [componentId, component] of componentsByMaxDepth) {
@@ -164,7 +162,7 @@ export const replicate = (
                   statuses.pending === 0 && statuses.invalid === 0
               );
               if (canRewrite) {
-                // if (canRewrite && componentId === "C9") {
+                // if (canRewrite && ["C53", "C52"].includes(componentId)) {
                 // if (componentId === "C89") {
                 // Card
                 logger.info("Start rewriting component", {
@@ -216,9 +214,9 @@ export const replicate = (
               });
             }
 
-            if (state.component.registry.size < 3) {
-              enqueue();
-            }
+            // if (state.component.registry.size < 3) {
+            //   enqueue();
+            // }
           }
         },
         { name: "Rewrite components" }

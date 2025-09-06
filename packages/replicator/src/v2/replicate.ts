@@ -116,7 +116,7 @@ export const replicate = (
       //   el.tagName = `x-h${el.tagName.slice(1)}`;
       // });a
 
-      state.trees.set("App", clone(rootTree));
+      state.trees.set("App", rootTree);
       const hostRoot = [...state.node.all.values()].find(
         (n) =>
           state.component.all.get(n.componentId)?.tag ===
@@ -245,7 +245,7 @@ export const replicate = (
 
       await traceable(
         async () => {
-          const maxConcurrency = 10;
+          const maxConcurrency = 30;
           function enqueue() {
             // TODO: reorder by max node depth
             for (const [componentId, component] of componentsByMaxDepth) {

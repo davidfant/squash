@@ -67,6 +67,7 @@
     "hastscript": "^9.0.1",
     "htmlparser2": "^10.0.0",
     "jest-diff": "^30.0.5",
+    "jsonpath-plus": "^10.3.0",
     "langsmith": "^0.3.66",
     "lodash.camelcase": "^4.3.0",
     "lodash.kebabcase": "^4.1.1",

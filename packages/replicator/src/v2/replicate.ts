@@ -27,6 +27,7 @@ import { replaceSVGPathsInFiles } from "../lib/svg/replace";
 import { Metadata, type Snapshot } from "../types";
 import { recmaReplaceRefs } from "./ref";
 import { rewrite } from "./rewrite/agent";
+import { getPropFunctionsRequiredForRender } from "./rewrite/propFunctions";
 import { buildState, type ReplicatorNodeStatus } from "./state";
 
 type NodeId = Metadata.ReactFiber.NodeId;
@@ -137,22 +138,21 @@ export const replicate = (
 
       function canRewrite(componentId: ComponentId): {
         value: boolean;
-        stats: Map<NodeId, Record<ReplicatorNodeStatus, number>>;
-      } {
+        details: {
+          statusesByNodeId: Map<NodeId, Record<ReplicatorNodeStatus, number>>;
+          propFunctionsByNodeId: Map<NodeId, Record<string, unknown[]>>;
+        };
+      } | null {
         const component = state.component.all.get(componentId);
-        if (!component) return { value: false, stats: new Map() };
-        if (!("codeId" in component)) return { value: false, stats: new Map() };
-        if (rewrites.has(componentId)) {
-          return { value: false, stats: new Map() };
-        }
-
-        const analysis = componentAnalysis.get(componentId);
         if (
+          !component ||
+          !("codeId" in component) ||
+          rewrites.has(componentId) ||
           state.component.nodes
             .get(componentId)
             ?.every((n) => state.node.status.get(n) === "valid")
         ) {
-          return { value: false, stats: new Map() };
+          return null;
         }
 
         // TODO: very hacky way of excluding components with functions in props.
@@ -196,14 +196,39 @@ export const replicate = (
           })
         );
 
+        const propFunctionsByNodeId: Map<
+          NodeId,
+          Record<string, unknown[]>
+        > = new Map(
+          state.component.nodes
+            .get(componentId)
+            ?.filter((nodeId) => state.node.descendants.all.get(nodeId)?.size)
+            .map((nodeId) => {
+              return [
+                nodeId,
+                getPropFunctionsRequiredForRender(
+                  componentAnalysis.get(componentId)!,
+                  (state.node.all.get(nodeId)?.props ?? {}) as Record<
+                    string,
+                    unknown
+                  >
+                ),
+              ] as const;
+            }) ?? []
+        );
+
         // if (componentId === "C18") { // Row component
         //   console.log(statusesByNodeId);
         // }
 
-        const value = [...statusesByNodeId].every(
-          ([, statuses]) => statuses.pending === 0 && statuses.invalid === 0
-        );
-        return { value, stats: statusesByNodeId };
+        const value =
+          [...statusesByNodeId].every(
+            ([, statuses]) => statuses.pending === 0 && statuses.invalid === 0
+          ) &&
+          ![...propFunctionsByNodeId.values()].some(
+            (paths) => Object.values(paths).length
+          );
+        return { value, details: { statusesByNodeId, propFunctionsByNodeId } };
       }
 
       await traceable(
@@ -224,14 +249,21 @@ export const replicate = (
               // if (can.value) {
               // if (can.value && ["C53", "C52"].includes(componentId)) {
               if (
-                can.value &&
+                can?.value &&
                 ["C40", "C41", "C38", "C20", "C39", "C36"].includes(componentId) // button
               ) {
                 // if (componentId === "C89") {
                 // Card
                 logger.info("Start rewriting component", {
                   componentId,
-                  nodes: Object.fromEntries(can.stats.entries()),
+                  details: {
+                    statusesByNodeId: Object.fromEntries(
+                      can.details.statusesByNodeId.entries()
+                    ),
+                    propFunctionsByNodeId: Object.fromEntries(
+                      can.details.propFunctionsByNodeId.entries()
+                    ),
+                  },
                 });
 
                 const childLogger = logger.child({
@@ -246,10 +278,17 @@ export const replicate = (
                   promise.then((result) => ({ id: componentId, result }))
                 );
                 // }
-              } else {
+              } else if (can) {
                 logger.debug("Cannot rewrite component", {
                   componentId,
-                  nodes: Object.fromEntries(can.stats.entries()),
+                  details: {
+                    statusesByNodeId: Object.fromEntries(
+                      can.details.statusesByNodeId.entries()
+                    ),
+                    propFunctionsByNodeId: Object.fromEntries(
+                      can.details.propFunctionsByNodeId.entries()
+                    ),
+                  },
                 });
               }
             }

@@ -14,6 +14,20 @@ export interface ComponentToAnalyze {
   name: string | undefined;
 }
 
+export interface ComponentPropFunctionInfo {
+  jsonPath: string;
+  mayBeFunction: boolean;
+  usedInRender: boolean;
+  requiredForRender: boolean;
+}
+
+export interface ComponentAnalysisResult {
+  name: string;
+  description: string;
+  headOnly: boolean;
+  functions: ComponentPropFunctionInfo[];
+}
+
 export const analyzeComponent = (component: ComponentToAnalyze) =>
   traceable(
     async (

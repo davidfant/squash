@@ -17,7 +17,7 @@ export interface ComponentRegistryItem {
 
 export interface ReplicatorState {
   metadata: Metadata.ReactFiber;
-  trees: Map<string, Root>;
+  trees: Map<string, Root> & { root: Root };
   node: {
     all: Map<NodeId, Metadata.ReactFiber.Node & { id: NodeId }>;
     depth: Map<NodeId, number>;
@@ -186,7 +186,8 @@ function buildComponentNodesMap(
 }
 
 export async function buildState(
-  metadata: Metadata.ReactFiber
+  metadata: Metadata.ReactFiber,
+  rootTree: Root
 ): Promise<ReplicatorState> {
   const nodes = new Map(
     Object.entries(metadata.nodes).map(([id, n]) => [
@@ -236,7 +237,7 @@ export async function buildState(
 
   return {
     metadata,
-    trees: new Map(),
+    trees: Object.assign(new Map(), { root: rootTree }),
     node: { all: nodes, depth, status, ancestors, descendants, children },
     component: {
       all: components,

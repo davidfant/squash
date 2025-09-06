@@ -117,22 +117,6 @@ export async function buildExampleCode({
       ),
   ]);
 
-  // if (nodeId === "N150") {
-  //   console.log(
-  //     "--- EXAMLE",
-  //     component,
-  //     nodeId,
-  //     state.node.descendants.all.get(nodeId)
-  //   );
-  //   console.log(jsx);
-  //   console.log(html);
-  //   console.dir(exampleTree, { depth: null });
-  // }
-
-  // if (component.id === "C52") {
-  //   throw new Error("TODO: dependencies!!!");
-  // }
-
   return { html, jsx };
 }
 

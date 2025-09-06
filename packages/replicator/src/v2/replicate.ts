@@ -2,12 +2,14 @@ import {
   analyzeComponent,
   type ComponentToAnalyze,
 } from "@/lib/analyzeComponent";
+import { clone } from "@/lib/clone";
 import { logger } from "@/lib/logger";
 import * as prettier from "@/lib/prettier";
 import { recmaFixProperties } from "@/lib/recma/fixProperties";
 import { recmaRemoveRedundantFragment } from "@/lib/recma/removeRedundantFragment";
 import { recmaStripSquashAttribute } from "@/lib/recma/stripSquashAttribute";
 import { recmaWrapAsComponent } from "@/lib/rehype/wrapAsComponent";
+import { toPlain } from "@/lib/toPlain";
 import { load } from "cheerio";
 import { traceable } from "langsmith/traceable";
 import path from "path";
@@ -74,7 +76,13 @@ export const replicate = (
       if (!m) throw new Error("Metadata is required");
       fuseMemoForwardRef(m);
 
-      const state = await buildState(m);
+      const rootTree = unified()
+        .use(rehypeParse, { fragment: true })
+        .parse(body.html()!);
+      visit(rootTree, "element", (n) => {
+        if (n.tagName.startsWith("x-h")) n.tagName = n.tagName.slice(2);
+      });
+      const state = await buildState(m, clone(rootTree));
 
       const analyzed = await traceable(
         (components: Array<ComponentToAnalyze>) =>
@@ -107,20 +115,13 @@ export const replicate = (
       // $("h1,h2,h3,h4,h5,h6").each((_, el) => {
       //   el.tagName = `x-h${el.tagName.slice(1)}`;
       // });a
-      const rootTree = unified()
-        .use(rehypeParse, { fragment: true })
-        .parse(body.html()!);
-      visit(rootTree, "element", (n) => {
-        if (n.tagName.startsWith("x-h")) n.tagName = n.tagName.slice(2);
-      });
-      state.trees.set("App", rootTree);
 
+      state.trees.set("App", clone(rootTree));
       const hostRoot = [...state.node.all.values()].find(
         (n) =>
           state.component.all.get(n.componentId)?.tag ===
           Metadata.ReactFiber.Component.Tag.HostRoot
       );
-      if (hostRoot) state.trees.set("App", rootTree);
 
       const rewrites: Map<
         ComponentId,
@@ -139,7 +140,10 @@ export const replicate = (
       function canRewrite(componentId: ComponentId): {
         value: boolean;
         details: {
-          statusesByNodeId: Map<NodeId, Record<ReplicatorNodeStatus, number>>;
+          statusesByNodeId: Map<
+            NodeId,
+            Record<ReplicatorNodeStatus, Set<ComponentId>>
+          >;
           propFunctionsByNodeId: Map<NodeId, Record<string, unknown[]>>;
         };
       } | null {
@@ -171,7 +175,7 @@ export const replicate = (
 
         const statusesByNodeId = new Map<
           NodeId,
-          Record<ReplicatorNodeStatus, number>
+          Record<ReplicatorNodeStatus, Set<ComponentId>>
         >(
           // TODO: try seeing if we change this logic in the following way, if it unblocks the Row component: for each descendant from props, get all of its descendants from props, and so on, and all of those are deleted from the current node descendants
           state.component.nodes.get(componentId)?.map((nodeId) => {
@@ -186,10 +190,17 @@ export const replicate = (
               (d) => !state.node.status.has(d) && descendants.delete(d)
             );
 
-            const statuses = { pending: 0, valid: 0, invalid: 0 };
+            const statuses: Record<ReplicatorNodeStatus, Set<ComponentId>> = {
+              pending: new Set(),
+              valid: new Set(),
+              invalid: new Set(),
+            };
             descendants.forEach((d) => {
               const status = state.node.status.get(d);
-              if (status) statuses[status]++;
+              const node = state.node.all.get(d);
+              if (status && node) {
+                statuses[status].add(node.componentId);
+              }
             });
 
             return [nodeId, statuses] as const;
@@ -223,7 +234,8 @@ export const replicate = (
 
         const value =
           [...statusesByNodeId].every(
-            ([, statuses]) => statuses.pending === 0 && statuses.invalid === 0
+            ([, statuses]) =>
+              statuses.pending.size === 0 && statuses.invalid.size === 0
           ) &&
           ![...propFunctionsByNodeId.values()].some(
             (paths) => Object.values(paths).length
@@ -233,7 +245,7 @@ export const replicate = (
 
       await traceable(
         async () => {
-          const maxConcurrency = 1;
+          const maxConcurrency = 10;
           function enqueue() {
             // TODO: reorder by max node depth
             for (const [componentId, component] of componentsByMaxDepth) {
@@ -245,25 +257,19 @@ export const replicate = (
               }
 
               const can = canRewrite(componentId);
+              if (!can) continue;
 
-              if (can?.value) {
-                // if (can.value && ["C53", "C52"].includes(componentId)) {
-                // if (
-                //   can?.value &&
-                //   ["C40", "C41", "C38", "C20", "C39", "C36"].includes(componentId) // button
-                // ) {
+              if (
+                can?.value
+                // ["C40", "C41", "C38", "C20", "C39", "C36"].includes(componentId) // button
+                // ["C53", "C52", "C85"].includes(componentId) // lock icon
+                // ["C53", "C52"].includes(componentId) // icon
+              ) {
                 // if (componentId === "C89") {
                 // Card
                 logger.info("Start rewriting component", {
                   componentId,
-                  details: {
-                    statusesByNodeId: Object.fromEntries(
-                      can.details.statusesByNodeId.entries()
-                    ),
-                    propFunctionsByNodeId: Object.fromEntries(
-                      can.details.propFunctionsByNodeId.entries()
-                    ),
-                  },
+                  details: toPlain(can.details),
                 });
 
                 const childLogger = logger.child({
@@ -278,17 +284,10 @@ export const replicate = (
                   promise.then((result) => ({ id: componentId, result }))
                 );
                 // }
-              } else if (can) {
+              } else {
                 logger.debug("Cannot rewrite component", {
                   componentId,
-                  details: {
-                    statusesByNodeId: Object.fromEntries(
-                      can.details.statusesByNodeId.entries()
-                    ),
-                    propFunctionsByNodeId: Object.fromEntries(
-                      can.details.propFunctionsByNodeId.entries()
-                    ),
-                  },
+                  details: toPlain(can.details),
                 });
               }
             }
@@ -325,21 +324,21 @@ export const replicate = (
         { name: "Rewrite components" }
       )();
 
-      console.dir(
-        [
-          ...new Set(
-            [...state.component.nodes.get("C36")!]
-              .flatMap((n) => [...(state.node.descendants.all.get(n) ?? [])])
-              .map((n) => state.node.all.get(n)?.componentId)
-              .filter((c) => !!c)
-              .concat("C36")
-          ),
-        ].map((componentId) => ({
-          componentId,
-          rewritable: canRewrite(componentId),
-        })),
-        { depth: null }
-      );
+      // console.dir(
+      //   [
+      //     ...new Set(
+      //       [...state.component.nodes.get("C36")!]
+      //         .flatMap((n) => [...(state.node.descendants.all.get(n) ?? [])])
+      //         .map((n) => state.node.all.get(n)?.componentId)
+      //         .filter((c) => !!c)
+      //         .concat("C36")
+      //     ),
+      //   ].map((componentId) => ({
+      //     componentId,
+      //     rewritable: canRewrite(componentId),
+      //   })),
+      //   { depth: null }
+      // );
 
       const processor = unified()
         // .use(rehypeStripSquashAttribute)

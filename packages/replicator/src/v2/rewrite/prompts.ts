@@ -18,9 +18,9 @@ You are a senior TypeScript developer. Your job is to create a React component i
 2. **Rewrite the component into modern, idiomatic TypeScript** that preserves behaviour, observing **all** of these code-style rules:
 
    • Use **JSX** syntax everywhere; avoid \`React.createElement\` unless unavoidable.  
-   • Declare an \`export interface <ComponentName>Props\` for the props **and export it**.  
-   • Export the component itself with \`export function <ComponentName>() { … }\` (or \`export const <ComponentName> = …\`), **not** a default export.  
-   • Allowed imports:  
+   • Declare an \`export interface <ComponentName>Props\` for the props **and export it**. If your component's props are the same or similar to props from a dependency, use the dependency's props interface as a base.
+   • Export the component itself with \`export function <ComponentName>() { … }\` (or \`export const <ComponentName> = …\`), **not** a default export. Also export the props interface as well as other types and interfaces that might be used by other components.
+   • You are allowed to import the following packages, and everything mentioned in dependencies:
      \`\`\`ts
 import React from "react";
 import ReactDOM from "react-dom";
@@ -45,6 +45,7 @@ import { cn } from "@/lib/utils";
 export const initialUserMessage = (
   code: string,
   name: string | undefined,
+  deps: Array<{ name: string; module: string; code: string }>,
   examples: Array<{ jsx: string; html: string }>,
   options: { maxNumExamples: number }
 ) => {
@@ -62,6 +63,15 @@ export const initialUserMessage = (
     "```javascript",
     code,
     "```",
+    "",
+    "# Dependencies",
+    ...(!deps.length ? ["No dependencies"] : []),
+    ...deps.flatMap((dep) => [
+      `## ${dep.module}`,
+      "```typescript",
+      dep.code,
+      "```",
+    ]),
     "",
     "# Examples",
     `Showing ${numExamples} of ${unique.length} examples`,

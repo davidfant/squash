@@ -44,24 +44,25 @@ export async function rewrite(
     Array<{ element: Element; nodeId: NodeId }>
   >();
   for (const parentId of state.component.nodes.get(componentId) ?? []) {
-    for (const tree of state.trees.values()) {
-      const items: Array<{ element: Element; nodeId: NodeId }> = [];
-      visit(tree, "element", (element, index, parent) => {
-        if (index === undefined) return;
-        if (parent?.type !== "element" && parent?.type !== "root") return;
+    const tree = state.trees.root;
+    // for (const tree of state.trees.values()) {
+    const items: Array<{ element: Element; nodeId: NodeId }> = [];
+    visit(tree, "element", (element, index, parent) => {
+      if (index === undefined) return;
+      if (parent?.type !== "element" && parent?.type !== "root") return;
 
-        const nodeId = element.properties?.["dataSquashNodeId"] as NodeId;
-        if (state.node.ancestors.get(nodeId)?.has(parentId)) {
-          items.push({ element, nodeId });
-          return SKIP;
-        }
-      });
-      // TODO: is it a dangerous assumption that we'll just find the first tree that has this element? it assumes that trees are listed by depth (aka the biggest tree first). e.g. if a descendant of parentId exists in a tree, it might also exist a deeper nested descendant in a later tree.
-      if (items.length) {
-        examples.set(parentId, items);
-        break;
+      const nodeId = element.properties?.["dataSquashNodeId"] as NodeId;
+      if (state.node.ancestors.get(nodeId)?.has(parentId)) {
+        items.push({ element, nodeId });
+        return SKIP;
       }
+    });
+    // TODO: is it a dangerous assumption that we'll just find the first tree that has this element? it assumes that trees are listed by depth (aka the biggest tree first). e.g. if a descendant of parentId exists in a tree, it might also exist a deeper nested descendant in a later tree.
+    if (items.length) {
+      examples.set(parentId, items);
+      // break;
     }
+    // }
   }
 
   const componentName = (() => {
@@ -86,9 +87,43 @@ export async function rewrite(
     )
   );
 
+  const deps = (state.component.nodes.get(componentId) ?? [])
+    .flatMap((nodeId) => {
+      const descendants = new Set(state.node.descendants.all.get(nodeId));
+      state.node.descendants.fromProps.get(nodeId)?.forEach((d) => {
+        descendants.delete(d.nodeId);
+        state.node.descendants.all
+          .get(d.nodeId)
+          ?.forEach((d) => descendants.delete(d));
+      });
+      descendants.forEach(
+        (d) => !state.node.status.has(d) && descendants.delete(d)
+      );
+
+      return [...descendants]
+        .map((d) => state.node.all.get(d)?.componentId)
+        .filter((c) => !!c);
+    })
+    .filter((v, i, a) => a.indexOf(v) === i)
+    .map((c) => {
+      const item = state.component.registry.get(c);
+      if (!item) {
+        throw new Error(
+          `Component ${componentId} depends on ${c} which is not found in registry`
+        );
+      }
+      return item;
+    })
+    .map((c) => ({
+      name: c.name,
+      module: path.join(`@`, c.dir, c.name),
+      code: c.code,
+    }));
+
   const content = Prompts.initialUserMessage(
     minifiedCode,
     componentName,
+    deps,
     examplesCode,
     { maxNumExamples: 5 }
   );

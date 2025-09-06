@@ -102,9 +102,78 @@ export const replicate = (
           (state.component.maxDepth.get(a.id) ?? 0)
       );
 
+      function canRewrite(componentId: ComponentId): {
+        value: boolean;
+        stats: Map<NodeId, Record<ReplicatorNodeStatus, number>>;
+      } {
+        const component = state.component.all.get(componentId);
+        if (!component) return { value: false, stats: new Map() };
+        if (!("codeId" in component)) return { value: false, stats: new Map() };
+        if (rewrites.has(componentId)) {
+          return { value: false, stats: new Map() };
+        }
+        if (
+          state.component.nodes
+            .get(componentId)
+            ?.every((n) => state.node.status.get(n) === "valid")
+        ) {
+          return { value: false, stats: new Map() };
+        }
+
+        // TODO: very hacky way of excluding components with functions in props.
+        // ASK flash to get all props and determine which ones are callbacks vs used for rendering
+        // if (
+        //   state.component.nodes
+        //     .get(componentId)
+        //     ?.some((id) =>
+        //       JSON.stringify(state.node.all.get(id)?.props).includes(
+        //         '"$$typeof":"function"'
+        //       )
+        //     )
+        // ) {
+        //   return { value: false, stats: new Map() };
+        // }
+
+        const statusesByNodeId = new Map<
+          NodeId,
+          Record<ReplicatorNodeStatus, number>
+        >(
+          // TODO: try seeing if we change this logic in the following way, if it unblocks the Row component: for each descendant from props, get all of its descendants from props, and so on, and all of those are deleted from the current node descendants
+          state.component.nodes.get(componentId)?.map((nodeId) => {
+            const descendants = new Set(state.node.descendants.all.get(nodeId));
+            state.node.descendants.fromProps.get(nodeId)?.forEach((d) => {
+              descendants.delete(d.nodeId);
+              state.node.descendants.all
+                .get(d.nodeId)
+                ?.forEach((d) => descendants.delete(d));
+            });
+            descendants.forEach(
+              (d) => !state.node.status.has(d) && descendants.delete(d)
+            );
+
+            const statuses = { pending: 0, valid: 0, invalid: 0 };
+            descendants.forEach((d) => {
+              const status = state.node.status.get(d);
+              if (status) statuses[status]++;
+            });
+
+            return [nodeId, statuses] as const;
+          })
+        );
+
+        // if (componentId === "C18") { // Row component
+        //   console.log(statusesByNodeId);
+        // }
+
+        const value = [...statusesByNodeId].every(
+          ([, statuses]) => statuses.pending === 0 && statuses.invalid === 0
+        );
+        return { value, stats: statusesByNodeId };
+      }
+
       await traceable(
         async () => {
-          const maxConcurrency = 100;
+          const maxConcurrency = 1;
           function enqueue() {
             // TODO: reorder by max node depth
             for (const [componentId, component] of componentsByMaxDepth) {
@@ -115,73 +184,19 @@ export const replicate = (
                 return;
               }
 
-              if (!("codeId" in component)) continue;
-              if (rewrites.has(componentId)) continue;
+              const can = canRewrite(componentId);
+
+              // if (can.value) {
+              // if (can.value && ["C53", "C52"].includes(componentId)) {
               if (
-                state.component.nodes
-                  .get(componentId)
-                  ?.every((n) => state.node.status.get(n) === "valid")
+                can.value &&
+                ["C40", "C41", "C38", "C20", "C39", "C36"].includes(componentId) // button
               ) {
-                continue;
-              }
-
-              // TODO: very hacky way of excluding components with functions in props
-              if (
-                state.component.nodes
-                  .get(componentId)
-                  ?.some((id) =>
-                    JSON.stringify(state.node.all.get(id)?.props).includes(
-                      '"$$typeof":"function"'
-                    )
-                  )
-              ) {
-                continue;
-              }
-
-              const statusesByNodeId = new Map<
-                NodeId,
-                Record<ReplicatorNodeStatus, number>
-              >(
-                // TODO: try seeing if we change this logic in the following way, if it unblocks the Row component: for each descendant from props, get all of its descendants from props, and so on, and all of those are deleted from the current node descendants
-                state.component.nodes.get(componentId)?.map((nodeId) => {
-                  const descendants = new Set(
-                    state.node.descendants.all.get(nodeId)
-                  );
-                  state.node.descendants.fromProps.get(nodeId)?.forEach((d) => {
-                    descendants.delete(d.nodeId);
-                    state.node.descendants.all
-                      .get(d.nodeId)
-                      ?.forEach((d) => descendants.delete(d));
-                  });
-                  descendants.forEach(
-                    (d) => !state.node.status.has(d) && descendants.delete(d)
-                  );
-
-                  const statuses = { pending: 0, valid: 0, invalid: 0 };
-                  descendants.forEach((d) => {
-                    const status = state.node.status.get(d);
-                    if (status) statuses[status]++;
-                  });
-
-                  return [nodeId, statuses] as const;
-                })
-              );
-
-              // if (componentId === "C18") { // Row component
-              //   console.log(statusesByNodeId);
-              // }
-
-              const canRewrite = [...statusesByNodeId].every(
-                ([, statuses]) =>
-                  statuses.pending === 0 && statuses.invalid === 0
-              );
-              if (canRewrite) {
-                // if (canRewrite && ["C53", "C52"].includes(componentId)) {
                 // if (componentId === "C89") {
                 // Card
                 logger.info("Start rewriting component", {
                   componentId,
-                  nodes: Object.fromEntries(statusesByNodeId.entries()),
+                  nodes: Object.fromEntries(can.stats.entries()),
                 });
 
                 const childLogger = logger.child({
@@ -199,7 +214,7 @@ export const replicate = (
               } else {
                 logger.debug("Cannot rewrite component", {
                   componentId,
-                  nodes: Object.fromEntries(statusesByNodeId.entries()),
+                  nodes: Object.fromEntries(can.stats.entries()),
                 });
               }
             }
@@ -228,13 +243,29 @@ export const replicate = (
               });
             }
 
-            if (state.component.registry.size < 50) {
-              enqueue();
-            }
+            // if (state.component.registry.size < 50) {
+            enqueue();
+            // }
           }
         },
         { name: "Rewrite components" }
       )();
+
+      console.dir(
+        [
+          ...new Set(
+            [...state.component.nodes.get("C36")!]
+              .flatMap((n) => [...(state.node.descendants.all.get(n) ?? [])])
+              .map((n) => state.node.all.get(n)?.componentId)
+              .filter((c) => !!c)
+              .concat("C36")
+          ),
+        ].map((componentId) => ({
+          componentId,
+          rewritable: canRewrite(componentId),
+        })),
+        { depth: null }
+      );
 
       const processor = unified()
         // .use(rehypeStripSquashAttribute)

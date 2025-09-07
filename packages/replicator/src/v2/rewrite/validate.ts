@@ -11,7 +11,11 @@ export async function validate(opts: {
     code: string;
   };
   state: ReplicatorState;
-  examples: Array<{ jsx: string; html: string }>;
+  examples: Array<{
+    nodeId: Metadata.ReactFiber.NodeId;
+    jsx: string;
+    html: string;
+  }>;
 }): Promise<string | undefined> {
   const rendered = await render({
     component: opts.component,

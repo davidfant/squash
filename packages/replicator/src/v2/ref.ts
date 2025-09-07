@@ -306,7 +306,7 @@ export const recmaReplaceRefs: Plugin<[state: ReplicatorState], Program> =
       Object.assign(
         node,
         createComponentElement({ id: compId, name: compName }, props, {
-          imports: new Set(),
+          imports,
           state,
         })
       );

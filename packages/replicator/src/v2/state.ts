@@ -6,13 +6,14 @@ type NodeId = Metadata.ReactFiber.NodeId;
 type ComponentId = Metadata.ReactFiber.ComponentId;
 type CodeId = Metadata.ReactFiber.CodeId;
 
-export type ReplicatorNodeStatus = "pending" | "valid" | "invalid";
+export type ReplicatorNodeStatus = "pending" | "skipped" | "valid" | "invalid";
 
 export interface ComponentRegistryItem {
   id: ComponentId;
   dir: string;
   name: string;
-  code: string;
+  description: string;
+  code: { ts: string; dts: string };
 }
 
 export interface ReplicatorState {

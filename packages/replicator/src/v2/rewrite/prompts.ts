@@ -1,3 +1,5 @@
+import type { Metadata } from "@/types";
+
 export const instructions = `
 You are a senior TypeScript developer. Your job is to create a React component in TypeScript. You will be given a minified JavaScript code snippet of the component, as well as one or more examples of how JSX is rendered to HTML.
 
@@ -45,8 +47,12 @@ import { cn } from "@/lib/utils";
 export const initialUserMessage = (
   code: string,
   name: string | undefined,
-  deps: Array<{ name: string; module: string; code: string }>,
-  examples: Array<{ jsx: string; html: string }>,
+  deps: Array<{ module: string; description: string; code: { dts: string } }>,
+  examples: Array<{
+    nodeId: Metadata.ReactFiber.NodeId;
+    jsx: string;
+    html: string;
+  }>,
   options: { maxNumExamples: number }
 ) => {
   const unique = examples.filter(
@@ -65,20 +71,26 @@ export const initialUserMessage = (
     "```",
     "",
     "# Dependencies",
-    ...(!deps.length ? ["No dependencies"] : []),
+    "```typescript",
+    ...(!deps.length ? ["// No dependencies"] : []),
     ...deps.flatMap((dep) => [
-      `## ${dep.module}`,
-      "```typescript",
-      dep.code,
-      "```",
+      `/** ${dep.description} */`,
+      `declare module "${dep.module}" {`,
+      ...dep.code.dts
+        .trim()
+        .split("\n")
+        .map((line) => `  ${line}`),
+      `}`,
+      "",
     ]),
+    "```",
     "",
     "# Examples",
     `Showing ${numExamples} of ${unique.length} examples`,
     ...unique
       .slice(0, numExamples)
-      .flatMap((e, i) => [
-        `## Example ${i + 1}`,
+      .flatMap((e) => [
+        `## Example ${e.nodeId}`,
         "Input JSX",
         `\`\`\`javascript\n${e.jsx}\n\`\`\``,
         "",
@@ -99,7 +111,11 @@ export const buildErrorsUserMessage = (errors: string[]) =>
 
 export const renderErrorsUserMessage = (
   errors: Array<{ message: string; description: string }>[],
-  examples: Array<{ jsx: string; html: string }>,
+  examples: Array<{
+    nodeId: Metadata.ReactFiber.NodeId;
+    jsx: string;
+    html: string;
+  }>,
   options: { maxNumExamples: number }
 ) => {
   const { errors: errorsToShow } = errors.reduce(
@@ -129,14 +145,14 @@ export const renderErrorsUserMessage = (
     ``,
     "# Examples",
     ...errorsToShow.flatMap((error, index) => [
-      `## Example ${index + 1}`,
+      `## Example ${examples[index]!.nodeId}`,
       ...(error.length
         ? [
             "Found errors while rendering the component",
             ...error.flatMap((e) => [`- ${e.message}`, e.description]),
             "Input JSX",
             "```javascript",
-            examples[index]?.jsx,
+            examples[index]!.jsx,
             "```",
           ]
         : ["Status: Success"]),

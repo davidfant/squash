@@ -194,6 +194,7 @@ export const replicate = (
               pending: new Set(),
               valid: new Set(),
               invalid: new Set(),
+              skipped: new Set(),
             };
             descendants.forEach((d) => {
               const status = state.node.status.get(d);
@@ -245,7 +246,9 @@ export const replicate = (
 
       await traceable(
         async () => {
-          const maxConcurrency = 30;
+          const maxConcurrency = 10;
+          const maxComponents = 20;
+
           function enqueue() {
             // TODO: reorder by max node depth
             for (const [componentId, component] of componentsByMaxDepth) {
@@ -255,12 +258,25 @@ export const replicate = (
                 );
                 return;
               }
+              if (
+                state.component.registry.size + rewrites.size >=
+                maxComponents
+              ) {
+                logger.debug(
+                  "Max components reached, waiting for a rewrite to finish"
+                );
+                return;
+              }
 
               const can = canRewrite(componentId);
               if (!can) continue;
 
+              // const whitelist = ["C40", "C41"];
+              // const whitelist = ["C77"]; // rewrite
+              const whitelist: string[] | undefined = undefined;
               if (
-                can?.value
+                can?.value &&
+                whitelist?.includes(componentId) !== false
                 // ["C40", "C41", "C38", "C20", "C39", "C36"].includes(componentId) // button
                 // ["C53", "C52", "C85"].includes(componentId) // lock icon
                 // ["C53", "C52"].includes(componentId) // icon
@@ -308,7 +324,7 @@ export const replicate = (
                   rewrite.result.item.dir,
                   `${rewrite.result.item.name}.tsx`
                 ),
-                rewrite.result.item.code
+                rewrite.result.item.code.ts
               );
             } else {
               state.component.nodes.get(rewrite.id)?.forEach((nodeId) => {
@@ -316,7 +332,7 @@ export const replicate = (
               });
             }
 
-            // if (state.component.registry.size < 50) {
+            // if (state.component.registry.size + rewrites.size < maxComponents) {
             enqueue();
             // }
           }

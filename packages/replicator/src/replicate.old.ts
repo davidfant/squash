@@ -332,7 +332,7 @@ export const replicate = (
           });
         })
         .use(rehypeStringify)
-        .process(svgAliased.html);
+        .process(body.html()!);
 
       const replicatedHtml = `
 <!DOCTYPE html>

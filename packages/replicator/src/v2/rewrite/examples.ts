@@ -122,13 +122,15 @@ export async function buildExampleCode({
 
 export function replaceExamples(
   component: { id: ComponentId; name: string },
-  state: ReplicatorState
+  state: ReplicatorState,
+  skipNodeIds: Set<NodeId>
 ): Map<NodeId, ReplicatorNodeStatus> {
   const replaced = new Map<NodeId, ReplicatorNodeStatus>();
   // for (const tree of state.node.trees.values()) {
   for (const tree of [...state.trees.values()]) {
     const componentNodeIds = state.component.nodes.get(component.id);
     for (const parentId of componentNodeIds ?? []) {
+      if (skipNodeIds.has(parentId)) continue;
       const node = state.node.all.get(parentId);
       if (!node) continue;
       // const depsFromProps = state.node.descendants.fromProps.get(parentId);

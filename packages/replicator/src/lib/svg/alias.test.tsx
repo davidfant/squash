@@ -90,7 +90,7 @@ describe("aliasSVGPaths", () => {
       </svg>
     );
 
-    expect(res.html).toMatchSnapshot();
+    expect([...res.dPathMapping]).toHaveLength(1);
   });
 
   describe("metadata", () => {

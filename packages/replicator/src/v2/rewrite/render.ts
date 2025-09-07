@@ -155,7 +155,7 @@ export async function render(
     ...[...opts.state.component.registry.values()]
       // .filter((cid) => cid !== opts.component.id)
       .map(async (item) => {
-        const compiled = await compileComponent(item.code);
+        const compiled = await compileComponent(item.code.ts);
         if (!compiled.ok) throw new Error(`Failed to compile ${item.id}`);
         modules[`@/${item.dir}/${item.name}`] = {
           code: compiled.code,

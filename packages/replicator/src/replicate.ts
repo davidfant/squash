@@ -159,7 +159,7 @@ export const replicate = (
       const registry = buildInitialComponentRegistry(m.components);
       const tree = unified()
         .use(rehypeParse, { fragment: true })
-        .parse(svgAliased.html);
+        .parse(body.html()!);
 
       const analyzed = await traceable(
         (components: Array<ComponentToAnalyze>) =>
@@ -188,7 +188,7 @@ export const replicate = (
       console.dir(
         analyzed
           .map((a) => ({
-            depCount: a.dependencies.length,
+            depCount: a.functions.length,
             nodeCount: componentNodes.get(a.id)!.length,
             ...a,
           }))

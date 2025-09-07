@@ -1,5 +1,7 @@
 import { generateText } from "@/lib/ai";
+import { filesystemCacheMiddleware } from "@/lib/filesystemCacheMiddleware";
 import { createOpenAI } from "@ai-sdk/openai";
+import { wrapLanguageModel } from "ai";
 
 export async function llmMerge(opts: {
   instructions: string;
@@ -15,7 +17,10 @@ export async function llmMerge(opts: {
   }).chat;
 
   const { text } = await generateText({
-    model: morph("auto"),
+    model: wrapLanguageModel({
+      model: morph("auto"),
+      middleware: filesystemCacheMiddleware(),
+    }),
     messages: [
       {
         role: "user",

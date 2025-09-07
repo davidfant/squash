@@ -106,15 +106,17 @@ export async function rewrite(
         .filter((c) => !!c);
     })
     .filter((v, i, a) => a.indexOf(v) === i)
-    .map((c) => {
-      const item = state.component.registry.get(c);
-      if (!item) {
-        throw new Error(
-          `Component ${componentId} depends on ${c} which is not found in registry`
-        );
-      }
-      return item;
-    })
+    .map((c) => state.component.registry.get(c))
+    .filter((c) => !!c)
+    // .map((c) => {
+    //   const item = state.component.registry.get(c);
+    //   if (!item) {
+    //     throw new Error(
+    //       `Component ${componentId} depends on ${c} which is not found in registry`
+    //     );
+    //   }
+    //   return item;
+    // })
     .map((c) => ({
       name: c.name,
       description: c.description,

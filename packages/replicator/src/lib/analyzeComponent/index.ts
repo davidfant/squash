@@ -85,6 +85,11 @@ export const analyzeComponent = (component: ComponentToAnalyze) =>
               ),
           stepCountIs(3),
         ],
+        // providerOptions: {
+        //   google: {
+        //     thinkingConfig: { includeThoughts: true },
+        //   } satisfies GoogleGenerativeAIProviderOptions,
+        // },
       });
 
       const tr = toolResults[toolResults.length - 1];

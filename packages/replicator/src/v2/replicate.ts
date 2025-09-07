@@ -117,11 +117,6 @@ export const replicate = (
       // });a
 
       state.trees.set("App", rootTree);
-      const hostRoot = [...state.node.all.values()].find(
-        (n) =>
-          state.component.all.get(n.componentId)?.tag ===
-          Metadata.ReactFiber.Component.Tag.HostRoot
-      );
 
       const rewrites: Map<
         ComponentId,
@@ -137,14 +132,20 @@ export const replicate = (
           (state.component.maxDepth.get(a.id) ?? 0)
       );
 
-      function canRewrite(componentId: ComponentId): {
-        value: boolean;
+      const whitelist: Metadata.ReactFiber.ComponentId[] = [];
+      // whitelist.push("C32", "C15");
+
+      function isRewritable(componentId: ComponentId): {
+        status: "blocked" | "never" | "yes";
         details: {
           statusesByNodeId: Map<
             NodeId,
-            Record<ReplicatorNodeStatus, Set<ComponentId>>
+            Partial<Record<ReplicatorNodeStatus, Set<ComponentId>>>
           >;
-          propFunctionsByNodeId: Map<NodeId, Record<string, unknown[]>>;
+          propFunctionsByNodeId: Map<
+            NodeId,
+            Record<string, unknown[]> | undefined
+          >;
         };
       } | null {
         const component = state.component.all.get(componentId);
@@ -154,28 +155,17 @@ export const replicate = (
           rewrites.has(componentId) ||
           state.component.nodes
             .get(componentId)
-            ?.every((n) => state.node.status.get(n) === "valid")
+            ?.every((n) => state.node.status.get(n) !== "pending")
         ) {
           return null;
         }
-
-        // TODO: very hacky way of excluding components with functions in props.
-        // ASK flash to get all props and determine which ones are callbacks vs used for rendering
-        // if (
-        //   state.component.nodes
-        //     .get(componentId)
-        //     ?.some((id) =>
-        //       JSON.stringify(state.node.all.get(id)?.props).includes(
-        //         '"$$typeof":"function"'
-        //       )
-        //     )
-        // ) {
-        //   return { value: false, stats: new Map() };
-        // }
+        if (whitelist.length && !whitelist.includes(componentId)) {
+          return null;
+        }
 
         const statusesByNodeId = new Map<
           NodeId,
-          Record<ReplicatorNodeStatus, Set<ComponentId>>
+          Partial<Record<ReplicatorNodeStatus, Set<ComponentId>>>
         >(
           // TODO: try seeing if we change this logic in the following way, if it unblocks the Row component: for each descendant from props, get all of its descendants from props, and so on, and all of those are deleted from the current node descendants
           state.component.nodes.get(componentId)?.map((nodeId) => {
@@ -190,17 +180,15 @@ export const replicate = (
               (d) => !state.node.status.has(d) && descendants.delete(d)
             );
 
-            const statuses: Record<ReplicatorNodeStatus, Set<ComponentId>> = {
-              pending: new Set(),
-              valid: new Set(),
-              invalid: new Set(),
-              skipped: new Set(),
-            };
+            const statuses: Partial<
+              Record<ReplicatorNodeStatus, Set<ComponentId>>
+            > = {};
             descendants.forEach((d) => {
               const status = state.node.status.get(d);
               const node = state.node.all.get(d);
               if (status && node) {
-                statuses[status].add(node.componentId);
+                if (!(status in statuses)) statuses[status] = new Set();
+                statuses[status]!.add(node.componentId);
               }
             });
 
@@ -212,42 +200,39 @@ export const replicate = (
           NodeId,
           Record<string, unknown[]>
         > = new Map(
-          state.component.nodes
-            .get(componentId)
-            ?.filter((nodeId) => state.node.descendants.all.get(nodeId)?.size)
+          (state.component.nodes.get(componentId) ?? [])
+            .filter((nodeId) => state.node.descendants.all.get(nodeId)?.size)
             .map((nodeId) => {
-              return [
-                nodeId,
-                getPropFunctionsRequiredForRender(
-                  componentAnalysis.get(componentId)!,
-                  (state.node.all.get(nodeId)?.props ?? {}) as Record<
-                    string,
-                    unknown
-                  >
-                ),
-              ] as const;
-            }) ?? []
+              const node = state.node.all.get(nodeId);
+              const fns = getPropFunctionsRequiredForRender(
+                componentAnalysis.get(componentId)!,
+                (node?.props ?? {}) as Record<string, unknown>
+              );
+              if (!Object.keys(fns).length) return undefined;
+              return [nodeId, fns] as const;
+            })
+            .filter((v) => !!v)
         );
 
         // if (componentId === "C18") { // Row component
         //   console.log(statusesByNodeId);
         // }
 
-        const value =
-          [...statusesByNodeId].every(
-            ([, statuses]) =>
-              statuses.pending.size === 0 && statuses.invalid.size === 0
-          ) &&
-          ![...propFunctionsByNodeId.values()].some(
-            (paths) => Object.values(paths).length
-          );
-        return { value, details: { statusesByNodeId, propFunctionsByNodeId } };
+        const isBlocked = [...statusesByNodeId].every(([, s]) => s.pending);
+        const isNever = [...propFunctionsByNodeId.values()].some(
+          (paths) => paths && Object.values(paths).length
+        );
+        const value = isNever ? "never" : isBlocked ? "blocked" : "yes";
+        return {
+          status: value,
+          details: { statusesByNodeId, propFunctionsByNodeId },
+        };
       }
 
       await traceable(
         async () => {
-          const maxConcurrency = 10;
-          const maxComponents = 20;
+          const maxConcurrency = 1;
+          const maxComponents = 90;
 
           function enqueue() {
             // TODO: reorder by max node depth
@@ -268,43 +253,41 @@ export const replicate = (
                 return;
               }
 
-              const can = canRewrite(componentId);
-              if (!can) continue;
+              const rewritable = isRewritable(componentId);
+              switch (rewritable?.status) {
+                case "blocked":
+                  logger.debug("Waiting for blocking component", {
+                    componentId,
+                    details: toPlain(rewritable.details.statusesByNodeId),
+                  });
+                  break;
+                case "never":
+                  logger.debug("Skipping component with prop fns", {
+                    componentId,
+                    details: toPlain(rewritable.details.propFunctionsByNodeId),
+                  });
+                  state.component.nodes.get(componentId)?.forEach((nodeId) => {
+                    state.node.status.set(nodeId, "skipped");
+                  });
+                  break;
+                case "yes":
+                  logger.info("Start rewriting component", {
+                    componentId,
+                    details: toPlain(rewritable.details),
+                  });
 
-              // const whitelist = ["C40", "C41"];
-              // const whitelist = ["C77"]; // rewrite
-              const whitelist: string[] | undefined = undefined;
-              if (
-                can?.value &&
-                whitelist?.includes(componentId) !== false
-                // ["C40", "C41", "C38", "C20", "C39", "C36"].includes(componentId) // button
-                // ["C53", "C52", "C85"].includes(componentId) // lock icon
-                // ["C53", "C52"].includes(componentId) // icon
-              ) {
-                // if (componentId === "C89") {
-                // Card
-                logger.info("Start rewriting component", {
-                  componentId,
-                  details: toPlain(can.details),
-                });
-
-                const childLogger = logger.child({
-                  name: `rewrite ${componentId}`,
-                });
-                const promise = traceable(
-                  (id: ComponentId) => rewrite(id, state, childLogger),
-                  { name: `Rewrite ${componentId}` }
-                )(componentId);
-                rewrites.set(
-                  componentId,
-                  promise.then((result) => ({ id: componentId, result }))
-                );
-                // }
-              } else {
-                logger.debug("Cannot rewrite component", {
-                  componentId,
-                  details: toPlain(can.details),
-                });
+                  const childLogger = logger.child({
+                    name: `rewrite ${componentId}`,
+                  });
+                  const promise = traceable(
+                    (id: ComponentId) => rewrite(id, state, childLogger),
+                    { name: `Rewrite ${componentId}` }
+                  )(componentId);
+                  rewrites.set(
+                    componentId,
+                    promise.then((result) => ({ id: componentId, result }))
+                  );
+                  break;
               }
             }
           }
@@ -339,6 +322,19 @@ export const replicate = (
         },
         { name: "Rewrite components" }
       )();
+
+      whitelist.length = 0;
+      console.log(
+        JSON.stringify(
+          toPlain(
+            Object.fromEntries(
+              [...state.component.all.entries()]
+                .map(([id, c]) => [id, isRewritable(id)])
+                .filter(([_, can]) => !!can)
+            )
+          )
+        )
+      );
 
       // console.dir(
       //   [

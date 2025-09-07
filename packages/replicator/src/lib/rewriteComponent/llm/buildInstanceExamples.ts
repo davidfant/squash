@@ -25,13 +25,13 @@ interface LimitDepthConfig {
 }
 
 const limitDepthConfig: LimitDepthConfig = {
-  maxComponents: 10,
-  maxDom: 20,
+  maxComponents: 3,
+  maxDom: 6,
 };
 
 const clone = <T>(v: T): T => JSON.parse(JSON.stringify(v));
 
-const rehypeLimitDepth: Plugin<
+export const rehypeLimitDepth: Plugin<
   [metadata: Metadata.ReactFiber, config: LimitDepthConfig],
   Root
 > = (metadata) => (tree) => {
@@ -65,7 +65,7 @@ const rehypeLimitDepth: Plugin<
   });
 };
 
-const recmaLimitDepth: Plugin<[config: LimitDepthConfig], Program> =
+export const recmaLimitDepth: Plugin<[config: LimitDepthConfig], Program> =
   (config) => (program) => {
     const stack: { isComponent: boolean }[] = [];
 

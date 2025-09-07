@@ -41,19 +41,24 @@ export function createReplicatorTools() {
         .describe(
           "Specify ONLY the precise lines of code that you wish to edit AND 2-3 lines of unchanged code above and below the edit AND comments like `// ... keep existing code ...` for existing unchanged code. Unless you are changing the beginning of the file, **ALWAYS** start with a comment like `// ... keep existing code ...` to indicate the unchanged code before the edit. **AVOID writing out unchanged code unless it is 2-3 lines above and below the edit, or it is necessary to provide context for the edit**. Instead, represent all unchanged code using the comment of the language you're editing in - example: `// ... existing code ...`"
         ),
-      component: z.object({ name: z.string(), description: z.string() }),
+      componentName: z.string(),
+      componentDescription: z.string(),
     }),
-    execute: async ({ instructions, codeEdit, component }) => {
+    execute: async (input) => {
       if (!latestCode) {
-        latestCode = codeEdit;
+        latestCode = input.codeEdit;
       } else {
         latestCode = await llmMerge({
-          instructions,
+          instructions: input.instructions,
           original: latestCode,
-          update: codeEdit,
+          update: input.codeEdit,
           apiKey: process.env.MORPH_API_KEY!,
         });
       }
+      const component = {
+        name: input.componentName,
+        description: input.componentDescription,
+      };
       return { ok: true, component, code: latestCode! } as const;
     },
   });

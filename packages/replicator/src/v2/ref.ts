@@ -94,9 +94,7 @@ function toExpression(value: any, ctx: ReplaceRefsContext): Expression {
         const component = ctx.state.component.registry.get(componentId!);
         if (component) {
           return createComponentElement(
-            component
-              ? { id: component.id, name: component.name }
-              : { id: undefined, name: "unknown" },
+            { id: component.id, name: component.name },
             el.props,
             ctx
           );
@@ -142,6 +140,16 @@ function toExpression(value: any, ctx: ReplaceRefsContext): Expression {
           }
         }
 
+        // TODO: investigate when this happens...
+        // if (el.codeId === "F62" && el.nodeId === null) {
+        //   console.log(el);
+        //   throw new Error("WHY?");
+        // }
+        return createComponentElement(
+          { id: undefined, name: "unknown" },
+          el.props,
+          ctx
+        );
         // throw new Error(
         //   `Code ${el.codeId} not found in registry and no nodeId`
         // );
@@ -231,6 +239,11 @@ function createComponentElement(
   ctx: ReplaceRefsContext
 ): NodeMap["JSXElement"] {
   if (comp.id) ctx.imports.add(comp.id);
+
+  if (comp.name === undefined) {
+    console.error("wowza...", comp, props);
+    throw new Error("Component name is undefined... " + JSON.stringify(comp));
+  }
 
   const { children, ...rest } = props;
   const childNodes: NodeMap["JSXElement"]["children"] = [children]

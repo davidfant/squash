@@ -7,7 +7,7 @@ export const getPropFunctionsRequiredForRender = (
   props: Record<string, unknown>
 ): Record<string, unknown[]> =>
   analysis.functions
-    .filter((f) => f.requiredForRender)
+    .filter((f) => f.usedInRender)
     .map((f) => f.jsonPath)
     .reduce(
       (acc, path) => {
@@ -19,8 +19,7 @@ export const getPropFunctionsRequiredForRender = (
               "function"
         );
         if (!hits.length) return acc;
-        acc[path] = hits;
-        return acc;
+        return { ...acc, [path]: hits };
       },
       {} as Record<string, unknown[]>
     );

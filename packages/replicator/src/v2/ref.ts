@@ -147,7 +147,7 @@ function toExpression(value: any, ctx: ReplaceRefsContext): Expression {
         // }
         return createComponentElement(
           { id: undefined, name: "unknown" },
-          el.props,
+          el.props ?? {},
           ctx
         );
         // throw new Error(
@@ -241,7 +241,6 @@ function createComponentElement(
   if (comp.id) ctx.imports.add(comp.id);
 
   if (comp.name === undefined) {
-    console.error("wowza...", comp, props);
     throw new Error("Component name is undefined... " + JSON.stringify(comp));
   }
 

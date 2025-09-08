@@ -1,6 +1,6 @@
 import * as prettier from "@/lib/prettier";
 import { generate, parse, walk, type DeclarationList } from "css-tree";
-import { diffLines } from "diff";
+import { createPatch } from "diff";
 import * as parse5 from "parse5";
 
 const normText = (s: string) => s.replace(/\s+/g, " ").trim();
@@ -10,7 +10,7 @@ const CSS_PROPERTY_ALIAS: Record<string, string> = {
 };
 const OPTIONAL_COMMA_FUNCTIONS = ["rect", "inset", "matrix", "matrix3d"];
 
-function canonicaliseStyle(style: string): string {
+function canonicaliseStyle(style: string): string | undefined {
   const ast = parse(style, { context: "declarationList" }) as DeclarationList;
 
   walk(ast, (n) => {
@@ -46,6 +46,7 @@ const canonicaliseClass = (className: string) =>
   className
     .split(" ")
     .filter((c) => !!c)
+    .filter((c, i, a) => a.indexOf(c) === i)
     .sort()
     .join(" ");
 
@@ -56,15 +57,23 @@ function simplify<
     node.childNodes = node.childNodes.map(simplify);
   }
   if ("attrs" in node) {
-    node.attrs.sort((a, b) => a.name.localeCompare(b.name));
-    node.attrs.forEach((attr) => {
-      if (attr.name === "style") {
-        attr.value = canonicaliseStyle(attr.value);
-      }
-      if (attr.name === "class") {
-        attr.value = canonicaliseClass(attr.value);
-      }
-    });
+    node.attrs = node.attrs
+      .map((attr) => {
+        if (attr.name === "style") {
+          const style = canonicaliseStyle(attr.value);
+          if (style) {
+            return { name: "style", value: style };
+          } else {
+            return undefined;
+          }
+        }
+        if (attr.name === "class") {
+          return { name: "class", value: canonicaliseClass(attr.value) };
+        }
+        return attr;
+      })
+      .filter((v) => !!v)
+      .sort((a, b) => a.name.localeCompare(b.name));
   }
 
   return node;
@@ -90,20 +99,23 @@ function canonicalise(html: string) {
 // }
 export async function diffRenderedHtml(a: string, b: string) {
   const [lhs, rhs] = await Promise.all([
-    prettier.html(canonicalise(a)),
-    prettier.html(canonicalise(b)),
+    prettier.html(canonicalise(a)).then((v) => v.trim()),
+    prettier.html(canonicalise(b)).then((v) => v.trim()),
   ]);
 
-  const changes = diffLines(lhs.trimEnd(), rhs.trimEnd());
-  if (changes.every((part) => !part.added && !part.removed)) return null;
-  return changes
-    .flatMap((p) => {
-      const prefix = p.added ? "+" : p.removed ? "-" : " ";
-      // part.value always ends with a newline
-      return p.value
-        .replace(/\n$/, "")
-        .split("\n")
-        .map((line) => `${prefix} ${line}`);
-    })
-    .join("\n");
+  if (lhs === rhs) return;
+  const lines = createPatch("diff", lhs.trimEnd(), rhs.trimEnd(), "", "", {
+    context: 5,
+  })
+    .split("\n")
+    .slice(4);
+
+  const maxLines = 30;
+  if (lines.length > maxLines) {
+    const linesToRemove = lines.length - maxLines;
+    lines.splice(maxLines, linesToRemove);
+    lines.push(`... ${linesToRemove} lines redacted ...`);
+  }
+
+  return lines.join("\n");
 }

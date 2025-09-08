@@ -29,40 +29,18 @@ Core ideas:
 - [x] Make rewrite agentic. Allows for faster code edits, as well as
   - [ ] allow the agentic loop to "give up" if it's not making progress
 - [ ] Make sure it works when multiple components have the same name in the same file
-- [ ] Limit depth of HTML preview
+- [ ] C7: Limit depth of HTML preview
 - [ ] Look into grok-code-fast-1 for the first iteration of the rewrite. If it works, we saved time/cost
 - [x] Change how deps are shown to be d.ts + description
 - [ ] C68: why not using placeholders
 - [ ] C48: why internal problem with image component rendering link?
 - [ ] `el.codeId === "F62" && el.nodeId === null`: what to do?
+- [x] C58: where does the <link> come from?
+- [ ] C75: does it use placeholders better?
+- [ ] C74, C72: is deps the tightest it can be, or does it just show all deps?
+- [ ] C74, C68: are placeholders used better?
+- [ ] C56, C60: split up. Maybe if a big component is rendered only once, with no props, just put it in a separate file?
+- [ ] C38: still named ComponentToRewrite
 - [ ] make sure it works when multiple components have the same name in the same file
 - [ ] how to solve `Component C14 depends on C15 which is not found in registry` for skipped components?
-
-unblock rendering:
-
-C32: 349
-C15: 277
-C14: 189
-C28: 100
-C18: 13
-C27: 12
-C75: 12
-C59: 11
-C65: 6
-C11: 2
-C13: 3
-C17: 3
-C42: 2
-C47: 5
-C56: 2
-C58: 4
-C60: 2
-C61: 3
-C62: 4
-C63: 5
-C72: 5
-C74: 4
-C88: 2
-C92: 2
-C94: 2
-C7: 1
+- [x] jest-diff vs git diff?

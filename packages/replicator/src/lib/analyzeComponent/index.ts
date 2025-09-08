@@ -24,7 +24,7 @@ export interface ComponentPropFunctionInfo {
 export interface ComponentAnalysisResult {
   name: string;
   description: string;
-  headOnly: boolean;
+  classes: string[];
   functions: ComponentPropFunctionInfo[];
 }
 
@@ -37,7 +37,7 @@ export const analyzeComponent = (component: ComponentToAnalyze) =>
       reasoning: string | undefined;
       name: string;
       description: string;
-      headOnly: boolean;
+      classes: string[];
       functions: Array<{
         jsonPath: string;
         mayBeFunction: boolean;
@@ -62,6 +62,9 @@ export const analyzeComponent = (component: ComponentToAnalyze) =>
               name: z.string(),
               description: z.string(),
               headOnly: z.boolean(),
+              sideEffectWrapper: z.boolean(),
+              contextProviderWrapper: z.boolean(),
+              errorBoundaryWrapper: z.boolean(),
               functions: z
                 .object({
                   jsonPath: z.string(),
@@ -94,7 +97,21 @@ export const analyzeComponent = (component: ComponentToAnalyze) =>
 
       const tr = toolResults[toolResults.length - 1];
       if (tr && !tr.dynamic && tr.toolName === "analyzeComponent") {
-        return { ...tr.input, id: comp.id, reasoning: reasoningText };
+        const classes: string[] = [];
+        if (tr.input.headOnly) classes.push("headOnly");
+        if (tr.input.sideEffectWrapper) classes.push("sideEffectWrapper");
+        if (tr.input.contextProviderWrapper)
+          classes.push("contextProviderWrapper");
+        if (tr.input.errorBoundaryWrapper) classes.push("errorBoundaryWrapper");
+
+        return {
+          id: comp.id,
+          name: tr.input.name,
+          description: tr.input.description,
+          classes,
+          functions: tr.input.functions,
+          reasoning: reasoningText,
+        };
       }
 
       throw new Error("Failed to analyze component");

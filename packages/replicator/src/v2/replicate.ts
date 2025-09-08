@@ -111,7 +111,7 @@ export const replicate = (
       );
 
       analyzed
-        .filter((a) => a.headOnly)
+        .filter((a) => !!a.classes.length)
         .forEach((a) => {
           state.component.all.delete(a.id);
           state.component.nodes

@@ -51,7 +51,7 @@ Decision tree:
 • If the original code referenced unsupported libraries, replicate the behaviour in-line or stub it out with best-effort logic.
 • De-minify names to clear, Pascal-cased identifiers.  
 • Some React components include SVGs and SVG paths. The SVG paths are often very long and have been replaced with placeholders. The placeholders follow the format [[SVG:0|PATH:0|NAME:...|DESCRIPTION:...]]. When you see these placeholders, you should repeat them verbatim - do not change or expand them. They will later be replaced with the original SVG paths.
-• If the componet is named `ComponentToRewrite`, give the component a descriptive name and don't call it `ComponentToRewrite`. If it seems like the component comes from a UI kit or similar, use the name that the component is usually called in the UI kit.
+• If the component in the tests is named `ComponentToRewrite`, just MUST rename the component and give it a descriptive name. Components cannot be named `ComponentToRewrite`. If it seems like the component comes from a UI kit or similar, use the name that the component is usually called in the UI kit.
 
 ────────────────────────────────────────────────────────
 ◆ `MarkTestsAsInvalid` HEURISTICS (common STATIC patterns)

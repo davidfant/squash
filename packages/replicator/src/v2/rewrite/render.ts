@@ -46,11 +46,24 @@ async function compileComponent(
   }
 }
 
-function makeLazyRequire(modules: Record<string, Module>) {
+function makeLazyRequire(
+  modules: Record<string, Module>,
+  onIllegalImport: (spec: string) => void
+) {
   const hostRequire = createRequire(import.meta.url);
   const cache: Record<string, any> = {};
   return function lazyRequire(spec: string) {
     if (cache[spec]) return cache[spec];
+
+    const allowed =
+      spec === "react" || spec === "react-dom" || spec.startsWith("@/");
+
+    if (!allowed) {
+      onIllegalImport(spec);
+      cache[spec] = {};
+      return cache[spec];
+    }
+
     const mod = modules[spec];
     if (!mod) return hostRequire(spec);
 
@@ -177,10 +190,19 @@ export async function render(
 
   if (codeBuildErrors) return { ok: false, errors: codeBuildErrors };
 
-  const require = makeLazyRequire(modules);
+  const illegalImports = new Set<string>();
+  const require = makeLazyRequire(modules, (spec) => illegalImports.add(spec));
   const ctx = vm.createContext({ require });
   const results = await Promise.all(
     opts.examples.map((jsx, i) => renderSample(ctx, jsx, i))
   );
+
+  if (illegalImports.size) {
+    return {
+      ok: false,
+      errors: [`Illegal imports: ${[...illegalImports].join(", ")}`],
+    };
+  }
+
   return { ok: true, results };
 }

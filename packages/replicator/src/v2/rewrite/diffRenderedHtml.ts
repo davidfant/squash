@@ -99,8 +99,8 @@ function canonicalise(html: string) {
 // }
 export async function diffRenderedHtml(a: string, b: string) {
   const [lhs, rhs] = await Promise.all([
-    prettier.html(canonicalise(a)).then((v) => v.trim()),
-    prettier.html(canonicalise(b)).then((v) => v.trim()),
+    prettier.html(canonicalise(a)),
+    prettier.html(canonicalise(b)),
   ]);
 
   if (lhs === rhs) return;
@@ -110,7 +110,7 @@ export async function diffRenderedHtml(a: string, b: string) {
     .split("\n")
     .slice(4);
 
-  const maxLines = 30;
+  const maxLines = 50;
   if (lines.length > maxLines) {
     const linesToRemove = lines.length - maxLines;
     lines.splice(maxLines, linesToRemove);

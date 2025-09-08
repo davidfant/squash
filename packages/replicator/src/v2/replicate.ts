@@ -30,7 +30,12 @@ import { Metadata, type Snapshot } from "../types";
 import { recmaReplaceRefs } from "./ref";
 import { rewrite } from "./rewrite/agent";
 import { getPropFunctionsRequiredForRender } from "./rewrite/propFunctions";
-import { buildState, type ReplicatorNodeStatus } from "./state";
+import {
+  buildState,
+  type ComponentRegistryItem,
+  type ReplicatorNodeStatus,
+} from "./state";
+import { structureComponents } from "./structure/agent";
 
 type NodeId = Metadata.ReactFiber.NodeId;
 type ComponentId = Metadata.ReactFiber.ComponentId;
@@ -38,9 +43,10 @@ type ComponentId = Metadata.ReactFiber.ComponentId;
 const whitelist: Metadata.ReactFiber.ComponentId[] = [];
 // whitelist.push("C32", "C15");
 // whitelist.push("C58"); // avatar
+// whitelist.push("C75", "C40");
 
-const maxConcurrency = 1;
-const maxComponents = 30000;
+const maxConcurrency = 10;
+const maxComponents = 500;
 
 export const replicate = (
   snapshot: Snapshot,
@@ -337,21 +343,21 @@ export const replicate = (
       //   )
       // );
 
-      // console.dir(
-      //   [
-      //     ...new Set(
-      //       [...state.component.nodes.get("C36")!]
-      //         .flatMap((n) => [...(state.node.descendants.all.get(n) ?? [])])
-      //         .map((n) => state.node.all.get(n)?.componentId)
-      //         .filter((c) => !!c)
-      //         .concat("C36")
-      //     ),
-      //   ].map((componentId) => ({
-      //     componentId,
-      //     rewritable: canRewrite(componentId),
-      //   })),
-      //   { depth: null }
-      // );
+      console.dir(
+        [
+          ...new Set(
+            [...state.component.nodes.get("C75")!]
+              .flatMap((n) => [...(state.node.descendants.all.get(n) ?? [])])
+              .map((n) => state.node.all.get(n)?.componentId)
+              .filter((c) => !!c)
+              .concat("C75")
+          ),
+        ].map((componentId) => ({
+          componentId,
+          rewritable: isRewritable(componentId)?.status,
+        })),
+        { depth: null }
+      );
 
       const processor = unified()
         // .use(rehypeStripSquashAttribute)
@@ -364,11 +370,22 @@ export const replicate = (
         .use(recmaFixProperties)
         .use(recmaStringify);
 
-      const appstx = await processor.run(rootTree);
-      await sink.writeText(
-        "src/App.tsx",
-        await prettier.ts(processor.stringify(appstx))
-      );
+      const apptsx = await processor.run(rootTree);
+
+      const appItem: ComponentRegistryItem = {
+        id: "C-1",
+        dir: "",
+        name: "App",
+        description: "App",
+        code: { ts: await prettier.ts(processor.stringify(apptsx)), dts: "" },
+      };
+      state.component.registry.set(appItem.id, appItem);
+
+      await sink.writeText("src/App.tsx", appItem.code.ts);
+      await traceable(
+        () => structureComponents(new Set([appItem.id]), state, sink, logger),
+        { name: "Structure components" }
+      )();
 
       const replicatedHtml = `
 <!DOCTYPE html>

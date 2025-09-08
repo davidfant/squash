@@ -9,6 +9,9 @@ export class TarSink implements FileSink<Uint8Array> {
   async writeBytes(path: string, bytes: Uint8Array) {
     this.assets.push({ path, bytes });
   }
+  async remove(filePath: string) {
+    this.assets = this.assets.filter((a) => a.path !== filePath);
+  }
   async list() {
     return [...new Set(this.assets.map((a) => a.path))];
   }

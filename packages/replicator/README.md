@@ -36,7 +36,7 @@ Core ideas:
 - [ ] C48: why internal problem with image component rendering link?
 - [ ] `el.codeId === "F62" && el.nodeId === null`: what to do?
 - [x] C58: where does the <link> come from?
-- [ ] C75: does it use placeholders better?
+- [ ] C75 (depends on C40): shows button declared in props as unknown bc not yet set up
 - [ ] C74, C72: is deps the tightest it can be, or does it just show all deps?
 - [ ] C74, C68: are placeholders used better?
 - [ ] C56, C60: split up. Maybe if a big component is rendered only once, with no props, just put it in a separate file?

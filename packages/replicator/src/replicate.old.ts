@@ -224,12 +224,6 @@ export const replicate = (
                                 tagName: "placeholder",
                                 props: { path: i.key.join("/") },
                               };
-                              console.log("👀 replacing", {
-                                nodeId,
-                                i,
-                                parent,
-                                last,
-                              });
                               last[i.key[i.key.length - 1]!] = tag;
                               // last[i.key[i.key.length - 1]!] =
                               //   "[[redacted, this string serves as a placeholder and will be seen as a <prop path=... /> tag in the output HTML]]";

@@ -4,6 +4,7 @@ import { filesystemCacheMiddleware } from "@/lib/filesystemCacheMiddleware";
 import { withCacheBreakpoints } from "@/lib/rewriteComponent/llm/withCacheBreakpoint";
 import type { Metadata } from "@/types";
 import { anthropic, type AnthropicProviderOptions } from "@ai-sdk/anthropic";
+import { xai, type XaiProviderOptions } from "@ai-sdk/xai";
 import { stepCountIs, wrapLanguageModel } from "ai";
 import { traceable } from "langsmith/traceable";
 import path from "path";
@@ -134,13 +135,19 @@ export async function rewrite(
 
   logger.debug(`Rewriting component`, { componentId });
 
+  const claudeSonnet4 = wrapLanguageModel({
+    model: anthropic("claude-sonnet-4-20250514"),
+    middleware: filesystemCacheMiddleware(),
+  });
+  const grokCodeFast1 = wrapLanguageModel({
+    model: xai("grok-code-fast-1"),
+    middleware: filesystemCacheMiddleware(),
+  });
+
   let lastValidationError: Awaited<ReturnType<typeof validate>> | undefined;
   const { steps } = await generateText({
-    model: wrapLanguageModel({
-      model: anthropic("claude-sonnet-4-20250514"),
-      // model: google("gemini-2.5-flash"),
-      middleware: filesystemCacheMiddleware(),
-    }),
+    model: claudeSonnet4,
+    // model: grokCodeFast1,
     messages: withCacheBreakpoints([
       { role: "system", content: Prompts.instructions },
       { role: "user", content },
@@ -162,6 +169,8 @@ export async function rewrite(
         thinking: { type: "enabled", budgetTokens: 1024 },
         // thinking: { type: "enabled" },
       } satisfies AnthropicProviderOptions,
+      // @ts-expect-error
+      xai: { reasoning_effort: "low" } satisfies XaiProviderOptions,
     },
     stopWhen: [
       async ({ steps }) => {

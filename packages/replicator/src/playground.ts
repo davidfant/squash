@@ -62,6 +62,8 @@ await Promise.all(
   [
     path.join(PATH_TO_TEMPLATE, "src/components"),
     path.join(PATH_TO_TEMPLATE, "src/svgs"),
+    path.join(PATH_TO_TEMPLATE, "src/ui"),
+    path.join(PATH_TO_TEMPLATE, "src/pages"),
     path.join(PATH_TO_TEMPLATE, "src/App.tsx"),
     path.join(PATH_TO_TEMPLATE, "public"),
   ].map((p) => fs.rm(p, { recursive: true }).catch(() => {}))
@@ -112,7 +114,7 @@ try {
 // await fs.writeFile("replicated.tar.gz", out);
 
 await new Promise((resolve) => setTimeout(resolve, 10));
-logFileTree(PATH_TO_TEMPLATE);
+await logFileTree(PATH_TO_TEMPLATE);
 
 // Kill any existing pnpm dev process when this script restarts
 let child: ChildProcess | null = null;

@@ -15,6 +15,30 @@ export class FileSystemSink implements FileSink {
     await fs.writeFile(fullFilePath, bytes);
     this.paths.add(filePath);
   }
+  async remove(filePath: string) {
+    const fullFilePath = path.join(this.dir, filePath);
+    await fs.rm(fullFilePath, { recursive: true });
+    this.paths.delete(filePath);
+
+    // Recursively remove empty parent directories
+    await this.removeEmptyDirectories(path.dirname(fullFilePath));
+  }
+
+  private async removeEmptyDirectories(dirPath: string) {
+    if (dirPath === this.dir || dirPath === path.dirname(dirPath)) {
+      return;
+    }
+
+    try {
+      const entries = await fs.readdir(dirPath);
+      if (entries.length === 0) {
+        await fs.rmdir(dirPath);
+        await this.removeEmptyDirectories(path.dirname(dirPath));
+      }
+    } catch (error) {
+      return;
+    }
+  }
   async list() {
     return Array.from(this.paths);
   }

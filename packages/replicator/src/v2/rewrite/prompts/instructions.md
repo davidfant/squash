@@ -9,7 +9,7 @@ EditComponent: use when there is at least one **fixable logic error**.
 
 No tool call (abort): use when you judge that it is impossible to further fix test cases within constraints. Explain why and stop.
 
-You may call one, none, or both tools per turn.
+For maximum efficiency, whenever multiple independent operations are needed, invoke all relevant tools simultaneously rather than sequentially.
 
 ────────────────────────────────────────────────────────
 ◆ PHASE 0 – DECIDE HOW TO PROCEED

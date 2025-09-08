@@ -35,6 +35,13 @@ import { buildState, type ReplicatorNodeStatus } from "./state";
 type NodeId = Metadata.ReactFiber.NodeId;
 type ComponentId = Metadata.ReactFiber.ComponentId;
 
+const whitelist: Metadata.ReactFiber.ComponentId[] = [];
+// whitelist.push("C32", "C15");
+// whitelist.push("C58"); // avatar
+
+const maxConcurrency = 1;
+const maxComponents = 30000;
+
 export const replicate = (
   snapshot: Snapshot,
   sink: FileSink<any>,
@@ -132,9 +139,6 @@ export const replicate = (
           (state.component.maxDepth.get(a.id) ?? 0)
       );
 
-      const whitelist: Metadata.ReactFiber.ComponentId[] = [];
-      // whitelist.push("C32", "C15");
-
       function isRewritable(componentId: ComponentId): {
         status: "blocked" | "never" | "yes";
         details: {
@@ -231,9 +235,6 @@ export const replicate = (
 
       await traceable(
         async () => {
-          const maxConcurrency = 1;
-          const maxComponents = 90;
-
           function enqueue() {
             // TODO: reorder by max node depth
             for (const [componentId, component] of componentsByMaxDepth) {
@@ -311,7 +312,7 @@ export const replicate = (
               );
             } else {
               state.component.nodes.get(rewrite.id)?.forEach((nodeId) => {
-                state.node.status.set(nodeId, "invalid");
+                state.node.status.set(nodeId, "skipped");
               });
             }
 
@@ -323,18 +324,18 @@ export const replicate = (
         { name: "Rewrite components" }
       )();
 
-      whitelist.length = 0;
-      console.log(
-        JSON.stringify(
-          toPlain(
-            Object.fromEntries(
-              [...state.component.all.entries()]
-                .map(([id, c]) => [id, isRewritable(id)])
-                .filter(([_, can]) => !!can)
-            )
-          )
-        )
-      );
+      // whitelist.length = 0;
+      // console.log(
+      //   JSON.stringify(
+      //     toPlain(
+      //       Object.fromEntries(
+      //         [...state.component.all.entries()]
+      //           .map(([id, c]) => [id, isRewritable(id)])
+      //           .filter(([_, can]) => !!can)
+      //       )
+      //     )
+      //   )
+      // );
 
       // console.dir(
       //   [

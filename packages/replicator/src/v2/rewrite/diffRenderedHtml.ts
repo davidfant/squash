@@ -1,6 +1,6 @@
+import * as prettier from "@/lib/prettier";
 import { generate, parse, walk, type DeclarationList } from "css-tree";
-import { diff } from "jest-diff";
-// import { diffLines } from "diff";
+import { diffLines } from "diff";
 import * as parse5 from "parse5";
 
 const normText = (s: string) => s.replace(/\s+/g, " ").trim();
@@ -10,7 +10,7 @@ const CSS_PROPERTY_ALIAS: Record<string, string> = {
 };
 const OPTIONAL_COMMA_FUNCTIONS = ["rect", "inset", "matrix", "matrix3d"];
 
-function canonicaliseStyle(style: string): Record<string, string> {
+function canonicaliseStyle(style: string): string {
   const ast = parse(style, { context: "declarationList" }) as DeclarationList;
 
   walk(ast, (n) => {
@@ -38,10 +38,8 @@ function canonicaliseStyle(style: string): Record<string, string> {
     .toArray()
     .filter((d) => d.type === "Declaration")
     .sort((a, b) => a.property.localeCompare(b.property))
-    .reduce(
-      (acc, d) => ({ ...acc, [d.property]: generate(d.value) }),
-      {} as Record<string, string>
-    );
+    .map((d) => `${d.property}: ${generate(d.value)}`)
+    .join("; ");
 }
 
 const canonicaliseClass = (className: string) =>
@@ -51,44 +49,31 @@ const canonicaliseClass = (className: string) =>
     .sort()
     .join(" ");
 
-function simplify(
-  node: parse5.DefaultTreeAdapterMap[keyof parse5.DefaultTreeAdapterMap]
-): unknown {
-  if (node.nodeName === "#comment") return null;
-  if (node.nodeName === "#text") {
-    const text = normText(
-      (node as parse5.DefaultTreeAdapterMap["textNode"]).value
-    );
-    return text ? text : null;
+function simplify<
+  T extends parse5.DefaultTreeAdapterMap[keyof parse5.DefaultTreeAdapterMap],
+>(node: T): T {
+  if ("childNodes" in node) {
+    node.childNodes = node.childNodes.map(simplify);
   }
-
-  const children = "childNodes" in node ? node.childNodes : [];
-  let attrs: Record<string, unknown> = {};
   if ("attrs" in node) {
-    for (const { name, value } of node.attrs) {
-      if (name === "style") {
-        const canonical = canonicaliseStyle(value);
-        if (!Object.keys(canonical).length) continue;
-        attrs[name] = canonical;
-      } else if (name === "class") {
-        attrs[name] = canonicaliseClass(value);
-      } else {
-        attrs[name] = value;
+    node.attrs.sort((a, b) => a.name.localeCompare(b.name));
+    node.attrs.forEach((attr) => {
+      if (attr.name === "style") {
+        attr.value = canonicaliseStyle(attr.value);
       }
-    }
+      if (attr.name === "class") {
+        attr.value = canonicaliseClass(attr.value);
+      }
+    });
   }
 
-  return {
-    tag: node.nodeName,
-    attrs,
-    children: children.map(simplify).filter(Boolean),
-  };
+  return node;
 }
 
 function canonicalise(html: string) {
   const dom = parse5.parseFragment(html, { sourceCodeLocationInfo: false });
   // return JSON.stringify(simplify(dom), null, 2);
-  return simplify(dom);
+  return parse5.serialize(simplify(dom));
 }
 
 // export function diffRenderedHtml(a: string, b: string) {
@@ -103,31 +88,22 @@ function canonicalise(html: string) {
 //     ? null
 //     : diffString;
 // }
-export function diffRenderedHtml(a: string, b: string) {
-  const lhs = canonicalise(a);
-  const rhs = canonicalise(b);
-  // const lhs = JSON.stringify(canonicalise(a), null, 2);
-  // const rhs = JSON.stringify(canonicalise(b), null, 2);
+export async function diffRenderedHtml(a: string, b: string) {
+  const [lhs, rhs] = await Promise.all([
+    prettier.html(canonicalise(a)),
+    prettier.html(canonicalise(b)),
+  ]);
 
-  // const changes = diffLines(lhs, rhs);
-  // if (changes.every((part) => !part.added && !part.removed)) return null;
-  // return changes
-  //   .flatMap((part) => {
-  //     const prefix = part.added ? "+" : part.removed ? "-" : " ";
-  //     return part.value.split("\n").map((line) => `${prefix} ${line}`);
-  //   })
-  //   .join("\n");
-
-  const diffString = diff(lhs, rhs, {
-    aAnnotation: "Expected",
-    bAnnotation: "Actual",
-    aIndicator: "+",
-    bIndicator: "-",
-    aColor: (x) => x,
-    bColor: (x) => x,
-    commonColor: (x) => x,
-  });
-  return diffString === "Compared values have no visual difference."
-    ? null
-    : diffString;
+  const changes = diffLines(lhs.trimEnd(), rhs.trimEnd());
+  if (changes.every((part) => !part.added && !part.removed)) return null;
+  return changes
+    .flatMap((p) => {
+      const prefix = p.added ? "+" : p.removed ? "-" : " ";
+      // part.value always ends with a newline
+      return p.value
+        .replace(/\n$/, "")
+        .split("\n")
+        .map((line) => `${prefix} ${line}`);
+    })
+    .join("\n");
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from "@/types";
+import * as cheerio from "cheerio";
 import esbuild from "esbuild";
 import { createRequire } from "node:module";
 import vm from "node:vm";
@@ -95,12 +96,24 @@ function withConsoleCapture<T>(fn: () => T): { result: T | null; logs: Log[] } {
   }
 }
 
+function stripReactImgPreloads(html: string): string {
+  const $ = cheerio.load(html, {}, false);
+
+  $('link[rel="preload"][as="image"]').each((_, link) => {
+    const $link = $(link);
+    const href = $link.attr("href");
+    const $img = $('img[src="' + href + '"]');
+    if ($img.length) $link.remove();
+  });
+
+  return $.html();
+}
+
 async function renderSample(
   ctx: vm.Context,
   sampleCode: string,
   index: number
 ): Promise<{ html: string | null; logs: Log[] }> {
-  // esbuild just turns TSX → CJS; we don't bundle so 'require' calls stay.
   const { code } = await esbuild.transform(sampleCode, {
     loader: "tsx",
     format: "cjs",
@@ -109,11 +122,10 @@ async function renderSample(
 
   ctx.module = { exports: {} };
   vm.runInContext(code, ctx, { filename: `sample-${index}.cjs` });
-  // TODO: listen to console logs happening when creating this element.
-  // E.g. "Each child in a list should have a unique key prop". These
-  // errors should be reported back to the LLM
   const element = React.createElement(ctx.module.exports.Sample);
-  const output = withConsoleCapture(() => renderToStaticMarkup(element));
+  const output = withConsoleCapture(() =>
+    stripReactImgPreloads(renderToStaticMarkup(element))
+  );
   return { html: output.result, logs: output.logs };
 }
 
@@ -162,11 +174,6 @@ export async function render(
         };
       }),
   ]);
-
-  // if (opts.component.id === "C30") {
-  //   console.log(opts.state.component.registry);
-  //   // process.exit(0);
-  // }
 
   if (codeBuildErrors) return { ok: false, errors: codeBuildErrors };
 

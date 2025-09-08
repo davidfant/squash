@@ -5,7 +5,7 @@ import { llmMerge } from "./llmMerge";
 export function createReplicatorTools() {
   let latestCode: string | undefined;
 
-  const editComponent = tool({
+  const EditComponent = tool({
     description: `
   Use this tool to propose an edit to the component. The code edit will be read by a less intelligent model, which will quickly apply the edit. You should make it clear what the edit is, while also minimizing the unchanged code you write.
   
@@ -63,9 +63,14 @@ export function createReplicatorTools() {
     },
   });
 
-  const skipExamples = tool({
-    description:
-      "Mark example IDs as invalid so future validation ignores them",
+  const MarkTestsAsInvalid = tool({
+    description: `
+Use this tool to tell the evaluation harness that one or more test cases are invalid, for example because the test case cannot be satisfied in a static-render environment or are internally contradictory. The harness will drop those tests from future diff checks.
+
+When to use:
+1. The mismatch is due to effects / layout / browser APIs that do not run under \`renderToStaticMarkup\` (e.g. ResizeObserver, useLayoutEffect).
+2. The test's expected HTML conflicts with other tests or is malformed.
+      `.trim(),
     inputSchema: z.object({
       reason: z.string(),
       ids: z.string().array().nonempty(),
@@ -73,5 +78,5 @@ export function createReplicatorTools() {
     execute: () => ({ ok: true }),
   });
 
-  return { editComponent, skipExamples };
+  return { MarkTestsAsInvalid, EditComponent };
 }

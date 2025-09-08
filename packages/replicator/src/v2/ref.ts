@@ -295,8 +295,12 @@ const findAttr = <T>(element: NodeMap["JSXElement"], name: string) => {
   return attr.value.value as T;
 };
 
-export const recmaReplaceRefs: Plugin<[state: ReplicatorState], Program> =
-  (state) => (tree) => {
+export const recmaReplaceRefs: Plugin<
+  [state: ReplicatorState, defaultComponentName?: string],
+  Program
+> =
+  (state, defaultComponentName = "Component") =>
+  (tree) => {
     const imports = new Set<ComponentId>();
 
     estreeVisit(tree, (node) => {
@@ -314,7 +318,7 @@ export const recmaReplaceRefs: Plugin<[state: ReplicatorState], Program> =
       const props = JSON.parse(propsString) as Record<string, unknown>;
 
       imports.add(compId);
-      const compName = state.component.name.get(compId) ?? "Component";
+      const compName = state.component.name.get(compId) ?? defaultComponentName;
       Object.keys(node).forEach((k) => delete (node as any)[k]);
       Object.assign(
         node,

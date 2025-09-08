@@ -45,7 +45,7 @@ export async function buildExampleCode({
       .use(recmaJsx)
       .use(recmaRemoveRedundantFragment)
       .use(recmaWrapAsComponent, "Sample")
-      .use(recmaReplaceRefs, state)
+      .use(recmaReplaceRefs, state, component.name)
       .use(recmaStripSquashAttribute)
       .use(recmaFixProperties)
       .use(recmaStringify),
@@ -130,7 +130,11 @@ export function replaceExamples(
   for (const tree of [...state.trees.values()]) {
     const componentNodeIds = state.component.nodes.get(component.id);
     for (const parentId of componentNodeIds ?? []) {
-      if (skipNodeIds.has(parentId)) continue;
+      if (skipNodeIds.has(parentId)) {
+        replaced.set(parentId, "skipped");
+        continue;
+      }
+
       const node = state.node.all.get(parentId);
       if (!node) continue;
       // const depsFromProps = state.node.descendants.fromProps.get(parentId);

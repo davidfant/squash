@@ -30,7 +30,7 @@ export async function rewrite(
   logger: Logger
 ): Promise<{
   item: ComponentRegistryItem;
-  reasoning: string | undefined;
+  reasoning: string[];
   nodes: Map<NodeId, ReplicatorNodeStatus>;
 } | null> {
   const component = state.component.all.get(
@@ -74,7 +74,7 @@ export async function rewrite(
       .name;
     if (name && name.length > 3) return name;
   })();
-  const exampleComponentName = componentName ?? "Component";
+  const exampleComponentName = componentName ?? "ComponentToRewrite";
 
   const examples = await Promise.all(
     [...exampleNodes].map(async ([nodeId, items]) => {
@@ -134,8 +134,8 @@ export async function rewrite(
 
   logger.debug(`Rewriting component`, { componentId });
 
-  let lastValidationError: string | undefined = undefined;
-  const { reasoningText, toolResults, response } = await generateText({
+  let lastValidationError: Awaited<ReturnType<typeof validate>> | undefined;
+  const { steps } = await generateText({
     model: wrapLanguageModel({
       model: anthropic("claude-sonnet-4-20250514"),
       // model: google("gemini-2.5-flash"),
@@ -147,10 +147,10 @@ export async function rewrite(
     ]),
     tools: createReplicatorTools(),
     prepareStep: ({ messages }) => {
-      if (lastValidationError) {
+      if (lastValidationError?.message) {
         const newMessage = {
           role: "user",
-          content: lastValidationError,
+          content: lastValidationError.message,
         } as const;
         lastValidationError = undefined;
         return { messages: [...messages, newMessage] };
@@ -160,6 +160,7 @@ export async function rewrite(
     providerOptions: {
       anthropic: {
         thinking: { type: "enabled", budgetTokens: 1024 },
+        // thinking: { type: "enabled" },
       } satisfies AnthropicProviderOptions,
     },
     stopWhen: [
@@ -168,36 +169,38 @@ export async function rewrite(
           .flatMap((s) => s.toolResults)
           .filter((s) => !s.dynamic);
         const latest = toolResults.findLast(
-          (r) => r.toolName === "editComponent"
+          (r) => r.toolName === "EditComponent"
         )?.output;
         if (!latest) return false;
 
-        const skippedExampleIds = toolResults
-          .filter((r) => r.toolName === "skipExamples")
-          .flatMap((r) => r.input.ids);
+        const skippedExampleIds = new Set(
+          toolResults
+            .filter((r) => r.toolName === "MarkTestsAsInvalid")
+            .flatMap((r) => r.input.ids)
+        );
 
         const comp = {
           id: componentId,
           name: { original: exampleComponentName, new: latest.component.name },
           code: latest.code,
         };
-        const error = await traceable(
+        const validationError = await traceable(
           (c: typeof comp) =>
             validate({
               component: c,
               state,
               examples: examples.filter(
-                (e) => !skippedExampleIds.includes(e.nodeId)
+                (e) => !skippedExampleIds.has(e.nodeId)
               ),
             }),
           { name: "Validate" }
         )(comp);
 
-        if (error) {
-          lastValidationError = error;
+        if (validationError) {
+          lastValidationError = validationError;
           logger.debug("Validation error after rewriting component", {
             componentId,
-            error: lastValidationError,
+            error: validationError.message,
           });
         } else {
           logger.debug("Validation success after rewriting component", {
@@ -205,21 +208,27 @@ export async function rewrite(
           });
         }
 
-        return !error;
+        return !validationError;
       },
       stepCountIs(3),
     ],
   });
 
-  const latest = toolResults
-    .filter((r) => !r.dynamic)
-    .findLast((r) => r.toolName === "editComponent")?.output;
-  const skippedExampleIds = toolResults
-    .filter((r) => !r.dynamic)
-    .filter((r) => r.toolName === "skipExamples")
-    .flatMap((r) => r.input.ids);
+  const toolResults = steps
+    .flatMap((s) => s.toolResults)
+    .filter((r) => !r.dynamic);
 
-  if (latest) {
+  const latest = toolResults.findLast(
+    (r) => r.toolName === "EditComponent"
+  )?.output;
+  const skippedExampleIds = new Set(
+    toolResults
+      .filter((r) => r.toolName === "MarkTestsAsInvalid")
+      .flatMap((r) => r.input.ids as Metadata.ReactFiber.NodeId[])
+  );
+  lastValidationError?.nodeIds.forEach((id) => skippedExampleIds.add(id));
+
+  if (latest && skippedExampleIds.size !== examples.length) {
     const registryItem: ComponentRegistryItem = {
       id: componentId,
       dir: path.join("components", componentId),
@@ -238,13 +247,15 @@ export async function rewrite(
     const replaced = replaceExamples(
       { id: componentId, name: latest.component.name },
       state,
-      new Set(skippedExampleIds as Metadata.ReactFiber.NodeId[])
+      skippedExampleIds
     );
 
     replaced.forEach((status, nodeId) => state.node.status.set(nodeId, status));
     return {
       item: registryItem,
-      reasoning: reasoningText,
+      reasoning: steps
+        .flatMap((s) => s.reasoningText)
+        .filter((r) => r !== undefined),
       nodes: replaced,
     };
   }

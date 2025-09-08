@@ -84,12 +84,25 @@ const toCode = async (
   fn: Function | null | undefined,
   props: Record<string, unknown>,
   ctx: SanitizeContext
-): Promise<Metadata.ReactFiber.PropValue.Component> => ({
-  $$typeof: "react.component",
-  codeId: ctx.codeIdByFn.get(fn!) ?? null,
-  nodeId: ctx.nodeIdByProps.get(props) ?? null,
-  props: await sanitize(props, ctx),
-});
+): Promise<Metadata.ReactFiber.PropValue.Component> => {
+  let nodeId: Metadata.ReactFiber.NodeId | null = null;
+  if (ctx.nodeIdByProps.has(props)) {
+    nodeId = ctx.nodeIdByProps.get(props) ?? null;
+  } else {
+    const matches = [...ctx.nodeIdByProps.entries()].filter(([p, _]) =>
+      deepEqual(props, p)
+    );
+    if (matches.length === 1) {
+      nodeId = matches[0]![1];
+    }
+  }
+  return {
+    $$typeof: "react.component",
+    codeId: ctx.codeIdByFn.get(fn!) ?? null,
+    nodeId,
+    props: await sanitize(props, ctx),
+  };
+};
 
 async function getCodeFn(el: any): Promise<Function | null | undefined> {
   if (typeof el === "function") return el;
@@ -220,6 +233,48 @@ const sanitize = async (value: any, context: SanitizeContext): Promise<any> =>
       ancestors: [...c.ancestors, v],
     }),
   });
+
+function deepEqual(a: any, b: any) {
+  // 1. Fast-path: identical reference or primitive equality
+  if (a === b) return true;
+
+  // 2. Handle Date & RegExp specifically
+  if (a instanceof Date && b instanceof Date)
+    return a.getTime() === b.getTime();
+  if (a instanceof RegExp && b instanceof RegExp)
+    return a.toString() === b.toString();
+
+  // 3. If either isn’t an object (or is null) they differ
+  if (
+    a === null ||
+    b === null ||
+    typeof a !== "object" ||
+    typeof b !== "object"
+  ) {
+    return false;
+  }
+
+  // 4. Arrays: length + element-wise check
+  if (Array.isArray(a) || Array.isArray(b)) {
+    if (!Array.isArray(a) || !Array.isArray(b)) return false;
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (!deepEqual(a[i], b[i])) return false;
+    }
+    return true;
+  }
+
+  // 5. Plain objects: compare keys + recurse on values
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) return false;
+
+  for (const key of keysA) {
+    if (!Object.prototype.hasOwnProperty.call(b, key)) return false;
+    if (!deepEqual(a[key], b[key])) return false;
+  }
+  return true;
+}
 
 export async function reactFiber(): Promise<Metadata.ReactFiber | null> {
   const root = findReactRoot();

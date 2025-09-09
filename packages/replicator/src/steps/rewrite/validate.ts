@@ -1,5 +1,5 @@
 import type { Metadata } from "@/types";
-import type { ReplicatorState } from "../state";
+import type { ReplicatorState } from "../../state";
 import { diffRenderedHtml } from "./diffRenderedHtml";
 import * as Prompts from "./prompts";
 import { render } from "./render";

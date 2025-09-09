@@ -1,4 +1,12 @@
+import { clone } from "@/lib/clone";
+import { logger } from "@/lib/logger";
 import * as prettier from "@/lib/prettier";
+import { recmaFixProperties } from "@/lib/recma/fixProperties";
+import { recmaRemoveRedundantFragment } from "@/lib/recma/removeRedundantFragment";
+import { recmaStripSquashAttribute } from "@/lib/recma/stripSquashAttribute";
+import { recmaWrapAsComponent } from "@/lib/rehype/wrapAsComponent";
+import { toPlain } from "@/lib/toPlain";
+import { analyzeComponent, type ComponentToAnalyze } from "@/steps/analyze";
 import { load } from "cheerio";
 import { traceable } from "langsmith/traceable";
 import path from "path";
@@ -7,84 +15,45 @@ import recmaStringify from "recma-stringify";
 import rehypeParse from "rehype-parse";
 import rehypeRecma from "rehype-recma";
 import { unified } from "unified";
-import { SKIP, visit } from "unist-util-visit";
-import { langsmith } from "./lib/ai";
-import {
-  analyzeComponent,
-  type ComponentToAnalyze,
-} from "./lib/analyzeComponent";
+import { visit } from "unist-util-visit";
+import { langsmith } from "./lib/ai/sdk";
 import { downloadRemoteUrl } from "./lib/assets/downloadRemoteAsset";
 import { identifyUrlsToDownload } from "./lib/assets/identifyRemoveAssetsToDownload";
-import {
-  buildInitialComponentRegistry,
-  type ComponentRegistry,
-} from "./lib/componentRegistry";
 import { fuseMemoForwardRef } from "./lib/fuseMemoForwardRef";
-import {
-  getRewritableComponents,
-  type RewritableComponentInfo,
-} from "./lib/getRewritableComponents";
-import { createRef } from "./lib/recma/createRef";
-import { recmaFixProperties } from "./lib/recma/fixProperties";
-import { recmaRemoveRedundantFragment } from "./lib/recma/removeRedundantFragment";
-import { recmaReplaceRefs } from "./lib/recma/replaceRefs";
-import { rehypeStripSquashAttribute } from "./lib/rehype/stripSquashAttribute";
-import { recmaWrapAsComponent } from "./lib/rehype/wrapAsComponent";
-import type { RewriteComponentStrategy } from "./lib/rewriteComponent/types";
+import { recmaReplaceRefs } from "./lib/recma/ref";
 import type { FileSink } from "./lib/sinks/base";
-import { aliasSVGPaths, type DescribeSVGStrategy } from "./lib/svg/alias";
+import { aliasSVGPaths } from "./lib/svg/alias";
 import { replaceSVGPathsInFiles } from "./lib/svg/replace";
 import {
-  buildAncestorsMap,
-  buildChildMap,
-  buildComponentNodesMap,
-  buildDescendantsMap,
-  componentsMap,
-  nodesMap,
-} from "./lib/traversal/util";
+  buildState,
+  type ComponentRegistryItem,
+  type ReplicatorNodeStatus,
+} from "./state";
+import { rewrite } from "./steps/rewrite/agent";
+import { getPropFunctionsRequiredForRender } from "./steps/rewrite/propFunctions";
+import { structureComponents } from "./steps/structure/agent";
 import { Metadata, type Snapshot } from "./types";
 
-type Root = import("hast").Root;
-type Element = import("hast").Element;
 type NodeId = Metadata.ReactFiber.NodeId;
-type CodeId = Metadata.ReactFiber.CodeId;
 type ComponentId = Metadata.ReactFiber.ComponentId;
 
-const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
+const whitelist: Metadata.ReactFiber.ComponentId[] = [];
+// whitelist.push("C32", "C15");
+// whitelist.push("C58"); // avatar
+// whitelist.push("C75", "C40");
 
-async function writeFile(opts: {
-  componentName: string;
-  path: string;
-  root: Root;
-  sink: FileSink;
-  componentRegistry: ComponentRegistry;
-}) {
-  const processor = unified()
-    .use(rehypeStripSquashAttribute)
-    .use(rehypeRecma)
-    .use(recmaJsx)
-    .use(recmaRemoveRedundantFragment)
-    .use(recmaWrapAsComponent, opts.componentName)
-    .use(recmaReplaceRefs, opts.componentRegistry)
-    .use(recmaFixProperties)
-    .use(recmaStringify);
+const maxConcurrency = 30;
+const maxComponents = 500;
 
-  const estree = await processor.run(clone(opts.root));
-  await opts.sink.writeText(
-    opts.path,
-    await prettier.ts(processor.stringify(estree))
-  );
-}
-
-export const replicate = (
-  snapshot: Snapshot,
-  sink: FileSink<any>,
-  rewriteComponentStrategy: RewriteComponentStrategy,
-  describeSVGStrategy: DescribeSVGStrategy
-) =>
+export const replicate = (snapshot: Snapshot, sink: FileSink<any>) =>
   traceable(
     async (_url: string) => {
-      const $ = load(snapshot.page.html);
+      // const $ = load(snapshot.page.html, { xmlMode: true });
+      const $ = load(
+        // TODO: this might incorrectly match with other text
+        snapshot.page.html.replace(/<(\/?)h([1-6])/gi, "<$1x-h$2")
+      );
+
       const html = $("html") ?? $("html");
       const head = $("head") ?? $("head");
       const body = $("body") ?? $("body");
@@ -105,7 +74,7 @@ export const replicate = (
       );
 
       const svgAliased = await traceable(
-        () => aliasSVGPaths($, snapshot.metadata, describeSVGStrategy),
+        () => aliasSVGPaths($, snapshot.metadata),
         { name: "Alias SVG paths" }
       )();
 
@@ -113,302 +82,303 @@ export const replicate = (
       if (!m) throw new Error("Metadata is required");
       fuseMemoForwardRef(m);
 
-      const nodes = nodesMap(m.nodes);
-      const components = componentsMap(m.components);
-      const componentNodes = buildComponentNodesMap(nodes);
-      const childMap = buildChildMap(nodes);
-      const ancestorsMap = buildAncestorsMap(nodes);
-      const descendantsMap = buildDescendantsMap(childMap);
-      const codeIdToComponentId = new Map(
-        [...components.entries()]
-          .map(([cid, c]) =>
-            "codeId" in c ? ([c.codeId, cid] as const) : undefined
-          )
-          .filter((v) => !!v)
-      );
-
-      const nodeStatus = new Map<
-        Metadata.ReactFiber.NodeId,
-        "pending" | "valid" | "invalid"
-      >(
-        // [...nodes.entries()].map(([id, node]) => {
-        //   const c = components.get(node.componentId);
-        //   return [id, c && "codeId" in c ? "pending" : "valid"];
-        // })
-        [...nodes.entries()]
-          .filter(([, n]) => {
-            const c = components.get(n.componentId);
-            return c && "codeId" in c;
-          })
-          .map(([id]) => [id, "pending"])
-      );
-
-      // mark every node that's not a code node as valid
-
-      const formattedCode = new Map<Metadata.ReactFiber.CodeId, string>(
-        await Promise.all(
-          Object.entries(m.code).map(
-            async ([id, code]) =>
-              [
-                id as Metadata.ReactFiber.CodeId,
-                await prettier.js(`(${code})`),
-              ] as const
-          )
-        )
-      );
-      const registry = buildInitialComponentRegistry(m.components);
-      const tree = unified()
+      const rootTree = unified()
         .use(rehypeParse, { fragment: true })
         .parse(body.html()!);
+      visit(rootTree, "element", (n) => {
+        if (n.tagName.startsWith("x-h")) n.tagName = n.tagName.slice(2);
+      });
+      const state = await buildState(m, clone(rootTree));
 
       const analyzed = await traceable(
         (components: Array<ComponentToAnalyze>) =>
           Promise.all(components.map(analyzeComponent)),
         { name: "Analyze All Components" }
       )(
-        [...registry.values()]
-          .map((c) => {
-            const comp = components.get(c.id);
-            if (!comp || !("codeId" in comp)) return;
-            const code = formattedCode.get(comp.codeId);
+        [...state.component.all]
+          .map(([cid, c]) => {
+            if (!("codeId" in c)) return;
+            const code = state.code.get(c.codeId);
             if (!code) return;
-            const n = c.name;
-            return { id: c.id, code, name: n.isFallback ? undefined : n.value };
+            return { id: cid, code, name: state.component.name.get(cid) };
           })
           .filter((v) => !!v)
         // .slice(0, 3)
       );
-      analyzed.forEach((a) => {
-        const item = registry.get(a.id);
-        if (!item) return;
-        item.name = { value: a.name, isFallback: true };
-        item.path = path.join("src/components/analyzed", a.id, `${a.name}.tsx`);
-        item.module = path.join("@/components/analyzed", a.id, a.name);
-      });
+      const componentAnalysis = new Map<ComponentId, (typeof analyzed)[number]>(
+        analyzed.map((a) => [a.id, a])
+      );
+
+      analyzed
+        .filter((a) => !!a.classes.length)
+        .forEach((a) => {
+          state.component.all.delete(a.id);
+          state.component.nodes
+            .get(a.id)
+            ?.forEach((id) => state.node.all.delete(id));
+        });
+
+      // $("h1,h2,h3,h4,h5,h6").each((_, el) => {
+      //   el.tagName = `x-h${el.tagName.slice(1)}`;
+      // });a
+
+      state.trees.set("App", rootTree);
+
+      const rewrites: Map<
+        ComponentId,
+        Promise<{
+          id: ComponentId;
+          result: Awaited<ReturnType<typeof rewrite>>;
+        }>
+      > = new Map();
+
+      const componentsByMaxDepth = [...state.component.all.entries()].sort(
+        ([, a], [, b]) =>
+          (state.component.maxDepth.get(b.id) ?? 0) -
+          (state.component.maxDepth.get(a.id) ?? 0)
+      );
+
+      function isRewritable(componentId: ComponentId): {
+        status: "blocked" | "never" | "yes";
+        details: {
+          statusesByNodeId: Map<
+            NodeId,
+            Partial<Record<ReplicatorNodeStatus, Set<ComponentId>>>
+          >;
+          propFunctionsByNodeId: Map<
+            NodeId,
+            Record<string, unknown[]> | undefined
+          >;
+        };
+      } | null {
+        const component = state.component.all.get(componentId);
+        if (
+          !component ||
+          !("codeId" in component) ||
+          rewrites.has(componentId) ||
+          state.component.nodes
+            .get(componentId)
+            ?.every((n) => state.node.status.get(n) !== "pending")
+        ) {
+          return null;
+        }
+        if (whitelist.length && !whitelist.includes(componentId)) {
+          return null;
+        }
+
+        const statusesByNodeId = new Map<
+          NodeId,
+          Partial<Record<ReplicatorNodeStatus, Set<ComponentId>>>
+        >(
+          // TODO: try seeing if we change this logic in the following way, if it unblocks the Row component: for each descendant from props, get all of its descendants from props, and so on, and all of those are deleted from the current node descendants
+          state.component.nodes.get(componentId)?.map((nodeId) => {
+            const descendants = new Set(state.node.descendants.all.get(nodeId));
+            state.node.descendants.fromProps.get(nodeId)?.forEach((d) => {
+              descendants.delete(d.nodeId);
+              state.node.descendants.all
+                .get(d.nodeId)
+                ?.forEach((d) => descendants.delete(d));
+            });
+            descendants.forEach(
+              (d) => !state.node.status.has(d) && descendants.delete(d)
+            );
+
+            const statuses: Partial<
+              Record<ReplicatorNodeStatus, Set<ComponentId>>
+            > = {};
+            descendants.forEach((d) => {
+              const status = state.node.status.get(d);
+              const node = state.node.all.get(d);
+              if (status && node) {
+                if (!(status in statuses)) statuses[status] = new Set();
+                statuses[status]!.add(node.componentId);
+              }
+            });
+
+            return [nodeId, statuses] as const;
+          })
+        );
+
+        const propFunctionsByNodeId: Map<
+          NodeId,
+          Record<string, unknown[]>
+        > = new Map(
+          (state.component.nodes.get(componentId) ?? [])
+            .filter((nodeId) => state.node.descendants.all.get(nodeId)?.size)
+            .map((nodeId) => {
+              const node = state.node.all.get(nodeId);
+              const fns = getPropFunctionsRequiredForRender(
+                componentAnalysis.get(componentId)!,
+                (node?.props ?? {}) as Record<string, unknown>
+              );
+              if (!Object.keys(fns).length) return undefined;
+              return [nodeId, fns] as const;
+            })
+            .filter((v) => !!v)
+        );
+
+        // if (componentId === "C18") { // Row component
+        //   console.log(statusesByNodeId);
+        // }
+
+        const isBlocked = [...statusesByNodeId].every(([, s]) => s.pending);
+        const isNever = [...propFunctionsByNodeId.values()].some(
+          (paths) => paths && Object.values(paths).length
+        );
+        const value = isNever ? "never" : isBlocked ? "blocked" : "yes";
+        return {
+          status: value,
+          details: { statusesByNodeId, propFunctionsByNodeId },
+        };
+      }
+
+      await traceable(
+        async () => {
+          function enqueue() {
+            // TODO: reorder by max node depth
+            for (const [componentId, component] of componentsByMaxDepth) {
+              if (rewrites.size >= maxConcurrency) {
+                logger.debug(
+                  "Max concurrency reached, waiting for a rewrite to finish"
+                );
+                return;
+              }
+              if (
+                state.component.registry.size + rewrites.size >=
+                maxComponents
+              ) {
+                logger.debug(
+                  "Max components reached, waiting for a rewrite to finish"
+                );
+                return;
+              }
+
+              const rewritable = isRewritable(componentId);
+              switch (rewritable?.status) {
+                case "blocked":
+                  logger.debug("Waiting for blocking component", {
+                    componentId,
+                    details: toPlain(rewritable.details.statusesByNodeId),
+                  });
+                  break;
+                case "never":
+                  logger.debug("Skipping component with prop fns", {
+                    componentId,
+                    details: toPlain(rewritable.details.propFunctionsByNodeId),
+                  });
+                  state.component.nodes.get(componentId)?.forEach((nodeId) => {
+                    state.node.status.set(nodeId, "skipped");
+                  });
+                  break;
+                case "yes":
+                  logger.info("Start rewriting component", {
+                    componentId,
+                    details: toPlain(rewritable.details),
+                  });
+
+                  const childLogger = logger.child({
+                    name: `rewrite ${componentId}`,
+                  });
+                  const promise = traceable(
+                    (id: ComponentId) => rewrite(id, state, childLogger),
+                    { name: `Rewrite ${componentId}` }
+                  )(componentId);
+                  rewrites.set(
+                    componentId,
+                    promise.then((result) => ({ id: componentId, result }))
+                  );
+                  break;
+              }
+            }
+          }
+
+          enqueue();
+          while (rewrites.size) {
+            logger.info("Number of running rewrites", { count: rewrites.size });
+
+            const rewrite = await Promise.race(rewrites.values());
+            logger.info("Rewriting done", rewrite);
+            rewrites.delete(rewrite.id);
+
+            if (rewrite.result) {
+              await sink.writeText(
+                path.join(
+                  "src",
+                  rewrite.result.item.dir,
+                  `${rewrite.result.item.name}.tsx`
+                ),
+                rewrite.result.item.code.ts
+              );
+            } else {
+              state.component.nodes.get(rewrite.id)?.forEach((nodeId) => {
+                state.node.status.set(nodeId, "skipped");
+              });
+            }
+
+            // if (state.component.registry.size + rewrites.size < maxComponents) {
+            enqueue();
+            // }
+          }
+        },
+        { name: "Rewrite components" }
+      )();
+
+      // whitelist.length = 0;
+      // console.log(
+      //   JSON.stringify(
+      //     toPlain(
+      //       Object.fromEntries(
+      //         [...state.component.all.entries()]
+      //           .map(([id, c]) => [id, isRewritable(id)])
+      //           .filter(([_, can]) => !!can)
+      //       )
+      //     )
+      //   )
+      // );
+
       console.dir(
-        analyzed
-          .map((a) => ({
-            depCount: a.functions.length,
-            nodeCount: componentNodes.get(a.id)!.length,
-            ...a,
-          }))
-          .sort((a, b) => b.nodeCount - a.nodeCount),
-        // .sort((a, b) => a.depCount - b.depCount),
+        [
+          ...new Set(
+            [...state.component.nodes.get("C40")!]
+              .flatMap((n) => [...(state.node.descendants.all.get(n) ?? [])])
+              .map((n) => state.node.all.get(n)?.componentId)
+              .filter((c) => !!c)
+              .concat("C75")
+          ),
+        ].map((componentId) => ({
+          componentId,
+          rewritable: isRewritable(componentId)?.status,
+        })),
         { depth: null }
       );
 
-      let iteration = 0;
-      while (true) {
-        // if (Math.random()) break;
-        if (iteration !== 0) break;
-
-        const rewritable = getRewritableComponents(m, nodeStatus);
-        console.dir(rewritable, { depth: null });
-        const infos = [...rewritable.values()].filter((c) => c.rewritable);
-        if (!infos.length) break;
-
-        await traceable(
-          (infos: RewritableComponentInfo[]) =>
-            Promise.all(
-              infos.map(async (a) => {
-                const resolved = registry.get(a.componentId)!;
-                // ["C36" as const, "C89" as const].map(async (componentId) => {
-                //   const resolved = registry.get(componentId)!;
-                const component = components.get(resolved.id)!;
-                if (!("codeId" in component)) {
-                  throw new Error(
-                    "trying to rewrite component with no codeId: " + resolved.id
-                  );
-                }
-
-                const elementsByNodeId = new Map<
-                  NodeId,
-                  Array<{
-                    element: Element;
-                    index: number;
-                    parent: Root | Element;
-                    nodeId: NodeId;
-                  }>
-                >();
-
-                const nodeIdsForComponent = [...nodes.entries()]
-                  .filter(([, n]) => n.componentId === resolved.id)
-                  .map(([id]) => id);
-
-                for (const parentId of nodeIdsForComponent) {
-                  visit(tree, "element", (element, index, parent) => {
-                    if (index === undefined) return;
-                    const nodeId = element.properties?.[
-                      "dataSquashNodeId"
-                    ] as NodeId;
-                    if (parent?.type !== "element" && parent?.type !== "root")
-                      return;
-
-                    if (ancestorsMap.get(nodeId)?.has(parentId)) {
-                      elementsByNodeId.set(parentId, [
-                        ...(elementsByNodeId.get(parentId) ?? []),
-                        { element, index, parent, nodeId },
-                      ]);
-                      return SKIP;
-                    }
-                  });
-                }
-
-                // find all elements w this as a parent
-                const rewritten = await traceable(
-                  () =>
-                    rewriteComponentStrategy({
-                      component: {
-                        id: resolved.id,
-                        code: m.code[component.codeId]!,
-                        deps: {
-                          all: new Set(
-                            [...registry.entries()]
-                              .filter(([, c]) => c.code)
-                              .map(([id]) => id)
-                          ),
-                          internal: new Set(),
-                        },
-                      },
-                      instances: nodeIdsForComponent.map((nodeId) => {
-                        const node = nodes.get(nodeId)!;
-                        const nodeProps = clone(node.props) as Record<
-                          string,
-                          unknown
-                        >;
-                        const elements = (
-                          elementsByNodeId.get(nodeId) ?? []
-                        ).map((e) => clone(e.element));
-
-                        // TODO: figure out how to replace nodes from props
-                        // console.log("ELEMENTS");
-                        // console.dir(elements, { depth: null });
-                        // console.log("NODE PROPS");
-                        // console.dir(nodeProps, { depth: null });
-
-                        const ref = createRef({
-                          componentId: resolved.id,
-                          props: nodeProps,
-                          ctx: {
-                            deps: new Set(),
-                            metadata: m,
-                            tree,
-                            codeIdToComponentId,
-                            componentRegistry: registry,
-                          },
-                          children: [],
-                        });
-
-                        return { nodeId, ref, children: elements };
-                      }),
-                      componentRegistry: registry,
-                      metadata: m,
-                    }),
-                  { name: `Rewrite ${resolved.name.value} (${resolved.id})` }
-                )();
-                if (!rewritten) {
-                  nodeIdsForComponent.forEach((nodeId) =>
-                    nodeStatus.set(nodeId, "invalid")
-                  );
-                  return null;
-                } else {
-                  Object.assign(resolved, rewritten);
-                  await sink.writeText(resolved.path, rewritten.code!);
-                  nodeIdsForComponent.forEach((nodeId) =>
-                    nodeStatus.set(nodeId, "valid")
-                  );
-                }
-
-                const elementsOrderedByDepth = [...elementsByNodeId.entries()]
-                  .map(([nodeId, elements]) => ({ nodeId, elements }))
-                  .sort(
-                    (a, b) =>
-                      (ancestorsMap.get(b.nodeId)?.size ?? 0) -
-                      (ancestorsMap.get(a.nodeId)?.size ?? 0)
-                  );
-
-                // Note(fant): loop over elements in reverse, so that we replace the innermost elements first.
-                // TODO: for testing, try saving all of these separately to see if it works
-                for (const { nodeId, elements } of elementsOrderedByDepth) {
-                  if (!elements.length) continue;
-
-                  const { index, parent } = elements[0]!;
-                  const props = nodes.get(nodeId)!.props as Record<
-                    string,
-                    unknown
-                  >;
-                  // Note(fant): we need to Object.assign instead of replace because some
-                  // of the elements detected might point at the parent being replaced
-                  if (!parent.children[index]!) return null;
-                  Object.assign(
-                    parent.children[index]!,
-                    createRef({
-                      componentId: resolved.id,
-                      props,
-                      nodeId,
-                      ctx: {
-                        deps: new Set(),
-                        metadata: m,
-                        tree,
-                        codeIdToComponentId,
-                        componentRegistry: registry,
-                      },
-                      // Note(fant): for now we keep the children within the ref, so that in the processor loop we still can find elements of a certain node.
-                      children: clone(elements.map((e) => e.element)),
-                    })
-                  );
-                  elements.slice(1).forEach((e) => (e.element.tagName = "rm"));
-                }
-
-                [...elementsByNodeId.values()].flat().forEach(({ parent }) => {
-                  parent.children = parent.children.filter(
-                    (el) => el.type !== "element" || el.tagName !== "rm"
-                  );
-                });
-
-                return rewritten;
-              })
-            ),
-          {
-            name: `Rewrite Components (iteration ${iteration}, ${infos.length} components)`,
-          }
-        )(infos);
-
-        iteration++;
-      }
-
       const processor = unified()
-        .use(rehypeStripSquashAttribute)
+        // .use(rehypeStripSquashAttribute)
         .use(rehypeRecma)
         .use(recmaJsx)
         .use(recmaRemoveRedundantFragment)
         .use(recmaWrapAsComponent, "App")
-        .use(recmaReplaceRefs, registry)
+        .use(recmaReplaceRefs, state)
+        .use(recmaStripSquashAttribute)
         .use(recmaFixProperties)
         .use(recmaStringify);
 
-      const appstx = await processor.run(tree);
-      await sink.writeText(
-        "src/App.tsx",
-        await prettier.ts(processor.stringify(appstx))
-      );
+      const apptsx = await processor.run(rootTree);
 
-      // rewritten.forEach((r) => {
-      //   const item = registry.get(r.id)!;
-      //   item.path = path.join(
-      //     "src/components/rewritten",
-      //     r.id,
-      //     `${r.name}.tsx`
-      //   );
-      //   item.module = path.join("@/components/rewritten", r.id, r.name);
-      //   item.code = r.typescript;
-      // });
+      const appItem: ComponentRegistryItem = {
+        id: "C-1",
+        dir: "",
+        name: "App",
+        description: "App",
+        code: { ts: await prettier.ts(processor.stringify(apptsx)), dts: "" },
+      };
+      state.component.registry.set(appItem.id, appItem);
 
-      // await Promise.all(
-      //   rewritten.map((r) =>
-      //     sink.writeText(registry.get(r.id)?.path!, r.typescript)
-      //   )
-      // );
+      await sink.writeText("src/App.tsx", appItem.code.ts);
+      await traceable(
+        () => structureComponents(new Set([appItem.id]), state, sink, logger),
+        { name: "Structure components" }
+      )();
 
       const replicatedHtml = `
 <!DOCTYPE html>
@@ -419,6 +389,7 @@ export const replicate = (
   <script type="module" src="/src/main.tsx"></script>
 </html>
   `.trim();
+
       await replaceSVGPathsInFiles(sink, svgAliased.dPathMapping);
       await prettier
         .html(replicatedHtml)

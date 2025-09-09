@@ -8,8 +8,8 @@ import type { Element } from "domhandler";
 import { traceable } from "langsmith/traceable";
 import { createHash } from "node:crypto";
 import { z } from "zod";
-import { generateObject } from "../ai";
-import { filesystemCacheMiddleware } from "../filesystemCacheMiddleware";
+import { filesystemCacheMiddleware } from "../ai/filesystemCacheMiddleware";
+import { generateObject } from "../ai/sdk";
 import { replaceSVGPathAliases } from "./replace";
 
 const model = wrapLanguageModel({
@@ -31,8 +31,7 @@ export type DescribeSVGStrategy = (
 
 export async function aliasSVGPaths(
   $: CheerioAPI,
-  metadata: Metadata.ReactFiber | null,
-  describe: DescribeSVGStrategy
+  metadata: Metadata.ReactFiber | null
 ): Promise<{
   metadata: Metadata.ReactFiber | null;
   dPathMapping: Map<string, string>;
@@ -62,9 +61,10 @@ export async function aliasSVGPaths(
 
   const details = await Promise.all(
     uniqHashes.map(
-      traceable((hash: string) => describe(svgsByHash.get(hash)![0]!.cloned), {
-        name: "Describe SVG",
-      })
+      traceable(
+        (hash: string) => describeSVGWithLLM(svgsByHash.get(hash)![0]!.cloned),
+        { name: "Describe SVG" }
+      )
     )
   );
 

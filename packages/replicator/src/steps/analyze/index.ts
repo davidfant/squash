@@ -1,11 +1,11 @@
+import { filesystemCacheMiddleware } from "@/lib/ai/filesystemCacheMiddleware";
+import { generateText } from "@/lib/ai/sdk";
+import { withCacheBreakpoints } from "@/lib/ai/withCacheBreakpoints";
 import type { Metadata } from "@/types";
 import { google, type GoogleGenerativeAIProviderOptions } from "@ai-sdk/google";
 import { stepCountIs, tool, wrapLanguageModel } from "ai";
 import { traceable } from "langsmith/traceable";
 import { z } from "zod";
-import { generateText } from "../ai";
-import { filesystemCacheMiddleware } from "../filesystemCacheMiddleware";
-import { withCacheBreakpoints } from "../rewriteComponent/llm/withCacheBreakpoint";
 import * as Prompts from "./prompts";
 
 export interface ComponentToAnalyze {

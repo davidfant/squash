@@ -5,7 +5,7 @@ import { createRequire } from "node:module";
 import vm from "node:vm";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import type { ReplicatorState } from "../state";
+import type { ReplicatorState } from "../../state";
 
 type ComponentId = Metadata.ReactFiber.ComponentId;
 

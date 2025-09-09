@@ -1,4 +1,4 @@
-import type { ComponentAnalysisResult } from "@/lib/analyzeComponent";
+import type { ComponentAnalysisResult } from "@/steps/analyze";
 import type { Metadata } from "@/types";
 import { JSONPath } from "jsonpath-plus";
 

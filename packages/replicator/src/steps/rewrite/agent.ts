@@ -1,7 +1,7 @@
-import { generateText } from "@/lib/ai";
+import { filesystemCacheMiddleware } from "@/lib/ai/filesystemCacheMiddleware";
+import { generateText } from "@/lib/ai/sdk";
+import { withCacheBreakpoints } from "@/lib/ai/withCacheBreakpoints";
 import { clone } from "@/lib/clone";
-import { filesystemCacheMiddleware } from "@/lib/filesystemCacheMiddleware";
-import { withCacheBreakpoints } from "@/lib/rewriteComponent/llm/withCacheBreakpoint";
 import type { Metadata } from "@/types";
 import { anthropic, type AnthropicProviderOptions } from "@ai-sdk/anthropic";
 import { xai, type XaiProviderOptions } from "@ai-sdk/xai";
@@ -14,7 +14,7 @@ import type {
   ComponentRegistryItem,
   ReplicatorNodeStatus,
   ReplicatorState,
-} from "../state";
+} from "../../state";
 import { generateDeclarationFile } from "./dts";
 import { buildExampleCode, replaceExamples } from "./examples";
 import * as Prompts from "./prompts";

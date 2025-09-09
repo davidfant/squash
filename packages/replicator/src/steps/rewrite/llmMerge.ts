@@ -1,5 +1,5 @@
-import { generateText } from "@/lib/ai";
-import { filesystemCacheMiddleware } from "@/lib/filesystemCacheMiddleware";
+import { filesystemCacheMiddleware } from "@/lib/ai/filesystemCacheMiddleware";
+import { generateText } from "@/lib/ai/sdk";
 import { createOpenAI } from "@ai-sdk/openai";
 import { wrapLanguageModel } from "ai";
 

@@ -15,8 +15,8 @@ import rehypeRecma from "rehype-recma";
 import rehypeStringify from "rehype-stringify";
 import { unified } from "unified";
 import { SKIP, visit } from "unist-util-visit";
-import { createRef, recmaReplaceRefs } from "../ref";
-import type { ReplicatorNodeStatus, ReplicatorState } from "../state";
+import { createRef, recmaReplaceRefs } from "../../lib/recma/ref";
+import type { ReplicatorNodeStatus, ReplicatorState } from "../../state";
 
 type NodeId = Metadata.ReactFiber.NodeId;
 type ComponentId = Metadata.ReactFiber.ComponentId;

@@ -1,5 +1,5 @@
-import { generateText } from "@/lib/ai";
-import { filesystemCacheMiddleware } from "@/lib/filesystemCacheMiddleware";
+import { filesystemCacheMiddleware } from "@/lib/ai/filesystemCacheMiddleware";
+import { generateText } from "@/lib/ai/sdk";
 import type { FileSink } from "@/lib/sinks/base";
 import type { Metadata } from "@/types";
 import { anthropic, type AnthropicProviderOptions } from "@ai-sdk/anthropic";
@@ -15,7 +15,7 @@ import {
 } from "ts-morph";
 import { JsxEmit } from "typescript";
 import type { Logger } from "winston";
-import type { ReplicatorState } from "../state";
+import type { ReplicatorState } from "../../state";
 import { instructions } from "./prompt";
 import { createStructureComponentsTool } from "./tools";
 

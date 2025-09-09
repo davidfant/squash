@@ -17,7 +17,7 @@ import recmaStringify from "recma-stringify";
 import rehypeRecma from "rehype-recma";
 import { unified, type Plugin } from "unified";
 import { SKIP, visit } from "unist-util-visit";
-import type { ReplicatorState } from "./state";
+import type { ReplicatorState } from "../../state";
 
 type CodeId = Metadata.ReactFiber.CodeId;
 type ComponentId = Metadata.ReactFiber.ComponentId;

@@ -62,10 +62,9 @@ function App() {
       });
       console.log("Active tab:", tab);
 
-      if (tab.id) {
-        // Send message to background script to capture the page
+      if (tab?.id) {
         const response = await chrome.runtime.sendMessage({
-          action: "capturePage",
+          action: "createSnapshot",
           tabId: tab.id,
         });
         console.log("Capture response:", response);

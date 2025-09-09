@@ -22,6 +22,34 @@ export const replicatorRouter = new Hono<{
       z.object({
         // TODO: thread id...
         page: z.object({ url: z.url(), title: z.string(), html: z.string() }),
+        metadata: z
+          .object({
+            type: z.literal("react-fiber"),
+            code: z.record(z.string(), z.string()),
+            components: z.record(
+              z.string(),
+              z.object({
+                tag: z.number(),
+                name: z.string().optional(),
+                codeId: z.string().optional(),
+              })
+            ),
+            nodes: z.record(
+              z.string(),
+              z.object({
+                parentId: z
+                  .string()
+                  .transform((id) => id as `N${number}`)
+                  .nullable(),
+                componentId: z.string().transform((id) => id as `C${number}`),
+                props: z
+                  .record(z.string(), z.unknown())
+                  .or(z.string())
+                  .nullable(),
+              })
+            ),
+          })
+          .nullable(),
       })
     ),
     requireAuth,

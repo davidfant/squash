@@ -1,75 +1,120 @@
+import { initWasm } from "@resvg/resvg-wasm";
+import { AwsClient } from "aws4fetch";
 import { ChildProcess, spawn } from "node:child_process";
 import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { langsmith } from "./lib/ai";
 import { FileSystemSink } from "./lib/sinks/fs";
+import { describeSVGWithLLM } from "./lib/svg/alias";
 import { logFileTree } from "./logFileTree";
-import { replicate } from "./replicate";
+import { replicate } from "./v2/replicate";
+// import { replicate } from "./replicate.old";
 import type { Snapshot } from "./types";
 
-const PATH_TO_CAPTURE = `./captures/posthog.json`;
-const PATH_TO_TEMPLATE = `./captures/replicated`;
+const SNAPSHOT_CACHE_DIR = path.join(os.tmpdir(), "squash-replicator");
+const PATH_TO_TEMPLATE = `./playground`;
 
-// const capture2 = await fs
-//   .readFile(PATH_TO_CAPTURE, "utf-8")
-//   .then(
-//     (t) =>
-//       JSON.parse(t) as {
-//         captureData: {
-//           css: string;
-//           js: string;
-//           headContent: string;
-//           bodyContent: string;
-//         };
-//         currentUrl: string;
-//         timestamp: string;
-//         sessionId: string;
-//       }
-//   )
-//   .then(
-//     ({ captureData: d, currentUrl: url }): Capture => ({
-//       pages: [
-//         {
-//           css: d.css,
-//           js: d.js,
-//           html: { head: d.headContent, body: d.bodyContent },
-//           url,
-//         },
-//       ],
-//     })
-//   );
-// await fs.writeFile(
-//   PATH_TO_CAPTURE,
-//   JSON.stringify(capture2, null, 2)
-// );
-const capture = JSON.parse(
-  await fs.readFile(PATH_TO_CAPTURE, "utf-8")
-) as Snapshot;
+const snapshots: Record<string, string> = {
+  cursor:
+    "46cb2680-f22a-4656-a386-c535e1fe3808/0e7e720f-491f-442d-a9c6-bfcf60bde1ba/1756183558170.json",
+  dework:
+    "46cb2680-f22a-4656-a386-c535e1fe3808/4c751a7c-88e9-4aa7-8a7f-cc4affec16a5/1756321376209.json",
+  autodesk:
+    "46cb2680-f22a-4656-a386-c535e1fe3808/9c838fb6-6bd2-43bd-9dc5-df38ee3e4227/1756337260672.json",
+};
+
+const arg = process.argv[2];
+if (!arg) throw new Error("No snapshot ID provided");
+
+const snapshotId = snapshots[arg] ?? arg;
+if (!snapshotId) throw new Error("Invalid snapshot ID");
+
+const snapshotPath = path.join(SNAPSHOT_CACHE_DIR, snapshotId);
+const snapshot = await (async (): Promise<Snapshot> => {
+  if (await fs.stat(snapshotPath).catch(() => false)) {
+    console.log("Using cached snapshot", snapshotPath);
+  } else {
+    console.log("Downloading snapshot", snapshotId);
+    const url = `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${process.env.R2_BUCKET_NAME}/${snapshotId}`;
+    const signedUrl = await new AwsClient({
+      accessKeyId: process.env.R2_ACCESS_KEY_ID!,
+      secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+      service: "s3",
+      region: "auto",
+    }).sign(url, { method: "GET", aws: { signQuery: true } });
+
+    // fetch and save at snapshotPath
+    await fs.mkdir(path.dirname(snapshotPath), { recursive: true });
+    await fetch(signedUrl)
+      .then((res) => res.json())
+      .then((json) =>
+        fs.writeFile(snapshotPath, JSON.stringify(json, null, 2))
+      );
+    console.log("Saved to", snapshotPath);
+  }
+
+  return fs.readFile(snapshotPath, "utf-8").then(JSON.parse);
+})();
 
 await Promise.all(
   [
     path.join(PATH_TO_TEMPLATE, "src/components"),
     path.join(PATH_TO_TEMPLATE, "src/svgs"),
+    path.join(PATH_TO_TEMPLATE, "src/ui"),
+    path.join(PATH_TO_TEMPLATE, "src/pages"),
+    path.join(PATH_TO_TEMPLATE, "src/App.tsx"),
     path.join(PATH_TO_TEMPLATE, "public"),
   ].map((p) => fs.rm(p, { recursive: true }).catch(() => {}))
 );
 
+const wasmPath = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../node_modules/@resvg/resvg-wasm/index_bg.wasm"
+);
+await initWasm(await fs.readFile(wasmPath));
+
 // const sink = new TarSink();
 const sink = new FileSystemSink(PATH_TO_TEMPLATE);
-await replicate(capture, sink, {
-  // stylesAndScripts: false,
-  // base64Images: false,
-  // svgs: false,
-  // buttons: false,
-  // roles: false,
-  // blocks: false,
-  // tags: false,
-});
+try {
+  await replicate(
+    snapshot,
+    sink,
+    // (opts) => {
+    //   // if (["C80", "C41", "C30", "C40"].includes(opts.component.id)) {
+
+    //   // complex w many unprocessed children: C55
+    //   if (
+    //     [
+    //       "C41",
+    //       "C40",
+    //       "C64",
+    //       "C17",
+    //       "C56",
+    //       "C28",
+    //       "C18",
+    //       "C19",
+    //       "C22",
+    //     ].includes(opts.component.id) ||
+    //     true
+    //   ) {
+    //     return rewriteComponentWithLLMStrategy(opts);
+    //   } else {
+    //     return rewriteComponentUseFirstStrategy(opts);
+    //   }
+    // },
+    describeSVGWithLLM
+  );
+} finally {
+  await langsmith.awaitPendingTraceBatches();
+}
 
 // const out = await sink.finalize();
 // await fs.writeFile("replicated.tar.gz", out);
 
 await new Promise((resolve) => setTimeout(resolve, 10));
-logFileTree(PATH_TO_TEMPLATE);
+await logFileTree(PATH_TO_TEMPLATE);
 
 // Kill any existing pnpm dev process when this script restarts
 let child: ChildProcess | null = null;

@@ -1,0 +1,5 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`aliasSVGPaths > should alias paths 1`] = `"<svg><path d="[[SVG:0|PATH:0|NAME:test|DESCRIPTION:test]]"></path><path d="[[SVG:0|PATH:1|NAME:test|DESCRIPTION:test]]"></path></svg>"`;
+
+exports[`aliasSVGPaths > should use same placeholder if path is the same 1`] = `"<html><head></head><body><svg><path d="[[SVG:0|PATH:0|NAME:test|DESCRIPTION:test]]"></path><path d="[[SVG:0|PATH:0|NAME:test|DESCRIPTION:test]]"></path></svg></body></html>"`;

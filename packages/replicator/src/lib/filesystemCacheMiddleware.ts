@@ -80,8 +80,8 @@ export function filesystemCacheMiddleware(
         }
       }
 
-      console.log("### doGenerate ###");
-      console.dir(params.prompt, { depth: null });
+      // console.log("### doGenerate ###");
+      // console.dir(params.prompt, { depth: null });
       const result = await doGenerate();
       // Serialize Date to ISO
       const serializable = {

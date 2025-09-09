@@ -7,7 +7,9 @@
   "description": "A modern, TypeScript-powered Chrome extension starter with React and Shadcn/UI",
   "type": "module",
   "scripts": {
-    "dev": "vite --clearScreen false --port 5174",
+    "dev": "concurrently \"npm run dev:inject\" \"npm run dev:crx\"",
+    "dev:crx": "vite --clearScreen false --port 5174",
+    "dev:inject": "vite build --watch --config vite.config.inject.ts --clearScreen false",
     "build": "tsc -b && vite build --clearScreen false",
     "preview": "vite preview"
   },
@@ -19,7 +21,6 @@
     "clsx": "^2.1.1",
     "framer-motion": "^12.23.3",
     "lucide-react": "^0.525.0",
-    "nanoid": "^5.1.5",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "tailwind-merge": "^3.3.1",
@@ -33,7 +34,9 @@
     "@types/node": "^22.8.7",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
+    "@types/react-reconciler": "^0.32.0",
     "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.2.0",
     "tailwindcss": "^4.1.11",
     "typescript": "~5.8.3",
     "vite": "^6.3.5"

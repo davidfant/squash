@@ -1,0 +1,178 @@
+import { Metadata } from "../..";
+import {
+  getAllDeps,
+  getComponentInternalDeps,
+  getNodeInternalDeps,
+} from "./deps";
+import { buildComponentNodesMap, calcNodeDepths, nodesMap } from "./util";
+
+type NodeId = Metadata.ReactFiber.NodeId;
+type ComponentId = Metadata.ReactFiber.ComponentId;
+
+const componentHasCode = (
+  c: Metadata.ReactFiber.Component.Any
+): c is Metadata.ReactFiber.Component.WithCode<any> =>
+  "codeId" in c && c.codeId != null;
+
+export function collectDescendantComponents(
+  rootNodeIds: Iterable<Metadata.ReactFiber.NodeId>,
+  descendantMap: Map<
+    Metadata.ReactFiber.NodeId,
+    Set<Metadata.ReactFiber.NodeId>
+  >,
+  nodes: Record<Metadata.ReactFiber.NodeId, Metadata.ReactFiber.Node>,
+  components: Record<
+    Metadata.ReactFiber.ComponentId,
+    Metadata.ReactFiber.Component.Any
+  >
+): Set<Metadata.ReactFiber.ComponentId> {
+  const out = new Set<Metadata.ReactFiber.ComponentId>();
+
+  /** Visit every node (root + all its descendants) exactly once */
+  for (const rootId of rootNodeIds) {
+    const visitStack: Metadata.ReactFiber.NodeId[] = [rootId];
+
+    while (visitStack.length) {
+      const nid = visitStack.pop()!;
+      const node = nodes[nid]!;
+      const comp = components[node.componentId]!;
+
+      // if (componentHasCode(comp)) {
+      out.add(node.componentId);
+      // }
+
+      // DFS: push all descendants
+      const desc = descendantMap.get(nid);
+      if (desc) {
+        for (const child of desc) visitStack.push(child);
+      }
+    }
+  }
+
+  return out;
+}
+
+// TODO: when stuck, get the most deeply nested component
+export async function traverseComponents(
+  metadata: Metadata.ReactFiber,
+  process: (group: {
+    id: ComponentId;
+    component: Metadata.ReactFiber.Component.Any;
+    nodes: Record<NodeId, Metadata.ReactFiber.Node>;
+    deps: { internal: Set<ComponentId>; all: Set<ComponentId> };
+  }) => unknown
+) {
+  if (!metadata) return;
+
+  const nodes = nodesMap(metadata.nodes);
+  const componentNodes = buildComponentNodesMap(nodes);
+
+  const nodeDepths = calcNodeDepths(nodes);
+  const componentMaxDepths = new Map<ComponentId, number>();
+  for (const [nodeId, depth] of nodeDepths.entries()) {
+    const componentId = nodes.get(nodeId)!.componentId;
+    componentMaxDepths.set(
+      componentId,
+      Math.max(componentMaxDepths.get(componentId) ?? 0, depth)
+    );
+  }
+
+  const nodeInternalDeps = getNodeInternalDeps(metadata);
+  const componentInternalDeps = getComponentInternalDeps(
+    metadata,
+    nodeInternalDeps
+  );
+
+  const componentAllDeps = getAllDeps(metadata, componentInternalDeps);
+
+  const sortOrder = new Map(
+    [...componentNodes.keys()].map((componentId) => [
+      componentId,
+      {
+        maxDepth: componentMaxDepths.get(componentId) ?? 0,
+        internalDeps: componentInternalDeps.get(componentId)?.size ?? 0,
+        allDeps: componentAllDeps.get(componentId)?.size ?? 0,
+      },
+    ])
+  );
+
+  const remaining = [...componentNodes]
+    .map(([componentId, nodes]) => ({ componentId, nodes }))
+    // .sort(
+    //   (a, b) =>
+    //     (componentMaxDepths.get(b.componentId) ?? 0) -
+    //     (componentMaxDepths.get(a.componentId) ?? 0)
+    // );
+    .sort((compA, compB) => {
+      const a = sortOrder.get(compA.componentId)!;
+      const b = sortOrder.get(compB.componentId)!;
+      if (a.maxDepth !== b.maxDepth) return b.maxDepth - a.maxDepth;
+      if (a.internalDeps !== b.internalDeps)
+        return a.internalDeps - b.internalDeps;
+      if (a.allDeps !== b.allDeps) return a.allDeps - b.allDeps;
+      return 0;
+    });
+  const processed = new Set<ComponentId>();
+  console.log(
+    "Sorting components",
+    Object.fromEntries(
+      remaining.map((m) => [m.componentId, sortOrder.get(m.componentId)])
+    )
+  );
+
+  const next = () => {
+    const woAllDeps = remaining.filter(({ componentId }) =>
+      [...(componentAllDeps.get(componentId) ?? [])].every((cid) =>
+        processed.has(cid)
+      )
+    );
+    if (woAllDeps.length) {
+      const next = woAllDeps[0]!;
+      remaining.splice(remaining.indexOf(next), 1);
+      return next;
+    }
+
+    const wointernalDeps = remaining.filter(({ componentId }) =>
+      [...(componentInternalDeps.get(componentId) ?? [])].every((cid) =>
+        processed.has(cid)
+      )
+    );
+    if (wointernalDeps.length) {
+      const next = wointernalDeps[0]!;
+      remaining.splice(remaining.indexOf(next), 1);
+      return next;
+    }
+  };
+
+  let g: { componentId: ComponentId; nodes: NodeId[] } | undefined;
+  while ((g = next())) {
+    await process({
+      id: g.componentId,
+      component: metadata.components[g.componentId]!,
+      nodes: Object.fromEntries(g.nodes.map((id) => [id, nodes.get(id)!])),
+      deps: {
+        // TODO: should this maybe only include components up until
+        // a component uses another component? in that case it's no
+        // longer a direct internal dependency
+        internal: componentInternalDeps.get(g.componentId) ?? new Set(),
+        all: componentAllDeps.get(g.componentId) ?? new Set(),
+      },
+    });
+    processed.add(g.componentId);
+  }
+
+  if (remaining.length) {
+    for (const { componentId } of remaining) {
+      console.log(
+        componentId,
+        // componentDeps.get(id),
+        [...componentInternalDeps.get(componentId)!].filter(
+          (id) => !processed.has(id)
+        )
+      );
+    }
+    // throw new Error(
+    //   `Metadata processor failed to process all components. Remaining: ${remaining.map(({ componentId }) => componentId).join(", ")}`
+    // );
+  }
+}

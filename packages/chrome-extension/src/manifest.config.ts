@@ -19,6 +19,9 @@ export default defineManifest({
       run_at: "document_start",
     },
   ],
+  web_accessible_resources: [
+    { resources: ["dist/src/page/inject.js"], matches: ["<all_urls>"] },
+  ],
   // content_security_policy: {
   //   extension_pages:
   //     "script-src 'self'; object-src 'self'; connect-src 'self' http://localhost:5174 ws://localhost:5174 http://localhost:8787",

@@ -48,24 +48,32 @@ async function compileComponent(
 
 function makeLazyRequire(
   modules: Record<string, Module>,
-  onIllegalImport: (spec: string) => void
+  onIllegalImport: (spec: string) => void,
+  onRuntimeError: (err: Error) => void
 ) {
   const hostRequire = createRequire(import.meta.url);
   const cache: Record<string, any> = {};
   return function lazyRequire(spec: string) {
     if (cache[spec]) return cache[spec];
 
-    const allowed =
-      spec === "react" || spec === "react-dom" || spec.startsWith("@/");
-
-    if (!allowed) {
-      onIllegalImport(spec);
-      cache[spec] = {};
-      return cache[spec];
-    }
-
     const mod = modules[spec];
-    if (!mod) return hostRequire(spec);
+    if (!mod) {
+      const allowed = [
+        "react",
+        "react-dom",
+        "react/jsx-runtime",
+        "clsx",
+        "tailwind-merge",
+      ].includes(spec);
+
+      if (!allowed) {
+        onIllegalImport(spec);
+        cache[spec] = {};
+        return cache[spec];
+      }
+
+      return hostRequire(spec);
+    }
 
     const m = { exports: {} };
     const ctx = vm.createContext({
@@ -73,8 +81,14 @@ function makeLazyRequire(
       exports: m.exports,
       require: lazyRequire,
     });
-    vm.runInContext(modules[spec]!.code, ctx, { filename: spec });
-    cache[spec] = mod.transform ? mod.transform(m.exports) : m.exports;
+    try {
+      vm.runInContext(modules[spec]!.code, ctx, { filename: spec });
+      cache[spec] = mod.transform ? mod.transform(m.exports) : m.exports;
+    } catch (error) {
+      onRuntimeError?.(error as Error);
+      cache[spec] = {};
+    }
+
     return cache[spec];
   };
 }
@@ -149,7 +163,7 @@ export async function render(
   | { ok: false; errors: string[] }
 > {
   const modules: Record<string, Module> = {};
-  let codeBuildErrors: string[] | undefined = undefined;
+  let buildErrors: string[] | undefined = undefined;
   await Promise.all([
     (async () => {
       const compiled = await compileComponent(opts.component.code);
@@ -161,7 +175,7 @@ export async function render(
           }),
         };
       } else {
-        codeBuildErrors = compiled.errors;
+        buildErrors = compiled.errors;
       }
     })(),
     (async () => {
@@ -188,21 +202,29 @@ export async function render(
       }),
   ]);
 
-  if (codeBuildErrors) return { ok: false, errors: codeBuildErrors };
+  if (buildErrors) return { ok: false, errors: buildErrors };
 
   const illegalImports = new Set<string>();
-  const require = makeLazyRequire(modules, (spec) => illegalImports.add(spec));
+  const runtimeErrors: string[] = [];
+  const require = makeLazyRequire(
+    modules,
+    (spec) => illegalImports.add(spec),
+    (err) => runtimeErrors.push(err.message)
+  );
   const ctx = vm.createContext({ require });
   const results = await Promise.all(
     opts.examples.map((jsx, i) => renderSample(ctx, jsx, i))
   );
 
+  const errors: string[] = [];
+
   if (illegalImports.size) {
-    return {
-      ok: false,
-      errors: [`Illegal imports: ${[...illegalImports].join(", ")}`],
-    };
+    errors.push(`Illegal imports: ${[...illegalImports].join(", ")}`);
   }
 
-  return { ok: true, results };
+  if (runtimeErrors.length) {
+    errors.push(...runtimeErrors);
+  }
+
+  return errors.length ? { ok: false, errors } : { ok: true, results };
 }

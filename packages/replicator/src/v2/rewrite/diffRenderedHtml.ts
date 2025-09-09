@@ -99,8 +99,8 @@ function canonicalise(html: string) {
 // }
 export async function diffRenderedHtml(a: string, b: string) {
   const [lhs, rhs] = await Promise.all([
-    prettier.html(canonicalise(a)),
-    prettier.html(canonicalise(b)),
+    prettier.html(canonicalise(a)).then((v) => v.trim() + "\n"),
+    prettier.html(canonicalise(b)).then((v) => v.trim() + "\n"),
   ]);
 
   if (lhs === rhs) return;

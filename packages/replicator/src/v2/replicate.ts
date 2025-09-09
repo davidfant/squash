@@ -45,7 +45,7 @@ const whitelist: Metadata.ReactFiber.ComponentId[] = [];
 // whitelist.push("C58"); // avatar
 // whitelist.push("C75", "C40");
 
-const maxConcurrency = 10;
+const maxConcurrency = 30;
 const maxComponents = 500;
 
 export const replicate = (

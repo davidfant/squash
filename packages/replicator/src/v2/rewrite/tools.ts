@@ -63,9 +63,9 @@ export function createReplicatorTools() {
     },
   });
 
-  const MarkTestsAsInvalid = tool({
+  const MarkTestsOutOfScope = tool({
     description: `
-Use this tool to tell the evaluation harness that one or more test cases are invalid, for example because the test case cannot be satisfied in a static-render environment or are internally contradictory. The harness will drop those tests from future diff checks.
+Use this tool to tell the evaluation harness that one or more test cases are out of scope, for example because the test case cannot be satisfied in a static-render environment or are internally contradictory. The harness will drop those tests from future diff checks.
 
 When to use:
 1. The mismatch is due to effects / layout / browser APIs that do not run under \`renderToStaticMarkup\` (e.g. ResizeObserver, useLayoutEffect).
@@ -78,5 +78,5 @@ When to use:
     execute: () => ({ ok: true }),
   });
 
-  return { MarkTestsAsInvalid, EditComponent };
+  return { MarkTestsOutOfScope, EditComponent };
 }

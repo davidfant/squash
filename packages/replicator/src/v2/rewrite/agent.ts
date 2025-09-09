@@ -146,8 +146,8 @@ export async function rewrite(
 
   let lastValidationError: Awaited<ReturnType<typeof validate>> | undefined;
   const { steps } = await generateText({
-    model: claudeSonnet4,
-    // model: grokCodeFast1,
+    // model: claudeSonnet4,
+    model: grokCodeFast1,
     messages: withCacheBreakpoints([
       { role: "system", content: Prompts.instructions },
       { role: "user", content },
@@ -184,7 +184,7 @@ export async function rewrite(
 
         const skippedExampleIds = new Set(
           toolResults
-            .filter((r) => r.toolName === "MarkTestsAsInvalid")
+            .filter((r) => r.toolName === "MarkTestsOutOfScope")
             .flatMap((r) => r.input.ids)
         );
 
@@ -232,7 +232,7 @@ export async function rewrite(
   )?.output;
   const skippedExampleIds = new Set(
     toolResults
-      .filter((r) => r.toolName === "MarkTestsAsInvalid")
+      .filter((r) => r.toolName === "MarkTestsOutOfScope")
       .flatMap((r) => r.input.ids as Metadata.ReactFiber.NodeId[])
   );
   lastValidationError?.nodeIds.forEach((id) => skippedExampleIds.add(id));

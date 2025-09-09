@@ -1,5 +1,5 @@
 import type { Metadata } from "@/types";
-import { google } from "@ai-sdk/google";
+import { google, type GoogleGenerativeAIProviderOptions } from "@ai-sdk/google";
 import { stepCountIs, tool, wrapLanguageModel } from "ai";
 import { traceable } from "langsmith/traceable";
 import { z } from "zod";
@@ -62,9 +62,11 @@ export const analyzeComponent = (component: ComponentToAnalyze) =>
               name: z.string(),
               description: z.string(),
               headOnly: z.boolean(),
-              sideEffectWrapper: z.boolean(),
+              sideEffectOnly: z.boolean(),
               contextProviderWrapper: z.boolean(),
               errorBoundaryWrapper: z.boolean(),
+              suspenseWrapper: z.boolean(),
+              noopWrapper: z.boolean(),
               functions: z
                 .object({
                   jsonPath: z.string(),
@@ -88,21 +90,23 @@ export const analyzeComponent = (component: ComponentToAnalyze) =>
               ),
           stepCountIs(3),
         ],
-        // providerOptions: {
-        //   google: {
-        //     thinkingConfig: { includeThoughts: true },
-        //   } satisfies GoogleGenerativeAIProviderOptions,
-        // },
+        providerOptions: {
+          google: {
+            thinkingConfig: { includeThoughts: true },
+          } satisfies GoogleGenerativeAIProviderOptions,
+        },
       });
 
       const tr = toolResults[toolResults.length - 1];
       if (tr && !tr.dynamic && tr.toolName === "analyzeComponent") {
         const classes: string[] = [];
         if (tr.input.headOnly) classes.push("headOnly");
-        if (tr.input.sideEffectWrapper) classes.push("sideEffectWrapper");
+        if (tr.input.sideEffectOnly) classes.push("sideEffectOnly");
         if (tr.input.contextProviderWrapper)
           classes.push("contextProviderWrapper");
+        if (tr.input.suspenseWrapper) classes.push("suspenseWrapper");
         if (tr.input.errorBoundaryWrapper) classes.push("errorBoundaryWrapper");
+        if (tr.input.noopWrapper) classes.push("noopWrapper");
 
         return {
           id: comp.id,

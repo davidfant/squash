@@ -12,6 +12,9 @@ export class TestSink implements FileSink<Asset[]> {
   async writeBytes(path: string, bytes: Uint8Array) {
     this.assets.push({ path, bytes });
   }
+  async remove(path: string) {
+    this.assets = this.assets.filter((a) => a.path !== path);
+  }
   async list() {
     return [...new Set(this.assets.map((a) => a.path))];
   }

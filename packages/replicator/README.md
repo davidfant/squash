@@ -28,9 +28,9 @@ Core ideas:
 
 - [x] Make rewrite agentic. Allows for faster code edits, as well as
   - [ ] allow the agentic loop to "give up" if it's not making progress
-- [ ] Make sure it works when multiple components have the same name in the same file
+- [x] Make sure it works when multiple components have the same name in the same file
 - [ ] C7: Limit depth of HTML preview
-- [ ] Look into grok-code-fast-1 for the first iteration of the rewrite. If it works, we saved time/cost
+- [x] Look into grok-code-fast-1 for the first iteration of the rewrite. If it works, we saved time/cost
 - [x] Change how deps are shown to be d.ts + description
 - [ ] C68: why not using placeholders
 - [ ] C48: why internal problem with image component rendering link?
@@ -41,6 +41,7 @@ Core ideas:
 - [ ] C74, C68: are placeholders used better?
 - [ ] C56, C60: split up. Maybe if a big component is rendered only once, with no props, just put it in a separate file?
 - [ ] C38: still named ComponentToRewrite
-- [ ] make sure it works when multiple components have the same name in the same file
+- [x] make sure it works when multiple components have the same name in the same file
 - [ ] how to solve `Component C14 depends on C15 which is not found in registry` for skipped components?
 - [x] jest-diff vs git diff?
+- [ ] srcset and src alias similar to svg alias to save tokens

@@ -38,14 +38,16 @@ For **each** discovered path output:
 | **requiredForRender**| \`true\` if omitting the function causes an error or breaks the render; otherwise \`false\`.   |
 
 ### 3 · Binary component classifiers
-Set each key below to \`true\` or \`false\` (independent flags; more than one can be \`true\`):
+For each of the below independent flags, reason briefly about it and set the key to \`true\` or \`false\` (independent flags; more than one can be \`true\`):
 
 | key | Set to \`true\` when… |
 |-----|-----------------------|
 | **headOnly** | The component's _sole_ purpose is to inject or mutate \`<head>\` elements (\`<title>\`, \`<meta>\`, \`<style>\`, etc.) and it returns **no visible DOM**. |
-| **sideEffectWrapper** | It simply returns its \`children\` (or nothing) but performs **side-effects inside hooks**—e.g. \`useEffect\`, \`useLayoutEffect\`, timers, analytics pings (\`gtag\`, \`mixpanel\`, etc.). |
-| **contextProviderWrapper** | The root JSX is one or more context providers (e.g. \`<ThemeProvider>\`, \`<AuthProvider>\`) whose only meaningful descendant is \`{children}\` and which add no visible markup. |
-| **errorBoundaryWrapper** | A class component implementing \`componentDidCatch\`/\`getDerivedStateFromError\`, or a function component using an error-boundary hook, that normally just renders its \`children\`. |
+| **sideEffectOnly** | It renders \`props.children\` or nothing but its main purpose is to perform **side-effects inside hooks**—e.g. \`useEffect\`, \`useLayoutEffect\`, timers, analytics pings (\`gtag\`, \`mixpanel\`, etc.). |
+| **contextProviderWrapper** | The primary purpose of the component is to wrap its children in one or more context providers (e.g. \`<ThemeProvider>\`, \`<AuthProvider>\`, \`<RouterProvider>\`) whose only meaningful descendant is \`{children}\` and which add no visible markup. This should NOT be true if the component is a UI component that renders more than just \`{children}\`. |
+| **errorBoundaryWrapper** | A class that acts as an error boundary, that normally just renders its \`children\`. |
+| **noopWrapper** | The component's entire render output is euther null or props.children (sometimes wrapped in React.Fragment, <></> or similar). It might have logic for redirecting based on auth state or similar, but in the base case it's just a wrapper around \`{children}\`. |
+| **suspenseWrapper** | The component is a wrapper around \`<Suspense>\` and \`<SuspenseList>\` and renders children inside them. |
 
 `.trim();
 

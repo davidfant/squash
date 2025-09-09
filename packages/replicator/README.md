@@ -45,3 +45,5 @@ Core ideas:
 - [ ] how to solve `Component C14 depends on C15 which is not found in registry` for skipped components?
 - [x] jest-diff vs git diff?
 - [ ] srcset and src alias similar to svg alias to save tokens
+- [ ] split up analyze prompt in two (children + classification) to make it faster
+- [ ] make analysis happen in parallel with rewrite

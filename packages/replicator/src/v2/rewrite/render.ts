@@ -163,7 +163,15 @@ export async function render(
   | { ok: false; errors: string[] }
 > {
   const modules: Record<string, Module> = {};
-  let buildErrors: string[] | undefined = undefined;
+  const errors: string[] = [];
+
+  if (opts.component.name.original === "ComponentToRewrite") {
+    errors.push(
+      "Component cannot be called ComponentToRewrite - rename it to something descriptive"
+    );
+  }
+
+  let hasBuildErrors = false;
   await Promise.all([
     (async () => {
       const compiled = await compileComponent(opts.component.code);
@@ -175,7 +183,8 @@ export async function render(
           }),
         };
       } else {
-        buildErrors = compiled.errors;
+        errors.push(...compiled.errors);
+        hasBuildErrors = true;
       }
     })(),
     (async () => {
@@ -202,29 +211,29 @@ export async function render(
       }),
   ]);
 
-  if (buildErrors) return { ok: false, errors: buildErrors };
+  if (!hasBuildErrors) {
+    const illegalImports = new Set<string>();
+    const runtimeErrors: string[] = [];
+    const require = makeLazyRequire(
+      modules,
+      (spec) => illegalImports.add(spec),
+      (err) => runtimeErrors.push(err.message)
+    );
+    const ctx = vm.createContext({ require });
+    const results = await Promise.all(
+      opts.examples.map((jsx, i) => renderSample(ctx, jsx, i))
+    );
 
-  const illegalImports = new Set<string>();
-  const runtimeErrors: string[] = [];
-  const require = makeLazyRequire(
-    modules,
-    (spec) => illegalImports.add(spec),
-    (err) => runtimeErrors.push(err.message)
-  );
-  const ctx = vm.createContext({ require });
-  const results = await Promise.all(
-    opts.examples.map((jsx, i) => renderSample(ctx, jsx, i))
-  );
+    if (illegalImports.size) {
+      errors.push(`Illegal imports: ${[...illegalImports].join(", ")}`);
+    }
 
-  const errors: string[] = [];
+    if (runtimeErrors.length) {
+      errors.push(...runtimeErrors);
+    }
 
-  if (illegalImports.size) {
-    errors.push(`Illegal imports: ${[...illegalImports].join(", ")}`);
+    return errors.length ? { ok: false, errors } : { ok: true, results };
   }
 
-  if (runtimeErrors.length) {
-    errors.push(...runtimeErrors);
-  }
-
-  return errors.length ? { ok: false, errors } : { ok: true, results };
+  return { ok: false, errors };
 }

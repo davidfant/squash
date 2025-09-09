@@ -117,6 +117,14 @@ export async function buildExampleCode({
       ),
   ]);
 
+  // if (Math.random() && component.id === "C92") {
+  //   console.log("--- HTML ---");
+  //   console.log(html);
+  //   console.log("--- JSX ---");
+  //   console.log(jsx);
+  //   process.exit(0);
+  // }
+
   return { html, jsx };
 }
 

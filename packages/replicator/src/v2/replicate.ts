@@ -346,7 +346,7 @@ export const replicate = (
       console.dir(
         [
           ...new Set(
-            [...state.component.nodes.get("C75")!]
+            [...state.component.nodes.get("C40")!]
               .flatMap((n) => [...(state.node.descendants.all.get(n) ?? [])])
               .map((n) => state.node.all.get(n)?.componentId)
               .filter((c) => !!c)

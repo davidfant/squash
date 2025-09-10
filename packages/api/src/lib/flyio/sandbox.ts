@@ -1,4 +1,5 @@
 import type { RepoSnapshot } from "@/database/schema/repos";
+import { traceable } from "langsmith/traceable";
 import { flyFetch, flyFetchJson } from "./util";
 
 interface FlyMachineCheck {
@@ -73,7 +74,7 @@ export const createMachine = ({
   appId,
   git,
   auth,
-  apiKey,
+  accessToken,
   snapshot,
 }: {
   appId: string;
@@ -87,10 +88,10 @@ export const createMachine = ({
       region: "auto";
     };
   };
-  apiKey: string;
+  accessToken: string;
   snapshot: RepoSnapshot;
 }) =>
-  flyFetchJson<FlyMachine>(`/apps/${appId}/machines`, apiKey, {
+  flyFetchJson<FlyMachine>(`/apps/${appId}/machines`, accessToken, {
     method: "POST",
     body: JSON.stringify({
       config: {
@@ -204,53 +205,63 @@ function isHealthy(machine: FlyMachine): boolean {
   return running && checksPassing;
 }
 
-export async function waitForMachineHealthy(
+export const waitForMachineHealthy = (
   appId: string,
   machineId: string,
   apiKey: string,
   timeoutMs = 5 * 60_000,
   pollMs = 2_000
-) {
-  const machine = await flyFetchJson<FlyMachine>(
-    `/apps/${appId}/machines/${machineId}`,
-    apiKey
-  );
-  if (isHealthy(machine)) return machine;
-
-  if (["stopped", "suspended"].includes(machine.state)) {
-    await flyFetchJson(`/apps/${appId}/machines/${machineId}/start`, apiKey, {
-      method: "POST",
-    });
-  }
-
-  const startTime = Date.now();
-  while (true) {
-    let machine: FlyMachine | undefined;
-    try {
-      machine = await flyFetchJson<FlyMachine>(
-        `/apps/${appId}/machines/${machineId}`,
-        apiKey
+) =>
+  traceable(
+    async (_: { appId: string; machineId: string }) => {
+      const getDetails = traceable(
+        () =>
+          flyFetchJson<FlyMachine>(
+            `/apps/${appId}/machines/${machineId}`,
+            apiKey
+          ),
+        { name: "Get machine details" }
       );
 
+      const machine = await getDetails();
       if (isHealthy(machine)) return machine;
-    } catch (e) {
-      console.warn(
-        `Failed to fetch machine ${appId}/${machineId} after start: ${
-          (e as Error).message
-        }`
-      );
-    }
 
-    if (Date.now() - startTime > timeoutMs) {
-      const summary = (machine?.checks ?? [])
-        .map((c) => `${c.name}:${c.status}`)
-        .join(", ");
-      throw new Error(
-        `Timed out waiting for machine ${machineId} to become healthy. ` +
-          `state=${machine?.state} checks=[${summary}]`
-      );
-    }
+      if (["stopped", "suspended"].includes(machine.state)) {
+        await traceable(
+          () =>
+            flyFetchJson(`/apps/${appId}/machines/${machineId}/start`, apiKey, {
+              method: "POST",
+            }),
+          { name: "Start machine" }
+        )();
+      }
 
-    await new Promise((resolve) => setTimeout(resolve, pollMs));
-  }
-}
+      const startTime = Date.now();
+      while (true) {
+        let machine: FlyMachine | undefined;
+        try {
+          machine = await getDetails();
+          if (isHealthy(machine)) return machine;
+        } catch (e) {
+          console.warn(
+            `Failed to fetch machine ${appId}/${machineId} after start: ${
+              (e as Error).message
+            }`
+          );
+        }
+
+        if (Date.now() - startTime > timeoutMs) {
+          const summary = (machine?.checks ?? [])
+            .map((c) => `${c.name}:${c.status}`)
+            .join(", ");
+          throw new Error(
+            `Timed out waiting for machine ${machineId} to become healthy. ` +
+              `state=${machine?.state} checks=[${summary}]`
+          );
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, pollMs));
+      }
+    },
+    { name: "Wait for machine to become healthy" }
+  )({ appId, machineId });

@@ -1,4 +1,4 @@
-import type { AgentRuntimeContext } from "@/agent/types";
+import type { AgentRuntimeContext } from "@/agent/custom/types";
 import { gitGrep } from "@/lib/flyio/exec";
 import { tool } from "ai";
 import { z } from "zod";

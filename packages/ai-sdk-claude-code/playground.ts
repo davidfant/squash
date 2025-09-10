@@ -1,7 +1,7 @@
 import { type SDKMessage } from "@anthropic-ai/claude-code";
 import { streamText, tool, type ToolSet } from "ai";
 import { z } from "zod/v4/mini";
-import { ClaudeCodeLanguageModel } from ".";
+import { ClaudeCodeLanguageModel } from "./src";
 
 const msgs: SDKMessage[] = [
   {

@@ -2,7 +2,7 @@ import type { Database } from "@/database";
 import * as schema from "@/database/schema";
 import * as FlyioExec from "@/lib/flyio/exec";
 import { eq } from "drizzle-orm";
-import type { AgentRuntimeContext } from "./types";
+import type { AgentRuntimeContext } from "../agent/custom/types";
 
 export async function checkoutLatestCommit(
   messages: Pick<schema.Message, "id" | "role" | "parts">[],

@@ -548,6 +548,52 @@ export const reposRouter = new Hono<{
     }
   )
   .post(
+    "/repos",
+    zValidator(
+      "json",
+      z.object({
+        name: z.string(),
+        url: z.string().url(),
+        defaultBranch: z.string(),
+        snapshot: z.object({
+          type: z.literal("docker"),
+          port: z.number(),
+          image: z.string(),
+          entrypoint: z.string(),
+          workdir: z.string(),
+        }),
+      })
+    ),
+    requireAuth,
+    requireActiveOrganization,
+    async (c) => {
+      const { name, url, defaultBranch, snapshot } = c.req.valid("json");
+      const organizationId = c.get("organizationId");
+      const db = c.get("db");
+
+      try {
+        const [newRepo] = await db
+          .insert(schema.repo)
+          .values({
+            name,
+            url,
+            defaultBranch,
+            private: false,
+            providerId: null,
+            externalId: null,
+            organizationId,
+            snapshot,
+          })
+          .returning();
+
+        return c.json(newRepo!);
+      } catch (error) {
+        console.error("Error creating repository:", error);
+        return c.json({ error: "Failed to create repository" }, 500);
+      }
+    }
+  )
+  .post(
     "/:repoId/branches",
     zValidator("param", z.object({ repoId: z.string().uuid() })),
     zValidator(
@@ -608,7 +654,7 @@ export const reposRouter = new Hono<{
         try {
           await FlyioSandbox.createApp(
             flyioAppId,
-            c.env.FLY_API_KEY,
+            c.env.FLY_ACCESS_TOKEN,
             c.env.FLY_ORG_SLUG
           );
 
@@ -643,7 +689,7 @@ export const reposRouter = new Hono<{
                   }
                 : undefined,
             },
-            apiKey: c.env.FLY_API_KEY,
+            accessToken: c.env.FLY_ACCESS_TOKEN,
           });
 
           // Create repo branch record
@@ -668,9 +714,10 @@ export const reposRouter = new Hono<{
 
           return c.json(repoBranch!);
         } catch (error) {
-          await FlyioSandbox.deleteApp(branchName, c.env.FLY_API_KEY).catch(
-            () => {}
-          );
+          await FlyioSandbox.deleteApp(
+            branchName,
+            c.env.FLY_ACCESS_TOKEN
+          ).catch(() => {});
           throw error;
         }
       } catch (error) {
@@ -746,12 +793,12 @@ export const reposRouter = new Hono<{
       await FlyioSandbox.waitForMachineHealthy(
         branch.sandbox.appId,
         branch.sandbox.machineId,
-        c.env.FLY_API_KEY
+        c.env.FLY_ACCESS_TOKEN
       );
       const { sha } = c.req.valid("json");
       const context: FlyioExec.FlyioExecSandboxContext = {
         ...branch.sandbox,
-        apiKey: c.env.FLY_API_KEY,
+        accessToken: c.env.FLY_ACCESS_TOKEN,
       };
       if (sha) {
         await FlyioExec.gitReset(context, sha);
@@ -770,7 +817,10 @@ export const reposRouter = new Hono<{
       const db = c.get("db");
       const branch = c.get("branch");
       if (branch.sandbox.type === "flyio") {
-        await FlyioSandbox.deleteApp(branch.sandbox.appId, c.env.FLY_API_KEY);
+        await FlyioSandbox.deleteApp(
+          branch.sandbox.appId,
+          c.env.FLY_ACCESS_TOKEN
+        );
       }
 
       await db

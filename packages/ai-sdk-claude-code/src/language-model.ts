@@ -2,7 +2,11 @@ import type {
   LanguageModelV2,
   LanguageModelV2StreamPart,
 } from "@ai-sdk/provider";
-import type { SDKMessage } from "@anthropic-ai/claude-code";
+import {
+  query as claudeCodeQuery,
+  type Options,
+  type SDKMessage,
+} from "@anthropic-ai/claude-code";
 import { messageToStreamPart } from "./message-to-stream-part";
 
 export class ClaudeCodeLanguageModel implements LanguageModelV2 {
@@ -11,7 +15,17 @@ export class ClaudeCodeLanguageModel implements LanguageModelV2 {
   readonly provider = "anthropic";
   readonly supportedUrls = { "image/*": [/^https?:\/\/.*$/] };
 
-  constructor(private generate: () => Promise<SDKMessage[]>) {}
+  constructor(
+    private cwd: string,
+    // private query: typeof claudeCodeQuery = claudeCodeQuery
+    private query: ({
+      prompt,
+      options,
+    }: {
+      prompt: string;
+      options?: Options;
+    }) => AsyncGenerator<SDKMessage, void> = claudeCodeQuery
+  ) {}
 
   async doGenerate(
     _options: Parameters<LanguageModelV2["doGenerate"]>[0]
@@ -22,30 +36,29 @@ export class ClaudeCodeLanguageModel implements LanguageModelV2 {
   async doStream(
     options: Parameters<LanguageModelV2["doStream"]>[0]
   ): Promise<Awaited<ReturnType<LanguageModelV2["doStream"]>>> {
-    const generate = this.generate;
     const stream = new ReadableStream<LanguageModelV2StreamPart>({
-      async start(controller) {
-        const messages = await generate();
+      start: async (controller) => {
         const process = messageToStreamPart(controller);
-        messages.forEach(process);
+        const lastMessageContent = options.prompt
+          .findLast((m) => m.role === "user")
+          ?.content.find((c) => c.type === "text")?.text;
+        if (!lastMessageContent) {
+          throw new Error("No last message content");
+        }
+
+        const q = this.query({
+          prompt: lastMessageContent,
+          options: {
+            cwd: this.cwd,
+            executable: "node",
+            includePartialMessages: true,
+            permissionMode: "acceptEdits",
+            // TODO: add session id
+            resume: undefined,
+          },
+        });
+        for await (const msg of q) process(msg);
         controller.close();
-
-        // controller.enqueue({ type: 'stream-start', warnings });
-
-        // for (const text of messages) {
-        //   const id = String(blockIdx++);
-
-        //   controller.enqueue({ type: 'text-start', id });
-        //   controller.enqueue({ type: 'text-delta', id, delta: text });
-        //   controller.enqueue({ type: 'text-end', id });
-        // }
-
-        // controller.enqueue({
-        //   type: 'finish',
-        //   finishReason: 'stop',
-        //   usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
-        // });
-        // controller.close();
       },
     });
 

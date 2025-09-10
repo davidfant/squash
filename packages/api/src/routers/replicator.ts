@@ -103,7 +103,9 @@ export const replicatorRouter = new Hono<{
       const filePath = `replicator/${randomUUID()}.tar.gz`;
       const db = c.get("db");
       const organizationId = c.get("organizationId");
-      const version = "v0.0.3";
+
+      const template = "replicator-vite-ts";
+      const version = "v0.0.4";
 
       // TODO: make sure user can create repo in this org
 
@@ -131,7 +133,7 @@ export const replicatorRouter = new Hono<{
             {
               json: {
                 source: {
-                  prefix: "templates/replicator-vite-js",
+                  prefix: `templates/${template}`,
                   tag: version,
                 },
                 tarFilePath: filePath,
@@ -160,7 +162,7 @@ export const replicatorRouter = new Hono<{
             url: git.remote,
             snapshot: {
               type: "docker",
-              image: `registry.fly.io/squash-template:replicator-vite-js-${version}`,
+              image: `registry.fly.io/squash-template:${template}-${version}`,
               port: 5173,
               entrypoint: "pnpm dev --host 0.0.0.0 --port $PORT",
               workdir: "/root/repo",

@@ -38,4 +38,4 @@ if ! flyctl apps list | grep -q $APP_NAME; then
   flyctl apps create $APP_NAME
 fi
 
-build replicator-vite-js
+build replicator-vite-ts

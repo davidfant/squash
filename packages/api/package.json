@@ -27,8 +27,6 @@
     "typegen": "wrangler types --env-interface CloudflareBindings"
   },
   "dependencies": {
-    "@squash/replicator": "workspace:*",
-    "@squash/replicator-git-sync": "workspace:*",
     "@ai-sdk/anthropic": "^2.0.0",
     "@ai-sdk/google": "^2.0.0",
     "@ai-sdk/openai": "^2.0.3",
@@ -39,16 +37,22 @@
     "@opentelemetry/context-async-hooks": "^2.0.1",
     "@opentelemetry/exporter-trace-otlp-proto": "^0.203.0",
     "@opentelemetry/sdk-trace-base": "^2.0.1",
+    "@squash/ai-sdk-claude-code": "workspace:*",
+    "@squash/flyio-ssh-proxy": "workspace:*",
+    "@squash/replicator": "workspace:*",
+    "@squash/replicator-git-sync": "workspace:*",
     "ai": "^5.0.5",
     "aws4fetch": "^1.0.20",
     "better-auth": "^1.2.12",
     "drizzle-orm": "^0.44.2",
     "hono": "^4.9.0",
+    "jsonwebtoken": "^9.0.2",
     "langsmith": "^0.3.53",
     "lodash.camelcase": "^4.3.0",
     "lodash.kebabcase": "^4.1.1",
     "lodash.upperfirst": "^4.3.1",
     "nanotar": "^0.2.0",
+    "ws": "^8.18.3",
     "zod": "^4.0.16"
   },
   "devDependencies": {

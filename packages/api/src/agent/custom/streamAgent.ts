@@ -1,5 +1,4 @@
 import * as FlyioExec from "@/lib/flyio/exec";
-import { wrapModelWithLangsmith } from "@/lib/langsmith";
 import { morphMerge } from "@/lib/morph";
 import { anthropic } from "@ai-sdk/anthropic";
 import { google } from "@ai-sdk/google";
@@ -15,11 +14,12 @@ import {
 import { AwsClient } from "aws4fetch";
 import { randomUUID } from "crypto";
 import { createTarGzip } from "nanotar";
+import { gitCommit } from "../git";
+import type { ChatMessage } from "../types";
 import EnvPrompt from "./prompts/env.md";
 import SystemPrompt from "./prompts/system.md";
 import { createAgentTools } from "./tools";
-import { gitCommit } from "./tools/git";
-import type { AgentRuntimeContext, ChatMessage } from "./types";
+import type { AgentRuntimeContext } from "./types";
 
 function withCacheBreakpoints(
   msgs: ModelMessage[],
@@ -86,21 +86,7 @@ export async function streamAgent(
     onFinish: opts.onFinish,
     execute: async ({ writer }) => {
       const agentStream = streamText({
-        model: wrapModelWithLangsmith(
-          anthropic("claude-sonnet-4-20250514"),
-          opts.env,
-          {
-            runName: "hypershape-agent-main",
-            tags: ["hypershape", "agent", "main-flow"],
-            metadata: {
-              sandboxId: runtimeContext.sandbox.appId,
-              machineId: runtimeContext.sandbox.machineId,
-              workdir: runtimeContext.sandbox.workdir,
-              messageCount: messages.length,
-              session_id: opts.threadId,
-            },
-          }
-        ),
+        model: anthropic("claude-sonnet-4-20250514"),
         messages: [
           ...withCacheBreakpoints([{ role: "system", content: SystemPrompt }]),
           {
@@ -166,19 +152,7 @@ export async function streamAgent(
       }
 
       const commitStream = streamText({
-        model: wrapModelWithLangsmith(
-          google("gemini-2.5-flash-lite"),
-          opts.env,
-          {
-            runName: "Commit Message",
-            tags: ["commit"],
-            metadata: {
-              changesCount: changes.length,
-              sandboxId: runtimeContext.sandbox.appId,
-              session_id: opts.threadId,
-            },
-          }
-        ),
+        model: google("gemini-2.5-flash-lite"),
         experimental_telemetry: { isEnabled: true },
         messages: [
           {

@@ -1,12 +1,13 @@
-import { checkoutLatestCommit } from "@/agent/checkoutLatestCommit";
-import { streamAgent } from "@/agent/streamAgent";
-import type { AgentRuntimeContext, ChatMessage } from "@/agent/types";
+import { streamClaudeCodeAgent } from "@/agent/claudeCode/streamAgent";
+import type { AgentRuntimeContext } from "@/agent/custom/types";
+import type { ChatMessage } from "@/agent/types";
 import { requireAuth } from "@/auth/middleware";
 import type { Database } from "@/database";
 import type { MessageUsage } from "@/database/schema";
 import * as schema from "@/database/schema";
+import { langsmith } from "@/lib/ai";
+import { checkoutLatestCommit } from "@/lib/checkoutLatestCommit";
 import { waitForMachineHealthy } from "@/lib/flyio/sandbox";
-import { getLangsmithClient } from "@/lib/langsmith";
 import { resolveMessageThreadHistory } from "@/lib/resolveMessageThreadHistory";
 import { zValidator } from "@hono/zod-validator";
 import { and, asc, eq } from "drizzle-orm";
@@ -15,10 +16,7 @@ import { traceable } from "langsmith/traceable";
 import { z } from "zod";
 
 export const zUserMessagePart = z.union([
-  z.object({
-    type: z.literal("text"),
-    text: z.string(),
-  }),
+  z.object({ type: z.literal("text"), text: z.string() }),
   z.object({
     type: z.literal("file"),
     mediaType: z.string(),
@@ -103,25 +101,21 @@ export const chatRouter = new Hono<{
       const params = c.req.valid("param");
       const user = c.get("user");
 
-      // Initialize Langsmith OTEL tracing
-      const client = getLangsmithClient(c.env);
+      const [allMessages, branch] = await Promise.all([
+        loadMessages(db, params.branchId, user.id),
+        db
+          .select()
+          .from(schema.repoBranch)
+          .where(eq(schema.repoBranch.id, params.branchId))
+          .then((r) => r[0]!),
+      ]);
+      if (!allMessages.length) {
+        return c.json({ error: "Message thread not found" }, 404);
+      }
+      const threadId = allMessages[0]!.threadId;
 
-      // Create the traced handler
-      const tracedHandler = traceable(
+      const result = await traceable(
         async () => {
-          const [allMessages, branch] = await Promise.all([
-            loadMessages(db, params.branchId, user.id),
-            db
-              .select()
-              .from(schema.repoBranch)
-              .where(eq(schema.repoBranch.id, params.branchId))
-              .then((r) => r[0]!),
-          ]);
-          if (!allMessages.length) {
-            return c.json({ error: "Message thread not found" }, 404);
-          }
-          const threadId = allMessages[0]!.threadId;
-
           const [messages] = await Promise.all([
             await (async () => {
               if (allMessages.some((m) => m.id === body.message.id)) {
@@ -144,7 +138,7 @@ export const chatRouter = new Hono<{
             waitForMachineHealthy(
               branch.sandbox.appId,
               branch.sandbox.machineId,
-              c.env.FLY_API_KEY
+              c.env.FLY_ACCESS_TOKEN
             ),
           ]);
           const runtimeContext: AgentRuntimeContext = {
@@ -153,14 +147,15 @@ export const chatRouter = new Hono<{
               appId: branch.sandbox.appId,
               machineId: branch.sandbox.machineId,
               workdir: branch.sandbox.workdir,
-              apiKey: c.env.FLY_API_KEY,
+              accessToken: c.env.FLY_ACCESS_TOKEN,
             },
-            todos:
-              messages
-                .flatMap((m) => m.parts)
-                .filter((p) => p.type === "tool-todoWrite")
-                .findLast((p) => p.state === "output-available")?.output
-                ?.todos ?? [],
+            todos: [],
+            // todos:
+            //   messages
+            //     .flatMap((m) => m.parts)
+            //     .filter((p) => p.type === "tool-todoWrite")
+            //     .findLast((p) => p.state === "output-available")?.output
+            //     ?.todos ?? [],
           };
 
           await checkoutLatestCommit(messages, runtimeContext, db);
@@ -170,62 +165,86 @@ export const chatRouter = new Hono<{
 
           const nextParentId = messages[messages.length - 1]!.id;
           const usage: MessageUsage[] = [];
-          return streamAgent(messagesWithoutRoot, runtimeContext, {
-            env: c.env,
-            threadId: params.branchId,
-            fileTransfer: {
-              bucket: c.env.R2_FILE_TRANSFER_BUCKET,
-              bucketName: c.env.R2_FILE_TRANSFER_BUCKET_NAME,
-              url: c.env.R2_FILE_TRANSFER_ENDPOINT_URL_S3,
-              accessKeyId: c.env.R2_FILE_TRANSFER_ACCESS_KEY_ID,
-              secretAccessKey: c.env.R2_FILE_TRANSFER_SECRET_ACCESS_KEY,
-            },
-            onFinish: async ({ responseMessage }) => {
-              await db.insert(schema.message).values({
-                id: responseMessage.id,
-                role: responseMessage.role as "user" | "assistant",
-                parts: responseMessage.parts,
-                usage,
-                threadId,
-                parentId: nextParentId,
-              });
-            },
-            messageMetadata(opts) {
-              if (opts.part.type === "start") {
-                return {
-                  createdAt: new Date().toISOString(),
+          return streamClaudeCodeAgent(
+            messagesWithoutRoot,
+            runtimeContext.sandbox,
+            {
+              env: c.env,
+              threadId: params.branchId,
+              onFinish: async ({ responseMessage }) => {
+                await db.insert(schema.message).values({
+                  id: responseMessage.id,
+                  role: responseMessage.role as "user" | "assistant",
+                  parts: responseMessage.parts,
+                  usage,
+                  threadId,
                   parentId: nextParentId,
-                };
-              }
-              if (opts.part.type === "finish-step") {
-                usage.push({
-                  ...opts.part.usage,
-                  modelId: opts.part.response.modelId,
                 });
-              }
-            },
-          });
+              },
+              messageMetadata(opts) {
+                if (opts.part.type === "start") {
+                  return {
+                    createdAt: new Date().toISOString(),
+                    parentId: nextParentId,
+                  };
+                }
+                if (opts.part.type === "finish-step") {
+                  usage.push({
+                    ...opts.part.usage,
+                    modelId: opts.part.response.modelId,
+                  });
+                }
+              },
+            }
+          );
+          // return streamAgent(messagesWithoutRoot, runtimeContext, {
+          //   env: c.env,
+          //   threadId: params.branchId,
+          //   fileTransfer: {
+          //     bucket: c.env.R2_FILE_TRANSFER_BUCKET,
+          //     bucketName: c.env.R2_FILE_TRANSFER_BUCKET_NAME,
+          //     url: c.env.R2_FILE_TRANSFER_ENDPOINT_URL_S3,
+          //     accessKeyId: c.env.R2_FILE_TRANSFER_ACCESS_KEY_ID,
+          //     secretAccessKey: c.env.R2_FILE_TRANSFER_SECRET_ACCESS_KEY,
+          //   },
+          //   onFinish: async ({ responseMessage }) => {
+          //     await db.insert(schema.message).values({
+          //       id: responseMessage.id,
+          //       role: responseMessage.role as "user" | "assistant",
+          //       parts: responseMessage.parts,
+          //       usage,
+          //       threadId,
+          //       parentId: nextParentId,
+          //     });
+          //   },
+          //   messageMetadata(opts) {
+          //     if (opts.part.type === "start") {
+          //       return {
+          //         createdAt: new Date().toISOString(),
+          //         parentId: nextParentId,
+          //       };
+          //     }
+          //     if (opts.part.type === "finish-step") {
+          //       usage.push({
+          //         ...opts.part.usage,
+          //         modelId: opts.part.response.modelId,
+          //       });
+          //     }
+          //   },
+          // });
         },
         {
           name: "Code Gen Agent",
-          run_type: "chain",
+          client: langsmith,
           metadata: {
             branchId: params.branchId,
             userId: user.id,
-            session_id: params.branchId, // single LS thread per branch
+            session_id: threadId,
           },
-          // omit client to avoid type conflicts across subpath resolutions
         }
-      );
+      )();
 
-      // Execute the traced handler
-      const result = await tracedHandler();
-
-      // Ensure traces are flushed
-      if (client) {
-        await client.awaitPendingTraceBatches();
-      }
-
+      await langsmith.awaitPendingTraceBatches();
       return result;
     }
   );

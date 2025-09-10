@@ -22,7 +22,7 @@ import { identifyUrlsToDownload } from "./lib/assets/identifyRemoveAssetsToDownl
 import { fuseMemoForwardRef } from "./lib/fuseMemoForwardRef";
 import { recmaReplaceRefs } from "./lib/recma/ref";
 import type { FileSink } from "./lib/sinks/base";
-import { aliasSVGPaths } from "./lib/svg/alias";
+import { aliasSVGPaths, describeSVGWithLLM } from "./lib/svg/alias";
 import { replaceSVGPathsInFiles } from "./lib/svg/replace";
 import {
   buildState,
@@ -74,7 +74,7 @@ export const replicate = (snapshot: Snapshot, sink: FileSink<any>) =>
       );
 
       const svgAliased = await traceable(
-        () => aliasSVGPaths($, snapshot.metadata),
+        () => aliasSVGPaths($, snapshot.metadata, describeSVGWithLLM),
         { name: "Alias SVG paths" }
       )();
 

@@ -31,7 +31,8 @@ export type DescribeSVGStrategy = (
 
 export async function aliasSVGPaths(
   $: CheerioAPI,
-  metadata: Metadata.ReactFiber | null
+  metadata: Metadata.ReactFiber | null,
+  describe: DescribeSVGStrategy
 ): Promise<{
   metadata: Metadata.ReactFiber | null;
   dPathMapping: Map<string, string>;
@@ -61,10 +62,9 @@ export async function aliasSVGPaths(
 
   const details = await Promise.all(
     uniqHashes.map(
-      traceable(
-        (hash: string) => describeSVGWithLLM(svgsByHash.get(hash)![0]!.cloned),
-        { name: "Describe SVG" }
-      )
+      traceable((hash: string) => describe(svgsByHash.get(hash)![0]!.cloned), {
+        name: "Describe SVG",
+      })
     )
   );
 

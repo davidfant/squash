@@ -3,7 +3,7 @@ import type { Database } from "@/database";
 import * as schema from "@/database/schema";
 import { zValidator } from "@hono/zod-validator";
 import type { Snapshot } from "@squash/replicator";
-import { replicate, TarSink } from "@squash/replicator";
+// import { replicate, TarSink } from "@squash/replicator";
 import type { AppType as ReplicatorGitSyncAppType } from "@squash/replicator-git-sync";
 import { Hono } from "hono";
 import { hc } from "hono/client";
@@ -109,6 +109,8 @@ export const replicatorRouter = new Hono<{
 
       const startedAt = Date.now();
       try {
+        const TarSink: any = null;
+        const replicate: any = null;
         const sink = new TarSink();
         console.log("Replicating...", Date.now() - startedAt);
         await replicate(snapshot, sink);

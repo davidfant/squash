@@ -8,8 +8,8 @@ import type { Element } from "domhandler";
 import { traceable } from "langsmith/traceable";
 import { createHash } from "node:crypto";
 import { z } from "zod";
-import { generateObject } from "../ai";
-import { filesystemCacheMiddleware } from "../filesystemCacheMiddleware";
+import { filesystemCacheMiddleware } from "../ai/filesystemCacheMiddleware";
+import { generateObject } from "../ai/sdk";
 import { replaceSVGPathAliases } from "./replace";
 
 const model = wrapLanguageModel({

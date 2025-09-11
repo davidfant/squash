@@ -3,7 +3,7 @@ import { flyFetchJson } from "./util";
 export interface FlyioExecSandboxContext {
   appId: string;
   machineId: string;
-  apiKey: string;
+  accessToken: string;
   workdir: string;
 }
 
@@ -22,7 +22,7 @@ const execCommand = (
 ): Promise<ExecResult> =>
   flyFetchJson<ExecResult>(
     `/apps/${context.appId}/machines/${context.machineId}/exec`,
-    context.apiKey,
+    context.accessToken,
     {
       method: "POST",
       body: JSON.stringify({
@@ -172,8 +172,8 @@ export async function gitCommit(
     context,
     [
       "git add -A",
-      "git config --global user.name 'Hive Mind'",
-      "git config --global user.email 'agent@hivemind.io'",
+      "git config --global user.name 'Squash'",
+      "git config --global user.email 'agent@squash.build'",
       `git commit -m ${escape(title)} -m ${escape(body)} --quiet`,
       "git rev-parse HEAD",
     ].join(" && ")

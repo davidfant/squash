@@ -13,6 +13,7 @@ import { ExtensionAuthPage } from "./routes/extension-auth";
 import { LandingPage } from "./routes/landing";
 import { LoginPage } from "./routes/login";
 import { NewRepoFromProvider, NewRepoPage } from "./routes/new/repo";
+import { NewRepoManualPage } from "./routes/new/repo/manual";
 import { RepoPage } from "./routes/repos";
 
 i18n.use(initReactI18next).init({
@@ -39,6 +40,7 @@ createRoot(document.getElementById("root")!).render(
               element={<BranchPage />}
             />
             <Route path="/new/repo" element={<NewRepoPage />} />
+            <Route path="/new/repo/manual" element={<NewRepoManualPage />} />
             <Route
               path="/new/repo/:providerId"
               element={<NewRepoFromProvider />}

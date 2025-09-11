@@ -5,6 +5,8 @@ RUN apk add --no-cache python3 py3-pip git \
  && corepack enable \
  && corepack prepare pnpm@latest --activate
 
+RUN npm install -g @anthropic-ai/claude-code
+
 ARG AWS_ACCESS_KEY_ID
 ARG AWS_SECRET_ACCESS_KEY
 ARG AWS_ENDPOINT_URL_S3

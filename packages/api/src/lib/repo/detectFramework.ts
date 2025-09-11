@@ -224,7 +224,7 @@ export function createSnapshotFromFramework(
     type: "docker",
     port: framework.port,
     image: "node:20-alpine",
-    entrypoint: framework.entrypoint,
     workdir: "/app",
+    cmd: { entrypoint: framework.entrypoint },
   };
 }

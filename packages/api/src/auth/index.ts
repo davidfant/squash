@@ -32,7 +32,9 @@ async function createDefaultOrganization(db: Database, user: User) {
   return organizationId;
 }
 
-export function createAuth(env: CloudflareBindings) {
+export function createAuth(
+  env: CloudflareBindings
+): ReturnType<typeof betterAuth> {
   const db = createDatabase(env);
   return betterAuth({
     appName: "LP",

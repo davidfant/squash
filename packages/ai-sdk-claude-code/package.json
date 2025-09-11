@@ -1,0 +1,24 @@
+{
+  "name": "@squash/ai-sdk-claude-code",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "dev": "tsc --watch --preserveWatchOutput",
+    "playground": "tsx --env-file .env playground.ts",
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "ai": "^5.0.39",
+    "tsx": "^4.20.5",
+    "typescript": "~5.8.3"
+  },
+  "dependencies": {
+    "@ai-sdk/provider": "^2.0.0",
+    "@ai-sdk/provider-utils": "^3.0.8",
+    "@anthropic-ai/claude-code": "^1.0.110",
+    "zod": "^4.1.5"
+  }
+}

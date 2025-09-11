@@ -3,7 +3,7 @@ import type { Database } from "@/database";
 import * as schema from "@/database/schema";
 import { zValidator } from "@hono/zod-validator";
 import type { Snapshot } from "@squash/replicator";
-import { replicate, TarSink } from "@squash/replicator";
+// import { replicate, TarSink } from "@squash/replicator";
 import type { AppType as ReplicatorGitSyncAppType } from "@squash/replicator-git-sync";
 import { Hono } from "hono";
 import { hc } from "hono/client";
@@ -103,12 +103,16 @@ export const replicatorRouter = new Hono<{
       const filePath = `replicator/${randomUUID()}.tar.gz`;
       const db = c.get("db");
       const organizationId = c.get("organizationId");
-      const version = "v0.0.3";
+
+      const template = "replicator-vite-ts";
+      const version = "v0.0.4";
 
       // TODO: make sure user can create repo in this org
 
       const startedAt = Date.now();
       try {
+        const TarSink: any = null;
+        const replicate: any = null;
         const sink = new TarSink();
         console.log("Replicating...", Date.now() - startedAt);
         await replicate(snapshot, sink);
@@ -129,7 +133,7 @@ export const replicatorRouter = new Hono<{
             {
               json: {
                 source: {
-                  prefix: "templates/replicator-vite-js",
+                  prefix: `templates/${template}`,
                   tag: version,
                 },
                 tarFilePath: filePath,
@@ -158,10 +162,10 @@ export const replicatorRouter = new Hono<{
             url: git.remote,
             snapshot: {
               type: "docker",
-              image: `registry.fly.io/squash-template:replicator-vite-js-${version}`,
+              image: `registry.fly.io/squash-template:${template}-${version}`,
               port: 5173,
-              entrypoint: "pnpm dev --host 0.0.0.0 --port $PORT",
               workdir: "/root/repo",
+              cmd: { entrypoint: "pnpm dev --host 0.0.0.0 --port $PORT" },
             },
             defaultBranch: git.branch,
             private: true,

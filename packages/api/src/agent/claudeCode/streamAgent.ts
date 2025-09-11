@@ -42,7 +42,6 @@ export async function streamClaudeCodeAgent(
         model: new ClaudeCodeLanguageModel(sandbox.workdir, async function* (
           req
         ) {
-          console.log("streamText...", opts.env.ANTHROPIC_API_KEY);
           const payload: FlyioSSHProxyJWTPayload = {
             app: sandbox.appId,
             cwd: sandbox.workdir,
@@ -66,10 +65,16 @@ export async function streamClaudeCodeAgent(
           );
           const stream = FlyioSSH.streamSSH(opts.env.FLY_SSH_PROXY_URL, token);
           for await (const message of stream) {
-            console.log("here!!! 3", message);
             if (message.type === "stdout") {
-              console.log("stdout....", message);
-              // TODO: yield this shit...
+              const lines = message.data.split("\n");
+              for (const line of lines) {
+                try {
+                  const data = JSON.parse(line);
+                  if (typeof data === "object" && !!data.type) {
+                    yield data;
+                  }
+                } catch {}
+              }
             }
           }
         }),

@@ -78,7 +78,6 @@ wss.on("connection", (ws, req) => {
     console.debug(`[${remote}] → ${payload.app} :: ${payload.command}`);
 
     // 3. Spawn flyctl ssh console
-    console.log("XXXXX", `sh -c "${payload.command}"`);
     child = spawn(
       "flyctl",
       [

@@ -16,66 +16,61 @@ export async function* streamSSH(
 ): AsyncGenerator<FlyioSSHProxyMessage, void> {
   const ws = new WebSocket(url);
 
+  const deferred = <T>() => {
+    let r!: (v: T) => void;
+    const p = new Promise<T>((res) => (r = res));
+    return { promise: p, resolve: r };
+  };
+
   // Buffer of pending stdout messages
   const queue: FlyioSSHProxyMessage[] = [];
-  let resolveNext: (() => void) | null = null;
-
-  // Promise that resolves when ws is closed or exit received
-  let done: Promise<void>;
-  let doneResolve!: () => void;
-  done = new Promise((res) => (doneResolve = res));
+  const next = deferred<void>();
+  const done = deferred<void>();
 
   ws.addEventListener("open", () => {
-    // Send our JWT request
-    const req: FlyioSSHProxyProxyRequest = { jwt };
-    ws.send(JSON.stringify(req));
+    ws.send(JSON.stringify({ jwt } satisfies FlyioSSHProxyProxyRequest));
   });
 
-  ws.addEventListener("message", (data) => {
-    console.log("event listener...", data);
+  ws.addEventListener("message", (event) => {
     try {
-      const msg: FlyioSSHProxyMessage = JSON.parse(data.toString());
+      const msg: FlyioSSHProxyMessage = JSON.parse(event.data);
       queue.push(msg);
-      if (resolveNext) {
-        resolveNext();
-        resolveNext = null;
-      }
-
-      // When process ends (exit or error), mark done
+      next.resolve();
       if (msg.type === "exit" || msg.type === "error") {
-        doneResolve();
+        done.resolve();
+        ws.close();
       }
-    } catch {
-      // ignore malformed
-      return;
+    } catch (error) {
+      console.warn("Failed to parse message", error, event.data.toString());
     }
   });
 
-  ws.addEventListener("error", doneResolve);
-  ws.addEventListener("close", doneResolve);
+  const closeOrError = () => {
+    done.resolve();
+    next.resolve();
+  };
+  ws.addEventListener("close", closeOrError);
+  ws.addEventListener("error", closeOrError);
 
   try {
     while (true) {
-      // Yield all buffered lines
+      // yield everything we already have
       while (queue.length) {
-        yield queue.shift()!;
+        const msg = queue.shift()!;
+        yield msg;
+        if (msg.type === "exit" || msg.type === "error") return;
       }
-      // Wait for next stdout or done
-      await new Promise<void>((res) => {
-        resolveNext = res;
-        // if done fires first, resolveNext will never be called, but we unblock below
-      }).catch(() => {
-        /* noop */
-      });
-      // If socket closed before pushing any more, break
-      if (ws.readyState !== WebSocket.OPEN && queue.length === 0) {
-        break;
-      }
+
+      // wait for either a new message OR the stream ending
+      await Promise.race([next.promise, done.promise]);
+
+      // re-arm the 'next' deferred for the next iteration
+      if (queue.length === 0 && done.promise === Promise.resolve()) break;
+      next.promise = new Promise<void>((res) => (next.resolve = res));
     }
   } finally {
     ws.close();
   }
 
-  // Wait for any remaining cleanup
   await done;
 }

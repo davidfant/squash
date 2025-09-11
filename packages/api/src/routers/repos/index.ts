@@ -211,12 +211,14 @@ export const reposRouter = new Hono<{
 
         const branchId = randomUUID();
         const branchName = `${kebabCase(title)}-${branchId.split("-")[0]}`;
-        const flyioAppId = [
-          organizationId.split("-")[0],
-          repo.id.split("-")[0],
-          kebabCase(title),
-          branchId.split("-")[0],
-        ].join("-");
+
+        const flyioAppIdPrefix = `${organizationId.split("-")[0]}-${
+          repo.id.split("-")[0]
+        }-${branchId.split("-")[0]!}-`;
+        const flyioAppId = `${flyioAppIdPrefix}${kebabCase(title).slice(
+          0,
+          63 - flyioAppIdPrefix.length
+        )}`;
 
         try {
           await FlyioSandbox.createApp(

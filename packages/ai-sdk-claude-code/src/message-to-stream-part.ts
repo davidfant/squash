@@ -402,6 +402,9 @@ export function messageToStreamPart(
             usage,
             providerMetadata,
           });
+          usage.inputTokens = undefined;
+          usage.outputTokens = undefined;
+          usage.totalTokens = undefined;
           return;
         }
 

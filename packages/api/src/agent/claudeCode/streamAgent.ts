@@ -38,6 +38,10 @@ export async function streamClaudeCodeAgent(
       //     setModel(model?: string): Promise<void>;
       // }
 
+      const lastClaudeCodeSessionId = messages
+        .flatMap((m) => m.parts)
+        .findLast((p) => p.type === "data-claudeCodeSession")?.data.id;
+
       const agentStream = streamText({
         model: new ClaudeCodeLanguageModel(sandbox.workdir, async function* (
           req
@@ -46,11 +50,18 @@ export async function streamClaudeCodeAgent(
             app: sandbox.appId,
             cwd: sandbox.workdir,
             // TODO: resume session id
-            // TODO: check if we using parent_tool_use_id can "resume" from an earlier point in a thread
+            // TODO: deny read/write to files that are gitignored
             command: [
+              // allows bypassPermissions when running in as sudo user
+              `IS_SANDBOX=1`,
               `ANTHROPIC_API_KEY=${opts.env.ANTHROPIC_API_KEY}`,
               "claude",
+              ...(lastClaudeCodeSessionId
+                ? ["--resume", lastClaudeCodeSessionId]
+                : []),
               "--output-format stream-json",
+              "--permission-mode bypassPermissions",
+              // "--permission-mode acceptEdits",
               "--include-partial-messages",
               "--verbose",
               "--print",
@@ -65,11 +76,26 @@ export async function streamClaudeCodeAgent(
           );
           const stream = FlyioSSH.streamSSH(opts.env.FLY_SSH_PROXY_URL, token);
           for await (const message of stream) {
+            console.log(message);
             if (message.type === "stdout") {
-              const lines = message.data.split("\n");
+              const lines = message.data
+                .split("\n")
+                .map((l) => l.trim())
+                .filter((v) => !!v);
               for (const line of lines) {
                 try {
                   const data = JSON.parse(line);
+                  if (data.type === "system") {
+                    const sessionId = data.session_id;
+                    if (sessionId !== lastClaudeCodeSessionId) {
+                      writer.write({
+                        type: "data-claudeCodeSession",
+                        id: sessionId,
+                        data: { id: sessionId },
+                      });
+                    }
+                  }
+
                   if (typeof data === "object" && !!data.type) {
                     yield data;
                   }

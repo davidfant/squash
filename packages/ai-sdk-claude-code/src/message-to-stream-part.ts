@@ -18,6 +18,8 @@ interface AnthropicProviderMetadata extends SharedV2ProviderMetadata {
   usage: Record<string, JSONValue>;
 }
 
+const toToolName = (name: string) => `ClaudeCode${name}`;
+
 export function messageToStreamPart(
   controller: ReadableStreamDefaultController<LanguageModelV2StreamPart>
 ) {
@@ -101,7 +103,7 @@ export function messageToStreamPart(
                 : {
                     type: "tool-call",
                     toolCallId: value.content_block.id,
-                    toolName: value.content_block.name,
+                    toolName: toToolName(value.content_block.name),
                     input: "",
                   };
 
@@ -111,7 +113,7 @@ export function messageToStreamPart(
                   : {
                       type: "tool-input-start",
                       id: value.content_block.id,
-                      toolName: value.content_block.name,
+                      toolName: toToolName(value.content_block.name),
                     }
               );
               return;
@@ -125,14 +127,14 @@ export function messageToStreamPart(
                 contentBlocks[value.index] = {
                   type: "tool-call",
                   toolCallId: value.content_block.id,
-                  toolName: value.content_block.name,
+                  toolName: toToolName(value.content_block.name),
                   input: "",
                   // providerExecuted: true,
                 };
                 controller.enqueue({
                   type: "tool-input-start",
                   id: value.content_block.id,
-                  toolName: value.content_block.name,
+                  toolName: toToolName(value.content_block.name),
                   providerExecuted: true,
                 });
               }

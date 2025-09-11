@@ -95,8 +95,8 @@ function NewRepoForm({ provider }: { provider: ProviderData }) {
             type: "docker",
             port: editedInfo.port,
             image: "node:20-alpine",
-            entrypoint: editedInfo.entrypoint,
             workdir: "/",
+            cmd: { entrypoint: editedInfo.entrypoint },
           },
         },
       });

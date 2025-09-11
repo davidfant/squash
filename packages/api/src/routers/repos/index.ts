@@ -83,8 +83,11 @@ export const reposRouter = new Hono<{
           type: z.literal("docker"),
           port: z.number(),
           image: z.string(),
-          entrypoint: z.string(),
           workdir: z.string(),
+          cmd: z.object({
+            prepare: z.string().optional(),
+            entrypoint: z.string(),
+          }),
         }),
       })
     ),
@@ -98,10 +101,7 @@ export const reposRouter = new Hono<{
         // Update the repo with new snapshot
         await db
           .update(schema.repo)
-          .set({
-            snapshot: snapshot,
-            updatedAt: new Date(),
-          })
+          .set({ snapshot: snapshot, updatedAt: new Date() })
           .where(eq(schema.repo.id, repo.id));
 
         return c.json({
@@ -126,8 +126,11 @@ export const reposRouter = new Hono<{
           type: z.literal("docker"),
           port: z.number(),
           image: z.string(),
-          entrypoint: z.string(),
           workdir: z.string(),
+          cmd: z.object({
+            prepare: z.string().optional(),
+            entrypoint: z.string(),
+          }),
         }),
       })
     ),

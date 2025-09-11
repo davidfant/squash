@@ -17,7 +17,7 @@ export interface RepoSnapshot {
   port: number;
   image: string;
   workdir: string;
-  entrypoint: string;
+  cmd: { prepare?: string; entrypoint: string };
 }
 
 export interface RepoBranchSandbox {

@@ -41,8 +41,11 @@ export function NewRepoManualPage() {
           type: "docker",
           image: `registry.fly.io/squash-template:${template}-${version}`,
           port: 5173,
-          entrypoint: "pnpm dev --host 0.0.0.0 --port $PORT",
-          workdir: "/root/repo",
+          workdir: "/repo",
+          cmd: {
+            prepare: "mv /root/repo/* $WORKDIR",
+            entrypoint: "pnpm dev --host 0.0.0.0 --port $PORT",
+          },
         },
       },
     });

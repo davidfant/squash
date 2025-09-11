@@ -177,8 +177,11 @@ export const repoProvidersRouter = new Hono<{
           type: z.literal("docker"),
           port: z.number(),
           image: z.string(),
-          entrypoint: z.string(),
           workdir: z.string(),
+          cmd: z.object({
+            prepare: z.string().optional(),
+            entrypoint: z.string(),
+          }),
         }),
       })
     ),

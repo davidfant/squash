@@ -22,6 +22,13 @@ interface FlyMachine {
   config: any;
 }
 
+interface FlyVolume {
+  id: string;
+  name: string;
+  region: string;
+  size_gb: number;
+}
+
 export async function createApp(
   appId: string,
   apiKey: string,
@@ -70,7 +77,19 @@ export async function createApp(
 export const deleteApp = (appName: string, apiKey: string) =>
   flyFetch(`/apps/${appName}?force=true`, apiKey, { method: "DELETE" });
 
-export const createMachine = ({
+export const createVolume = (
+  appId: string,
+  apiKey: string,
+  region: string,
+  name = "repo_data",
+  sizeGb = 2
+) =>
+  flyFetchJson<FlyVolume>(`/apps/${appId}/volumes`, apiKey, {
+    method: "POST",
+    body: JSON.stringify({ name, region, size_gb: sizeGb }),
+  });
+
+export async function createMachine({
   appId,
   git,
   auth,
@@ -90,10 +109,13 @@ export const createMachine = ({
   };
   accessToken: string;
   snapshot: RepoSnapshot;
-}) =>
-  flyFetchJson<FlyMachine>(`/apps/${appId}/machines`, accessToken, {
+}) {
+  const region = "iad";
+  const volume = await createVolume(appId, accessToken, region, "repo_data", 2);
+  return flyFetchJson<FlyMachine>(`/apps/${appId}/machines`, accessToken, {
     method: "POST",
     body: JSON.stringify({
+      region: volume.region,
       config: {
         image: snapshot.image,
         guest: { cpu_kind: "shared", cpus: 2, memory_mb: 1024 },
@@ -125,7 +147,7 @@ export const createMachine = ({
         },
         env: {
           PORT: snapshot.port.toString(),
-          GIT_REPO_DIR: git.workdir,
+          WORKDIR: git.workdir,
           GIT_REPO_URL: git.url,
           GIT_BRANCH: git.branch,
           GITHUB_USERNAME: auth.github?.username,
@@ -136,50 +158,33 @@ export const createMachine = ({
           AWS_ENDPOINT_URL_S3: auth.aws?.endpointUrl,
           AWS_REGION: auth.aws?.region,
         },
+        mounts: [{ volume: volume.id, path: git.workdir, name: volume.name }],
         init: {
-          // entrypoint: [
-          //   "/bin/sh",
-          //   "-c",
-          //   `
-          //       set -e;
-
-          //       apk update;
-          //       apk add --no-cache git;
-
-          //       corepack enable;
-          //       corepack prepare pnpm@10.0.0 --activate;
-
-          //       git config --global credential.helper store;
-          //       printf "protocol=https\nhost=github.com\nusername=$GITHUB_USERNAME\npassword=$GITHUB_PASSWORD\n" | git credential approve;
-
-          //       if [ -d $GIT_REPO_DIR ]; then
-          //         cd $GIT_REPO_DIR;
-          //         # git pull origin $GIT_BRANCH;
-          //       else
-          //         git clone $GIT_URL $GIT_REPO_DIR;
-          //         cd $GIT_REPO_DIR;
-          //       fi
-          //       ${snapshot.entrypoint};
-          //     `,
-          // ],
           entrypoint: [
             "sh",
             "-lc",
             `
-              cd "$GIT_REPO_DIR"
+              ${snapshot.cmd.prepare ?? ""}
+
+              cd $WORKDIR
 
               if [ ! -d ".git" ]; then
-                echo "Initializing git repo in $GIT_REPO_DIR..."
+                echo "Volume dir is empty. Copying everything from ${
+                  git.workdir
+                }..."
+                mv ${git.workdir}/* .
+
+                echo "Initializing git repo in $WORKDIR..."
                 git init
                 git remote add origin "$GIT_REPO_URL"
-
+  
                 # Get the default branch from the remote (works for main/master or others)
                 DEFAULT_BRANCH=$(git ls-remote --symref origin HEAD | awk '/^ref:/ {print $2}' | sed 's|refs/heads/||')
-
+  
                 echo "Pulling default branch ($DEFAULT_BRANCH) from $GIT_REPO_URL..."
                 git fetch origin "$DEFAULT_BRANCH"
                 git reset --hard "origin/$DEFAULT_BRANCH"
-
+  
                 echo "Creating new branch $GIT_BRANCH..."
                 git checkout -b "$GIT_BRANCH"
               else
@@ -187,7 +192,7 @@ export const createMachine = ({
                 git pull --ff-only
               fi
 
-              ${snapshot.entrypoint};
+              ${snapshot.cmd.entrypoint}
             `,
           ],
           // entrypoint: ["/bin/sh", "-c", snapshot.entrypoint],
@@ -196,6 +201,7 @@ export const createMachine = ({
       },
     }),
   });
+}
 
 function isHealthy(machine: FlyMachine): boolean {
   const running = machine.state === "started";

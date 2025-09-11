@@ -52,6 +52,8 @@ export async function streamClaudeCodeAgent(
             // TODO: resume session id
             // TODO: deny read/write to files that are gitignored
             command: [
+              `cd ${sandbox.workdir}`,
+              "&&",
               // allows bypassPermissions when running in as sudo user
               `IS_SANDBOX=1`,
               `ANTHROPIC_API_KEY=${opts.env.ANTHROPIC_API_KEY}`,

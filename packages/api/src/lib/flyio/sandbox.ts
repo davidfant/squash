@@ -187,9 +187,9 @@ export async function createMachine({
   
                 echo "Creating new branch $GIT_BRANCH..."
                 git checkout -b "$GIT_BRANCH"
-              else
-                echo "Repo already initialized. Pulling latest changes..."
-                git pull --ff-only
+              #else
+              #  echo "Repo already initialized. Pulling latest changes..."
+              #  git pull --ff-only
               fi
 
               ${snapshot.cmd.entrypoint}

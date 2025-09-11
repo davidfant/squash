@@ -2,7 +2,7 @@ import { tool, type InferUITools } from "ai";
 import { z } from "zod";
 
 export const tools = {
-  "claudecode-Task": tool({
+  ClaudeCodeTask: tool({
     name: "Task",
     inputSchema: z
       .object({
@@ -20,7 +20,7 @@ export const tools = {
       "Launch a new agent to handle complex, multi-step tasks autonomously.",
   }),
 
-  "claudecode-Bash": tool({
+  ClaudeCodeBash: tool({
     name: "Bash",
     inputSchema: z
       .object({
@@ -48,7 +48,7 @@ export const tools = {
       "Executes a bash command in a persistent, secured shell session.",
   }),
 
-  "claudecode-Glob": tool({
+  ClaudeCodeGlob: tool({
     name: "Glob",
     inputSchema: z
       .object({
@@ -66,7 +66,7 @@ export const tools = {
       "Finds files matching a glob pattern, sorted by modification time.",
   }),
 
-  "claudecode-Grep": tool({
+  ClaudeCodeGrep: tool({
     name: "Grep",
     inputSchema: z
       .object({
@@ -122,7 +122,7 @@ export const tools = {
     description: "Searches file contents with ripgrep-powered regex matching.",
   }),
 
-  "claudecode-ExitPlanMode": tool({
+  ClaudeCodeExitPlanMode: tool({
     name: "ExitPlanMode",
     inputSchema: z
       .object({
@@ -138,7 +138,7 @@ export const tools = {
       "Signal that planning is complete and code implementation should begin.",
   }),
 
-  "claudecode-Read": tool({
+  ClaudeCodeRead: tool({
     name: "Read",
     inputSchema: z
       .object({
@@ -155,7 +155,7 @@ export const tools = {
       "Reads a file’s content (text, PDF, notebook, or image) from disk.",
   }),
 
-  "claudecode-Edit": tool({
+  ClaudeCodeEdit: tool({
     name: "Edit",
     inputSchema: z
       .object({
@@ -174,7 +174,7 @@ export const tools = {
     description: "Performs a single find-and-replace edit in a file.",
   }),
 
-  "claudecode-MultiEdit": tool({
+  ClaudeCodeMultiEdit: tool({
     name: "MultiEdit",
     inputSchema: z
       .object({
@@ -203,7 +203,7 @@ export const tools = {
       "Applies multiple find-and-replace edits to a single file atomically.",
   }),
 
-  "claudecode-Write": tool({
+  ClaudeCodeWrite: tool({
     name: "Write",
     inputSchema: z
       .object({
@@ -217,7 +217,7 @@ export const tools = {
     description: "Writes (or overwrites) a file on the local filesystem.",
   }),
 
-  "claudecode-NotebookEdit": tool({
+  ClaudeCodeNotebookEdit: tool({
     name: "NotebookEdit",
     inputSchema: z
       .object({
@@ -248,7 +248,7 @@ export const tools = {
       "Replaces, inserts, or deletes a specific cell in a Jupyter notebook.",
   }),
 
-  "claudecode-WebFetch": tool({
+  ClaudeCodeWebFetch: tool({
     name: "WebFetch",
     inputSchema: z
       .object({
@@ -260,7 +260,7 @@ export const tools = {
     description: "Fetches and analyzes webpage content using an AI model.",
   }),
 
-  "claudecode-TodoWrite": tool({
+  ClaudeCodeTodoWrite: tool({
     name: "TodoWrite",
     inputSchema: z
       .object({
@@ -272,21 +272,19 @@ export const tools = {
                 status: z
                   .enum(["pending", "in_progress", "completed"])
                   .describe("The current state of this todo item"),
-                id: z
-                  .string()
-                  .describe("A unique identifier for this todo item"),
+                activeForm: z.string().describe("The active form to use"),
               })
               .strict()
           )
           .describe("The updated list of todos"),
       })
       .strict(),
-    outputSchema: z.unknown(),
+    outputSchema: z.string(),
     description:
       "Creates or updates a structured todo list for the current session.",
   }),
 
-  "claudecode-WebSearch": tool({
+  ClaudeCodeWebSearch: tool({
     name: "WebSearch",
     inputSchema: z
       .object({
@@ -305,7 +303,7 @@ export const tools = {
     description: "Performs a web search to retrieve up-to-date information.",
   }),
 
-  "claudecode-BashOutput": tool({
+  ClaudeCodeBashOutput: tool({
     name: "BashOutput",
     inputSchema: z
       .object({
@@ -317,7 +315,7 @@ export const tools = {
     description: "Retrieves new output from a running or completed Bash shell.",
   }),
 
-  "claudecode-KillBash": tool({
+  ClaudeCodeKillBash: tool({
     name: "KillBash",
     inputSchema: z
       .object({

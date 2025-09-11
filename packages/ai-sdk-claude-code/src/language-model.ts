@@ -38,27 +38,32 @@ export class ClaudeCodeLanguageModel implements LanguageModelV2 {
   ): Promise<Awaited<ReturnType<LanguageModelV2["doStream"]>>> {
     const stream = new ReadableStream<LanguageModelV2StreamPart>({
       start: async (controller) => {
-        const process = messageToStreamPart(controller);
-        const lastMessageContent = options.prompt
-          .findLast((m) => m.role === "user")
-          ?.content.find((c) => c.type === "text")?.text;
-        if (!lastMessageContent) {
-          throw new Error("No last message content");
-        }
+        try {
+          const process = messageToStreamPart(controller);
+          const lastMessageContent = options.prompt
+            .findLast((m) => m.role === "user")
+            ?.content.find((c) => c.type === "text")?.text;
+          if (!lastMessageContent) {
+            throw new Error("No last message content");
+          }
 
-        const q = this.query({
-          prompt: lastMessageContent,
-          options: {
-            cwd: this.cwd,
-            executable: "node",
-            includePartialMessages: true,
-            permissionMode: "acceptEdits",
-            // TODO: add session id
-            resume: undefined,
-          },
-        });
-        for await (const msg of q) process(msg);
-        controller.close();
+          const q = this.query({
+            prompt: lastMessageContent,
+            options: {
+              cwd: this.cwd,
+              executable: "node",
+              includePartialMessages: true,
+              permissionMode: "acceptEdits",
+              // TODO: add session id
+              resume: undefined,
+            },
+          });
+          for await (const msg of q) process(msg);
+        } catch (error) {
+          console.error("Error in ClaudeCodeLanguageModel.doStream", error);
+        } finally {
+          controller.close();
+        }
       },
     });
 

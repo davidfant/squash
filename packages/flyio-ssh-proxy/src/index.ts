@@ -68,7 +68,7 @@ wss.on("connection", (ws, req) => {
     let payload: FlyioSSHProxyJWTPayload;
     try {
       payload = jwt.verify(request.jwt, process.env.JWT_PUBLIC_KEY!, {
-        algorithms: ["RS256", "ES256"],
+        algorithms: ["RS256"],
       }) as FlyioSSHProxyJWTPayload;
     } catch (err) {
       ws.close(4001, "invalid-jwt");
@@ -78,16 +78,18 @@ wss.on("connection", (ws, req) => {
     console.debug(`[${remote}] → ${payload.app} :: ${payload.command}`);
 
     // 3. Spawn flyctl ssh console
+    console.log("XXXXX", `sh -c "${payload.command}"`);
     child = spawn(
       "flyctl",
       [
         "ssh",
         "console",
-        "--pty=false",
+        "--pty",
         "--app",
         payload.app,
         "--command",
-        [`cd ${payload.cwd}`, payload.command].join(";\n"),
+        // [`cd ${payload.cwd}`, payload.command].join(";\n"),
+        `sh -c '${payload.command}'`,
       ],
       {
         env: {

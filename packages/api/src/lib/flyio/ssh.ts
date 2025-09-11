@@ -2,7 +2,6 @@ import type {
   FlyioSSHProxyMessage,
   FlyioSSHProxyProxyRequest,
 } from "@squash/flyio-ssh-proxy";
-import WebSocket from "ws";
 
 /**
  * Connects to your SSH-over-WS proxy and returns an async generator
@@ -26,13 +25,14 @@ export async function* streamSSH(
   let doneResolve!: () => void;
   done = new Promise((res) => (doneResolve = res));
 
-  ws.on("open", () => {
+  ws.addEventListener("open", () => {
     // Send our JWT request
     const req: FlyioSSHProxyProxyRequest = { jwt };
     ws.send(JSON.stringify(req));
   });
 
-  ws.on("message", (data) => {
+  ws.addEventListener("message", (data) => {
+    console.log("event listener...", data);
     try {
       const msg: FlyioSSHProxyMessage = JSON.parse(data.toString());
       queue.push(msg);
@@ -51,8 +51,8 @@ export async function* streamSSH(
     }
   });
 
-  ws.on("error", doneResolve);
-  ws.on("close", doneResolve);
+  ws.addEventListener("error", doneResolve);
+  ws.addEventListener("close", doneResolve);
 
   try {
     while (true) {

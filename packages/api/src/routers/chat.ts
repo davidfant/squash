@@ -141,6 +141,7 @@ export const chatRouter = new Hono<{
               c.env.FLY_ACCESS_TOKEN
             ),
           ]);
+
           const runtimeContext: AgentRuntimeContext = {
             type: "flyio",
             sandbox: {

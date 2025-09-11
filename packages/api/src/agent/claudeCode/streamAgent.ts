@@ -42,30 +42,31 @@ export async function streamClaudeCodeAgent(
         model: new ClaudeCodeLanguageModel(sandbox.workdir, async function* (
           req
         ) {
+          console.log("streamText...", opts.env.ANTHROPIC_API_KEY);
           const payload: FlyioSSHProxyJWTPayload = {
             app: sandbox.appId,
             cwd: sandbox.workdir,
             // TODO: resume session id
             // TODO: check if we using parent_tool_use_id can "resume" from an earlier point in a thread
             command: [
+              `ANTHROPIC_API_KEY=${opts.env.ANTHROPIC_API_KEY}`,
               "claude",
               "--output-format stream-json",
               "--include-partial-messages",
+              "--verbose",
               "--print",
               JSON.stringify(req.prompt),
             ].join(" "),
-            env: {
-              ANTHROPIC_API_KEY: opts.env.ANTHROPIC_API_KEY,
-              FLY_ACCESS_TOKEN: opts.env.FLY_ACCESS_TOKEN,
-            },
+            env: { FLY_ACCESS_TOKEN: opts.env.FLY_ACCESS_TOKEN },
           };
           const token = jwt.sign(
             payload,
             opts.env.FLY_SSH_PROXY_JWT_PRIVATE_KEY,
-            { expiresIn: "1m" }
+            { expiresIn: "1m", algorithm: "RS256" }
           );
           const stream = FlyioSSH.streamSSH(opts.env.FLY_SSH_PROXY_URL, token);
           for await (const message of stream) {
+            console.log("here!!! 3", message);
             if (message.type === "stdout") {
               console.log("stdout....", message);
               // TODO: yield this shit...
@@ -83,6 +84,7 @@ export async function streamClaudeCodeAgent(
         })
       );
       await agentStream.consumeStream();
+      writer.write({ type: "finish" });
 
       // if (!changes.length) {
       //   writer.write({ type: "finish" });

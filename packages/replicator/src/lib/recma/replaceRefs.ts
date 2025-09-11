@@ -1,22 +1,12 @@
+import type { Metadata, RefImport } from "@/types";
 import * as acorn from "acorn";
 import acornJsx from "acorn-jsx";
+import type { ImportDeclaration, NodeMap, Program } from "estree";
 import { SKIP, visit } from "estree-util-visit";
-import type { Literal } from "hast";
-import path from "path";
 import type { Plugin } from "unified";
+import type { ComponentRegistry } from "../componentRegistry";
 
-type Program = any;
-type JSXIdentifier = any;
-type JSXAttribute = any;
-type JSXExpressionContainer = any;
-type ImportDeclaration = any;
-type ExportDefaultDeclaration = any;
-type ExportNamedDeclaration = any;
-type ArrowFunctionExpression = any;
-
-export interface ExtractJSXComponentsOptions {
-  componentName?: string; // Required for named exports, default: "Component"
-}
+type ComponentId = Metadata.ReactFiber.ComponentId;
 
 const JSXParser = acorn.Parser.extend(acornJsx());
 function parseJSX(code: string) {
@@ -33,148 +23,98 @@ function parseJSX(code: string) {
   }
 }
 
-const ident = (n: string): JSXIdentifier => ({
-  type: "JSXIdentifier",
-  name: n,
-});
+export const recmaReplaceRefs: Plugin<[registry: ComponentRegistry], Program> =
+  (registry) => (tree: Program) => {
+    const imports = new Map<string, RefImport>();
+    const addImport = (i: RefImport) => imports.set(JSON.stringify(i), i);
 
-const lit = (v: string): Literal => ({ type: "Literal", value: v });
-
-const expr = (v: unknown): JSXExpressionContainer => ({
-  type: "JSXExpressionContainer",
-  expression: lit(v as never),
-});
-
-const attr = (key: string, value: unknown): JSXAttribute => {
-  // <Comp disabled />   -> value === null
-  if (typeof value === "boolean" && value === true) {
-    return { type: "JSXAttribute", name: ident(key), value: null };
-  }
-
-  // <Comp size="sm" />
-  if (typeof value === "string") {
-    return { type: "JSXAttribute", name: ident(key), value: lit(value) };
-  }
-
-  // <Comp count={42} />  or  <Comp data={{…}} />
-  return { type: "JSXAttribute", name: ident(key), value: expr(value) };
-};
-
-export const recmaReplaceRefs: Plugin<[]> = () => (tree: Program) => {
-  const importMap = new Map<string, { default?: string; named: Set<string> }>();
-
-  visit(tree, (node, key, idx, ancestors) => {
-    if (node.type !== "JSXElement") return;
-
-    const opening = node.openingElement;
-    if (opening.name.type !== "JSXIdentifier" || opening.name.name !== "ref") {
-      return;
-    }
-
-    //------------------------------------------------------------------
-    // 1️⃣  pull attributes we care about
-    //------------------------------------------------------------------
-    const findAttr = (name: string) =>
-      opening.attributes
-        .filter((a) => a.type === "JSXAttribute")
-        .find((a) => a.name.name === name);
-
-    const importAttr = findAttr("imports");
-    const jsxAttr = findAttr("jsx");
-    const tagNameAttr = findAttr("tagName");
-    const propsAttr = findAttr("props");
-
-    if (importAttr) {
-      const imports: Array<{ module: string; import: string[] }> = JSON.parse(
-        (importAttr.value as Literal).value
+    const findAttr = <T>(element: NodeMap["JSXElement"], name: string) => {
+      const attr = element.openingElement.attributes.find(
+        (a): a is NodeMap["JSXAttribute"] =>
+          a.type === "JSXAttribute" && a.name.name === name
       );
+      if (attr?.value?.type !== "Literal") return;
+      return attr.value.value as T;
+    };
 
-      for (const { module, import: specifiers } of imports) {
-        const record = importMap.get(module) ?? { named: new Set<string>() };
-        for (const spec of specifiers) {
-          if (spec === "default") {
-            // infer a local name (Svg1, Button etc.)
-            record.default ||= path.basename(module);
-          } else {
-            record.named.add(spec);
+    visit(tree, (node, key, idx, ancestors) => {
+      // existing imports
+      if (node.type === "ImportDeclaration") {
+        const module = node.source.value as string;
+        for (const spec of node.specifiers) {
+          if (spec.type === "ImportDefaultSpecifier") {
+            addImport({ module, name: spec.local.name, default: true });
+          } else if (
+            spec.type === "ImportSpecifier" &&
+            spec.imported.type === "Identifier"
+          ) {
+            addImport({ module, name: spec.imported.name });
           }
         }
-        importMap.set(module, record);
-      }
-    }
-
-    if (jsxAttr) {
-      const jsxCode = (jsxAttr.value as Literal).value;
-      const replacement = parseJSX(jsxCode);
-
-      const parent = ancestors.at(-1)!;
-      if (typeof idx === "number") {
-        // @ts-ignore
-        parent[key!][idx] = replacement;
-      } else {
-        // @ts-ignore
-        parent[key!] = replacement;
       }
 
-      // Don’t walk into the brand-new subtree
-      return SKIP;
-    } else if (tagNameAttr) {
-      const tagName = (tagNameAttr.value as Literal).value;
-      const props = propsAttr
-        ? JSON.parse((propsAttr.value as Literal).value)
-        : {};
+      // imports from <ref ... />
+      if (
+        node.type === "JSXElement" &&
+        node.openingElement?.name?.type === "JSXIdentifier" &&
+        node.openingElement.name.name === "ref"
+      ) {
+        const depsString = findAttr<string>(node, "deps");
+        const jsxString = findAttr<string>(node, "jsx");
+        if (!!depsString) {
+          const deps = JSON.parse(depsString) as ComponentId[];
+          for (const dep of deps) {
+            const c = registry.get(dep);
+            // if (c?.code) {
+            if (c) {
+              addImport({ module: c.module, name: c.name.value });
+            } else {
+              throw new Error(`Component ${dep} not found in registry`);
+            }
+          }
+        }
 
-      const id = { type: "JSXIdentifier", name: tagName } as const;
-      node.openingElement.name = id;
-      if (node.closingElement) node.closingElement.name = id;
+        if (!!jsxString) {
+          const jsx = parseJSX(jsxString);
+          const parent = ancestors.at(-1)!;
+          if (typeof idx === "number") {
+            // @ts-ignore
+            parent[key!][idx] = jsx;
+          } else {
+            // @ts-ignore
+            parent[key!] = jsx;
+          }
 
-      node.openingElement.attributes = Object.entries(props)
-        .map(([key, value]) => attr(key, value))
-        .filter(Boolean);
-    }
-  });
-
-  const importDecls: ImportDeclaration[] = [];
-  for (const [module, { default: def, named }] of importMap) {
-    const specifiers: ImportDeclaration["specifiers"] = [];
-
-    if (def) {
-      specifiers.push({
-        type: "ImportDefaultSpecifier",
-        local: { type: "Identifier", name: def },
-      });
-    }
-    for (const n of named) {
-      specifiers.push({
-        type: "ImportSpecifier",
-        imported: { type: "Identifier", name: n },
-        local: { type: "Identifier", name: n },
-      });
-    }
-
-    importDecls.push({
-      type: "ImportDeclaration",
-      source: { type: "Literal", value: module, raw: `'${module}'` },
-      specifiers,
+          // Don’t walk into the brand-new subtree
+          return SKIP;
+        }
+      }
     });
-  }
 
-  const originalExpr = (tree.body[0] as any).expression as Element;
+    const importDecls = new Map<string, ImportDeclaration>();
+    for (const i of imports.values()) {
+      if (!importDecls.has(i.module)) {
+        importDecls.set(i.module, {
+          type: "ImportDeclaration",
+          source: { type: "Literal", value: i.module, raw: `'${i.module}'` },
+          specifiers: [],
+          attributes: [],
+        });
+      }
 
-  const fn: ArrowFunctionExpression = {
-    type: "ArrowFunctionExpression",
-    params: [],
-    body: originalExpr,
-    async: false,
-    expression: true,
-    generator: false,
-    id: null,
+      if (i.default) {
+        importDecls.get(i.module)!.specifiers.push({
+          type: "ImportDefaultSpecifier",
+          local: { type: "Identifier", name: i.name },
+        });
+      } else {
+        importDecls.get(i.module)!.specifiers.push({
+          type: "ImportSpecifier",
+          imported: { type: "Identifier", name: i.name },
+          local: { type: "Identifier", name: i.name },
+        });
+      }
+    }
+
+    tree.body = [...importDecls.values(), ...tree.body];
   };
-
-  const exportDecl: ExportDefaultDeclaration = {
-    type: "ExportDefaultDeclaration",
-    declaration: fn,
-  };
-
-  tree.body = [...importDecls, exportDecl];
-};

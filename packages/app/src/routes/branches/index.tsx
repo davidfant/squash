@@ -95,7 +95,7 @@ function Component({ branchId }: { branchId: string }) {
             )}
           </ResizablePanel>
           <ResizableHandle className="bg-transparent w-[3px] data-[resize-handle-state=hover]:bg-primary/20 data-[resize-handle-state=drag]:bg-primary/20 transition-colors" />
-          <ResizablePanel defaultSize={75} className="p-2 pl-0">
+          <ResizablePanel defaultSize={75} className="pr-2 pb-2">
             <BranchPreview />
           </ResizablePanel>
         </ResizablePanelGroup>

@@ -1,9 +1,12 @@
+import { Badge } from "@/components/ui/badge";
 import type { ChatMessage } from "@squash/api/agent/types";
 import type { ChatStatus } from "ai";
 import {
   CircleCheck,
   EyeIcon,
   FilePenIcon,
+  FolderSearch,
+  SearchIcon,
   type LucideIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -55,8 +58,10 @@ export function messagePartsToEvents(
         currentEvents.push({
           icon: EyeIcon,
           label: (
-            <div className="inline-flex items-center gap-1">
-              {part.state === "output-available" ? "Read" : "Reading"}
+            <div className="inline space-x-2">
+              <span>
+                {part.state === "output-available" ? "Read" : "Reading"}
+              </span>
               {path && <FileBadge path={path} />}
             </div>
           ),
@@ -68,8 +73,10 @@ export function messagePartsToEvents(
         currentEvents.push({
           icon: FilePenIcon,
           label: (
-            <div className="inline-flex items-center gap-1">
-              {part.state === "output-available" ? "Updated" : "Updating"}
+            <div className="inline space-x-2">
+              <span>
+                {part.state === "output-available" ? "Updated" : "Updating"}
+              </span>
               {path && <FileBadge path={path} />}
             </div>
           ),
@@ -113,8 +120,49 @@ export function messagePartsToEvents(
         }
         break;
       }
+      case "tool-ClaudeCodeGlob": {
+        currentEvents.push({
+          icon: FolderSearch,
+          label: (
+            <div className="inline space-x-2">
+              <span>
+                {part.state === "output-available"
+                  ? "Scanned files for"
+                  : "Scanning files for"}
+              </span>
+              {!!part.input?.pattern && (
+                <Badge variant="outline" className="border-none bg-muted">
+                  {part.input?.pattern}
+                </Badge>
+              )}
+            </div>
+          ),
+        });
+      }
+      case "tool-ClaudeCodeGrep": {
+        currentEvents.push({
+          icon: SearchIcon,
+          label: (
+            <div className="inline space-x-2">
+              <span>
+                {part.state === "output-available"
+                  ? "Searched for"
+                  : "Searching for"}
+              </span>
+              {!!part.input?.pattern && (
+                <Badge variant="outline" className="border-none bg-muted">
+                  {part.input?.pattern}
+                </Badge>
+              )}
+            </div>
+          ),
+        });
+        break;
+      }
       default: {
-        console.warn(`Unknown tool:`, part);
+        if (part.type.startsWith("tool-")) {
+          console.warn(`Unknown tool:`, part);
+        }
       }
     }
   }

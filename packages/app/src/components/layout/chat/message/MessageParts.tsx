@@ -20,9 +20,7 @@ const Event = ({
 }) => (
   <div className="flex items-center gap-2 text-muted-foreground text-sm min-h-7">
     <event.icon className="size-3 flex-shrink-0" />
-    <div className="flex-1 inline-flex items-center row-gap-2 flex-wrap">
-      {event.label}
-    </div>
+    <div className="flex-1 inline space-x-2">{event.label}</div>
     {actions}
   </div>
 );
@@ -58,8 +56,11 @@ function EventsCollapsible({
                 label: (
                   <>
                     {firstEvent.label}
-                    and {otherCount} more {otherCount === 1 ? "step" : "steps"}
-                    ...
+                    <span>
+                      and {otherCount} more{" "}
+                      {otherCount === 1 ? "step" : "steps"}
+                      ...
+                    </span>
                   </>
                 ),
                 icon: firstEvent.icon,
@@ -100,7 +101,7 @@ export function MessageParts({ parts }: { parts: ChatMessage["parts"] }) {
   );
 
   if (!blocks.length) {
-    return <Skeleton className="h-4 w-48 mb-4" />;
+    return <Skeleton className="h-4 w-48" />;
   }
 
   return (

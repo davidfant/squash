@@ -25,7 +25,7 @@ export function FileBadge({ path }: { path: string }) {
   const name = path.split("/").pop()!;
   const icon = iconMap[name.split(".").pop() as keyof typeof iconMap];
   return (
-    <Badge>
+    <Badge variant="outline" className="border-none bg-muted">
       {icon && <icon.component color={icon.color} className="size-4" />}
       <span>{name}</span>
     </Badge>

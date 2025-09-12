@@ -6,13 +6,15 @@ export function AssistantMessageActions({
   onRetry,
 }: {
   className?: string;
-  onRetry: () => void;
+  onRetry?: () => void;
 }) {
   return (
     <Actions className={className}>
-      <Action tooltip="Retry message" onClick={onRetry}>
-        <RefreshCw />
-      </Action>
+      {onRetry && (
+        <Action tooltip="Retry message" onClick={onRetry}>
+          <RefreshCw />
+        </Action>
+      )}
       <Action>
         <ThumbsUp />
       </Action>

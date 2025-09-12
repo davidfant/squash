@@ -1,4 +1,9 @@
 import {
+  Conversation,
+  ConversationContent,
+  ConversationScrollButton,
+} from "@/components/ai-elements/conversation";
+import {
   ChatInput,
   type ChatInputValue,
 } from "@/components/layout/chat/input/ChatInput";
@@ -14,10 +19,12 @@ import { useStickToBottom } from "use-stick-to-bottom";
 import { v4 as uuid } from "uuid";
 import { FilePreview } from "../file/FilePreview";
 import { useChatContext } from "./context";
+import { AssistantMessage } from "./message/AssistantMessage";
 import { MessageActions } from "./message/MessageActions";
 import { MessageHeader } from "./message/MessageHeader";
 import { MessageParts } from "./message/MessageParts";
-import { UserMessageFooter } from "./message/UserMessageFooter";
+import { UserMessage } from "./message/UserMessage";
+import { UserMessageActions } from "./message/UserMessageActions";
 import { useMessageLineage } from "./messageLineage";
 import { ScrollToBottomButton } from "./ScrollToBottomButton";
 import { TodoList } from "./TodoList";
@@ -143,6 +150,113 @@ export function ChatThread({
     return [];
   }, [messages.activePath, status]);
 
+  if (Math.random()) {
+    return (
+      <div className="h-full w-full flex flex-col">
+        <Conversation className="flex-1 w-full">
+          <ConversationContent className="p-2 pr-4">
+            {messages.activePath.map((m) => {
+              switch (m.role) {
+                case "user":
+                  const isEditing = editingMessageId === m.id;
+                  const textContent = m.parts
+                    .filter((p) => p.type === "text")
+                    .map((p) => p.text)
+                    .join("");
+
+                  if (isEditing) {
+                    return (
+                      <div className="w-full" key={m.id}>
+                        <ChatInput
+                          initialValue={{
+                            text: textContent,
+                            files: m.parts.filter(
+                              (p) => p.type === "file"
+                            ) as FileUIPart[],
+                          }}
+                          submitting={false}
+                          autoFocus
+                          placeholder="Edit your message..."
+                          disabled={false}
+                          onSubmit={(value) => handleEditSubmit(m.id, value)}
+                        />
+                        <div className="flex gap-2 mt-2 justify-end">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditingMessageId(null)}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <UserMessage
+                      key={m.id}
+                      message={m}
+                      variants={messages.variants.get(m.metadata!.parentId)}
+                      onEdit={() => setEditingMessageId(m.id)}
+                      onVariantChange={handleVariantChange}
+                    />
+                  );
+                case "assistant":
+                  return (
+                    <AssistantMessage
+                      key={m.id}
+                      message={m}
+                      loading={
+                        m.id === mostRecentMessageId && status === "streaming"
+                      }
+                      onRetry={() => handleRetry(m.id)}
+                    />
+                  );
+              }
+            })}
+            {status === "submitted" && (
+              <div className="space-y-1">
+                <MessageHeader author="Squash" />
+                <Skeleton className="h-4 w-48 mb-4 ml-7" />
+              </div>
+            )}
+
+            {status === "error" && (
+              <div className="overflow-hidden mb-2 text-destructive flex items-center gap-1">
+                <AlertCircle className="w-4 h-4" /> Error
+              </div>
+            )}
+          </ConversationContent>
+          <ConversationScrollButton />
+        </Conversation>
+        <TodoList todos={currentTodos} />
+
+        <div className="p-2 pt-0">
+          <ChatInput
+            disabled={!ready}
+            initialValue={initialValue}
+            autoFocus
+            placeholder="Type a message..."
+            submitting={status === "submitted" || status === "streaming"}
+            maxRows={10}
+            onSubmit={(value) => {
+              sendMessage({
+                ...value,
+                metadata: {
+                  createdAt: new Date().toISOString(),
+                  parentId:
+                    messages.activePath[messages.activePath.length - 1]!.id,
+                },
+              });
+              sticky.scrollToBottom();
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col w-full h-full">
       <div className="flex-1 relative overflow-hidden">
@@ -213,7 +327,7 @@ export function ChatThread({
                               : "opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                           }
                         />
-                        <UserMessageFooter
+                        <UserMessageActions
                           className="opacity-0 group-hover:opacity-100 transition-opacity"
                           variants={messages.variants.get(m.metadata!.parentId)}
                           onEdit={() => setEditingMessageId(m.id)}
@@ -229,7 +343,7 @@ export function ChatThread({
                         author="Squash"
                         onRetry={() => handleRetry(m.id)}
                       />
-                      <div className="pl-7 max-w-[90%] space-y-4">
+                      <div className="pl-7 space-y-4">
                         <MessageParts parts={m.parts} />
                         {/* Only show MessageActions when not streaming */}
                         {(m.id !== mostRecentMessageId ||

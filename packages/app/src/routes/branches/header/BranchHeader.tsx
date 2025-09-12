@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import {
+  ArrowRight,
   ChevronDown,
   Copy,
   Eye,
@@ -24,7 +25,6 @@ import {
   Lock,
   Settings,
   Users,
-  ArrowRight,
 } from "lucide-react";
 import { Link } from "react-router";
 import { PreviewAddressBar } from "./PreviewAddressBar";
@@ -63,10 +63,7 @@ export function BranchHeader({
   const isPublic = true;
   return (
     <header
-      className={cn(
-        "flex items-center justify-between pr-2 py-1 border-b bg-background",
-        className
-      )}
+      className={cn("flex items-center justify-between pr-2 py-1", className)}
     >
       {/* Left Section - Wider like chat */}
       <div className="pl-2 flex items-center gap-1 w-sm">

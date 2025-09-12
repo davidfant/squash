@@ -1,82 +1,38 @@
-import {
-  ChainOfThought,
-  ChainOfThoughtContent,
-  ChainOfThoughtHeader,
-} from "@/components/ai-elements/chain-of-thought";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePrevious } from "@/hooks/usePrevious";
-import type { AllTools, ChatMessage } from "@squash/api/agent/types";
+import type { ChatMessage } from "@squash/api/agent/types";
+import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import { Markdown } from "../../Markdown";
-import { claudeCodeToolSteps } from "./tools/claude-code";
+import { useChatContext } from "../context";
 import {
-  ToolChainOfThoughtStep,
-  type ToolPart,
-  type ToolStep,
-} from "./tools/ToolChainOfThoughtStep";
+  messagePartsToEvents,
+  type EventBlockItem,
+} from "./messagePartsToEvents";
 
-interface TextBlock {
-  type: "text";
-  content: string;
-}
-
-interface ToolBlockItem<T extends keyof AllTools> {
-  part: ToolPart<T>;
-  step: ToolStep<AllTools, T>;
-}
-
-interface ToolBlock {
-  type: "tools";
-  tools: ToolBlockItem<keyof AllTools>[];
-}
-
-type GroupedPart = TextBlock | ToolBlock;
-
-// Preprocessing function to group text and tool blocks
-function preprocessMessageParts(parts: ChatMessage["parts"]): GroupedPart[] {
-  const grouped: GroupedPart[] = [];
-  let currentTools: ToolBlockItem<keyof AllTools>[] = [];
-
-  for (const part of parts) {
-    if (part.type === "text") {
-      if (!!currentTools.length) {
-        grouped.push({ type: "tools", tools: currentTools });
-        currentTools = [];
-      }
-
-      grouped.push({ type: "text", content: part.text });
-    } else if (part.type.startsWith("tool-")) {
-      const toolName = part.type.slice("tool-".length);
-      const step: ToolStep<AllTools, keyof AllTools> = {
-        ...claudeCodeToolSteps,
-      }[toolName as never] ?? {
-        label: () => toolName,
-        content: (part) => (
-          <pre className="whitespace-pre-wrap max-h-[60vh] overflow-y-auto">
-            {JSON.stringify(part, null, 2)}
-          </pre>
-        ),
-      };
-      console.log("party", part, step);
-      if (step) {
-        currentTools.push({ part, step } as ToolBlockItem<keyof AllTools>);
-      }
-    }
-  }
-
-  if (!!currentTools.length) {
-    grouped.push({ type: "tools", tools: currentTools });
-  }
-
-  return grouped;
-}
-
-function ChainOfThoughtBlock({
-  streaming,
-  tools,
+const Event = ({
+  event,
+  actions,
 }: {
+  event: EventBlockItem;
+  actions?: React.ReactNode;
+}) => (
+  <div className="flex items-center gap-2 text-muted-foreground text-sm min-h-7">
+    <event.icon className="size-3 flex-shrink-0" />
+    <div className="flex-1 inline-flex items-center row-gap-2 flex-wrap">
+      {event.label}
+    </div>
+    {actions}
+  </div>
+);
+
+function EventsCollapsible({
+  events,
+  streaming,
+}: {
+  events: EventBlockItem[];
   streaming: boolean;
-  tools: ToolBlockItem<keyof AllTools>[];
 }) {
   const [open, setOpen] = useState(streaming);
   const wasStreaming = usePrevious(streaming);
@@ -86,48 +42,79 @@ function ChainOfThoughtBlock({
     }
   }, [streaming, wasStreaming]);
 
+  const firstEvent = events[0]!;
+  if (events.length === 1) {
+    return <Event event={firstEvent} />;
+  }
+
+  const otherCount = events.length - 1;
   return (
-    <ChainOfThought open={open} onOpenChange={setOpen}>
-      <ChainOfThoughtHeader>Working...</ChainOfThoughtHeader>
-      <ChainOfThoughtContent>
-        {tools.map((tool) => (
-          <ToolChainOfThoughtStep
-            key={tool.part.toolCallId}
-            part={tool.part}
-            step={tool.step}
-          />
-        ))}
-      </ChainOfThoughtContent>
-    </ChainOfThought>
+    <div>
+      <Event
+        event={
+          open
+            ? firstEvent
+            : {
+                label: (
+                  <>
+                    {firstEvent.label}
+                    and {otherCount} more {otherCount === 1 ? "step" : "steps"}
+                    ...
+                  </>
+                ),
+                icon: firstEvent.icon,
+              }
+        }
+        actions={
+          !streaming && (
+            <Button size="sm" className="h-6" onClick={() => setOpen(!open)}>
+              {open ? "Hide" : "See all"}
+            </Button>
+          )
+        }
+      />
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="content"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+          >
+            {events.slice(1).map((event, idx) => (
+              <Event key={idx} event={event} />
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
-export function MessageParts({
-  parts,
-  streaming,
-}: {
-  parts: ChatMessage["parts"];
-  streaming: boolean;
-}) {
-  const groupedParts = useMemo(() => preprocessMessageParts(parts), [parts]);
+export function MessageParts({ parts }: { parts: ChatMessage["parts"] }) {
+  const { status } = useChatContext();
+  const blocks = useMemo(
+    () => messagePartsToEvents(parts, status),
+    [parts, status]
+  );
 
-  if (!groupedParts.length) {
+  if (!blocks.length) {
     return <Skeleton className="h-4 w-48 mb-4" />;
   }
 
   return (
     <div className="space-y-5">
-      {groupedParts.map((group, idx) => {
-        if (group.type === "text") {
-          return <Markdown key={`text-${idx}`}>{group.content}</Markdown>;
+      {blocks.map((block, idx) => {
+        if (block.type === "text") {
+          return <Markdown key={idx}>{block.content}</Markdown>;
         }
 
-        const isLastGroup = idx === groupedParts.length - 1;
         return (
-          <ChainOfThoughtBlock
-            key={`tools-${idx}`}
-            streaming={streaming && isLastGroup}
-            tools={group.tools}
+          <EventsCollapsible
+            key={idx}
+            events={block.events}
+            streaming={block.streaming}
           />
         );
       })}

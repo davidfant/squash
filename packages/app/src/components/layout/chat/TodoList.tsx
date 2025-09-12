@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils";
 import { CheckCircle2, Circle, CircleDot, CircleX } from "lucide-react";
 
 export interface Todo {
+  id: string;
   content: string;
   status: "pending" | "in_progress" | "completed" | "cancelled";
 }

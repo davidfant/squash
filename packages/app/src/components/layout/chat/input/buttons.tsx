@@ -124,7 +124,7 @@ export const ChatInputAttachButton = ({
 }) => (
   <Button
     variant="ghost"
-    className="rounded-full text-muted-foreground"
+    className="rounded-full"
     disabled={disabled}
     onClick={onClick}
   >

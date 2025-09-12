@@ -1,9 +1,11 @@
+import { TaskItemFile } from "@/components/ai-elements/task";
 import {
   Activity,
   CheckSquare,
   Edit3,
   Eye,
   EyeIcon,
+  FilePenIcon,
   FileSearch,
   FileText,
   FolderSearch,
@@ -12,30 +14,41 @@ import {
   NotebookPen,
   Search,
   Square,
-  SquarePenIcon,
   Target,
   Terminal,
   Wrench,
 } from "lucide-react";
 import type { ClaudeCodeAgentTools } from "node_modules/@squash/api/dist/agent/claudeCode/tools";
 import { TodoList } from "../../TodoList";
-import type { ToolSteps } from "./ToolChainOfThoughtStep";
+import type { ToolSteps } from "./types";
 
 export const claudeCodeToolSteps: ToolSteps<ClaudeCodeAgentTools> = {
   ClaudeCodeRead: {
     icon: () => EyeIcon,
     label: (p) => {
       const name = p.input?.file_path?.split("/").pop();
-      if (p.state === "output-available") return `Read ${name}`;
-      return `Reading ${name ?? ""}`;
+      const text = p.state === "output-available" ? "Read" : "Reading";
+      const file = name && <TaskItemFile name={name ?? ""} />;
+      return (
+        <div className="inline-flex items-center gap-1">
+          {text}
+          {file}
+        </div>
+      );
     },
   },
   ClaudeCodeEdit: {
-    icon: () => SquarePenIcon,
+    icon: () => FilePenIcon,
     label: (p) => {
       const name = p.input?.file_path?.split("/").pop();
-      if (p.state === "output-available") return `Updated ${name}`;
-      return `Updating ${name ?? ""}`;
+      const text = p.state === "output-available" ? "Updated" : "Updating";
+      const file = name && <TaskItemFile name={name ?? ""} />;
+      return (
+        <div className="inline-flex items-center gap-1">
+          {text}
+          {file}
+        </div>
+      );
     },
   },
   ClaudeCodeTodoWrite: {

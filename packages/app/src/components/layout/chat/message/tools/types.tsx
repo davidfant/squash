@@ -1,4 +1,3 @@
-import { ChainOfThoughtStep } from "@/components/ai-elements/chain-of-thought";
 import type { AllTools } from "@squash/api/agent/types";
 import type { ToolUIPart, UITools } from "ai";
 import type { LucideIcon } from "lucide-react";
@@ -29,19 +28,3 @@ export type ToolSteps<Tools extends UITools = UITools> = {
 export type ToolPart<T extends keyof AllTools> = ToolUIPart<{
   [K in T]: AllTools[K];
 }>;
-
-export const ToolChainOfThoughtStep = <T extends keyof AllTools>({
-  part,
-  step,
-}: {
-  part: ToolPart<T>;
-  step: ToolStep<AllTools, T>;
-}) => (
-  <ChainOfThoughtStep
-    icon={step.icon?.(part)}
-    label={step.label(part)}
-    status={part.state === "output-available" ? "complete" : "active"}
-  >
-    {step.content?.(part)}
-  </ChainOfThoughtStep>
-);

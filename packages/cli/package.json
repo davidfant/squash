@@ -1,0 +1,30 @@
+{
+  "name": "@squashai/cli",
+  "version": "0.0.0",
+  "bin": {
+    "squash": "./bin/squash.js"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "build": "tsc && chmod +x bin/squash.js",
+    "dev": "tsc --watch --preserveWatchOutput",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-code": "^1.0.110",
+    "commander": "^14.0.1",
+    "zod": "^4.0.16"
+  },
+  "devDependencies": {
+    "@types/node": "^22.8.7",
+    "typescript": "~5.8.3"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "README.md"
+  ]
+}

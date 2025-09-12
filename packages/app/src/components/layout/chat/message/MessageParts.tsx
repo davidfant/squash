@@ -68,7 +68,12 @@ function EventsCollapsible({
         }
         actions={
           !streaming && (
-            <Button size="sm" className="h-6" onClick={() => setOpen(!open)}>
+            <Button
+              size="sm"
+              className="h-6"
+              variant="secondary"
+              onClick={() => setOpen(!open)}
+            >
               {open ? "Hide" : "See all"}
             </Button>
           )

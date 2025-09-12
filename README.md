@@ -10,3 +10,8 @@ Convert the downloaded private key from Github using the following command, and 
 ```
 openssl pkcs8 -topk8 -inform PEM -in app-private-key.pem -outform PEM -nocrypt -out app-private-key.pkcs8.pem
 ```
+
+TODO
+
+- [ ] claude CLI => TS file for running claude (helps w escaping text)
+- [ ] Pause execution

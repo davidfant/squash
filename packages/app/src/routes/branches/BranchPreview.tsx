@@ -48,9 +48,37 @@ export function BranchPreview({ className }: { className?: string }) {
     if (screenSize === "mobile") return "w-[375px]";
   };
 
+  // if (Math.random()) {
+  //   return (
+  //     <Card className="p-0">
+  //       <WebPreviewNavigation>
+  //         {/* <Action tooltip="Go back">
+  //           <ArrowLeft />
+  //         </Action>
+  //         <Action tooltip="Go forward">
+  //           <ArrowRight />
+  //         </Action> */}
+  //         <Action tooltip="Refresh">
+  //           <RefreshCw />
+  //         </Action>
+  //         <WebPreviewUrl className="mx-1" value={previewPath} />
+  //         <Action tooltip="Select element">
+  //           <MousePointerClick />
+  //         </Action>
+  //         <a href={`${preview?.url}${previewPath}`} target="_blank">
+  //           <Action tooltip="Open in new tab">
+  //             <ExternalLink />
+  //           </Action>
+  //         </a>
+  //       </WebPreviewNavigation>
+  //       <WebPreviewBody src={preview?.url} />
+  //     </Card>
+  //   );
+  // }
+
   return (
-    <div className={cn("relative h-full p-2", className)}>
-      <Card className="p-0 h-full overflow-hidden">
+    <div className={cn("relative h-full", className)}>
+      <Card className="p-0 h-full overflow-hidden shadow-none">
         {preview ? (
           <iframe
             ref={iframeRef}

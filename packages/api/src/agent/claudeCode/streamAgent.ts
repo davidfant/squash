@@ -63,6 +63,7 @@ export async function streamClaudeCodeAgent(
                 : []),
               "--output-format stream-json",
               "--permission-mode bypassPermissions",
+              "--disallowedTools Bash",
               // "--permission-mode acceptEdits",
               "--include-partial-messages",
               "--verbose",

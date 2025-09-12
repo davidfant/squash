@@ -1,255 +1,124 @@
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
-import type { AllTools, ChatMessage } from "@squash/api/agent/types";
-import type { ToolUIPart } from "ai";
-import { CheckCircle2Icon, CircleX, Eye, Loader2 } from "lucide-react";
-import type { ReactNode } from "react";
+import { usePrevious } from "@/hooks/usePrevious";
+import type { ChatMessage } from "@squash/api/agent/types";
+import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useMemo, useState } from "react";
 import { Markdown } from "../../Markdown";
+import { useChatContext } from "../context";
+import {
+  messagePartsToEvents,
+  type EventBlockItem,
+} from "./messagePartsToEvents";
 
-export type ToolPart<T extends keyof AllTools> = ToolUIPart<{
-  [K in T]: AllTools[K];
-}>;
-
-const ToolAlert = ({
-  icon,
-  title,
-  description,
-  details,
-  isLoading = false,
-  showExpanded = false,
+const Event = ({
+  event,
+  actions,
 }: {
-  icon: ReactNode;
-  title: string;
-  description?: string;
-  details?: ReactNode;
-  isLoading?: boolean;
-  showExpanded?: boolean;
-}) => {
-  const alert = (
-    <Alert
-      className={cn(
-        "transition-all duration-500 ease-out",
-        isLoading
-          ? "animate-gradient bg-gradient-to-r from-muted via-muted/50 to-muted bg-[length:200%_100%]"
-          : ""
-      )}
-    >
-      {icon}
-      <div className="min-w-0 flex-1">
-        <AlertTitle className="transition-all duration-300 ease-in-out">
-          {title}
-          {/* Single line description - always show when not expanded */}
-          {!showExpanded && description && (
-            <>
-              <span className="mx-2 opacity-60">•</span>
-              <span className="font-normal text-muted-foreground">
-                {description}
-              </span>
-            </>
-          )}
-        </AlertTitle>
-        {/* Multi-line description - smooth height animation */}
-        <div
-          className={cn(
-            "grid transition-all duration-500 ease-out",
-            showExpanded && description
-              ? "grid-rows-[1fr] opacity-100"
-              : "grid-rows-[0fr] opacity-0"
-          )}
-        >
-          <div className="overflow-hidden">
-            <AlertDescription className="pt-1">{description}</AlertDescription>
-          </div>
-        </div>
-      </div>
-    </Alert>
-  );
+  event: EventBlockItem;
+  actions?: React.ReactNode;
+}) => (
+  <div className="flex items-center gap-2 text-muted-foreground text-sm min-h-7">
+    <event.icon className="size-3 flex-shrink-0" />
+    <div className="flex-1 inline space-x-2">{event.label}</div>
+    {actions}
+  </div>
+);
 
-  if (!details) return alert;
+function EventsCollapsible({
+  events,
+  streaming,
+}: {
+  events: EventBlockItem[];
+  streaming: boolean;
+}) {
+  const [open, setOpen] = useState(streaming);
+  const wasStreaming = usePrevious(streaming);
+  useEffect(() => {
+    if (wasStreaming && !streaming) {
+      setOpen(false);
+    }
+  }, [streaming, wasStreaming]);
+
+  const firstEvent = events[0]!;
+  if (events.length === 1) {
+    return <Event event={firstEvent} />;
+  }
+
+  const otherCount = events.length - 1;
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <div className="cursor-pointer">{alert}</div>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-        </DialogHeader>
-        {details}
-      </DialogContent>
-    </Dialog>
+    <div>
+      <Event
+        event={
+          open
+            ? firstEvent
+            : {
+                label: (
+                  <>
+                    {firstEvent.label}
+                    <span>
+                      and {otherCount} more{" "}
+                      {otherCount === 1 ? "step" : "steps"}
+                      ...
+                    </span>
+                  </>
+                ),
+                icon: firstEvent.icon,
+              }
+        }
+        actions={
+          !streaming && (
+            <Button size="sm" className="h-6" onClick={() => setOpen(!open)}>
+              {open ? "Hide" : "See all"}
+            </Button>
+          )
+        }
+      />
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="content"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+          >
+            {events.slice(1).map((event, idx) => (
+              <Event key={idx} event={event} />
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
-};
-
-const ToolErrorAlert = ({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) => <ToolAlert icon={<CircleX />} title={title} description={description} />;
-
-function ReadFileToolAlert({
-  part,
-  isLastTool,
-}: {
-  part: ToolPart<"readFile">;
-  isLastTool: boolean;
-}) {
-  switch (part.state) {
-    case "output-available":
-      if (!part.output.success) {
-        return (
-          <ToolErrorAlert
-            title={`Failed reading ${part.input.path}`}
-            description={part.output.message}
-          />
-        );
-      }
-      return (
-        <ToolAlert
-          icon={<Eye />}
-          title={`Read ${part.input.path}`}
-          description={part.input.explanation}
-          showExpanded={isLastTool}
-          details={
-            <pre className="whitespace-pre-wrap max-h-[60vh] overflow-y-auto">
-              {part.output.content}
-            </pre>
-          }
-        />
-      );
-    case "output-error":
-      return (
-        <ToolErrorAlert
-          title={`Failed reading ${part.input?.path ?? "file"}`}
-          description={part.errorText}
-        />
-      );
-    case "input-streaming":
-    case "input-available":
-      return (
-        <ToolAlert
-          icon={<Loader2 className="animate-spin" />}
-          title={`Reading ${part.input?.path ?? ""}`}
-          description={part.input?.explanation}
-          isLoading={true}
-          showExpanded={true}
-        />
-      );
-  }
-}
-
-function WriteFileToolAlert({
-  part,
-  isLastTool,
-}: {
-  part: ToolPart<"writeFile">;
-  isLastTool: boolean;
-}) {
-  switch (part.state) {
-    case "output-available":
-      return (
-        <ToolAlert
-          icon={<CheckCircle2Icon />}
-          title={`Updated ${part.input.path}`}
-          description={part.input.explanation ?? part.input.instruction}
-          showExpanded={isLastTool}
-          details={
-            <pre className="whitespace-pre-wrap max-h-[60vh] overflow-y-auto">
-              {part.input.codeEdit}
-            </pre>
-          }
-        />
-      );
-    case "output-error":
-      return (
-        <ToolErrorAlert
-          title={`Failed updating ${part.input?.path ?? "file"}`}
-          description={part.errorText}
-        />
-      );
-    case "input-streaming":
-    case "input-available":
-      return (
-        <ToolAlert
-          icon={<Loader2 className="animate-spin" />}
-          title={`Updating ${part.input?.path ?? ""}`}
-          description={part.input?.explanation ?? part.input?.instruction}
-          isLoading={true}
-          showExpanded={true}
-        />
-      );
-  }
 }
 
 export function MessageParts({ parts }: { parts: ChatMessage["parts"] }) {
-  // Find the index of the last tool part
-  const lastToolIndex = parts.reduce((lastIdx, part, idx) => {
-    if (part.type.startsWith("tool-") && part.type !== "tool-todoWrite") {
-      return idx;
-    }
-    return lastIdx;
-  }, -1);
+  const { status } = useChatContext();
+  const blocks = useMemo(
+    () => messagePartsToEvents(parts, status),
+    [parts, status]
+  );
 
-  const renderedParts = parts
-    .map((c, index) => {
-      const isLastTool = index === lastToolIndex;
+  if (!blocks.length) {
+    return <Skeleton className="h-4 w-48" />;
+  }
 
-      switch (c.type) {
-        case "text":
-          return <Markdown key={index}>{c.text}</Markdown>;
-        case "tool-readFile":
-          return (
-            <ReadFileToolAlert key={index} part={c} isLastTool={isLastTool} />
-          );
-        case "tool-writeFile":
-          return (
-            <WriteFileToolAlert key={index} part={c} isLastTool={isLastTool} />
-          );
-        case "tool-deleteFile":
-        case "tool-grepSearch":
-        case "tool-webSearch":
-          return (
-            <div key={index}>
-              <pre>{JSON.stringify(c, null, 2)}</pre>
-            </div>
-          );
-        case "tool-todoWrite":
-          return null;
-        case "tool-gitCommit":
-          return null;
-        case "step-start":
-        case "data-gitSha":
-        case "file":
-          return null;
-        default:
-          return (
-            <Card key={index}>
-              <CardHeader>
-                <CardTitle>{c.type}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <pre>{JSON.stringify(c, null, 2)}</pre>
-              </CardContent>
-            </Card>
-          );
-      }
-    })
-    .filter((p) => !!p);
+  return (
+    <div className="space-y-5">
+      {blocks.map((block, idx) => {
+        if (block.type === "text") {
+          return <Markdown key={idx}>{block.content}</Markdown>;
+        }
 
-  return renderedParts.length ? (
-    <div className="space-y-5">{renderedParts}</div>
-  ) : (
-    <Skeleton className="h-4 w-48 mb-4" />
+        return (
+          <EventsCollapsible
+            key={idx}
+            events={block.events}
+            streaming={block.streaming}
+          />
+        );
+      })}
+    </div>
   );
 }

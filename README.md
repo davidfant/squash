@@ -1,5 +1,5 @@
 ```
-brew install daytonaio/cli/daytona
+brew install flyctl
 pip install git-remote-s3
 ```
 

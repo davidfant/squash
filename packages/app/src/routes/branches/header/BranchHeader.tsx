@@ -7,7 +7,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Toggle } from "@/components/ui/toggle";
 import {
   Tooltip,
@@ -23,8 +22,8 @@ import {
   History,
   Lock,
   Settings,
+  Share,
   Users,
-  ArrowRight,
 } from "lucide-react";
 import { Link } from "react-router";
 import { PreviewAddressBar } from "./PreviewAddressBar";
@@ -63,10 +62,7 @@ export function BranchHeader({
   const isPublic = true;
   return (
     <header
-      className={cn(
-        "flex items-center justify-between pr-2 py-1 border-b bg-background",
-        className
-      )}
+      className={cn("flex items-center justify-between pr-2 py-2", className)}
     >
       {/* Left Section - Wider like chat */}
       <div className="pl-2 flex items-center gap-1 w-sm">
@@ -132,12 +128,12 @@ export function BranchHeader({
         </Tooltip>
 
         {/* Sidebar Toggle */}
-        <Tooltip>
+        {/* <Tooltip>
           <TooltipTrigger asChild>
             <SidebarTrigger />
           </TooltipTrigger>
           <TooltipContent>Toggle Chat</TooltipContent>
-        </Tooltip>
+        </Tooltip> */}
       </div>
 
       {/* Center Section - Action Buttons and URL Bar */}
@@ -197,9 +193,9 @@ export function BranchHeader({
         {/* Publish Button */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button size="sm" variant="outline">
-              See Preview
-              <ArrowRight className="size-4 ml-1" />
+            <Button variant="default">
+              <Share />
+              Share
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-64">

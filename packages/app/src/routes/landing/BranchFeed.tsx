@@ -1,3 +1,4 @@
+import { Suggestion, Suggestions } from "@/components/ai-elements/suggestion";
 import {
   ChatInput,
   type ChatInputValue,
@@ -7,7 +8,6 @@ import {
   EmptyState,
   FeedHeader,
   GettingStartedCard,
-  SuggestionPills,
   defaultSuggestions,
 } from "@/components/layout/feed";
 import { AppSidebar } from "@/components/layout/sidebar/app-sidebar";
@@ -161,11 +161,17 @@ export function BranchFeed({ repoId }: BranchFeedProps) {
                 }
               />
 
-              {/* Suggestion Pills */}
-              <SuggestionPills
-                suggestions={defaultSuggestions}
-                onSuggestionClick={handleSuggestionClick}
-              />
+              <Suggestions>
+                {defaultSuggestions.map((s, index) => (
+                  <Suggestion
+                    key={index}
+                    suggestion={s.prompt}
+                    onClick={handleSuggestionClick}
+                  >
+                    {<s.icon className="h-4 w-4" />} {s.text}
+                  </Suggestion>
+                ))}
+              </Suggestions>
             </div>
 
             {/* Separator */}

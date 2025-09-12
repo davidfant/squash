@@ -51,7 +51,7 @@ export default {
           tablet: "Tablet",
           mobile: "Mobile",
         },
-        showPreview: "Show {size} preview",
+        showPreview: "Show {{size}} preview",
       },
       path: {
         placeholder: "Go to...",

@@ -47,6 +47,7 @@ export type FlyioSSHProxyMessage =
   | FlyioSSHProxyErrorMessage;
 
 const stringify = (message: FlyioSSHProxyMessage) => JSON.stringify(message);
+const escape = (str: string) => `'${str.replace(/'/g, `'\\''`)}'`;
 
 const wss = new WebSocketServer({ noServer: true });
 wss.on("connection", (ws, req) => {
@@ -75,7 +76,8 @@ wss.on("connection", (ws, req) => {
       return;
     }
 
-    console.debug(`[${remote}] → ${payload.app} :: ${payload.command}`);
+    console.debug(`[${remote}] → ${payload.app} ::`, payload.command);
+    console.log(`sh -c ${escape(payload.command)}`);
 
     // 3. Spawn flyctl ssh console
     child = spawn(
@@ -87,8 +89,7 @@ wss.on("connection", (ws, req) => {
         "--app",
         payload.app,
         "--command",
-        // [`cd ${payload.cwd}`, payload.command].join(";\n"),
-        `sh -c '${payload.command}'`,
+        `sh -c ${escape(payload.command)}`,
       ],
       {
         env: {

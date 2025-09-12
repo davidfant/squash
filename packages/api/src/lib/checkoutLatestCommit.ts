@@ -11,7 +11,7 @@ export async function checkoutLatestCommit(
 ) {
   const latestSha = await messages
     .flatMap((m) => m.parts)
-    .findLast((p) => p.type === "data-gitSha");
+    .findLast((p) => p.type === "data-GitSha");
   if (latestSha) {
     await FlyioExec.gitReset(runtimeContext.sandbox, latestSha.data.sha);
   } else {
@@ -25,7 +25,7 @@ export async function checkoutLatestCommit(
     const data = { sha: currentSha, title, description };
     await db
       .update(schema.message)
-      .set({ parts: [{ type: "data-gitSha", data }] })
+      .set({ parts: [{ type: "data-GitSha", data }] })
       .where(eq(schema.message.id, rootMessage.id));
   }
 }

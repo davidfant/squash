@@ -14,6 +14,9 @@ import jwt from "jsonwebtoken";
 import type { ChatMessage } from "../types";
 import { tools } from "./tools";
 
+const stringify = (json: unknown) =>
+  `'${JSON.stringify(json).replace(/'/g, `'\\''`)}'`;
+
 export async function streamClaudeCodeAgent(
   messages: ChatMessage[],
   sandbox: FlyioExecSandboxContext,
@@ -27,49 +30,29 @@ export async function streamClaudeCodeAgent(
     generateId: randomUUID,
     onFinish: opts.onFinish,
     execute: async ({ writer }) => {
-      //       export interface Query extends AsyncGenerator<SDKMessage, void> {
-      //     /**
-      //      * Control Requests
-      //      * The following methods are control requests, and are only supported when
-      //      * streaming input/output is used.
-      //      */
-      //     interrupt(): Promise<void>;
-      //     setPermissionMode(mode: PermissionMode): Promise<void>;
-      //     setModel(model?: string): Promise<void>;
-      // }
-
-      const lastClaudeCodeSessionId = messages
+      const session = messages
         .flatMap((m) => m.parts)
-        .findLast((p) => p.type === "data-claudeCodeSession")?.data.id;
+        .findLast((p) => p.type === "data-AgentSession")?.data;
 
       const agentStream = streamText({
-        model: new ClaudeCodeLanguageModel(sandbox.workdir, async function* (
-          req
-        ) {
+        model: new ClaudeCodeLanguageModel(sandbox.workdir, async function* ({
+          prompt,
+        }) {
+          const command: string[] = [];
+          // TODO: deny read/write to files that are gitignored
+          // TODO: should we move this to @squashai/cli?
+          // allows bypassPermissions when running in as sudo user
+          command.push(`IS_SANDBOX=1`);
+          command.push(`ANTHROPIC_API_KEY=${opts.env.ANTHROPIC_API_KEY}`);
+          command.push("squash");
+          if (session) command.push("--session", stringify(session.data));
+          command.push("--cwd", sandbox.workdir);
+          command.push("--prompt", stringify([{ type: "text", text: prompt }]));
+
           const payload: FlyioSSHProxyJWTPayload = {
             app: sandbox.appId,
             cwd: sandbox.workdir,
-            // TODO: resume session id
-            // TODO: deny read/write to files that are gitignored
-            command: [
-              `cd ${sandbox.workdir}`,
-              "&&",
-              // allows bypassPermissions when running in as sudo user
-              `IS_SANDBOX=1`,
-              `ANTHROPIC_API_KEY=${opts.env.ANTHROPIC_API_KEY}`,
-              "claude",
-              ...(lastClaudeCodeSessionId
-                ? ["--resume", lastClaudeCodeSessionId]
-                : []),
-              "--output-format stream-json",
-              "--permission-mode bypassPermissions",
-              "--disallowedTools Bash",
-              // "--permission-mode acceptEdits",
-              "--include-partial-messages",
-              "--verbose",
-              "--print",
-              JSON.stringify(req.prompt),
-            ].join(" "),
+            command: command.join(" "),
             env: { FLY_ACCESS_TOKEN: opts.env.FLY_ACCESS_TOKEN },
           };
           const token = jwt.sign(
@@ -88,15 +71,14 @@ export async function streamClaudeCodeAgent(
               for (const line of lines) {
                 try {
                   const data = JSON.parse(line);
-                  if (data.type === "system") {
-                    const sessionId = data.session_id;
-                    if (sessionId !== lastClaudeCodeSessionId) {
-                      writer.write({
-                        type: "data-claudeCodeSession",
-                        id: sessionId,
-                        data: { id: sessionId },
-                      });
-                    }
+                  if (
+                    data.type === "@squashai/cli:done" &&
+                    typeof data.session === "object"
+                  ) {
+                    writer.write({
+                      type: "data-AgentSession",
+                      data: { type: "claude-code", data: data.session },
+                    });
                   }
 
                   if (typeof data === "object" && !!data.type) {
@@ -117,6 +99,7 @@ export async function streamClaudeCodeAgent(
           messageMetadata: opts.messageMetadata,
         })
       );
+
       await agentStream.consumeStream();
       writer.write({ type: "finish" });
 

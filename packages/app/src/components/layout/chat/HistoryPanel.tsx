@@ -47,9 +47,9 @@ export function HistoryPanel({
         (
           p: any
         ): p is {
-          type: "data-gitSha";
+          type: "data-GitSha";
           data: { sha: string; title: string; description: string };
-        } => p.type === "data-gitSha"
+        } => p.type === "data-GitSha"
       );
 
       if (!gitSha || processedCommits.has(message.id)) return;
@@ -61,7 +61,7 @@ export function HistoryPanel({
       const siblings = messages.filter(
         (m) =>
           m.metadata?.parentId === parentId &&
-          m.parts.some((p: any) => p.type === "data-gitSha")
+          m.parts.some((p) => p.type === "data-GitSha")
       );
 
       // Also check for commits that share the same grandparent (for root level variants)
@@ -98,16 +98,10 @@ export function HistoryPanel({
         const variantCommits = actualSiblings
           .map((sibling) => {
             const siblingGitSha = sibling.parts.find(
-              (
-                p: any
-              ): p is {
-                type: "data-gitSha";
-                data: { sha: string; title: string; description: string };
-              } => p.type === "data-gitSha"
+              (p) => p.type === "data-GitSha"
             );
 
             if (!siblingGitSha) return null;
-
             return {
               messageId: sibling.id,
               commit: siblingGitSha.data,

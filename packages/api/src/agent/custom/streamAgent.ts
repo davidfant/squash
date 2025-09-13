@@ -225,7 +225,7 @@ export async function streamAgent(
             if (tc.dynamic) return;
             if (tc.toolName === "gitCommit") {
               writer.write({
-                type: "data-gitSha",
+                type: "data-GitSha",
                 id: tc.toolCallId,
                 data: {
                   sha: tc.output.commitSha,

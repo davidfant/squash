@@ -127,8 +127,8 @@ export function ChatThread({
     const newActivePath = messages.switchVariant(parentId, chosenChildId);
     const lastSha = newActivePath
       .flatMap((m) => m.parts)
-      .findLast((p) => p.type === "data-gitSha") as any;
-    if (lastSha && lastSha.type === "data-gitSha") setPreview(lastSha.data.sha);
+      .findLast((p) => p.type === "data-GitSha");
+    if (lastSha) setPreview(lastSha.data.sha);
   };
 
   // Extract todos from the most recent todoWrite tool output

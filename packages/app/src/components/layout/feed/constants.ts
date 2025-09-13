@@ -1,7 +1,6 @@
 import { Bug, Palette, Sparkles, Zap } from "lucide-react";
-import type { Suggestion } from "./SuggestionPills";
 
-export const defaultSuggestions: Suggestion[] = [
+export const defaultSuggestions = [
   {
     text: "Build a feature",
     icon: Sparkles,
@@ -22,4 +21,4 @@ export const defaultSuggestions: Suggestion[] = [
     icon: Zap,
     prompt: "Help me improve performance by...",
   },
-]; 
+];

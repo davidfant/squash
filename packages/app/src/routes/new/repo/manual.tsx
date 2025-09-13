@@ -14,7 +14,7 @@ export function NewRepoManualPage() {
   const navigate = useNavigate();
 
   const template = "replicator-vite-ts";
-  const version = "v0.0.5";
+  const version = "v0.0.6";
 
   const createRepo = useMutation(api.repos.$post, {
     onSuccess: (repo) => {

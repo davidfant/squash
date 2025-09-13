@@ -37,7 +37,7 @@ export function MessageActions({
   const [thumbsDown, setThumbsDown] = useState(false);
 
   const latestCommitSha = message.parts.findLast(
-    (p) => p.type === "data-gitSha"
+    (p) => p.type === "data-GitSha"
   )?.data.sha;
 
   // Check if this message's commit is the one being previewed

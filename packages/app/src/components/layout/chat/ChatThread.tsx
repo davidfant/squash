@@ -177,7 +177,7 @@ export function ChatThread({
       initial="instant"
       resize="smooth"
     >
-      <div className="flex-1 w-full">
+      <div className="flex-1 w-full overflow-hidden">
         <ConversationContent className="p-2 pr-4">
           {messages.activePath.map((m) => {
             switch (m.role) {

@@ -23,3 +23,4 @@ openssl rsa -in private.dev.pem -pubout -out public.dev.pem
 - [x] claude CLI => TS file for running claude (helps w escaping text)
 - [ ] Pause execution
 - [ ] Git commit
+- [ ] allow screenshot inputs

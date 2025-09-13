@@ -112,7 +112,7 @@ export async function createMachine({
   snapshot: RepoSnapshot;
 }) {
   const region = "iad";
-  const volume = await createVolume(appId, accessToken, region, "repo_data", 2);
+  const volume = await createVolume(appId, accessToken, region);
   return flyFetchJson<FlyMachine>(`/apps/${appId}/machines`, accessToken, {
     method: "POST",
     body: JSON.stringify({

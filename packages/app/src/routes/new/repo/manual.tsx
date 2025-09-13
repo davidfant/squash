@@ -43,7 +43,8 @@ export function NewRepoManualPage() {
           port: 5173,
           workdir: "/repo",
           cmd: {
-            prepare: "mv /root/repo/* $WORKDIR",
+            prepare:
+              "if [ ! -d $WORKDIR/.git ]; then mv /root/repo/* $WORKDIR; fi",
             entrypoint: "pnpm dev --host 0.0.0.0 --port $PORT",
           },
         },

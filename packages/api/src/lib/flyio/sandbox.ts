@@ -1,5 +1,6 @@
 import type { RepoSnapshot } from "@/database/schema/repos";
 import { traceable } from "langsmith/traceable";
+import { logger } from "../logger";
 import { flyFetch, flyFetchJson } from "./util";
 
 interface FlyMachineCheck {
@@ -82,7 +83,7 @@ export const createVolume = (
   apiKey: string,
   region: string,
   name = "repo_data",
-  sizeGb = 2
+  sizeGb = 1
 ) =>
   flyFetchJson<FlyVolume>(`/apps/${appId}/volumes`, apiKey, {
     method: "POST",
@@ -111,7 +112,7 @@ export async function createMachine({
   snapshot: RepoSnapshot;
 }) {
   const region = "iad";
-  const volume = await createVolume(appId, accessToken, region, "repo_data", 2);
+  const volume = await createVolume(appId, accessToken, region);
   return flyFetchJson<FlyMachine>(`/apps/${appId}/machines`, accessToken, {
     method: "POST",
     body: JSON.stringify({
@@ -169,11 +170,6 @@ export async function createMachine({
               cd $WORKDIR
 
               if [ ! -d ".git" ]; then
-                echo "Volume dir is empty. Copying everything from ${
-                  git.workdir
-                }..."
-                mv ${git.workdir}/* .
-
                 echo "Initializing git repo in $WORKDIR..."
                 git init
                 git remote add origin "$GIT_REPO_URL"
@@ -220,6 +216,11 @@ export const waitForMachineHealthy = (
 ) =>
   traceable(
     async (_: { appId: string; machineId: string }) => {
+      logger.info("Waiting for machine to become healthy", {
+        appId,
+        machineId,
+      });
+
       const getDetails = traceable(
         () =>
           flyFetchJson<FlyMachine>(
@@ -233,6 +234,10 @@ export const waitForMachineHealthy = (
       if (isHealthy(machine)) return machine;
 
       if (["stopped", "suspended"].includes(machine.state)) {
+        logger.debug("Machine is stopped or suspended, starting it", {
+          appId,
+          machineId,
+        });
         await traceable(
           () =>
             flyFetchJson(`/apps/${appId}/machines/${machineId}/start`, apiKey, {
@@ -246,6 +251,7 @@ export const waitForMachineHealthy = (
       while (true) {
         let machine: FlyMachine | undefined;
         try {
+          logger.debug("Checking machine health", { appId, machineId });
           machine = await getDetails();
           if (isHealthy(machine)) return machine;
         } catch (e) {

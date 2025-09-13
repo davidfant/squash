@@ -14,13 +14,20 @@ import {
 const Event = ({
   event,
   actions,
+  onClick,
 }: {
   event: EventBlockItem;
   actions?: React.ReactNode;
+  onClick?: () => void;
 }) => (
-  <div className="flex items-center gap-2 text-muted-foreground text-sm min-h-7">
+  <div
+    className="flex items-center gap-2 text-muted-foreground text-sm min-h-7 cursor-pointer"
+    onClick={onClick}
+  >
     <event.icon className="size-3 flex-shrink-0" />
-    <div className="flex-1 inline space-x-2">{event.label}</div>
+    <div className="flex-1 inline space-x-2 overflow-hidden [&>*]:max-w-full">
+      {event.label}
+    </div>
     {actions}
   </div>
 );
@@ -47,8 +54,9 @@ function EventsCollapsible({
 
   const otherCount = events.length - 1;
   return (
-    <div>
+    <div className="@container">
       <Event
+        onClick={() => setOpen(!open)}
         event={
           open
             ? firstEvent
@@ -57,6 +65,7 @@ function EventsCollapsible({
                   <>
                     {firstEvent.label}
                     <span>
+                      {" "}
                       and {otherCount} more{" "}
                       {otherCount === 1 ? "step" : "steps"}
                       ...
@@ -70,9 +79,8 @@ function EventsCollapsible({
           !streaming && (
             <Button
               size="sm"
-              className="h-6"
+              className="h-6 @max-[240px]:hidden"
               variant="secondary"
-              onClick={() => setOpen(!open)}
             >
               {open ? "Hide" : "See all"}
             </Button>

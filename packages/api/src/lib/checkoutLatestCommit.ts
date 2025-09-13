@@ -3,6 +3,7 @@ import * as schema from "@/database/schema";
 import * as FlyioExec from "@/lib/flyio/exec";
 import { eq } from "drizzle-orm";
 import type { AgentRuntimeContext } from "../agent/custom/types";
+import { logger } from "./logger";
 
 export async function checkoutLatestCommit(
   messages: Pick<schema.Message, "id" | "role" | "parts">[],
@@ -13,6 +14,7 @@ export async function checkoutLatestCommit(
     .flatMap((m) => m.parts)
     .findLast((p) => p.type === "data-GitSha");
   if (latestSha) {
+    logger.info("Checking out latest commit", { sha: latestSha.data.sha });
     await FlyioExec.gitReset(runtimeContext.sandbox, latestSha.data.sha);
   } else {
     const rootMessage = messages.find((m) => m.role === "system");
@@ -23,6 +25,9 @@ export async function checkoutLatestCommit(
     const description =
       "This is the starting point before any changes have been made.";
     const data = { sha: currentSha, title, description };
+    logger.info("No latest commit found, using current commit", {
+      sha: currentSha,
+    });
     await db
       .update(schema.message)
       .set({ parts: [{ type: "data-GitSha", data }] })

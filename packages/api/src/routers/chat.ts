@@ -8,6 +8,7 @@ import * as schema from "@/database/schema";
 import { langsmith } from "@/lib/ai";
 import { checkoutLatestCommit } from "@/lib/checkoutLatestCommit";
 import { waitForMachineHealthy } from "@/lib/flyio/sandbox";
+import { logger } from "@/lib/logger";
 import { resolveMessageThreadHistory } from "@/lib/resolveMessageThreadHistory";
 import { zValidator } from "@hono/zod-validator";
 import { and, asc, eq } from "drizzle-orm";
@@ -113,6 +114,10 @@ export const chatRouter = new Hono<{
         return c.json({ error: "Message thread not found" }, 404);
       }
       const threadId = allMessages[0]!.threadId;
+      logger.info("Found messages in thread", {
+        threadId,
+        count: allMessages.length,
+      });
 
       const result = await traceable(
         async () => {
@@ -172,6 +177,7 @@ export const chatRouter = new Hono<{
             {
               env: c.env,
               threadId: params.branchId,
+              abortSignal: c.req.raw.signal,
               onFinish: async ({ responseMessage }) => {
                 await db.insert(schema.message).values({
                   id: responseMessage.id,

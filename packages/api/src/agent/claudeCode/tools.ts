@@ -3,7 +3,6 @@ import { z } from "zod";
 
 export const tools = {
   ClaudeCodeTask: tool({
-    name: "Task",
     inputSchema: z
       .object({
         description: z
@@ -21,7 +20,6 @@ export const tools = {
   }),
 
   ClaudeCodeBash: tool({
-    name: "Bash",
     inputSchema: z
       .object({
         command: z.string().describe("The command to execute"),
@@ -49,7 +47,6 @@ export const tools = {
   }),
 
   ClaudeCodeGlob: tool({
-    name: "Glob",
     inputSchema: z
       .object({
         pattern: z.string().describe("The glob pattern to match files against"),
@@ -67,7 +64,6 @@ export const tools = {
   }),
 
   ClaudeCodeGrep: tool({
-    name: "Grep",
     inputSchema: z
       .object({
         pattern: z.string().describe("The regex pattern to search for"),
@@ -123,7 +119,6 @@ export const tools = {
   }),
 
   ClaudeCodeExitPlanMode: tool({
-    name: "ExitPlanMode",
     inputSchema: z
       .object({
         plan: z
@@ -139,7 +134,6 @@ export const tools = {
   }),
 
   ClaudeCodeRead: tool({
-    name: "Read",
     inputSchema: z
       .object({
         file_path: z.string().describe("The absolute path to the file to read"),
@@ -156,7 +150,6 @@ export const tools = {
   }),
 
   ClaudeCodeEdit: tool({
-    name: "Edit",
     inputSchema: z
       .object({
         file_path: z
@@ -175,7 +168,6 @@ export const tools = {
   }),
 
   ClaudeCodeMultiEdit: tool({
-    name: "MultiEdit",
     inputSchema: z
       .object({
         file_path: z
@@ -204,7 +196,6 @@ export const tools = {
   }),
 
   ClaudeCodeWrite: tool({
-    name: "Write",
     inputSchema: z
       .object({
         file_path: z
@@ -218,7 +209,6 @@ export const tools = {
   }),
 
   ClaudeCodeNotebookEdit: tool({
-    name: "NotebookEdit",
     inputSchema: z
       .object({
         notebook_path: z
@@ -249,7 +239,6 @@ export const tools = {
   }),
 
   ClaudeCodeWebFetch: tool({
-    name: "WebFetch",
     inputSchema: z
       .object({
         url: z.string().url().describe("The URL to fetch content from"),
@@ -261,7 +250,6 @@ export const tools = {
   }),
 
   ClaudeCodeTodoWrite: tool({
-    name: "TodoWrite",
     inputSchema: z
       .object({
         todos: z
@@ -285,7 +273,6 @@ export const tools = {
   }),
 
   ClaudeCodeWebSearch: tool({
-    name: "WebSearch",
     inputSchema: z
       .object({
         query: z.string().min(2).describe("The search query to use"),
@@ -304,7 +291,6 @@ export const tools = {
   }),
 
   ClaudeCodeBashOutput: tool({
-    name: "BashOutput",
     inputSchema: z
       .object({
         bash_id: z.string().describe("The ID of the background shell to query"),
@@ -316,7 +302,6 @@ export const tools = {
   }),
 
   ClaudeCodeKillBash: tool({
-    name: "KillBash",
     inputSchema: z
       .object({
         shell_id: z.string().describe("The ID of the background shell to kill"),

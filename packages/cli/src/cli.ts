@@ -46,4 +46,7 @@ export async function main(argv: string[] = process.argv) {
     const session = await runClaudeCode(opts, controller.signal);
     console.log(JSON.stringify({ type: "@squashai/cli:done", session }));
   }
+
+  // exit asap even if there are active handles (process._getActiveHandles)
+  process.exit(0);
 }

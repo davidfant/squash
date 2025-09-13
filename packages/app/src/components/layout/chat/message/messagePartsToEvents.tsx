@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import type { ChatMessage } from "@squash/api/agent/types";
 import type { ChatStatus } from "ai";
 import {
-  CircleCheck,
+  Check,
   EyeIcon,
   FilePenIcon,
   FolderSearch,
@@ -58,12 +58,12 @@ export function messagePartsToEvents(
         currentEvents.push({
           icon: EyeIcon,
           label: (
-            <div className="inline space-x-2">
+            <>
               <span>
                 {part.state === "output-available" ? "Read" : "Reading"}
               </span>
               {path && <FileBadge path={path} />}
-            </div>
+            </>
           ),
         });
         break;
@@ -73,12 +73,12 @@ export function messagePartsToEvents(
         currentEvents.push({
           icon: FilePenIcon,
           label: (
-            <div className="inline space-x-2">
+            <>
               <span>
                 {part.state === "output-available" ? "Updated" : "Updating"}
               </span>
               {path && <FileBadge path={path} />}
-            </div>
+            </>
           ),
         });
         break;
@@ -107,7 +107,10 @@ export function messagePartsToEvents(
           // const added = nextTodos.filter((t) => !prevStatus.has(t.id));
 
           currentEvents.push(
-            ...completed.map((t) => ({ icon: CircleCheck, label: t.content }))
+            ...completed.map((t) => ({
+              icon: Check,
+              label: `Completed '${t.content}'`,
+            }))
           );
           // currentEvents.push(
           //   ...inProgress.map((t) => ({ icon: CircleDot, label: t.content }))
@@ -124,7 +127,7 @@ export function messagePartsToEvents(
         currentEvents.push({
           icon: FolderSearch,
           label: (
-            <div className="inline space-x-2">
+            <>
               <span>
                 {part.state === "output-available"
                   ? "Scanned files for"
@@ -135,7 +138,7 @@ export function messagePartsToEvents(
                   {part.input?.pattern}
                 </Badge>
               )}
-            </div>
+            </>
           ),
         });
       }
@@ -143,7 +146,7 @@ export function messagePartsToEvents(
         currentEvents.push({
           icon: SearchIcon,
           label: (
-            <div className="inline space-x-2">
+            <>
               <span>
                 {part.state === "output-available"
                   ? "Searched for"
@@ -154,7 +157,7 @@ export function messagePartsToEvents(
                   {part.input?.pattern}
                 </Badge>
               )}
-            </div>
+            </>
           ),
         });
         break;

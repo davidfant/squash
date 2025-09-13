@@ -3,7 +3,7 @@ import { tool } from "ai";
 import z from "zod";
 import type { AgentRuntimeContext } from "./custom/types";
 
-export const gitCommit = (
+export const GitCommit = (
   ctx: AgentRuntimeContext,
   applyChanges: () => Promise<unknown>
 ) =>

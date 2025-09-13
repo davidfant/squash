@@ -14,7 +14,7 @@ import {
 import { AwsClient } from "aws4fetch";
 import { randomUUID } from "crypto";
 import { createTarGzip } from "nanotar";
-import { gitCommit } from "../git";
+import { GitCommit } from "../git";
 import type { ChatMessage } from "../types";
 import EnvPrompt from "./prompts/env.md";
 import SystemPrompt from "./prompts/system.md";
@@ -171,7 +171,7 @@ export async function streamAgent(
           ...(await agentStream.response).messages,
         ],
         tools: {
-          gitCommit: gitCommit(runtimeContext, () => {
+          gitCommit: GitCommit(runtimeContext, () => {
             const deletes = changes.filter((c) => c.op === "delete");
             const deleteP =
               deletes.length &&

@@ -15,10 +15,3 @@ window.addEventListener("message", (event: MessageEvent) => {
     });
   }
 });
-
-const url = chrome.runtime.getURL("src/page/inject.ts");
-console.log("wow...", url);
-const s = document.createElement("script");
-s.src = url;
-(document.head || document.documentElement).appendChild(s);
-s.remove();

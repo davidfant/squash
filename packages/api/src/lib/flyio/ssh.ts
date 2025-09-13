@@ -1,7 +1,5 @@
-import type {
-  FlyioSSHProxyMessage,
-  FlyioSSHProxyProxyRequest,
-} from "@squash/flyio-ssh-proxy";
+import type { AnyProxyEvent } from "@squash/flyio-ssh-proxy";
+import { logger } from "../logger";
 
 /**
  * Connects to your SSH-over-WS proxy and returns an async generator
@@ -12,64 +10,61 @@ import type {
  */
 export async function* streamSSH(
   url: string,
-  jwt: string
-): AsyncGenerator<FlyioSSHProxyMessage, void> {
-  const ws = new WebSocket(url);
-
+  jwt: string,
+  abortSignal: AbortSignal
+): AsyncGenerator<AnyProxyEvent, void> {
   const deferred = <T>() => {
     let r!: (v: T) => void;
     const p = new Promise<T>((res) => (r = res));
     return { promise: p, resolve: r };
   };
 
-  // Buffer of pending stdout messages
-  const queue: FlyioSSHProxyMessage[] = [];
+  const queue: AnyProxyEvent[] = [];
   const next = deferred<void>();
   const done = deferred<void>();
 
-  ws.addEventListener("open", () => {
-    ws.send(JSON.stringify({ jwt } satisfies FlyioSSHProxyProxyRequest));
-  });
+  logger.debug("Connecting to SSH proxy", { url });
 
-  ws.addEventListener("message", (event) => {
-    try {
-      const msg: FlyioSSHProxyMessage = JSON.parse(event.data);
-      queue.push(msg);
-      next.resolve();
-      if (msg.type === "exit" || msg.type === "error") {
-        done.resolve();
-        ws.close();
-      }
-    } catch (error) {
-      console.warn("Failed to parse message", error, event.data.toString());
-    }
-  });
+  const es = new EventSource(`${url}?token=${jwt}`);
+  es.onopen = () => logger.debug("Connected to SSH proxy", { url });
+  es.onmessage = (message) => {
+    const event = JSON.parse(message.data) as AnyProxyEvent;
+    logger.debug("Received SSH proxy message", { data: event });
+    queue.push(event);
+    next.resolve();
+  };
 
-  const closeOrError = () => {
+  es.onerror = (error) => {
+    logger.debug("SSH proxy disconnected or errored", {
+      url,
+      message: (error as any).error?.message,
+    });
     done.resolve();
     next.resolve();
   };
-  ws.addEventListener("close", closeOrError);
-  ws.addEventListener("error", closeOrError);
 
-  try {
-    while (true) {
-      // yield everything we already have
-      while (queue.length) {
-        const msg = queue.shift()!;
-        yield msg;
-        if (msg.type === "exit" || msg.type === "error") return;
-      }
+  abortSignal.addEventListener("abort", () => {
+    logger.debug("SSH proxy aborted", { url });
+    es.close();
+    done.resolve();
+    next.resolve();
+  });
 
-      // wait for either a new message OR the stream ending
-      await Promise.race([next.promise, done.promise]);
-
-      // re-arm the 'next' deferred for the next iteration
-      if (queue.length === 0 && done.promise === Promise.resolve()) break;
-      next.promise = new Promise<void>((res) => (next.resolve = res));
+  while (true) {
+    // yield everything we already have
+    while (queue.length) {
+      const event = queue.shift()!;
+      yield event;
+      if (event.type === "exit" || event.type === "error") return;
     }
-  } finally {
-    ws.close();
+
+    // wait for either a new message OR the stream ending
+    await new Promise((res) => setTimeout(res, 50));
+    await Promise.race([next.promise, done.promise]);
+
+    // re-arm the 'next' deferred for the next iteration
+    if (queue.length === 0 && done.promise === Promise.resolve()) break;
+    next.promise = new Promise<void>((res) => (next.resolve = res));
   }
 
   await done;

@@ -10,6 +10,7 @@ RUN apt-get update -y && \
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
 RUN curl -L https://fly.io/install.sh | sh
+ENV PATH="/root/.fly/bin:$PATH"
 
 WORKDIR /app
 COPY tsconfig.base.json ./
@@ -22,7 +23,9 @@ COPY packages/flyio-ssh-proxy/tsconfig.json ./
 
 RUN pnpm install
 
-COPY packages/flyio-ssh-proxy/src/ ./src/
+COPY packages/flyio-ssh-proxy/worker-configuration.d.ts ./src/
+COPY packages/flyio-ssh-proxy/src/types.ts ./src/
+COPY packages/flyio-ssh-proxy/src/index.ts ./src/
 
 RUN pnpm build
 

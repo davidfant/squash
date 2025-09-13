@@ -293,7 +293,8 @@ export const reposRouter = new Hono<{
           throw error;
         }
       } catch (error) {
-        console.error("Error creating repo branch:", error);
+        console.error("Error creating repo branch!", error);
+        console.error("Stack: ", (error as Error).stack);
         return c.json({ error: "Failed to create repo branch" }, 500);
       }
     }

@@ -10,6 +10,7 @@
   "observability": {
     "enabled": true
   },
+  "upload_source_maps": true,
   "r2_buckets": [
     {
       "binding": "R2_FILE_TRANSFER_BUCKET",
@@ -41,7 +42,19 @@
         "TZ": "utc",
         "LANGSMITH_TRACING": "true",
         "LANGSMITH_ENDPOINT": "https://api.smith.langchain.com"
-      }
+      },
+      "r2_buckets": [
+        {
+          "binding": "R2_FILE_TRANSFER_BUCKET",
+          "bucket_name": "file-transfer",
+          "experimental_remote": true
+        },
+        {
+          "binding": "REPLICATOR_BUCKET",
+          "bucket_name": "replicator",
+          "experimental_remote": true
+        }
+      ]
     }
   },
   "rules": [{ "type": "Text", "globs": ["**/*.md"], "fallthrough": true }]

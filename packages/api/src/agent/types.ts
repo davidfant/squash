@@ -1,11 +1,11 @@
 import type { InferUITools, UIMessage } from "ai";
 import type { ClaudeCodeAgentTools } from "./claudeCode/tools";
 import type { CustomAgentTools } from "./custom/types";
-import type { gitCommit } from "./git";
+import type { GitCommit } from "./git";
 
 export type AllTools = ClaudeCodeAgentTools &
   CustomAgentTools &
-  InferUITools<{ gitCommit: ReturnType<typeof gitCommit> }>;
+  InferUITools<{ GitCommit: ReturnType<typeof GitCommit> }>;
 
 export type ChatMessageData = {
   GitSha: { sha: string; title: string; description: string };

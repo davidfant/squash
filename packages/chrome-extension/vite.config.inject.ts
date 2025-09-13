@@ -13,6 +13,5 @@ export default defineConfig({
       fileName: () => "page/inject.js",
     },
     rollupOptions: { output: { inlineDynamicImports: true } },
-    // sourcemap: true,
   },
 });

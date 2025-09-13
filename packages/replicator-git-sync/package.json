@@ -11,7 +11,7 @@
     "dev": "pnpm typegen && concurrently \"pnpm dev:tsx\" \"pnpm dev:tsc\"",
     "dev:tsx": "tsx --watch --env-file=.env src/index.ts",
     "dev:tsc": "tsc --watch --preserveWatchOutput",
-    "push": "wrangler deploy",
+    "_push": "wrangler deploy --env production",
     "typegen": "wrangler types --env-interface CloudflareBindings",
     "build": "tsc -b"
   },

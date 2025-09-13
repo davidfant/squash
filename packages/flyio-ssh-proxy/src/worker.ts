@@ -1,8 +1,10 @@
 import { Container as ContainerClass } from "@cloudflare/containers";
+import { env } from "cloudflare:workers";
 
 export class Container extends ContainerClass {
-  defaultPort = 3000;
-  envVars = { NODE_ENV: "production" };
+  defaultPort = Number(env.PORT);
+  sleepAfter = "1m";
+  envVars = { PORT: env.PORT, JWT_PUBLIC_KEY: env.JWT_PUBLIC_KEY };
 }
 
 export default {

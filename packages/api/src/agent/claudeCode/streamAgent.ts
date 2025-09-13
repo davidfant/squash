@@ -1,7 +1,8 @@
 import type { FlyioExecSandboxContext } from "@/lib/flyio/exec";
 import * as FlyioSSH from "@/lib/flyio/ssh";
+import { logger } from "@/lib/logger";
 import { ClaudeCodeLanguageModel } from "@squash/ai-sdk-claude-code";
-import type { FlyioSSHProxyJWTPayload } from "@squash/flyio-ssh-proxy";
+import type { JWTPayload } from "@squash/flyio-ssh-proxy";
 import {
   convertToModelMessages,
   createUIMessageStream,
@@ -23,7 +24,7 @@ export async function streamClaudeCodeAgent(
   opts: Pick<
     UIMessageStreamOptions<ChatMessage>,
     "onFinish" | "messageMetadata"
-  > & { threadId: string; env: CloudflareBindings }
+  > & { threadId: string; env: CloudflareBindings; abortSignal: AbortSignal }
 ) {
   const stream = createUIMessageStream<ChatMessage>({
     originalMessages: messages, // just needed for id generation
@@ -34,6 +35,11 @@ export async function streamClaudeCodeAgent(
         .flatMap((m) => m.parts)
         .findLast((p) => p.type === "data-AgentSession")?.data;
 
+      logger.debug("Starting agent stream", {
+        sandbox: sandbox.appId,
+        machineId: sandbox.machineId,
+        session,
+      });
       const agentStream = streamText({
         model: new ClaudeCodeLanguageModel(sandbox.workdir, async function* ({
           prompt,
@@ -49,7 +55,7 @@ export async function streamClaudeCodeAgent(
           command.push("--cwd", sandbox.workdir);
           command.push("--prompt", stringify([{ type: "text", text: prompt }]));
 
-          const payload: FlyioSSHProxyJWTPayload = {
+          const payload: JWTPayload = {
             app: sandbox.appId,
             cwd: sandbox.workdir,
             command: command.join(" "),
@@ -60,9 +66,19 @@ export async function streamClaudeCodeAgent(
             opts.env.FLY_SSH_PROXY_JWT_PRIVATE_KEY,
             { expiresIn: "1m", algorithm: "RS256" }
           );
-          const stream = FlyioSSH.streamSSH(opts.env.FLY_SSH_PROXY_URL, token);
+          logger.debug("Streaming SSH", {
+            url: opts.env.FLY_SSH_PROXY_URL,
+            private: opts.env.FLY_SSH_PROXY_JWT_PRIVATE_KEY,
+            token,
+            payload,
+          });
+
+          const stream = FlyioSSH.streamSSH(
+            opts.env.FLY_SSH_PROXY_URL,
+            token,
+            opts.abortSignal
+          );
           for await (const message of stream) {
-            console.log(message);
             if (message.type === "stdout") {
               const lines = message.data
                 .split("\n")
@@ -101,6 +117,7 @@ export async function streamClaudeCodeAgent(
       );
 
       await agentStream.consumeStream();
+      console.dir(agentStream.response, { depth: 10 });
       writer.write({ type: "finish" });
 
       // if (!changes.length) {

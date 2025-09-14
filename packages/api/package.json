@@ -45,6 +45,7 @@
     "aws4fetch": "^1.0.20",
     "better-auth": "^1.2.12",
     "drizzle-orm": "^0.44.2",
+    "eventsource-parser": "^3.0.5",
     "hono": "^4.9.0",
     "jsonwebtoken": "^9.0.2",
     "langsmith": "^0.3.53",

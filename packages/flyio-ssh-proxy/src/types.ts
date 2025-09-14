@@ -3,8 +3,6 @@ import { z } from "zod";
 export const jwtPayloadSchema = z.object({
   app: z.string(),
   cwd: z.string(),
-  command: z.string(),
-  env: z.record(z.string(), z.string()),
 });
 
 export type JWTPayload = z.infer<typeof jwtPayloadSchema>;

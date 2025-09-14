@@ -1,17 +1,19 @@
+import { streamText } from "@/lib/ai";
 import type { FlyioExecSandboxContext } from "@/lib/flyio/exec";
 import * as FlyioSSH from "@/lib/flyio/ssh";
 import { logger } from "@/lib/logger";
+import { google } from "@ai-sdk/google";
 import { ClaudeCodeLanguageModel } from "@squash/ai-sdk-claude-code";
 import type { JWTPayload } from "@squash/flyio-ssh-proxy";
 import {
   convertToModelMessages,
   createUIMessageStream,
   createUIMessageStreamResponse,
-  streamText,
   type UIMessageStreamOptions,
 } from "ai";
 import { randomUUID } from "crypto";
 import jwt from "jsonwebtoken";
+import { GitCommit } from "../git";
 import type { ChatMessage } from "../types";
 import { tools } from "./tools";
 
@@ -58,8 +60,6 @@ export async function streamClaudeCodeAgent(
           const payload: JWTPayload = {
             app: sandbox.appId,
             cwd: sandbox.workdir,
-            command: command.join(" "),
-            env: { FLY_ACCESS_TOKEN: opts.env.FLY_ACCESS_TOKEN },
           };
           const token = jwt.sign(
             payload,
@@ -68,40 +68,43 @@ export async function streamClaudeCodeAgent(
           );
           logger.debug("Streaming SSH", {
             url: opts.env.FLY_SSH_PROXY_URL,
-            private: opts.env.FLY_SSH_PROXY_JWT_PRIVATE_KEY,
-            token,
             payload,
           });
 
-          const stream = FlyioSSH.streamSSH(
-            opts.env.FLY_SSH_PROXY_URL,
+          let stdoutBuffer = "";
+          const stream = await FlyioSSH.streamSSH({
+            url: opts.env.FLY_SSH_PROXY_URL,
             token,
-            opts.abortSignal
-          );
-          for await (const message of stream) {
-            if (message.type === "stdout") {
-              const lines = message.data
-                .split("\n")
-                .map((l) => l.trim())
-                .filter((v) => !!v);
-              for (const line of lines) {
-                try {
-                  const data = JSON.parse(line);
-                  if (
-                    data.type === "@squashai/cli:done" &&
-                    typeof data.session === "object"
-                  ) {
-                    writer.write({
-                      type: "data-AgentSession",
-                      data: { type: "claude-code", data: data.session },
-                    });
-                  }
+            env: { FLY_ACCESS_TOKEN: opts.env.FLY_ACCESS_TOKEN },
+            command: command.join(" "),
+            abortSignal: opts.abortSignal,
+          });
 
-                  if (typeof data === "object" && !!data.type) {
-                    yield data;
-                  }
-                } catch {}
-              }
+          for await (const [message] of stream) {
+            if (message.type !== "stdout") continue;
+            stdoutBuffer += message.data;
+            let newlineIndex;
+            while ((newlineIndex = stdoutBuffer.indexOf("\n")) !== -1) {
+              const line = stdoutBuffer.slice(0, newlineIndex).trim();
+              stdoutBuffer = stdoutBuffer.slice(newlineIndex + 1);
+              if (!line) continue;
+
+              try {
+                const data = JSON.parse(line);
+                if (
+                  data.type === "@squashai/cli:done" &&
+                  typeof data.session === "object"
+                ) {
+                  writer.write({
+                    type: "data-AgentSession",
+                    data: { type: "claude-code", data: data.session },
+                  });
+                }
+
+                if (typeof data === "object" && !!data.type) {
+                  yield data;
+                }
+              } catch {}
             }
           }
         }),
@@ -117,120 +120,103 @@ export async function streamClaudeCodeAgent(
       );
 
       await agentStream.consumeStream();
-      console.dir(agentStream.response, { depth: 10 });
-      writer.write({ type: "finish" });
 
-      // if (!changes.length) {
-      //   writer.write({ type: "finish" });
-      //   return;
-      // }
+      const shouldCommit = (await agentStream.toolCalls).some(
+        (t) =>
+          !t.dynamic &&
+          [
+            "ClaudeCodeEdit",
+            "ClaudeCodeMultiEdit",
+            "ClaudeCodeWrite",
+            "ClaudeCodeNotebookEdit",
+          ].includes(t.toolName)
+      );
+      if (!shouldCommit) {
+        writer.write({ type: "finish" });
+        return;
+      }
 
-      // const commitStream = streamText({
-      //   model: wrapModelWithLangsmith(
-      //     google("gemini-2.5-flash-lite"),
-      //     opts.env,
-      //     {
-      //       runName: "Commit Message",
-      //       tags: ["commit"],
-      //       metadata: {
-      //         changesCount: changes.length,
-      //         sandboxId: runtimeContext.sandbox.appId,
-      //         session_id: opts.threadId,
-      //       },
-      //     }
-      //   ),
-      //   experimental_telemetry: { isEnabled: true },
-      //   messages: [
-      //     {
-      //       role: "system",
-      //       content:
-      //         "Your job is to generate ONE commit message based on the below conversation with a user and an AI code agent. The commit message has both a title and a description. The title should be a short summary of the changes, and the description should be a more detailed description of the changes. Both the title and description should be non-technical and easy to understand for someone who is not a developer. For example, avoid using technical terms like 'refactor' or 'feat: ...'",
-      //     },
-      //     ...convertToModelMessages(
-      //       messages
-      //         .map((m) => ({
-      //           ...m,
-      //           parts: m.parts.filter((p) => p.type === "text"),
-      //         }))
-      //         .filter((m) => !!m.parts.length)
-      //     ),
-      //     ...(await agentStream.response).messages,
-      //   ],
-      //   tools: {
-      //     gitCommit: gitCommit(runtimeContext, () => {
-      //       const deletes = changes.filter((c) => c.op === "delete");
-      //       const deleteP =
-      //         deletes.length &&
-      //         FlyioExec.deleteFiles(
-      //           deletes.map((c) => c.path),
-      //           runtimeContext.sandbox
-      //         );
+      const history = messages
+        .filter((m) => m.role === "assistant" || m.role === "user")
+        .map((m) => ({
+          role: m.role,
+          content: m.parts
+            .map((p) => {
+              if (p.type === "text") return p.text;
+              if (p.type === "tool-GitCommit")
+                return JSON.stringify({ commit: p.input });
+              return undefined;
+            })
+            .filter((c): c is string => !!c),
+        }));
 
-      //       const writes = changes.filter((c) => c.op === "write");
-      //       const writeP = (async () => {
-      //         if (!writes.length) return;
-      //         const tarPath = `${randomUUID()}.tar.gz`;
-      //         try {
-      //           const preUrl = `${opts.fileTransfer.url}/${
-      //             opts.fileTransfer.bucketName
-      //           }/${tarPath}?X-Amz-Expires=${15 * 60}`;
-      //           const [presigned] = await Promise.all([
-      //             new AwsClient({
-      //               accessKeyId: opts.fileTransfer.accessKeyId,
-      //               secretAccessKey: opts.fileTransfer.secretAccessKey,
-      //               service: "s3",
-      //               region: "auto",
-      //             })
-      //               .sign(new Request(preUrl), { aws: { signQuery: true } })
-      //               .then((presigned) => presigned.url.toString()),
-      //             Promise.all(
-      //               writes.map(async (w) => ({
-      //                 name: w.path,
-      //                 data: await w.content,
-      //               }))
-      //             )
-      //               .then(createTarGzip)
-      //               .then((tar) => opts.fileTransfer.bucket.put(tarPath, tar)),
-      //           ]);
+      const summary = (await agentStream.response).messages
+        .filter((m) => m.role === "assistant")
+        .flatMap((m) =>
+          typeof m.content === "string"
+            ? [{ type: "text" as const, text: m.content }]
+            : m.content
+        )
+        .map((p) => {
+          if (p.type === "text") return p.text;
+          if (p.type === "tool-call") {
+            return JSON.stringify({ tool: p.toolName, input: p.input });
+          }
+          return undefined;
+        })
+        .filter((c): c is string => !!c);
 
-      //           console.log("PATH: ", preUrl);
-      //           console.log("PRESIGNED: ", presigned);
-
-      //           await FlyioExec.writeFiles(presigned, runtimeContext.sandbox);
-      //         } finally {
-      //           await opts.fileTransfer.bucket.delete(tarPath);
-      //         }
-      //       })();
-
-      //       return Promise.all([deleteP, writeP]);
-      //     }),
-      //   },
-      //   toolChoice: { type: "tool", toolName: "gitCommit" },
-      //   onStepFinish: (step) => {
-      //     step.toolResults.forEach((tc) => {
-      //       if (tc.dynamic) return;
-      //       if (tc.toolName === "gitCommit") {
-      //         writer.write({
-      //           type: "data-gitSha",
-      //           id: tc.toolCallId,
-      //           data: {
-      //             sha: tc.output.commitSha,
-      //             title: tc.input.title,
-      //             description: tc.input.body,
-      //           },
-      //         });
-      //       }
-      //     });
-      //   },
-      // });
-      // writer.merge(
-      //   commitStream.toUIMessageStream({
-      //     sendStart: false,
-      //     sendReasoning: false,
-      //     messageMetadata: opts.messageMetadata,
-      //   })
-      // );
-      // await commitStream.consumeStream();
+      const commitStream = streamText({
+        model: google("gemini-2.5-flash-lite"),
+        messages: [
+          {
+            role: "system",
+            content:
+              "Your job is to generate ONE commit message based on the changes wrapped in <changes>. In <history> you can see a history of previous changes that have been made to the codebase. The commit message should only focus on <changes> not on <history>. The commit message has both a title and a description. The title should be a short summary of the changes, and the description should be a more detailed description of the changes. Both the title and description should be non-technical and easy to understand for someone who is not a developer. For example, avoid using technical terms like 'refactor' or 'feat: ...'",
+          },
+          {
+            role: "user",
+            content: [
+              "<changes>",
+              ...summary,
+              "</changes>",
+              "",
+              "<history>",
+              ...history.flatMap((h) => [
+                `<${h.role}>`,
+                ...h.content,
+                `</${h.role}>`,
+              ]),
+              "</history>",
+            ].join("\n"),
+          },
+        ],
+        tools: { GitCommit: GitCommit(sandbox) },
+        toolChoice: { type: "tool", toolName: "GitCommit" },
+        onStepFinish: (step) => {
+          step.toolResults.forEach((tc) => {
+            if (!tc.dynamic && tc.toolName === "GitCommit") {
+              writer.write({
+                type: "data-GitSha",
+                id: tc.toolCallId,
+                data: {
+                  sha: tc.output.commitSha,
+                  title: tc.input.title,
+                  description: tc.input.body,
+                },
+              });
+            }
+          });
+        },
+      });
+      writer.merge(
+        commitStream.toUIMessageStream({
+          sendStart: false,
+          sendReasoning: false,
+          messageMetadata: opts.messageMetadata,
+        })
+      );
+      await commitStream.consumeStream();
     },
   });
   return createUIMessageStreamResponse({ stream });

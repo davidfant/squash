@@ -26,51 +26,23 @@ function Component({ branchId }: { branchId: string }) {
     enabled: !!session.data?.user,
   });
 
-  const handleHistoryToggle = (enabled: boolean) => {
-    setIsHistoryEnabled(enabled);
-  };
-
-  const handleSelectCommit = (sha: string) => {
-    setPreview(sha);
-  };
-
-  const handleHideChatSidebar = () => {
-    console.log("Hide chat sidebar");
-  };
-
-  const handleRefresh = () => {
-    console.log("Refresh");
-    window.location.reload();
-  };
-
-  const handleOpenInNewTab = () => {
-    console.log("Open in new tab");
-    window.open(window.location.href, "_blank");
-  };
-
-  const handleInvite = () => {
-    console.log("Invite collaborators");
-  };
-
-  const handleUpgrade = () => {
-    console.log("Upgrade plan");
-  };
-
   return (
     <ChatProvider
       endpoint={`${import.meta.env.VITE_API_URL}/chat/branches/${branchId}`}
       initialMessages={threadMessages.data as ChatMessage[]}
+      onFinish={(step) => {
+        const latestSha = step.messages
+          .flatMap((m) => m.parts)
+          .findLast((part) => part.type === "tool-GitCommit")
+          ?.output?.commitSha;
+        if (latestSha) setPreview(latestSha);
+      }}
     >
       <SidebarProvider className="flex flex-col h-screen">
         <BranchHeader
           title={branch.name}
           isHistoryEnabled={isHistoryEnabled}
-          onHistoryToggle={handleHistoryToggle}
-          onHideChatSidebar={handleHideChatSidebar}
-          onRefresh={handleRefresh}
-          onOpenInNewTab={handleOpenInNewTab}
-          onInvite={handleInvite}
-          onUpgrade={handleUpgrade}
+          onHistoryToggle={setIsHistoryEnabled}
           publicUrl="https://my-awesome-landing-page.com"
         />
         <ResizablePanelGroup
@@ -86,7 +58,7 @@ function Component({ branchId }: { branchId: string }) {
             {isHistoryEnabled ? (
               <HistoryPanel
                 onClose={() => setIsHistoryEnabled(false)}
-                onSelectCommit={handleSelectCommit}
+                onSelectCommit={setPreview}
                 className="w-full"
                 threadId={branchId}
               />

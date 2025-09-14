@@ -1,6 +1,5 @@
 import { Badge } from "@/components/ui/badge";
 import type { ChatMessage } from "@squash/api/agent/types";
-import type { ChatStatus } from "ai";
 import {
   Check,
   EyeIcon,
@@ -18,6 +17,12 @@ interface TextBlock {
   content: string;
 }
 
+interface GitCommitBlock {
+  type: "commit";
+  title: string;
+  sha: string;
+}
+
 export interface EventBlockItem {
   icon: LucideIcon;
   label: ReactNode;
@@ -29,28 +34,28 @@ interface EventBlock {
   streaming: boolean;
 }
 
-type Block = TextBlock | EventBlock;
+type Block = TextBlock | GitCommitBlock | EventBlock;
 
-export function messagePartsToEvents(
-  parts: ChatMessage["parts"],
-  status: ChatStatus
-): Block[] {
+export function messagePartsToEvents(parts: ChatMessage["parts"]): Block[] {
   const blocks: Block[] = [];
   let currentEvents: EventBlockItem[] = [];
   let todos: Todo[] = [];
 
+  const flushEvents = () => {
+    if (!!currentEvents.length) {
+      blocks.push({
+        type: "events",
+        events: currentEvents,
+        streaming: false,
+      });
+      currentEvents = [];
+    }
+  };
+
   for (const part of parts) {
     switch (part.type) {
       case "text":
-        if (!!currentEvents.length) {
-          blocks.push({
-            type: "events",
-            events: currentEvents,
-            streaming: false,
-          });
-          currentEvents = [];
-        }
-
+        flushEvents();
         blocks.push({ type: "text", content: part.text });
         break;
       case "tool-ClaudeCodeRead": {
@@ -162,6 +167,17 @@ export function messagePartsToEvents(
         });
         break;
       }
+      case "tool-GitCommit": {
+        if (part.state === "output-available") {
+          flushEvents();
+          blocks.push({
+            type: "commit",
+            title: part.input.title,
+            sha: part.output.commitSha,
+          });
+          break;
+        }
+      }
       default: {
         if (part.type.startsWith("tool-")) {
           console.warn(`Unknown tool:`, part);
@@ -170,13 +186,7 @@ export function messagePartsToEvents(
     }
   }
 
-  if (!!currentEvents.length) {
-    blocks.push({
-      type: "events",
-      events: currentEvents,
-      streaming: status === "streaming",
-    });
-  }
+  flushEvents();
 
   return blocks;
 }

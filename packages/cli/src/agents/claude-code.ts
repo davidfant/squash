@@ -6,6 +6,7 @@ import path from "node:path";
 
 async function hydrateSession(session: ClaudeCodeSession, dir: string) {
   const sessionFilePath = path.join(dir, `${session.id}.jsonl`);
+  await fs.mkdir(dir, { recursive: true });
   await fs.writeFile(
     sessionFilePath,
     session.steps.map((step) => JSON.stringify(step)).join("\n")

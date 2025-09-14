@@ -32,11 +32,6 @@ interface BranchHeaderProps {
   title: string;
   isHistoryEnabled?: boolean;
   onHistoryToggle?: (enabled: boolean) => void;
-  onHideChatSidebar?: () => void;
-  onRefresh?: () => void;
-  onOpenInNewTab?: () => void;
-  onInvite?: () => void;
-  onUpgrade?: () => void;
   publicUrl?: string;
   className?: string;
 }
@@ -47,11 +42,6 @@ export function BranchHeader({
   title,
   isHistoryEnabled = false,
   onHistoryToggle,
-  onHideChatSidebar,
-  onRefresh,
-  onOpenInNewTab,
-  onInvite,
-  onUpgrade,
   publicUrl = "https://myproject.com",
   className,
 }: BranchHeaderProps) {

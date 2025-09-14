@@ -1,11 +1,11 @@
+import type { FlyioExecSandboxContext } from "@/lib/flyio/exec";
 import * as FlyioExec from "@/lib/flyio/exec";
 import { tool } from "ai";
 import z from "zod";
-import type { AgentRuntimeContext } from "./custom/types";
 
 export const GitCommit = (
-  ctx: AgentRuntimeContext,
-  applyChanges: () => Promise<unknown>
+  sandbox: FlyioExecSandboxContext,
+  applyChanges?: () => Promise<unknown>
 ) =>
   tool({
     description: `Commits the changes to the git repository.`,
@@ -15,8 +15,8 @@ export const GitCommit = (
     }),
     outputSchema: z.object({ commitSha: z.string() }),
     execute: async ({ title, body }) => {
-      await applyChanges();
-      const commitSha = await FlyioExec.gitCommit(ctx.sandbox, title, body);
+      await applyChanges?.();
+      const commitSha = await FlyioExec.gitCommit(sandbox, title, body);
       return { commitSha };
     },
   });

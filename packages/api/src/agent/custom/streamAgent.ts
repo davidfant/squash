@@ -171,7 +171,7 @@ export async function streamAgent(
           ...(await agentStream.response).messages,
         ],
         tools: {
-          gitCommit: GitCommit(runtimeContext, () => {
+          GitCommit: GitCommit(runtimeContext.sandbox, () => {
             const deletes = changes.filter((c) => c.op === "delete");
             const deleteP =
               deletes.length &&
@@ -207,9 +207,6 @@ export async function streamAgent(
                     .then((tar) => opts.fileTransfer.bucket.put(tarPath, tar)),
                 ]);
 
-                console.log("PATH: ", preUrl);
-                console.log("PRESIGNED: ", presigned);
-
                 await FlyioExec.writeFiles(presigned, runtimeContext.sandbox);
               } finally {
                 await opts.fileTransfer.bucket.delete(tarPath);
@@ -219,11 +216,11 @@ export async function streamAgent(
             return Promise.all([deleteP, writeP]);
           }),
         },
-        toolChoice: { type: "tool", toolName: "gitCommit" },
+        toolChoice: { type: "tool", toolName: "GitCommit" },
         onStepFinish: (step) => {
           step.toolResults.forEach((tc) => {
             if (tc.dynamic) return;
-            if (tc.toolName === "gitCommit") {
+            if (tc.toolName === "GitCommit") {
               writer.write({
                 type: "data-GitSha",
                 id: tc.toolCallId,

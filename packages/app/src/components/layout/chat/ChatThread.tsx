@@ -59,7 +59,7 @@ export function ChatThread({
   ready: boolean;
   initialValue?: ChatInputValue;
 }) {
-  const { setPreview, preview } = useBranchContext();
+  const { setPreview } = useBranchContext();
   const { messages: allMessages, status, sendMessage } = useChatContext();
   const messages = useMessageLineage(allMessages, id);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);

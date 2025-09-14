@@ -109,6 +109,9 @@ importers:
       drizzle-orm:
         specifier: ^0.44.2
         version: 0.44.5(@cloudflare/workers-types@4.20250913.0)(@neondatabase/serverless@1.0.1)(@opentelemetry/api@1.9.0)(@types/pg@8.15.4)(@upstash/redis@1.35.2)(kysely@0.28.5)(pg@8.16.3)(postgres@3.4.7)
+      eventsource-parser:
+        specifier: ^3.0.5
+        version: 3.0.5
       hono:
         specifier: ^4.9.0
         version: 4.9.4
@@ -458,6 +461,9 @@ importers:
       '@hono/node-server':
         specifier: ^1.19.0
         version: 1.19.0(hono@4.9.4)
+      '@hono/zod-validator':
+        specifier: ^0.7.2
+        version: 0.7.2(hono@4.9.4)(zod@4.1.8)
       concurrently:
         specifier: ^9.2.1
         version: 9.2.1

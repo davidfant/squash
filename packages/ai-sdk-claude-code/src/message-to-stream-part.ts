@@ -266,8 +266,6 @@ export function messageToStreamPart(
                 }
                 break;
             }
-
-            delete contentBlocks[value.index];
           }
 
           return;

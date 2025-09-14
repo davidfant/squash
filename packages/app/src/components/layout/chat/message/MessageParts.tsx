@@ -5,7 +5,7 @@ import type { ChatMessage } from "@squash/api/agent/types";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import { Markdown } from "../../Markdown";
-import { useChatContext } from "../context";
+import { GitCommitCard } from "./GitCommitCard";
 import {
   messagePartsToEvents,
   type EventBlockItem,
@@ -80,7 +80,7 @@ function EventsCollapsible({
             <Button
               size="sm"
               className="h-6 @max-[240px]:hidden"
-              variant="secondary"
+              variant="outline"
             >
               {open ? "Hide" : "See all"}
             </Button>
@@ -107,11 +107,7 @@ function EventsCollapsible({
 }
 
 export function MessageParts({ parts }: { parts: ChatMessage["parts"] }) {
-  const { status } = useChatContext();
-  const blocks = useMemo(
-    () => messagePartsToEvents(parts, status),
-    [parts, status]
-  );
+  const blocks = useMemo(() => messagePartsToEvents(parts), [parts]);
 
   if (!blocks.length) {
     return <Skeleton className="h-4 w-48" />;
@@ -120,17 +116,22 @@ export function MessageParts({ parts }: { parts: ChatMessage["parts"] }) {
   return (
     <div className="space-y-5">
       {blocks.map((block, idx) => {
-        if (block.type === "text") {
-          return <Markdown key={idx}>{block.content}</Markdown>;
+        switch (block.type) {
+          case "text":
+            return <Markdown key={idx}>{block.content}</Markdown>;
+          case "commit":
+            return (
+              <GitCommitCard key={idx} title={block.title} sha={block.sha} />
+            );
+          case "events":
+            return (
+              <EventsCollapsible
+                key={idx}
+                events={block.events}
+                streaming={block.streaming}
+              />
+            );
         }
-
-        return (
-          <EventsCollapsible
-            key={idx}
-            events={block.events}
-            streaming={block.streaming}
-          />
-        );
       })}
     </div>
   );

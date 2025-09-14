@@ -22,6 +22,8 @@ const snapshots: Record<string, string> = {
     "46cb2680-f22a-4656-a386-c535e1fe3808/4c751a7c-88e9-4aa7-8a7f-cc4affec16a5/1756321376209.json",
   autodesk:
     "46cb2680-f22a-4656-a386-c535e1fe3808/9c838fb6-6bd2-43bd-9dc5-df38ee3e4227/1756337260672.json",
+  posthog:
+    "46cb2680-f22a-4656-a386-c535e1fe3808/4427d771-ad21-46cf-be7a-76bc4e19cc07/1757816375293.json",
 };
 
 const arg = process.argv[2];

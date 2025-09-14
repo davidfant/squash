@@ -40,6 +40,7 @@ Decision tree:
 ────────────────────────────────────────────────────────
 ◆ CODING RULES (must pass lint & type-check)
 ────────────────────────────────────────────────────────
+• If `Must Rename Component` is `true`, you MUST rename the component and give it a descriptive name. Components cannot be named `ComponentToRewrite`. If it seems like the component comes from a UI kit or similar, use the name that the component is usually called in the UI kit.
 • Each file MUST `import React from "react"` at the top.
 • Use **JSX** syntax everywhere; avoid `React.createElement` unless unavoidable.
 • Export the component using a **named export** (`export interface …`, `export function …`). You **cannot** use default exports. Export both the component, props, as well as other types and interfaces that might be used by other components. If your component's props are the same or similar to props from a file you import, use the imported file's props interface as a base.
@@ -52,7 +53,6 @@ Decision tree:
 • If the original code referenced unsupported libraries, replicate the behaviour in-line or stub it out with best-effort logic.
 • De-minify names to clear, Pascal-cased identifiers.  
 • Some React components include SVGs and SVG paths. The SVG paths are often very long and have been replaced with placeholders. The placeholders follow the format [[SVG:0|PATH:0|NAME:...|DESCRIPTION:...]]. When you see these placeholders, you should repeat them verbatim - do not change or expand them. They will later be replaced with the original SVG paths.
-• If the component in the tests is named `ComponentToRewrite`, just MUST rename the component and give it a descriptive name. Components cannot be named `ComponentToRewrite`. If it seems like the component comes from a UI kit or similar, use the name that the component is usually called in the UI kit.
 
 ────────────────────────────────────────────────────────
 ◆ `MarkTestsOutOfScope` HEURISTICS (common STATIC patterns)

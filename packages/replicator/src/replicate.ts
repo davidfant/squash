@@ -42,8 +42,8 @@ const whitelist: Metadata.ReactFiber.ComponentId[] = [];
 // whitelist.push("C58"); // avatar
 // whitelist.push("C75", "C40");
 
-const maxConcurrency = 30;
-const maxComponents = 500;
+const maxConcurrency = 20;
+const maxComponents = 0;
 
 export const replicate = (snapshot: Snapshot, sink: FileSink<any>) =>
   traceable(
@@ -243,10 +243,11 @@ export const replicate = (snapshot: Snapshot, sink: FileSink<any>) =>
                 );
                 return;
               }
-              if (
-                state.component.registry.size + rewrites.size >=
-                maxComponents
-              ) {
+              // if (
+              //   state.component.registry.size + rewrites.size >=
+              //   maxComponents
+              // ) {
+              if (state.component.registry.size >= maxComponents) {
                 logger.debug(
                   "Max components reached, waiting for a rewrite to finish"
                 );
@@ -293,7 +294,10 @@ export const replicate = (snapshot: Snapshot, sink: FileSink<any>) =>
           }
 
           enqueue();
-          while (rewrites.size) {
+          while (
+            rewrites.size &&
+            state.component.registry.size < maxComponents
+          ) {
             logger.info("Number of running rewrites", { count: rewrites.size });
 
             const rewrite = await Promise.race(rewrites.values());
@@ -336,21 +340,21 @@ export const replicate = (snapshot: Snapshot, sink: FileSink<any>) =>
       //   )
       // );
 
-      console.dir(
-        [
-          ...new Set(
-            [...state.component.nodes.get("C40")!]
-              .flatMap((n) => [...(state.node.descendants.all.get(n) ?? [])])
-              .map((n) => state.node.all.get(n)?.componentId)
-              .filter((c) => !!c)
-              .concat("C75")
-          ),
-        ].map((componentId) => ({
-          componentId,
-          rewritable: isRewritable(componentId)?.status,
-        })),
-        { depth: null }
-      );
+      // console.dir(
+      //   [
+      //     ...new Set(
+      //       [...state.component.nodes.get("C40")!]
+      //         .flatMap((n) => [...(state.node.descendants.all.get(n) ?? [])])
+      //         .map((n) => state.node.all.get(n)?.componentId)
+      //         .filter((c) => !!c)
+      //         .concat("C75")
+      //     ),
+      //   ].map((componentId) => ({
+      //     componentId,
+      //     rewritable: isRewritable(componentId)?.status,
+      //   })),
+      //   { depth: null }
+      // );
 
       const processor = unified()
         // .use(rehypeStripSquashAttribute)

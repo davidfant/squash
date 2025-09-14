@@ -165,9 +165,9 @@ export async function render(
   const modules: Record<string, Module> = {};
   const errors: string[] = [];
 
-  if (opts.component.name.original === "ComponentToRewrite") {
+  if (opts.component.name.new === "ComponentToRewrite") {
     errors.push(
-      "Component cannot be called ComponentToRewrite - rename it to something descriptive"
+      `Invalid component name: "ComponentToRewrite". This is a placeholder and must be replaced with a meaningful name that describes the component's purpose (e.g. "UserProfileCard", "LoginForm").`
     );
   }
 

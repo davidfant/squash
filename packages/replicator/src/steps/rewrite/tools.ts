@@ -31,7 +31,11 @@ export function createReplicatorTools() {
   2. If the initial code is \`\`\`code \\n Block \\n code\`\`\`, and you want to remove Block, you can also specify \`\`\`// ... keep existing code ... \\n // remove Block \\n // ... rest of code ...\`\`\`.
   `.trim(),
     inputSchema: z.object({
-      componentName: z.string(),
+      rewrittenComponentName: z.string().describe(
+        "The NEW, descriptive name of the component you are producing. \
+        ⚠️ Do NOT use placeholder names such as `ComponentToRewrite`, `MyComponent`, or `Component`. \
+        The name must clearly communicate the component's purpose or role, e.g. `UserProfileCard`, `LoginForm`, `SidebarMenu`."
+      ),
       componentDescription: z.string(),
       instructions: z
         .string()
@@ -56,7 +60,7 @@ export function createReplicatorTools() {
         });
       }
       const component = {
-        name: input.componentName,
+        name: input.rewrittenComponentName,
         description: input.componentDescription,
       };
       return { ok: true, component, code: latestCode! } as const;

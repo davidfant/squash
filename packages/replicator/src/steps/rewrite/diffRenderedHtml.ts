@@ -38,7 +38,7 @@ function canonicaliseStyle(style: string): string | undefined {
     .toArray()
     .filter((d) => d.type === "Declaration")
     .sort((a, b) => a.property.localeCompare(b.property))
-    .map((d) => `${d.property}: ${generate(d.value)}`)
+    .map((d) => `${d.property}: ${generate(d.value).trim()}`)
     .join("; ");
 }
 

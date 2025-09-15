@@ -37,8 +37,8 @@ importers:
         specifier: ^3.0.8
         version: 3.0.8(zod@4.1.8)
       '@anthropic-ai/claude-code':
-        specifier: ^1.0.110
-        version: 1.0.110
+        specifier: ^1.0.117
+        version: 1.0.117
       zod:
         specifier: ^4.1.5
         version: 4.1.8
@@ -773,6 +773,11 @@ packages:
 
   '@anthropic-ai/claude-code@1.0.110':
     resolution: {integrity: sha512-iNoKuPkdSNk8NizvHCA5yiCKPHMxscxfacsok9JPwLwefumJ80slfBw3kh3abzB2DoFIJslP+0VlewtsG1pnMA==}
+    engines: {node: '>=18.0.0'}
+    hasBin: true
+
+  '@anthropic-ai/claude-code@1.0.117':
+    resolution: {integrity: sha512-ZSBFpwPqMZJZq9//BYSW0MLGQY0svAtncPe2EVxohO87Gym6Dqi+IRSVZkWSwF07gmzZH3luqrepX3q33l7T+Q==}
     engines: {node: '>=18.0.0'}
     hasBin: true
 
@@ -5810,6 +5815,15 @@ snapshots:
       '@jridgewell/trace-mapping': 0.3.30
 
   '@anthropic-ai/claude-code@1.0.110':
+    optionalDependencies:
+      '@img/sharp-darwin-arm64': 0.33.5
+      '@img/sharp-darwin-x64': 0.33.5
+      '@img/sharp-linux-arm': 0.33.5
+      '@img/sharp-linux-arm64': 0.33.5
+      '@img/sharp-linux-x64': 0.33.5
+      '@img/sharp-win32-x64': 0.33.5
+
+  '@anthropic-ai/claude-code@1.0.117':
     optionalDependencies:
       '@img/sharp-darwin-arm64': 0.33.5
       '@img/sharp-darwin-x64': 0.33.5

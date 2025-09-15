@@ -64,9 +64,7 @@ export function messagePartsToEvents(parts: ChatMessage["parts"]): Block[] {
           icon: EyeIcon,
           label: (
             <>
-              <span>
-                {part.state === "output-available" ? "Read" : "Reading"}
-              </span>
+              <span>Read</span>
               {path && <FileBadge path={path} />}
             </>
           ),
@@ -79,9 +77,7 @@ export function messagePartsToEvents(parts: ChatMessage["parts"]): Block[] {
           icon: FilePenIcon,
           label: (
             <>
-              <span>
-                {part.state === "output-available" ? "Updated" : "Updating"}
-              </span>
+              <span>Edit</span>
               {path && <FileBadge path={path} />}
             </>
           ),
@@ -152,11 +148,7 @@ export function messagePartsToEvents(parts: ChatMessage["parts"]): Block[] {
           icon: SearchIcon,
           label: (
             <>
-              <span>
-                {part.state === "output-available"
-                  ? "Searched for"
-                  : "Searching for"}
-              </span>
+              <span>Search for</span>
               {!!part.input?.pattern && (
                 <Badge variant="outline" className="border-none bg-muted">
                   {part.input?.pattern}

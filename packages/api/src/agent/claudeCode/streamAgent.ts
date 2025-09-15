@@ -3,7 +3,7 @@ import type { FlyioExecSandboxContext } from "@/lib/flyio/exec";
 import * as FlyioSSH from "@/lib/flyio/ssh";
 import { logger } from "@/lib/logger";
 import { google } from "@ai-sdk/google";
-import { ClaudeCodeLanguageModel } from "@squash/ai-sdk-claude-code";
+import { ClaudeCodeLanguageModel, tools } from "@squash/ai-sdk-claude-code";
 import type { JWTPayload } from "@squash/flyio-ssh-proxy";
 import {
   convertToModelMessages,
@@ -15,7 +15,6 @@ import { randomUUID } from "crypto";
 import jwt from "jsonwebtoken";
 import { GitCommit } from "../git";
 import type { ChatMessage } from "../types";
-import { tools } from "./tools";
 
 const stringify = (json: unknown) =>
   `'${JSON.stringify(json).replace(/'/g, `'\\''`)}'`;

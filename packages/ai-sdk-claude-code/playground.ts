@@ -1,7 +1,6 @@
 import { type SDKMessage } from "@anthropic-ai/claude-code";
-import { streamText, tool, type ToolSet } from "ai";
-import { z } from "zod/v4/mini";
-import { ClaudeCodeLanguageModel } from "./src";
+import { streamText } from "ai";
+import { ClaudeCodeLanguageModel, tools } from "./src";
 
 const msgs: SDKMessage[] = [
   {
@@ -406,38 +405,23 @@ const msgs: SDKMessage[] = [
   },
 ];
 
+const cwd = "/Users/fant/repos/lp/lp/packages/replicator/playground";
 const stream = streamText({
-  model: new ClaudeCodeLanguageModel(() => Promise.resolve(msgs)),
-  prompt: "Give me the package name",
-  tools: [
-    "Task",
-    "Bash",
-    "Glob",
-    "Grep",
-    "ExitPlanMode",
-    "Read",
-    "Edit",
-    "MultiEdit",
-    "Write",
-    "NotebookEdit",
-    "WebFetch",
-    "TodoWrite",
-    "WebSearch",
-    "BashOutput",
-    "KillBash",
-  ].reduce(
-    (acc, toolName) => ({
-      ...acc,
-      [toolName]: tool({
-        type: "provider-defined",
-        id: `anthropic.${toolName}`,
-        name: toolName,
-        args: {},
-        inputSchema: z.any(),
-      }),
-    }),
-    {} as ToolSet
-  ),
+  model: new ClaudeCodeLanguageModel(cwd),
+  prompt: [
+    {
+      role: "user",
+      content: [
+        { type: "text", text: "what is in the image" },
+        {
+          type: "image",
+          image:
+            "https://upload.wikimedia.org/wikipedia/commons/a/a7/Camponotus_flavomarginatus_ant.jpg",
+        },
+      ],
+    },
+  ],
+  tools,
 });
 
 for await (const chunk of stream.toUIMessageStream()) {

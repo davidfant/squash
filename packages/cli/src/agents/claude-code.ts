@@ -15,24 +15,24 @@ async function hydrateSession(session: ClaudeCodeSession, dir: string) {
 }
 
 export async function runClaudeCode(
-  options: ClaudeCodeCLIOptions,
+  req: ClaudeCodeCLIOptions,
   signal: AbortSignal
 ): Promise<ClaudeCodeSession> {
   const sessionsDir = path.join(
     os.homedir(),
     ".claude",
     "projects",
-    options.cwd.replace(/\//g, "-")
+    req.cwd.replace(/\//g, "-")
   );
 
-  if (options.session) await hydrateSession(options.session, sessionsDir);
+  if (req.session) await hydrateSession(req.session, sessionsDir);
 
   const q = query({
     prompt: (async function* () {
       const content: Array<
         | { type: "text"; text: string }
         | { type: "image"; source: { type: "url"; url: string } }
-      > = options.prompt
+      > = req.prompt
         .map((c) => {
           if (c.type === "text") {
             return { type: "text" as const, text: c.text };
@@ -54,17 +54,18 @@ export async function runClaudeCode(
       };
     })(),
     options: {
-      cwd: options.cwd,
-      resume: options.session?.id,
+      cwd: req.cwd,
+      resume: req.session?.id,
       executable: "node",
       includePartialMessages: true,
       permissionMode: "bypassPermissions",
+      appendSystemPrompt: req.options?.appendSystemPrompt,
     },
   });
 
   signal.addEventListener("abort", () => q.interrupt());
 
-  let sessionId = options.session?.id;
+  let sessionId = req.session?.id;
   for await (const msg of q) {
     console.log(JSON.stringify(msg));
     if (msg.type === "system" && typeof msg.session_id === "string") {

@@ -34,16 +34,22 @@ export const ClaudeCodeSessionSchema = z.object({
   steps: z.array(z.record(z.string(), z.any())),
 });
 
+export const ClaudeCodeOptionsSchema = z.object({
+  appendSystemPrompt: z.string().optional(),
+});
+
 export const ClaudeCodeCLIOptionsSchema = z.object({
   agent: z.enum(["claude-code"]),
   prompt: z.preprocess(parseJson, PromptSchema),
   session: z.preprocess(parseJson, ClaudeCodeSessionSchema).optional(),
+  options: z.preprocess(parseJson, ClaudeCodeOptionsSchema).optional(),
   cwd: z.string().default(process.cwd()),
 });
 
 export const CLIOptionsSchema = ClaudeCodeCLIOptionsSchema;
 
 export type ClaudeCodeCLIOptions = z.infer<typeof ClaudeCodeCLIOptionsSchema>;
+export type ClaudeCodeOptions = z.infer<typeof ClaudeCodeOptionsSchema>;
 export type CLIOptions = z.infer<typeof CLIOptionsSchema>;
 export type Prompt = z.infer<typeof PromptSchema>;
 export type ClaudeCodeSession = z.infer<typeof ClaudeCodeSessionSchema>;

@@ -15,6 +15,7 @@ import { randomUUID } from "crypto";
 import jwt from "jsonwebtoken";
 import { GitCommit } from "../git";
 import type { ChatMessage } from "../types";
+import appendSystemPrompt from "./prompt.md";
 
 const stringify = (json: unknown) =>
   `'${JSON.stringify(json).replace(/'/g, `'\\''`)}'`;
@@ -55,6 +56,7 @@ export async function streamClaudeCodeAgent(
           if (session) command.push("--session", stringify(session.data));
           command.push("--cwd", sandbox.workdir);
           command.push("--prompt", stringify(prompt));
+          command.push("--append-system-prompt", stringify(appendSystemPrompt));
 
           const payload: JWTPayload = {
             app: sandbox.appId,

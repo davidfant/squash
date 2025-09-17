@@ -54,7 +54,7 @@ export async function streamClaudeCodeAgent(
           command.push("squash");
           if (session) command.push("--session", stringify(session.data));
           command.push("--cwd", sandbox.workdir);
-          command.push("--prompt", stringify([{ type: "text", text: prompt }]));
+          command.push("--prompt", stringify(prompt));
 
           const payload: JWTPayload = {
             app: sandbox.appId,

@@ -1,5 +1,5 @@
 {
-  "name": "@squash/flyio-ssh-proxy",
+  "name": "@squashai/flyio-ssh-proxy",
   "type": "module",
   "version": "0.0.0",
   "exports": {

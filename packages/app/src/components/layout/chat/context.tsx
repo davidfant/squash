@@ -4,7 +4,7 @@ import {
   type UseChatHelpers,
   type UseChatOptions,
 } from "@ai-sdk/react";
-import type { ChatMessage } from "@squash/api/agent/types";
+import type { ChatMessage } from "@squashai/api/agent/types";
 import { DefaultChatTransport } from "ai";
 import { createContext, useContext, useEffect, type ReactNode } from "react";
 import { v4 as uuid } from "uuid";

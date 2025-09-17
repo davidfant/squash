@@ -1,4 +1,4 @@
-import type { ClaudeCodeTools } from "@squash/ai-sdk-claude-code";
+import type { ClaudeCodeTools } from "@squashai/ai-sdk-claude-code";
 import type { InferUITools, UIMessage } from "ai";
 import type { CustomAgentTools } from "./custom/types";
 import type { GitCommit } from "./git";

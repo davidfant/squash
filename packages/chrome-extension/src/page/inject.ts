@@ -1,3 +1,3 @@
-import { reactFiber } from "@squash/replicator/metadata/reactFiber";
+import { reactFiber } from "@squashai/replicator/metadata/reactFiber";
 
 window.__squash = { reactFiber };

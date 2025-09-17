@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/resizable";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { api, useQuery } from "@/hooks/api";
-import type { ChatMessage } from "@squash/api/agent/types";
+import type { ChatMessage } from "@squashai/api/agent/types";
 import { useState } from "react";
 import { useParams } from "react-router";
 import { BranchPreview } from "./BranchPreview";

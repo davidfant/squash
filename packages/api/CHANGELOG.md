@@ -1,4 +1,4 @@
-# @squash/api
+# @squashai/api
 
 ## 0.0.2
 

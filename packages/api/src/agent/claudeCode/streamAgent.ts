@@ -3,8 +3,8 @@ import type { FlyioExecSandboxContext } from "@/lib/flyio/exec";
 import * as FlyioSSH from "@/lib/flyio/ssh";
 import { logger } from "@/lib/logger";
 import { google } from "@ai-sdk/google";
-import { ClaudeCodeLanguageModel, tools } from "@squash/ai-sdk-claude-code";
-import type { JWTPayload } from "@squash/flyio-ssh-proxy";
+import { ClaudeCodeLanguageModel, tools } from "@squashai/ai-sdk-claude-code";
+import type { JWTPayload } from "@squashai/flyio-ssh-proxy";
 import {
   convertToModelMessages,
   createUIMessageStream,

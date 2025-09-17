@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import type { ChatMessage } from "@squash/api/agent/types";
+import type { ChatMessage } from "@squashai/api/agent/types";
 import {
   Check,
   EyeIcon,

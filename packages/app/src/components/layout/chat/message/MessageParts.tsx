@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePrevious } from "@/hooks/usePrevious";
-import type { ChatMessage } from "@squash/api/agent/types";
+import type { ChatMessage } from "@squashai/api/agent/types";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import { Markdown } from "../../Markdown";

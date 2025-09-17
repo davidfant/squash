@@ -1,5 +1,5 @@
 {
-  "name": "@squash/api",
+  "name": "@squashai/api",
   "type": "module",
   "version": "0.0.2",
   "exports": {
@@ -37,10 +37,10 @@
     "@opentelemetry/context-async-hooks": "^2.0.1",
     "@opentelemetry/exporter-trace-otlp-proto": "^0.203.0",
     "@opentelemetry/sdk-trace-base": "^2.0.1",
-    "@squash/ai-sdk-claude-code": "workspace:*",
-    "@squash/flyio-ssh-proxy": "workspace:*",
-    "@squash/replicator": "workspace:*",
-    "@squash/replicator-git-sync": "workspace:*",
+    "@squashai/ai-sdk-claude-code": "workspace:*",
+    "@squashai/flyio-ssh-proxy": "workspace:*",
+    "@squashai/replicator": "workspace:*",
+    "@squashai/replicator-git-sync": "workspace:*",
     "ai": "^5.0.5",
     "aws4fetch": "^1.0.20",
     "better-auth": "^1.2.12",

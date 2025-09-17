@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import type { ChatMessage } from "@squash/api/agent/types";
+import type { ChatMessage } from "@squashai/api/agent/types";
 import { AssistantMessageActions } from "./AssistantMessageActions";
 import { MessageHeader } from "./MessageHeader";
 import { MessageParts } from "./MessageParts";

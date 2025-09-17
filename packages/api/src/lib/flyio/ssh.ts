@@ -1,4 +1,4 @@
-import type { AnyProxyEvent } from "@squash/flyio-ssh-proxy";
+import type { AnyProxyEvent } from "@squashai/flyio-ssh-proxy";
 import { createParser } from "eventsource-parser";
 import { logger } from "../logger";
 import { toAsyncIterator } from "../toAsyncIterator";

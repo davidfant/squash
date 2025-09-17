@@ -8,7 +8,7 @@ import {
 } from "@/components/layout/chat/input/ChatInput";
 import { Button } from "@/components/ui/button";
 import { useBranchContext } from "@/routes/branches/context";
-import type { ChatMessage } from "@squash/api/agent/types";
+import type { ChatMessage } from "@squashai/api/agent/types";
 import type { FileUIPart } from "ai";
 import { AlertCircle } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";

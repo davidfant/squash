@@ -1,4 +1,4 @@
-import type { ChatMessage } from "@squash/api/agent/types";
+import type { ChatMessage } from "@squashai/api/agent/types";
 import { FilePreview } from "../../file/FilePreview";
 import type { VariantOptions } from "../messageLineage";
 import { MessageParts } from "./MessageParts";

@@ -10,14 +10,24 @@ const parseJson = (val: unknown) => {
 };
 
 export const PromptSchema = z.array(
-  z.object({ type: z.literal("text"), text: z.string() })
+  z.union([
+    z.object({
+      type: z.literal("text"),
+      text: z.string(),
+    }),
+    z.object({
+      type: z.literal("image"),
+      image: z.string(),
+      mediaType: z.string().optional(),
+    }),
+    z.object({
+      type: z.literal("file"),
+      data: z.string(),
+      filename: z.string().optional(),
+      mediaType: z.string(),
+    }),
+  ])
 );
-// export const PromptSchema = z.array(
-//   z.union([
-//     z.object({ type: z.literal('text'), text: z.string() }),
-//     z.object({ type: z.literal('image'), url: z.string() }),
-//   ])
-// );
 
 export const ClaudeCodeSessionSchema = z.object({
   id: z.string(),

@@ -1,4 +1,5 @@
 import { toast } from "@/components/ui/sonner";
+import { api, useMutation } from "@/hooks/api";
 import type { FileUIPart } from "ai";
 import { useCallback, useMemo, useRef, useState } from "react";
 
@@ -16,13 +17,7 @@ export function useFileUpload(initialFiles?: ChatInputFile[]) {
     [files]
   );
 
-  // const getSignedUrl = useMutation(api.upload.$post);
-  const getSignedUrl = {
-    mutateAsync: (...args: any[]) => ({
-      uploadUrl: "https://example.com/upload",
-      publicUrl: "https://example.com/public",
-    }),
-  };
+  const getSignedUrl = useMutation(api.upload.$post);
   const patchUpload = useCallback(
     (id: string, partial: Partial<ChatInputFile>) =>
       setFiles((prev) =>
@@ -41,7 +36,7 @@ export function useFileUpload(initialFiles?: ChatInputFile[]) {
     async (id: string, file: File) => {
       try {
         const signed = await getSignedUrl.mutateAsync({
-          filename: file.name,
+          json: { filename: file.name },
         });
         await fetch(signed.uploadUrl, {
           method: "PUT",

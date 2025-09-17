@@ -1,9 +1,12 @@
+import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { requestId } from "hono/request-id";
+import z from "zod";
 import { authMiddleware } from "./auth/middleware";
 import { databaseMiddleware } from "./database/middleware";
+import { createSignedUrl } from "./lib/cloudflare";
 import { chatRouter } from "./routers/chat";
 import { githubRouter } from "./routers/integrations/github";
 import { replicatorRouter } from "./routers/replicator";
@@ -23,7 +26,34 @@ const app = new Hono<{ Bindings: CloudflareBindings }>()
   .route("/repos/providers", repoProvidersRouter)
   .route("/repos/branches", repoBranchesRouter)
   .route("/repos", reposRouter)
-  .route("/integrations/github", githubRouter);
+  .route("/integrations/github", githubRouter)
+  .post(
+    "/upload",
+    zValidator("json", z.object({ filename: z.string() })),
+    async (c) => {
+      const filename = c.req.valid("json").filename;
+      const res = await createSignedUrl(filename, {
+        accessKeyId: c.env.R2_UPLOADS_ACCESS_KEY_ID,
+        secretAccessKey: c.env.R2_UPLOADS_SECRET_ACCESS_KEY,
+        bucketUrl: c.env.R2_UPLOADS_BUCKET_URL,
+        endpointUrl: c.env.R2_UPLOADS_ENDPOINT_URL_S3,
+      });
+      return c.json(res);
+    }
+  );
+// .post("/transcribe", async (c) => {
+//   const formData = await c.req.raw.formData();
+//   const file = formData.get("file");
+//   if (!(file instanceof File)) return c.json({ error: "Missing file" }, 400);
+
+//   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+//   const result = await openai.audio.transcriptions.create({
+//     file,
+//     model: "gpt-4o-transcribe",
+//   });
+
+//   return c.text(result.text);
+// });
 
 export default app;
 export type AppType = typeof app;

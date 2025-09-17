@@ -1,5 +1,6 @@
 import type { ClaudeCodeCLIOptions, ClaudeCodeSession } from "@/schema";
 import { query } from "@anthropic-ai/claude-code";
+import { randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -27,10 +28,31 @@ export async function runClaudeCode(
   if (options.session) await hydrateSession(options.session, sessionsDir);
 
   const q = query({
-    prompt: options.prompt
-      .filter((p) => p.type === "text")
-      .map((p) => p.text)
-      .join("\n"),
+    prompt: (async function* () {
+      const content: Array<
+        | { type: "text"; text: string }
+        | { type: "image"; source: { type: "url"; url: string } }
+      > = options.prompt
+        .map((c) => {
+          if (c.type === "text") {
+            return { type: "text" as const, text: c.text };
+          }
+          if (c.type === "file" && c.mediaType.startsWith("image/")) {
+            return {
+              type: "image" as const,
+              source: { type: "url" as const, url: c.data.toString() },
+            };
+          }
+        })
+        .filter((c) => !!c);
+
+      yield {
+        type: "user",
+        session_id: randomUUID(),
+        parent_tool_use_id: null,
+        message: { role: "user", content },
+      };
+    })(),
     options: {
       cwd: options.cwd,
       resume: options.session?.id,

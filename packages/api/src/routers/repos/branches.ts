@@ -29,8 +29,9 @@ export const repoBranchesRouter = new Hono<{
   )
   .get(
     "/:branchId/messages",
-    requireAuth,
     zValidator("param", z.object({ branchId: z.uuid() })),
+    requireAuth,
+    requireRepoBranch,
     async (c) => {
       const user = c.get("user");
       const { branchId } = c.req.valid("param");
@@ -68,6 +69,7 @@ export const repoBranchesRouter = new Hono<{
       })
     ),
     requireAuth,
+    requireRepoBranch,
     async (c) => {
       const body = c.req.valid("json");
       const params = c.req.valid("param");
@@ -76,12 +78,26 @@ export const repoBranchesRouter = new Hono<{
       const stub = c.env.SANDBOX_DO.get(
         c.env.SANDBOX_DO.idFromName(params.branchId)
       );
-      const client = hc<SandboxDurableObjectApp>("https://thread", {
+      return hc<SandboxDurableObjectApp>("https://thread", {
         fetch: stub.fetch.bind(stub),
-      });
-      return client.stream.$post({
+      }).stream.$post({
         json: { ...body, branchId: params.branchId, userId: user.id },
       });
+    }
+  )
+  .get(
+    "/:branchId/messages/stream",
+    zValidator("param", z.object({ branchId: z.uuid() })),
+    requireAuth,
+    requireRepoBranch,
+    async (c) => {
+      const params = c.req.valid("param");
+      const stub = c.env.SANDBOX_DO.get(
+        c.env.SANDBOX_DO.idFromName(params.branchId)
+      );
+      return hc<SandboxDurableObjectApp>("https://thread", {
+        fetch: stub.fetch.bind(stub),
+      }).listen.$post();
     }
   )
   .post(

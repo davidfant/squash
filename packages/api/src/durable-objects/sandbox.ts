@@ -79,6 +79,7 @@ interface ActiveRunContext {
 
 interface AgentAppHandlers {
   stream(c: Context, body: StreamRequestBody): Promise<Response>;
+  listen(c: Context): Promise<Response>;
   preview(body: PreviewRequestBody): Promise<{
     url: string;
     sha: string;
@@ -91,6 +92,7 @@ const createAgentApp = (handlers: AgentAppHandlers) =>
     .post("/stream", zValidator("json", StreamRequestBodySchema), (c) =>
       handlers.stream(c, c.req.valid("json"))
     )
+    .post("/listen", (c) => handlers.listen(c))
     .post("/preview", zValidator("json", PreviewRequestBodySchema), async (c) =>
       c.json(await handlers.preview(c.req.valid("json")))
     )
@@ -116,27 +118,29 @@ export class SandboxDurableObject implements AgentAppHandlers {
   }
 
   public async stream(c: Context, body: StreamRequestBody): Promise<Response> {
-    await this.state.blockConcurrencyWhile(async () => {
+    const sandbox = await this.state.blockConcurrencyWhile(async () => {
       if (!this.shouldStartNewRun(body)) return;
-      const sandbox = await this.getOrCreateSandbox(body.branchId);
-      await this.startRun(body, sandbox);
+      return this.getOrCreateSandbox(body.branchId);
     });
 
-    if (!this.run || this.run.messageId !== body.message.id) {
-      return c.text("Run unavailable", 409);
-    }
+    if (sandbox) await this.startRun(body, sandbox);
+    if (!this.run) return c.text("No stream to listen to", 409);
+    return this.listen(c);
+  }
+
+  public async listen(c: Context): Promise<Response> {
+    if (!this.run) return c.text("", 200);
 
     const stream = this.createReadableStream(this.run);
     const headers = new Headers(this.run.headers);
     headers.set("cache-control", "no-cache");
-
     return new Response(stream, { status: 200, headers });
   }
 
   public async preview(
     body: PreviewRequestBody
   ): Promise<{ url: string; sha: string }> {
-    const sandbox = await this.state.blockConcurrencyWhile(async () =>
+    const sandbox = await this.state.blockConcurrencyWhile(() =>
       this.getOrCreateSandbox(body.branchId)
     );
 
@@ -212,22 +216,28 @@ export class SandboxDurableObject implements AgentAppHandlers {
       count: allMessages.length,
     });
 
-    const { id, parts, parentId } = body.message;
-    const [message] = await db
-      .insert(schema.message)
-      .values({
-        id,
-        role: "user",
-        parts,
-        threadId,
-        parentId,
-        createdBy: body.userId,
-      })
-      .returning();
-    const messages: ChatMessage[] = [
-      ...resolveMessageThreadHistory(allMessages, parentId),
-      { ...message!, parentId },
-    ];
+    const messages = await (async () => {
+      if (allMessages.some((m) => m.id === body.message.id)) {
+        return resolveMessageThreadHistory(allMessages, body.message.id);
+      } else {
+        const { id, parts, parentId } = body.message;
+        const [message] = await db
+          .insert(schema.message)
+          .values({
+            id,
+            role: "user",
+            parts,
+            threadId,
+            parentId,
+            createdBy: body.userId,
+          })
+          .returning();
+        return [
+          ...resolveMessageThreadHistory(allMessages, parentId),
+          { ...message!, parentId },
+        ];
+      }
+    })();
     const nextParentId = messages.slice(-1)[0]!.id;
     const context: FlyioExecSandboxContext = {
       appId: sandbox.appId,

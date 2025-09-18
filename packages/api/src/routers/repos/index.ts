@@ -237,7 +237,9 @@ export const reposRouter = new Hono<{
         .returning()
         .then(([thread]) => thread!);
 
-      const [branch, parent] = await Promise.all([
+      const parentId = randomUUID();
+      const messageId = randomUUID();
+      const [branch] = await Promise.all([
         db
           .insert(schema.repoBranch)
           .values({
@@ -249,11 +251,16 @@ export const reposRouter = new Hono<{
           })
           .returning()
           .then(([branch]) => branch!),
-        db
-          .insert(schema.message)
-          .values({ role: "system", threadId: thread.id, parts: [] })
-          .returning()
-          .then(([message]) => message!),
+        db.insert(schema.message).values([
+          { id: parentId, role: "system", threadId: thread.id, parts: [] },
+          {
+            id: messageId,
+            role: "user",
+            threadId: thread.id,
+            parts: message.parts,
+            parentId,
+          },
+        ]),
       ]);
 
       const stub = c.env.SANDBOX_DO.get(c.env.SANDBOX_DO.idFromName(branch.id));
@@ -264,11 +271,7 @@ export const reposRouter = new Hono<{
         json: {
           branchId: branch.id,
           userId: user.id,
-          message: {
-            id: randomUUID(),
-            parts: message.parts,
-            parentId: parent.id,
-          },
+          message: { id: messageId, parts: message.parts, parentId },
         },
       });
 

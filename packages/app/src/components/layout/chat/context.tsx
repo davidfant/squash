@@ -23,6 +23,7 @@ export const ChatProvider = ({
 } & UseChatOptions<ChatMessage>) => {
   const chat = useChat<ChatMessage>({
     messages: initialMessages,
+    resume: true,
     transport: new DefaultChatTransport({
       api: endpoint,
       credentials: "include",
@@ -32,6 +33,7 @@ export const ChatProvider = ({
         const message = { id: l.id, parts: l.parts, parentId };
         return { body: { message } };
       },
+      prepareReconnectToStreamRequest: () => ({ api: `${endpoint}/stream` }),
     }),
     generateId: uuid,
     ...options,

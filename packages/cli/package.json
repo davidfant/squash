@@ -1,6 +1,6 @@
 {
   "name": "@squashai/cli",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "bin": {
     "squash": "./bin/squash.js"
   },
@@ -11,7 +11,8 @@
   "scripts": {
     "build": "tsc && chmod +x bin/squash.js",
     "dev": "tsc --watch --preserveWatchOutput",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "push": "npm publish || echo 'Already published, skipping'"
   },
   "dependencies": {
     "@anthropic-ai/claude-code": "^1.0.110",

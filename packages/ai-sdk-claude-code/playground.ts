@@ -1,6 +1,4 @@
-import { type SDKMessage } from "@anthropic-ai/claude-code";
-import { streamText } from "ai";
-import { ClaudeCodeLanguageModel, tools } from "./src";
+import { query, type SDKMessage } from "@anthropic-ai/claude-code";
 
 const msgs: SDKMessage[] = [
   {
@@ -406,37 +404,51 @@ const msgs: SDKMessage[] = [
 ];
 
 const cwd = "/Users/fant/repos/lp/lp/packages/replicator/playground";
-const stream = streamText({
-  model: new ClaudeCodeLanguageModel(cwd),
-  prompt: [
-    {
-      role: "user",
-      content: [
-        { type: "text", text: "what is in the image" },
+// const stream = streamText({
+//   model: new ClaudeCodeLanguageModel(cwd),
+//   prompt: [
+//     {
+//       role: "user",
+//       content: [
+//         { type: "text", text: "what is in the image" },
+//         {
+//           type: "image",
+//           image:
+//             "https://upload.wikimedia.org/wikipedia/commons/a/a7/Camponotus_flavomarginatus_ant.jpg",
+//         },
+//       ],
+//     },
+//   ],
+//   tools,
+// });
+
+// for await (const chunk of stream.toUIMessageStream()) {
+//   console.log(chunk);
+// }
+
+for await (const msg of query({
+  prompt: "who are you?",
+  options: {
+    cwd,
+    executable: "node",
+    includePartialMessages: true,
+    permissionMode: "acceptEdits",
+    hooks: {
+      UserPromptSubmit: [
         {
-          type: "image",
-          image:
-            "https://upload.wikimedia.org/wikipedia/commons/a/a7/Camponotus_flavomarginatus_ant.jpg",
+          hooks: [
+            async ({ cwd }) => {
+              process.exit(0);
+              // throw new Error("test");
+              console.log("hook", cwd);
+              return { async: true };
+            },
+          ],
         },
       ],
     },
-  ],
-  tools,
-});
-
-for await (const chunk of stream.toUIMessageStream()) {
-  console.log(chunk);
+  },
+})) {
+  console.dir(msg, { depth: null });
+  console.log("---");
 }
-
-// for await (const msg of query({
-//   prompt: "Give me the package name",
-//   options: {
-//     cwd: "/Users/fant/repos/lp/lp/packages/replicator/playground",
-//     executable: "node",
-//     includePartialMessages: true,
-//     permissionMode: "acceptEdits",
-//   },
-// })) {
-//   console.dir(msg, { depth: null });
-//   console.log("---");
-// }

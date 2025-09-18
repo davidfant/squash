@@ -12,7 +12,7 @@ export function GitCommitCard({ title, sha }: { title: string; sha: string }) {
     <Card
       className={cn(
         "py-2 transition-background",
-        isCurrent && "bg-blue-50 border-blue-500"
+        isCurrent && "bg-blue-500/10 border-blue-500"
       )}
     >
       <CardContent className="flex items-center gap-2">

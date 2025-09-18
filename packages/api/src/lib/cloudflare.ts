@@ -1,6 +1,5 @@
 import { AwsClient } from "aws4fetch";
 import { randomUUID } from "crypto";
-import path from "path";
 
 export async function createSignedUrl(
   filename: string,
@@ -12,8 +11,8 @@ export async function createSignedUrl(
   }
 ) {
   const uuid = randomUUID();
-  const publicUrl = path.join(opts.bucketUrl, uuid, filename);
-  const urlToSign = path.join(opts.endpointUrl, uuid, filename);
+  const publicUrl = `${opts.bucketUrl}/${uuid}/${filename}`;
+  const urlToSign = `${opts.endpointUrl}/${uuid}/${filename}`;
   const url = new URL(urlToSign);
 
   const EXPIRES = 60 * 15; // 15 minutes

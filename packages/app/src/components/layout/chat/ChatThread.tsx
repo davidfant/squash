@@ -7,6 +7,7 @@ import {
   type ChatInputValue,
 } from "@/components/layout/chat/input/ChatInput";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { useBranchContext } from "@/routes/branches/context";
 import type { ChatMessage } from "@squashai/api/agent/types";
 import type { FileUIPart } from "ai";
@@ -131,44 +132,19 @@ export function ChatThread({
     if (lastSha) setPreview(lastSha.data.sha);
   };
 
-  // Extract todos from the most recent todoWrite tool output
-  const currentTodos = useMemo(() => {
-    // Don't show todos when a new message has been submitted
-    if (status === "submitted") {
-      return [];
-    }
-
-    // Find the most recent todoWrite tool output by traversing messages in reverse
-    for (let i = messages.activePath.length - 1; i >= 0; i--) {
-      const message = messages.activePath[i];
-      if (message && message.role === "assistant") {
-        // Traverse parts in reverse order within each message to find the most recent
-        for (let j = message.parts.length - 1; j >= 0; j--) {
-          const part = message.parts[j];
-          if (
-            part &&
-            part.type === "tool-todoWrite" &&
-            "state" in part &&
-            part.state === "output-available" &&
-            "output" in part &&
-            part.output?.todos
-          ) {
-            console.log(
-              "Found todos in message",
-              i,
-              "part",
-              j,
-              ":",
-              part.output.todos
-            );
-            return part.output.todos;
-          }
-        }
-      }
-    }
-    console.log("No todos found in messages");
-    return [];
-  }, [messages.activePath, status]);
+  const todos = useMemo(
+    () =>
+      messages.activePath
+        .flatMap((p) => p.parts)
+        .filter((p) => p.type === "tool-ClaudeCodeTodoWrite")
+        .findLast((p) => p.state === "output-available")
+        ?.input.todos.map((t, index) => ({
+          id: index.toString(),
+          content: t.status === "in_progress" ? t.activeForm : t.content,
+          status: t.status,
+        })),
+    [messages.activePath]
+  );
 
   return (
     <StickToBottom
@@ -178,7 +154,7 @@ export function ChatThread({
       resize="smooth"
     >
       <div className="flex-1 w-full overflow-hidden">
-        <ConversationContent className="p-2 pr-4">
+        <ConversationContent className="pt-0 pl-2 pb-2 pr-4">
           {messages.activePath.map((m) => {
             switch (m.role) {
               case "user":
@@ -256,9 +232,19 @@ export function ChatThread({
         </ConversationContent>
         <ConversationScrollButton />
       </div>
-      <TodoList todos={currentTodos} />
 
       <div className="p-2 pt-0">
+        {!!todos?.length && (
+          // margin-inline: 12px;
+          // margin-bottom: 0;
+          // border-bottom-right-radius: 0;
+          // border-bottom-left-radius: 0;
+          // border-bottom: none;
+          // background: unset;
+          <Card className="mb-2 p-2">
+            <TodoList todos={todos} />
+          </Card>
+        )}
         <ChatInputWithScrollToBottom
           parentId={messages.activePath[messages.activePath.length - 1]?.id!}
           initialValue={initialValue}

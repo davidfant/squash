@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useBranchContext } from "@/routes/branches/context";
 import { BadgeCheck, RotateCw } from "lucide-react";
 
-export function GitCommitCard({ title, sha }: { title: string; sha: string }) {
+export function GitCommitAlert({ title, sha }: { title: string; sha: string }) {
   const { preview, setPreview } = useBranchContext();
   const isCurrent = preview?.sha === sha;
 

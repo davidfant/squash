@@ -5,7 +5,7 @@ import { CircleSlash } from "lucide-react";
 import { useMemo } from "react";
 import { Markdown } from "../../../Markdown";
 import { EventsCollapsible } from "./EventsCollapsible";
-import { GitCommitCard } from "./GitCommitCard";
+import { GitCommitAlert } from "./GitCommitCard";
 import { groupMessageEvents } from "./groupMessageEvents";
 
 export function MessageParts({ parts }: { parts: ChatMessage["parts"] }) {
@@ -30,7 +30,7 @@ export function MessageParts({ parts }: { parts: ChatMessage["parts"] }) {
             );
           case "commit":
             return (
-              <GitCommitCard key={idx} title={block.title} sha={block.sha} />
+              <GitCommitAlert key={idx} title={block.title} sha={block.sha} />
             );
           case "events":
             return (

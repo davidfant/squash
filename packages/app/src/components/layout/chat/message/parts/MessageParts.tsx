@@ -5,7 +5,7 @@ import { CircleSlash } from "lucide-react";
 import { useMemo } from "react";
 import { Markdown } from "../../../Markdown";
 import { EventsCollapsible } from "./EventsCollapsible";
-import { GitCommitAlert } from "./GitCommitCard";
+import { GitCommitAlert } from "./GitCommitAlert";
 import { groupMessageEvents } from "./groupMessageEvents";
 
 export function MessageParts({ parts }: { parts: ChatMessage["parts"] }) {

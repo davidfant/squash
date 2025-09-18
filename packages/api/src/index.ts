@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { requestId } from "hono/request-id";
+import { OpenAI } from "openai";
 import z from "zod";
 import { authMiddleware } from "./auth/middleware";
 import { databaseMiddleware } from "./database/middleware";
@@ -38,20 +39,20 @@ const app = new Hono<{ Bindings: CloudflareBindings }>()
       });
       return c.json(res);
     }
-  );
-// .post("/transcribe", async (c) => {
-//   const formData = await c.req.raw.formData();
-//   const file = formData.get("file");
-//   if (!(file instanceof File)) return c.json({ error: "Missing file" }, 400);
+  )
+  .post("/transcribe", async (c) => {
+    const formData = await c.req.raw.formData();
+    const file = formData.get("file");
+    if (!(file instanceof File)) return c.json({ error: "Missing file" }, 400);
 
-//   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
-//   const result = await openai.audio.transcriptions.create({
-//     file,
-//     model: "gpt-4o-transcribe",
-//   });
+    const openai = new OpenAI({ apiKey: c.env.OPENAI_API_KEY });
+    const result = await openai.audio.transcriptions.create({
+      file,
+      model: "gpt-4o-transcribe",
+    });
 
-//   return c.text(result.text);
-// });
+    return c.text(result.text);
+  });
 
 export default app;
 export type AppType = typeof app;

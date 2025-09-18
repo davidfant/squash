@@ -20,7 +20,16 @@ openssl rsa -in private.dev.pem -pubout -out public.dev.pem
 
 # TODO
 
-- [x] claude CLI => TS file for running claude (helps w escaping text)
-- [ ] Pause execution
-- [ ] Git commit
-- [ ] allow screenshot inputs
+- [ ] Send a message while agent is running
+- [ ] Hooks for tsc
+- [ ] Google OAuth
+- [ ] Base repo
+- [ ] UI for when machine is starting/status
+- [ ] Error handling to avoid white screen of death
+- [ ] Publish
+- [x] Resume conversation/have chat stream once w DO
+- [x] Show todo list at the bottom
+- [ ] AI gateway for caching/org lvl $ tracking
+- [ ] create new chat
+- [ ] point and click chat
+- [ ] Password protected preview urls

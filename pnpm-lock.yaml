@@ -120,7 +120,7 @@ importers:
         version: 9.0.2
       langsmith:
         specifier: ^0.3.53
-        version: 0.3.66(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.203.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.0.1(@opentelemetry/api@1.9.0))
+        version: 0.3.66(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.203.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.0.1(@opentelemetry/api@1.9.0))(openai@5.21.0(ws@8.18.3)(zod@4.1.8))
       lodash.camelcase:
         specifier: ^4.3.0
         version: 4.3.0
@@ -133,6 +133,9 @@ importers:
       nanotar:
         specifier: ^0.2.0
         version: 0.2.0
+      openai:
+        specifier: ^5.21.0
+        version: 5.21.0(ws@8.18.3)(zod@4.1.8)
       zod:
         specifier: ^4.0.16
         version: 4.1.8
@@ -542,7 +545,7 @@ importers:
         version: 10.3.0
       langsmith:
         specifier: ^0.3.66
-        version: 0.3.66(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.203.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.0.1(@opentelemetry/api@1.9.0))
+        version: 0.3.66(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.203.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.0.1(@opentelemetry/api@1.9.0))(openai@5.21.0(ws@8.18.3)(zod@4.1.8))
       nanotar:
         specifier: ^0.2.0
         version: 0.2.0
@@ -4596,6 +4599,18 @@ packages:
 
   one-time@1.0.0:
     resolution: {integrity: sha512-5DXOiRKwuSEcQ/l0kGCF6Q3jcADFv5tSmRaJck/OqkVFcOzutB134KRSfF0xDrL39MNnqxbHBbUUcjZIhTgb2g==}
+
+  openai@5.21.0:
+    resolution: {integrity: sha512-E9LuV51vgvwbahPJaZu2x4V6SWMq9g3X6Bj2/wnFiNfV7lmAxYVxPxcQNZqCWbAVMaEoers9HzIxpOp6Vvgn8w==}
+    hasBin: true
+    peerDependencies:
+      ws: ^8.18.0
+      zod: ^3.23.8
+    peerDependenciesMeta:
+      ws:
+        optional: true
+      zod:
+        optional: true
 
   outdent@0.5.0:
     resolution: {integrity: sha512-/jHxFIzoMXdqPzTaCpFzAAWhpkSjZPF4Vsn6jAfNpmbH/ymsmd7Qc6VE9BGn0L6YMj6uwpQLxCECpus4ukKS9Q==}
@@ -9748,7 +9763,7 @@ snapshots:
 
   kysely@0.28.5: {}
 
-  langsmith@0.3.66(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.203.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.0.1(@opentelemetry/api@1.9.0)):
+  langsmith@0.3.66(@opentelemetry/api@1.9.0)(@opentelemetry/exporter-trace-otlp-proto@0.203.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@2.0.1(@opentelemetry/api@1.9.0))(openai@5.21.0(ws@8.18.3)(zod@4.1.8)):
     dependencies:
       '@types/uuid': 10.0.0
       chalk: 4.1.2
@@ -9761,6 +9776,7 @@ snapshots:
       '@opentelemetry/api': 1.9.0
       '@opentelemetry/exporter-trace-otlp-proto': 0.203.0(@opentelemetry/api@1.9.0)
       '@opentelemetry/sdk-trace-base': 2.0.1(@opentelemetry/api@1.9.0)
+      openai: 5.21.0(ws@8.18.3)(zod@4.1.8)
 
   lightningcss-darwin-arm64@1.30.1:
     optional: true
@@ -10196,6 +10212,11 @@ snapshots:
   one-time@1.0.0:
     dependencies:
       fn.name: 1.1.0
+
+  openai@5.21.0(ws@8.18.3)(zod@4.1.8):
+    optionalDependencies:
+      ws: 8.18.3
+      zod: 4.1.8
 
   outdent@0.5.0: {}
 

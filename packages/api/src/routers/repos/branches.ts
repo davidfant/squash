@@ -120,7 +120,7 @@ export const repoBranchesRouter = new Hono<{
     }
   )
   .post(
-    "/:branchId/abort",
+    "/:branchId/messages/abort",
     zValidator("param", z.object({ branchId: z.uuid() })),
     zValidator("json", z.object({ messageId: z.uuid().optional() })),
     requireAuth,

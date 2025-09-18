@@ -23,6 +23,12 @@ import { zUserMessagePart } from "@/routers/schemas";
 import type { DurableObjectState } from "@cloudflare/workers-types";
 import { zValidator } from "@hono/zod-validator";
 import { createAppAuth } from "@octokit/auth-app";
+import {
+  createUIMessageStream,
+  createUIMessageStreamResponse,
+  type UIMessageStreamOptions,
+} from "ai";
+import { randomUUID } from "crypto";
 import { eq } from "drizzle-orm";
 import type { Context } from "hono";
 import { Hono } from "hono";
@@ -80,7 +86,10 @@ interface ActiveRunContext {
 interface AgentAppHandlers {
   stream(c: Context, body: StreamRequestBody): Promise<Response>;
   listen(c: Context): Promise<Response>;
-  preview(body: PreviewRequestBody): Promise<{
+  preview(
+    c: Context,
+    body: PreviewRequestBody
+  ): Promise<{
     url: string;
     sha: string;
   }>;
@@ -94,7 +103,7 @@ const createAgentApp = (handlers: AgentAppHandlers) =>
     )
     .post("/listen", (c) => handlers.listen(c))
     .post("/preview", zValidator("json", PreviewRequestBodySchema), async (c) =>
-      c.json(await handlers.preview(c.req.valid("json")))
+      c.json(await handlers.preview(c, c.req.valid("json")))
     )
     .post("/abort", zValidator("json", AbortRequestBodySchema), (c) =>
       handlers.abort(c, c.req.valid("json"))
@@ -138,17 +147,19 @@ export class SandboxDurableObject implements AgentAppHandlers {
   }
 
   public async preview(
+    c: Context,
     body: PreviewRequestBody
   ): Promise<{ url: string; sha: string }> {
     const sandbox = await this.state.blockConcurrencyWhile(() =>
       this.getOrCreateSandbox(body.branchId)
     );
 
-    await waitForMachineHealthy(
-      sandbox.appId,
-      sandbox.machineId,
-      this.env.FLY_ACCESS_TOKEN
-    );
+    await waitForMachineHealthy({
+      appId: sandbox.appId,
+      machineId: sandbox.machineId,
+      accessToken: this.env.FLY_ACCESS_TOKEN,
+      abortSignal: c.req.raw.signal,
+    });
 
     const context = { ...sandbox, accessToken: this.env.FLY_ACCESS_TOKEN };
     if (body.sha) {
@@ -246,20 +257,26 @@ export class SandboxDurableObject implements AgentAppHandlers {
       accessToken: this.env.FLY_ACCESS_TOKEN,
     };
 
+    const messageMetadata: UIMessageStreamOptions<ChatMessage>["messageMetadata"] =
+      (opts) => {
+        if (opts.part.type === "start") {
+          const createdAt = new Date().toISOString();
+          return { createdAt, parentId: nextParentId };
+        }
+        if (opts.part.type === "finish-step") {
+          usage.push({
+            ...opts.part.usage,
+            modelId: opts.part.response.modelId,
+          });
+        }
+        return undefined;
+      };
+
     await traceable(
-      async (body: StreamRequestBody, messages: ChatMessage[]) => {
-        await waitForMachineHealthy(
-          sandbox.appId,
-          sandbox.machineId,
-          this.env.FLY_ACCESS_TOKEN
-        );
-
-        await checkoutLatestCommit(messages, context, db);
-
-        const response = await streamClaudeCodeAgent(messages, context, {
-          env: this.env,
-          threadId,
-          abortSignal: abortController.signal,
+      (body: StreamRequestBody, messages: ChatMessage[]) => {
+        const stream = createUIMessageStream<ChatMessage>({
+          originalMessages: messages, // just needed for id generation
+          generateId: randomUUID,
           onFinish: async ({ responseMessage }) => {
             await db.insert(schema.message).values({
               id: responseMessage.id,
@@ -270,26 +287,49 @@ export class SandboxDurableObject implements AgentAppHandlers {
               parentId: nextParentId,
             });
           },
-          messageMetadata: (opts) => {
-            if (opts.part.type === "start") {
-              const createdAt = new Date().toISOString();
-              return { createdAt, parentId: nextParentId };
-            }
-            if (opts.part.type === "finish-step") {
-              usage.push({
-                ...opts.part.usage,
-                modelId: opts.part.response.modelId,
-              });
-            }
-            return undefined;
+          execute: async ({ writer }) => {
+            writer.write({
+              type: "start",
+              messageMetadata: messageMetadata({ part: { type: "start" } }),
+            });
+
+            await waitForMachineHealthy({
+              appId: sandbox.appId,
+              machineId: sandbox.machineId,
+              accessToken: this.env.FLY_ACCESS_TOKEN,
+              abortSignal: abortController.signal,
+              onCheck: (status, checks) =>
+                writer.write({
+                  type: "data-Sandbox",
+                  data: {
+                    status: (() => {
+                      if (status === "started") return "running";
+                      if (status === "starting") return "starting";
+                      return "pending";
+                    })(),
+                    checks: checks.map((c) => ({
+                      name: c.name,
+                      ok: c.status === "passing",
+                    })),
+                  },
+                }),
+            });
+
+            await checkoutLatestCommit(messages, context, db);
+            await streamClaudeCodeAgent(writer, messages, context, {
+              env: this.env,
+              threadId,
+              abortSignal: abortController.signal,
+              messageMetadata,
+            });
+            writer.write({ type: "finish" });
           },
         });
 
+        const response = createUIMessageStreamResponse({ stream });
         const headers = new Headers(response.headers);
         const reader = response.body?.getReader();
-        if (!reader) {
-          throw new Error("Agent response missing body reader");
-        }
+        if (!reader) throw new Error("Agent response missing body reader");
 
         this.run = {
           messageId: body.message.id,

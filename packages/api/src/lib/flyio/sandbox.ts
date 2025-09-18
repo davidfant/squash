@@ -10,10 +10,17 @@ interface FlyMachineCheck {
   updated_at?: string;
 }
 
+type FlyMachineStatus =
+  | "created"
+  | "started"
+  | "stopped"
+  | "suspended"
+  | string;
+
 interface FlyMachine {
   id: string;
   name: string;
-  state: "created" | "stopped" | "suspended" | string;
+  state: FlyMachineStatus;
   region: string;
   instance_id: string;
   checks: FlyMachineCheck[];
@@ -207,13 +214,23 @@ function isHealthy(machine: FlyMachine): boolean {
   return running && checksPassing;
 }
 
-export const waitForMachineHealthy = (
-  appId: string,
-  machineId: string,
-  apiKey: string,
+export const waitForMachineHealthy = ({
+  appId,
+  machineId,
+  accessToken,
+  abortSignal,
   timeoutMs = 5 * 60_000,
-  pollMs = 2_000
-) =>
+  pollMs = 2_000,
+  onCheck,
+}: {
+  appId: string;
+  machineId: string;
+  accessToken: string;
+  abortSignal: AbortSignal;
+  timeoutMs?: number;
+  pollMs?: number;
+  onCheck?: (status: FlyMachineStatus, checks: FlyMachineCheck[]) => void;
+}) =>
   traceable(
     async (_: { appId: string; machineId: string }) => {
       logger.info("Waiting for machine to become healthy", {
@@ -225,12 +242,13 @@ export const waitForMachineHealthy = (
         () =>
           flyFetchJson<FlyMachine>(
             `/apps/${appId}/machines/${machineId}`,
-            apiKey
+            accessToken
           ),
         { name: "Get machine details" }
       );
 
       const machine = await getDetails();
+      onCheck?.(machine.state, machine.checks);
       if (isHealthy(machine)) return machine;
 
       if (["stopped", "suspended"].includes(machine.state)) {
@@ -240,22 +258,30 @@ export const waitForMachineHealthy = (
         });
         await traceable(
           () =>
-            flyFetchJson(`/apps/${appId}/machines/${machineId}/start`, apiKey, {
-              method: "POST",
-            }),
+            flyFetchJson(
+              `/apps/${appId}/machines/${machineId}/start`,
+              accessToken,
+              { method: "POST" }
+            ),
           { name: "Start machine" }
         )();
       }
 
       const startTime = Date.now();
-      while (true) {
+      while (!abortSignal?.aborted) {
         let machine: FlyMachine | undefined;
         try {
-          logger.debug("Checking machine health", { appId, machineId });
           machine = await getDetails();
+          logger.debug("Checking machine health", {
+            appId,
+            machineId,
+            state: machine.state,
+            checks: machine.checks,
+          });
+          onCheck?.(machine.state, machine.checks);
           if (isHealthy(machine)) return machine;
         } catch (e) {
-          console.warn(
+          logger.warn(
             `Failed to fetch machine ${appId}/${machineId} after start: ${
               (e as Error).message
             }`

@@ -10,6 +10,11 @@ export type AllTools = ClaudeCodeTools &
 export type ChatMessageData = {
   GitSha: { sha: string; title: string; description: string };
   AgentSession: { type: "claude-code"; data: unknown };
+  Sandbox: {
+    status: "pending" | "starting" | "running";
+    checks: Array<{ name: string; ok: boolean }>;
+  };
+  StreamAbort: {};
 };
 export interface ChatMessageMetadata {
   createdAt: string;

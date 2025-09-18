@@ -56,6 +56,7 @@
     "zod": "^4.0.16"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250918.0",
     "@types/lodash.camelcase": "^4.3.9",
     "@types/lodash.kebabcase": "^4.1.9",
     "@types/lodash.upperfirst": "^4.3.9",

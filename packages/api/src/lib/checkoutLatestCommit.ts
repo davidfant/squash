@@ -2,12 +2,11 @@ import type { Database } from "@/database";
 import * as schema from "@/database/schema";
 import * as FlyioExec from "@/lib/flyio/exec";
 import { eq } from "drizzle-orm";
-import type { AgentRuntimeContext } from "../agent/custom/types";
 import { logger } from "./logger";
 
 export async function checkoutLatestCommit(
   messages: Pick<schema.Message, "id" | "role" | "parts">[],
-  runtimeContext: AgentRuntimeContext,
+  sandbox: FlyioExec.FlyioExecSandboxContext,
   db: Database
 ) {
   const latestSha = await messages
@@ -15,11 +14,11 @@ export async function checkoutLatestCommit(
     .findLast((p) => p.type === "data-GitSha");
   if (latestSha) {
     logger.info("Checking out latest commit", { sha: latestSha.data.sha });
-    await FlyioExec.gitReset(runtimeContext.sandbox, latestSha.data.sha);
+    await FlyioExec.gitReset(sandbox, latestSha.data.sha);
   } else {
     const rootMessage = messages.find((m) => m.role === "system");
     if (!rootMessage) throw new Error("Root message not found");
-    const currentSha = await FlyioExec.gitCurrentCommit(runtimeContext.sandbox);
+    const currentSha = await FlyioExec.gitCurrentCommit(sandbox);
 
     const title = "Starting point";
     const description =

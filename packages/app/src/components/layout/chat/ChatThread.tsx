@@ -12,7 +12,7 @@ import { useBranchContext } from "@/routes/branches/context";
 import type { ChatMessage } from "@squashai/api/agent/types";
 import type { FileUIPart } from "ai";
 import { AlertCircle } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import { v4 as uuid } from "uuid";
 import { useChatContext } from "./context";
@@ -65,16 +65,7 @@ export function ChatThread({
   const messages = useMessageLineage(allMessages, id);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
 
-  // Get the ID of the most recent message
-  const mostRecentMessageId =
-    messages.activePath[messages.activePath.length - 1]?.id;
-
-  useEffect(() => {
-    const last = messages.activePath[messages.activePath.length - 1];
-    if (last?.role === "user" && !!last.parts.length) {
-      sendMessage(undefined);
-    }
-  }, [!!messages.activePath.length]);
+  const mostRecentMessageId = messages.activePath.slice(-1)[0]?.id;
 
   const handleRetry = (assistantId: string, editedMessage?: ChatMessage) => {
     if (status === "submitted" || status === "streaming") return;

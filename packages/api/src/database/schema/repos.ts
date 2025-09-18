@@ -58,7 +58,7 @@ export const repoBranch = pgTable(
     id: uuid().primaryKey().defaultRandom(),
     title: text().notNull(),
     name: text().notNull(),
-    sandbox: json("sandbox").$type<RepoBranchSandbox>().notNull(),
+    sandbox: json("sandbox").$type<RepoBranchSandbox>(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
     deletedAt: timestamp("deleted_at"),

@@ -7,7 +7,6 @@ import z from "zod";
 import { authMiddleware } from "./auth/middleware";
 import { databaseMiddleware } from "./database/middleware";
 import { createSignedUrl } from "./lib/cloudflare";
-import { chatRouter } from "./routers/chat";
 import { githubRouter } from "./routers/integrations/github";
 import { replicatorRouter } from "./routers/replicator";
 import { reposRouter } from "./routers/repos";
@@ -21,7 +20,6 @@ const app = new Hono<{ Bindings: CloudflareBindings }>()
   .use(databaseMiddleware)
   .use(authMiddleware)
   .on(["GET", "POST"], "/auth/*", (c) => c.get("auth").handler(c.req.raw))
-  .route("/chat", chatRouter)
   .route("/replicator", replicatorRouter)
   .route("/repos/providers", repoProvidersRouter)
   .route("/repos/branches", repoBranchesRouter)
@@ -57,3 +55,5 @@ const app = new Hono<{ Bindings: CloudflareBindings }>()
 
 export default app;
 export type AppType = typeof app;
+
+export { SandboxDurableObject } from "./durable-objects/sandbox";

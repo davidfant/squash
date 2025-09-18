@@ -1,8 +1,4 @@
-import {
-  requireActiveOrganization,
-  requireAuth,
-  type User,
-} from "@/auth/middleware";
+import { type User } from "@/auth/middleware";
 import type { Database } from "@/database";
 import type {
   RepoBranchSandbox,
@@ -158,7 +154,7 @@ export const requireRepoBranch = createMiddleware<
       branch: {
         id: string;
         name: string;
-        sandbox: RepoBranchSandbox;
+        sandbox: RepoBranchSandbox | null;
         createdAt: Date;
         updatedAt: Date;
         createdBy: { id: string; name: string; image: string | null };

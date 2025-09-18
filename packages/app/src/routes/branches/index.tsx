@@ -21,14 +21,19 @@ function Component({ branchId }: { branchId: string }) {
   const [isHistoryEnabled, setIsHistoryEnabled] = useState(false);
 
   const session = authClient.useSession();
-  const threadMessages = useQuery(api.chat.branches[":branchId"].$get, {
-    params: { branchId },
-    enabled: !!session.data?.user,
-  });
+  const threadMessages = useQuery(
+    api.repos.branches[":branchId"].messages.$get,
+    {
+      params: { branchId },
+      enabled: !!session.data?.user,
+    }
+  );
 
   return (
     <ChatProvider
-      endpoint={`${import.meta.env.VITE_API_URL}/chat/branches/${branchId}`}
+      endpoint={`${
+        import.meta.env.VITE_API_URL
+      }/repos/branches/${branchId}/messages`}
       initialMessages={threadMessages.data as ChatMessage[]}
       onFinish={(step) => {
         const latestSha = step.messages

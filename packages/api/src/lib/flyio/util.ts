@@ -16,7 +16,7 @@ export async function flyFetch(
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new FlyAPIError(
-      `Request failed with status ${res.status} ${res.statusText}: ${text}`
+      `Request to ${path} failed with status ${res.status} ${res.statusText}: ${text}`
     );
   }
   return res;

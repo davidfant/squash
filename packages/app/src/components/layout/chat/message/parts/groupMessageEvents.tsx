@@ -9,12 +9,16 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import type { Todo } from "../TodoList";
-import { FileBadge } from "./FileBadge";
+import type { Todo } from "../../TodoList";
+import { FileBadge } from "../FileBadge";
 
 interface TextBlock {
   type: "text";
   content: string;
+}
+
+interface AbortBlock {
+  type: "abort";
 }
 
 interface GitCommitBlock {
@@ -34,9 +38,9 @@ interface EventBlock {
   streaming: boolean;
 }
 
-type Block = TextBlock | GitCommitBlock | EventBlock;
+type Block = TextBlock | AbortBlock | GitCommitBlock | EventBlock;
 
-export function messagePartsToEvents(parts: ChatMessage["parts"]): Block[] {
+export function groupMessageEvents(parts: ChatMessage["parts"]): Block[] {
   const blocks: Block[] = [];
   let currentEvents: EventBlockItem[] = [];
   let todos: Todo[] = [];
@@ -169,6 +173,11 @@ export function messagePartsToEvents(parts: ChatMessage["parts"]): Block[] {
           });
           break;
         }
+      }
+      case "data-AbortRequest": {
+        flushEvents();
+        blocks.push({ type: "abort" });
+        break;
       }
       default: {
         if (part.type.startsWith("tool-")) {

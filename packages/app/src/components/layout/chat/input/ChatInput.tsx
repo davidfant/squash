@@ -10,6 +10,7 @@ import {
   ChatInputDictateButton,
   ChatInputDictateCancelButton,
   ChatInputDictateStopButton,
+  ChatInputStopButton,
   ChatInputSubmitButton,
 } from "./buttons";
 import { DictationOverlay } from "./DictationOverlay";
@@ -30,6 +31,7 @@ export function ChatInput({
   disabled,
   Textarea: TextareaComponent = Textarea,
   repoPicker,
+  onStop,
   onSubmit,
 }: {
   initialValue?: ChatInputValue;
@@ -41,6 +43,7 @@ export function ChatInput({
   disabled?: boolean;
   Textarea?: typeof Textarea;
   repoPicker?: React.ReactNode;
+  onStop?(): void;
   onSubmit(value: ChatInputValue): unknown;
 }) {
   const [value, setValue] = useState(initialValue?.text ?? "");
@@ -64,6 +67,41 @@ export function ChatInput({
       uploads.set(uploads.files);
     }
   };
+
+  const buttons = (() => {
+    if (dictation.status !== "idle") {
+      return (
+        <>
+          <ChatInputDictateCancelButton
+            disabled={submitting}
+            onClick={dictation.cancel}
+          />
+          <ChatInputDictateStopButton
+            disabled={submitting}
+            loading={dictation.status === "transcribing"}
+            onClick={dictation.stop}
+          />
+        </>
+      );
+    }
+    if (submitting && onStop) {
+      return <ChatInputStopButton onClick={onStop} />;
+    }
+
+    return (
+      <>
+        <ChatInputDictateButton
+          disabled={submitting}
+          onClick={dictation.start}
+        />
+        <ChatInputSubmitButton
+          disabled={submitting || uploads.isUploading || !value || !!disabled}
+          loading={submitting || uploads.isUploading}
+          onClick={handleSubmit}
+        />
+      </>
+    );
+  })();
 
   return (
     <Card className="p-2 transition-all border border-input focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-4">
@@ -116,33 +154,7 @@ export function ChatInput({
           />
           {repoPicker}
           <div className="flex-1" />
-          {dictation.status === "idle" ? (
-            <>
-              <ChatInputDictateButton
-                disabled={submitting}
-                onClick={dictation.start}
-              />
-              <ChatInputSubmitButton
-                disabled={
-                  submitting || uploads.isUploading || !value || !!disabled
-                }
-                loading={submitting || uploads.isUploading}
-                onClick={handleSubmit}
-              />
-            </>
-          ) : (
-            <>
-              <ChatInputDictateCancelButton
-                disabled={submitting}
-                onClick={dictation.cancel}
-              />
-              <ChatInputDictateStopButton
-                disabled={submitting}
-                loading={dictation.status === "transcribing"}
-                onClick={dictation.stop}
-              />
-            </>
-          )}
+          {buttons}
         </div>
       </CardContent>
     </Card>

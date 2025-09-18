@@ -8,6 +8,7 @@ import {
 } from "@/components/layout/chat/input/ChatInput";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { api, useMutation } from "@/hooks/api";
 import { useBranchContext } from "@/routes/branches/context";
 import type { ChatMessage } from "@squashai/api/agent/types";
 import type { FileUIPart } from "ai";
@@ -25,10 +26,12 @@ function ChatInputWithScrollToBottom({
   parentId,
   initialValue,
   ready,
+  onStop,
 }: {
   parentId: string;
   initialValue: ChatInputValue | undefined;
   ready: boolean;
+  onStop: () => Promise<unknown>;
 }) {
   const { status, sendMessage } = useChatContext();
   const { scrollToBottom } = useStickToBottomContext();
@@ -40,6 +43,7 @@ function ChatInputWithScrollToBottom({
       placeholder="Type a message..."
       submitting={status === "submitted" || status === "streaming"}
       maxRows={10}
+      onStop={onStop}
       onSubmit={(value) => {
         sendMessage({
           ...value,
@@ -114,6 +118,10 @@ export function ChatThread({
     // Clear editing state
     setEditingMessageId(null);
   };
+
+  const stop = useMutation(
+    api.repos.branches[":branchId"].messages.abort.$post
+  );
 
   const handleVariantChange = (parentId: string, chosenChildId: string) => {
     const newActivePath = messages.switchVariant(parentId, chosenChildId);
@@ -240,6 +248,7 @@ export function ChatThread({
           parentId={messages.activePath[messages.activePath.length - 1]?.id!}
           initialValue={initialValue}
           ready={ready}
+          onStop={() => stop.mutateAsync({ param: { branchId: id }, json: {} })}
         />
       </div>
     </StickToBottom>

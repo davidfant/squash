@@ -12,6 +12,7 @@ import {
   Loader2,
   Mic,
   Paperclip,
+  Square,
   X,
 } from "lucide-react";
 
@@ -41,6 +42,17 @@ export const ChatInputSubmitButton = ({
         <CornerDownLeft className="size-3" />
       </span>
     </TooltipContent>
+  </Tooltip>
+);
+
+export const ChatInputStopButton = ({ onClick }: { onClick: () => void }) => (
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <Button size="icon" className="rounded-full" onClick={onClick}>
+        <Square fill="currentColor" />
+      </Button>
+    </TooltipTrigger>
+    <TooltipContent>Stop generating</TooltipContent>
   </Tooltip>
 );
 

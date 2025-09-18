@@ -1,15 +1,8 @@
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { usePrevious } from "@/hooks/usePrevious";
-import type { ChatMessage } from "@squashai/api/agent/types";
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useMemo, useState } from "react";
-import { Markdown } from "../../Markdown";
-import { GitCommitCard } from "./GitCommitCard";
-import {
-  messagePartsToEvents,
-  type EventBlockItem,
-} from "./messagePartsToEvents";
+import { useEffect, useState } from "react";
+import { type EventBlockItem } from "./groupMessageEvents";
 
 const Event = ({
   event,
@@ -32,7 +25,7 @@ const Event = ({
   </div>
 );
 
-function EventsCollapsible({
+export function EventsCollapsible({
   events,
   streaming,
 }: {
@@ -102,37 +95,6 @@ function EventsCollapsible({
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
-  );
-}
-
-export function MessageParts({ parts }: { parts: ChatMessage["parts"] }) {
-  const blocks = useMemo(() => messagePartsToEvents(parts), [parts]);
-
-  if (!blocks.length) {
-    return <Skeleton className="h-4 w-48" />;
-  }
-
-  return (
-    <div className="space-y-5">
-      {blocks.map((block, idx) => {
-        switch (block.type) {
-          case "text":
-            return <Markdown key={idx}>{block.content}</Markdown>;
-          case "commit":
-            return (
-              <GitCommitCard key={idx} title={block.title} sha={block.sha} />
-            );
-          case "events":
-            return (
-              <EventsCollapsible
-                key={idx}
-                events={block.events}
-                streaming={block.streaming}
-              />
-            );
-        }
-      })}
     </div>
   );
 }

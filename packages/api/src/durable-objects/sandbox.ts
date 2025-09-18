@@ -1,5 +1,5 @@
 import { streamClaudeCodeAgent } from "@/agent/claudeCode/streamAgent";
-import type { ChatMessage } from "@/agent/types";
+import type { ChatMessage, ChatMessageData } from "@/agent/types";
 import { createDatabase } from "@/database";
 import type { MessageUsage } from "@/database/schema";
 import * as schema from "@/database/schema";
@@ -26,6 +26,7 @@ import { createAppAuth } from "@octokit/auth-app";
 import {
   createUIMessageStream,
   createUIMessageStreamResponse,
+  type DataUIPart,
   type UIMessageStreamOptions,
 } from "ai";
 import { randomUUID } from "crypto";
@@ -34,6 +35,8 @@ import type { Context } from "hono";
 import { Hono } from "hono";
 import { traceable } from "langsmith/traceable";
 import z from "zod";
+
+const textEncoder = new TextEncoder();
 
 const StreamRequestBodySchema = z.object({
   branchId: z.uuid(),
@@ -184,6 +187,10 @@ export class SandboxDurableObject implements AgentAppHandlers {
       this.run.abortController.abort(
         new DOMException("client-stop", "AbortError")
       );
+      this.broadcastPart(this.run, {
+        type: "data-AbortRequest",
+        data: { messageId: this.run.messageId, reason: "client-stop" },
+      });
     }
     return c.json({ status: this.run.status });
   }
@@ -496,6 +503,18 @@ export class SandboxDurableObject implements AgentAppHandlers {
         run.listeners.delete(listenerId);
       },
     });
+  }
+
+  private broadcastPart(
+    run: ActiveRunContext,
+    part: DataUIPart<ChatMessageData>
+  ) {
+    try {
+      const encoded = textEncoder.encode(`data: ${JSON.stringify(part)}\n\n`);
+      this.broadcastChunk(run, encoded);
+    } catch (error) {
+      logger.warn("Failed to encode JSON chunk", { error });
+    }
   }
 
   private broadcastChunk(run: ActiveRunContext, chunk: Uint8Array) {

@@ -30,7 +30,8 @@
   "env": {
     "production": {
       "vars": {
-        "PORT": 3000
+        "PORT": 3000,
+        "DEBUG": "*"
       },
       "durable_objects": {
         "bindings": [{ "name": "FLYIO_SSH_PROXY", "class_name": "Container" }]

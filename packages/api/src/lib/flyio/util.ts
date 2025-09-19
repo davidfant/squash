@@ -1,3 +1,5 @@
+import { logger } from "../logger";
+
 export class FlyAPIError extends Error {}
 
 export async function flyFetch(
@@ -5,16 +7,36 @@ export async function flyFetch(
   accessToken: string,
   init: RequestInit = {}
 ) {
-  const res = await fetch(`https://api.machines.dev/v1${path}`, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-      ...init.headers,
-    },
-  });
+  let res: Response;
+  try {
+    res = await fetch(`https://api.machines.dev/v1${path}`, {
+      ...init,
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+        ...init.headers,
+      },
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : JSON.stringify(error);
+    logger.error("Failed to reach Fly.io API", {
+      path,
+      method: init.method,
+      error: message,
+    });
+    throw new FlyAPIError(`Request to ${path} failed: ${message}`);
+  }
+
   if (!res.ok) {
     const text = await res.text().catch(() => "");
+    logger.error("Fly.io API responded with an error", {
+      path,
+      method: init.method,
+      status: res.status,
+      statusText: res.statusText,
+      body: text,
+    });
     throw new FlyAPIError(
       `Request to ${path} failed with status ${res.status} ${res.statusText}: ${text}`
     );

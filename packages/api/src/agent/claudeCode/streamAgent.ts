@@ -64,15 +64,15 @@ export async function streamClaudeCodeAgent(
         algorithm: "RS256",
       });
       logger.debug("Streaming SSH", {
-        url: opts.env.FLY_SSH_PROXY_URL,
+        url: `${opts.env.FLY_SSH_PROXY_URL}/ssh`,
         payload,
       });
 
       let stdoutBuffer = "";
       const stream = await FlyioSSH.streamSSH({
-        url: opts.env.FLY_SSH_PROXY_URL,
+        url: `${opts.env.FLY_SSH_PROXY_URL}/ssh`,
         token,
-        env: { FLY_ACCESS_TOKEN: opts.env.FLY_ACCESS_TOKEN },
+        env: { FLY_API_TOKEN: opts.env.FLY_ACCESS_TOKEN },
         command: command.join(" "),
         abortSignal: opts.abortSignal,
       });
@@ -107,6 +107,9 @@ export async function streamClaudeCodeAgent(
     }),
     messages: convertToModelMessages(messages),
     tools,
+    onError: ({ error }) => {
+      logger.error("Error in ClaudeCode agent", { error });
+    },
   });
 
   writer.merge(

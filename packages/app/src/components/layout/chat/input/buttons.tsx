@@ -48,7 +48,12 @@ export const ChatInputSubmitButton = ({
 export const ChatInputStopButton = ({ onClick }: { onClick: () => void }) => (
   <Tooltip>
     <TooltipTrigger asChild>
-      <Button size="icon" className="rounded-full" onClick={onClick}>
+      <Button
+        size="icon"
+        className="rounded-full"
+        variant="secondary"
+        onClick={onClick}
+      >
         <Square fill="currentColor" />
       </Button>
     </TooltipTrigger>

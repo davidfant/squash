@@ -19,19 +19,37 @@ export async function* streamSSH(opts: {
 }): AsyncIterableIterator<[AnyProxyEvent]> {
   logger.debug("Connecting to SSH proxy", { url: opts.url });
 
-  const res = await fetch(opts.url, {
-    method: "POST",
-    // duplex: "half",
-    headers: {
-      Accept: "text/event-stream",
-      "Accept-Encoding": "identity",
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${opts.token}`,
-    },
-    body: JSON.stringify({ command: opts.command, env: opts.env }),
-  });
+  let res: Response;
+  try {
+    res = await fetch(opts.url, {
+      method: "POST",
+      headers: {
+        Accept: "text/event-stream",
+        "Accept-Encoding": "identity",
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${opts.token}`,
+      },
+      body: JSON.stringify({ command: opts.command, env: opts.env }),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error("Failed to reach SSH proxy", {
+      url: opts.url,
+      error: message,
+    });
+    throw error;
+  }
 
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    logger.error("SSH proxy responded with an error", {
+      url: opts.url,
+      status: res.status,
+      statusText: res.statusText,
+      body: body.slice(0, 512),
+    });
+    throw new Error(`HTTP ${res.status}`);
+  }
 
   const done = new AbortController();
   yield* toAsyncIterator<[AnyProxyEvent]>(

@@ -115,12 +115,20 @@ const createAgentApp = (handlers: AgentAppHandlers) =>
     .post("/abort", zValidator("json", AbortRequestBodySchema), (c) =>
       handlers.abort(c, c.req.valid("json"))
     )
-    .onError((err, c) => {
+    .onError(async (err, c) => {
       logger.error("Sandbox Durable Object Unhandled Error", {
         requestId: c.get("requestId"),
         route: c.req.path,
+        query: c.req.query(),
+        headers: Object.fromEntries(c.req.raw.headers.entries()),
+        body: await c.req.raw
+          .clone()
+          .text()
+          .catch(() => "Failed to read body"),
         stack: err.stack,
-        msg: err.message,
+        name: err.name,
+        cause: err.cause,
+        message: err.message,
       });
       throw err;
     });

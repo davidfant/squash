@@ -23,10 +23,7 @@ function Component({ branchId }: { branchId: string }) {
   const session = authClient.useSession();
   const threadMessages = useQuery(
     api.repos.branches[":branchId"].messages.$get,
-    {
-      params: { branchId },
-      enabled: !!session.data?.user,
-    }
+    { params: { branchId }, enabled: !!session.data?.user }
   );
 
   return (

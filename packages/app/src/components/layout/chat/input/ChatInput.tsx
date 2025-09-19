@@ -28,7 +28,7 @@ export function ChatInput({
   minRows,
   maxRows,
   placeholder,
-  disabled,
+  disabled = false,
   Textarea: TextareaComponent = Textarea,
   repoPicker,
   onStop,
@@ -73,11 +73,11 @@ export function ChatInput({
       return (
         <>
           <ChatInputDictateCancelButton
-            disabled={submitting}
+            disabled={submitting || disabled}
             onClick={dictation.cancel}
           />
           <ChatInputDictateStopButton
-            disabled={submitting}
+            disabled={submitting || disabled}
             loading={dictation.status === "transcribing"}
             onClick={dictation.stop}
           />
@@ -91,11 +91,11 @@ export function ChatInput({
     return (
       <>
         <ChatInputDictateButton
-          disabled={submitting}
+          disabled={submitting || disabled}
           onClick={dictation.start}
         />
         <ChatInputSubmitButton
-          disabled={submitting || uploads.isUploading || !value || !!disabled}
+          disabled={submitting || uploads.isUploading || !value || disabled}
           loading={submitting || uploads.isUploading}
           onClick={handleSubmit}
         />
@@ -104,7 +104,7 @@ export function ChatInput({
   })();
 
   return (
-    <Card className="p-2 transition-all border border-input focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-4">
+    <Card className="p-2 transition-all shadow-none border border-input focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-4">
       <CardContent className="flex flex-col gap-2 p-0">
         <div className="relative">
           <TextareaComponent
@@ -149,7 +149,7 @@ export function ChatInput({
         )}
         <div className="flex gap-2">
           <ChatInputAttachButton
-            disabled={submitting}
+            disabled={submitting || disabled}
             onClick={uploads.select}
           />
           {repoPicker}

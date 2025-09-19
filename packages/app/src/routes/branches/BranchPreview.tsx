@@ -78,7 +78,7 @@ export function BranchPreview({ className }: { className?: string }) {
 
   return (
     <div className={cn("relative h-full", className)}>
-      <Card className="p-0 h-full overflow-hidden shadow-none">
+      <Card className="p-0 h-full overflow-hidden shadow-none bg-muted">
         {preview ? (
           <iframe
             ref={iframeRef}

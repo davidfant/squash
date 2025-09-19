@@ -1,13 +1,14 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { logger } from "hono/logger";
+import { logger as honoLogger } from "hono/logger";
 import { requestId } from "hono/request-id";
 import { OpenAI } from "openai";
 import z from "zod";
 import { authMiddleware } from "./auth/middleware";
 import { databaseMiddleware } from "./database/middleware";
 import { createSignedUrl } from "./lib/cloudflare";
+import { logger } from "./lib/logger";
 import { githubRouter } from "./routers/integrations/github";
 import { replicatorRouter } from "./routers/replicator";
 import { reposRouter } from "./routers/repos";
@@ -17,7 +18,7 @@ import { repoProvidersRouter } from "./routers/repos/providers";
 const app = new Hono<{ Bindings: CloudflareBindings }>()
   .use("*", cors({ origin: process.env.APP_URL, credentials: true }))
   .use(requestId())
-  .use(logger())
+  .use(honoLogger())
   .use(databaseMiddleware)
   .use(authMiddleware)
   .on(["GET", "POST"], "/auth/*", (c) => c.get("auth").handler(c.req.raw))
@@ -52,6 +53,15 @@ const app = new Hono<{ Bindings: CloudflareBindings }>()
     });
 
     return c.text(result.text);
+  })
+  .onError((err, c) => {
+    logger.error("Hono Unhandled Error", {
+      requestId: c.get("requestId"),
+      route: c.req.path,
+      stack: err.stack,
+      msg: err.message,
+    });
+    throw err;
   });
 
 export default app;

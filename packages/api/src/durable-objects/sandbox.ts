@@ -33,6 +33,8 @@ import { randomUUID } from "crypto";
 import { eq } from "drizzle-orm";
 import type { Context } from "hono";
 import { Hono } from "hono";
+import { logger as honoLogger } from "hono/logger";
+import { requestId } from "hono/request-id";
 import { traceable } from "langsmith/traceable";
 import z from "zod";
 
@@ -101,6 +103,8 @@ interface AgentAppHandlers {
 
 const createAgentApp = (handlers: AgentAppHandlers) =>
   new Hono()
+    .use(requestId())
+    .use(honoLogger())
     .post("/stream", zValidator("json", StreamRequestBodySchema), (c) =>
       handlers.stream(c, c.req.valid("json"))
     )
@@ -110,7 +114,16 @@ const createAgentApp = (handlers: AgentAppHandlers) =>
     )
     .post("/abort", zValidator("json", AbortRequestBodySchema), (c) =>
       handlers.abort(c, c.req.valid("json"))
-    );
+    )
+    .onError((err, c) => {
+      logger.error("Sandbox Durable Object Unhandled Error", {
+        requestId: c.get("requestId"),
+        route: c.req.path,
+        stack: err.stack,
+        msg: err.message,
+      });
+      throw err;
+    });
 
 export type SandboxDurableObjectApp = ReturnType<typeof createAgentApp>;
 
@@ -196,8 +209,14 @@ export class SandboxDurableObject implements AgentAppHandlers {
   }
 
   private shouldStartNewRun(body: StreamRequestBody): boolean {
-    if (!this.run) return true;
-    if (this.run.messageId === body.message.id) return false;
+    if (!this.run) {
+      logger.debug("Starting new run because no run is active", body);
+      return true;
+    }
+    if (this.run.messageId === body.message.id) {
+      logger.debug("Skipping new run because message id is the same", body);
+      return false;
+    }
     if (this.run.status === "running" || this.run.status === "stopping") {
       logger.warn("Received new run request while previous run active", {
         branchId: body.branchId,
@@ -218,15 +237,15 @@ export class SandboxDurableObject implements AgentAppHandlers {
     const usage: MessageUsage[] = [];
     const db = createDatabase(this.env);
 
-    const [allMessages, branch] = await Promise.all([
-      loadBranchMessages(db, body.branchId, body.userId),
-      db
-        .select()
-        .from(schema.repoBranch)
-        .where(eq(schema.repoBranch.id, body.branchId))
-        .then((r) => r[0]!),
-    ]);
-    if (!allMessages.length) return;
+    const allMessages = await loadBranchMessages(
+      db,
+      body.branchId,
+      body.userId
+    );
+    if (!allMessages.length) {
+      logger.debug("No messages found in branch", { branchId: body.branchId });
+      return;
+    }
 
     const threadId = allMessages[0]!.threadId;
     logger.info("Found messages in thread", {
@@ -256,6 +275,7 @@ export class SandboxDurableObject implements AgentAppHandlers {
         ];
       }
     })();
+    logger.debug("Resolved messages", { messages });
     const nextParentId = messages.slice(-1)[0]!.id;
     const context: FlyioExecSandboxContext = {
       appId: sandbox.appId,
@@ -285,6 +305,9 @@ export class SandboxDurableObject implements AgentAppHandlers {
           originalMessages: messages, // just needed for id generation
           generateId: randomUUID,
           onFinish: async ({ responseMessage }) => {
+            logger.debug("Finished streaming response message", {
+              responseMessage,
+            });
             await db.insert(schema.message).values({
               id: responseMessage.id,
               role: responseMessage.role as "user" | "assistant",
@@ -369,13 +392,17 @@ export class SandboxDurableObject implements AgentAppHandlers {
       .where(eq(schema.repoBranch.id, branchId))
       .then(([branch]) => branch?.sandbox);
 
-    if (sandbox) return sandbox;
+    if (sandbox) {
+      logger.debug("Reusing existing sandbox", { branchId });
+      return sandbox;
+    }
 
     const newSandbox = await this.createSandbox(branchId);
     await db
       .update(schema.repoBranch)
       .set({ sandbox: newSandbox })
       .where(eq(schema.repoBranch.id, branchId));
+    logger.debug("Created new sandbox", { branchId });
     return newSandbox;
   }
 
@@ -407,6 +434,8 @@ export class SandboxDurableObject implements AgentAppHandlers {
         .then(([repo]) => repo!);
 
       await createApp(appId, this.env.FLY_ACCESS_TOKEN, this.env.FLY_ORG_SLUG);
+      logger.debug("Created new Fly.io app", { appId });
+
       const machine = await createMachine({
         appId,
         git: {
@@ -441,6 +470,10 @@ export class SandboxDurableObject implements AgentAppHandlers {
         },
         accessToken: this.env.FLY_ACCESS_TOKEN,
       });
+      logger.debug("Created new Fly.io machine", {
+        appId,
+        machineId: machine.id,
+      });
 
       return {
         type: "flyio",
@@ -451,6 +484,10 @@ export class SandboxDurableObject implements AgentAppHandlers {
       };
     } catch (error) {
       await deleteApp(appId, this.env.FLY_ACCESS_TOKEN).catch(() => {});
+      logger.error("Failed to create Fly.io app or machine, deleting app", {
+        appId,
+        error,
+      });
       throw error;
     }
   }
@@ -533,6 +570,7 @@ export class SandboxDurableObject implements AgentAppHandlers {
     if (this.run !== run) return;
     run.status = status;
 
+    logger.debug("Finishing run", { run, status });
     for (const [listenerId, controller] of run.listeners.entries()) {
       run.listeners.delete(listenerId);
       try {
@@ -546,7 +584,9 @@ export class SandboxDurableObject implements AgentAppHandlers {
   private disposeRun() {
     if (!this.run) return;
     try {
+      logger.debug("Disposing run", { run: this.run });
       this.run.abortController.abort(new DOMException("dispose", "AbortError"));
+      logger.debug("Disposed run", { run: this.run });
     } catch {}
     this.run = null;
   }

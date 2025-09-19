@@ -58,7 +58,13 @@
           "bucket_name": "replicator",
           "experimental_remote": true
         }
-      ]
+      ],
+      "durable_objects": {
+        "bindings": [
+          { "name": "SANDBOX_DO", "class_name": "SandboxDurableObject" }
+        ]
+      },
+      "migrations": [{ "tag": "v1", "new_classes": ["SandboxDurableObject"] }]
     }
   },
   "rules": [{ "type": "Text", "globs": ["**/*.md"], "fallthrough": true }]

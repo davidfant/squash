@@ -1,6 +1,12 @@
 import { logger } from "../logger";
 
-export class FlyAPIError extends Error {}
+export class FlyAPIError extends Error {
+  code: number;
+  constructor(message: string, code: number) {
+    super(message);
+    this.code = code;
+  }
+}
 
 export async function flyFetch(
   path: string,
@@ -25,7 +31,7 @@ export async function flyFetch(
       method: init.method,
       error: message,
     });
-    throw new FlyAPIError(`Request to ${path} failed: ${message}`);
+    throw new FlyAPIError(`Request to ${path} failed: ${message}`, 500);
   }
 
   if (!res.ok) {
@@ -38,7 +44,8 @@ export async function flyFetch(
       body: text,
     });
     throw new FlyAPIError(
-      `Request to ${path} failed with status ${res.status} ${res.statusText}: ${text}`
+      `Request to ${path} failed with status ${res.status} ${res.statusText}: ${text}`,
+      res.status
     );
   }
   return res;

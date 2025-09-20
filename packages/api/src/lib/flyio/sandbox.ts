@@ -1,7 +1,7 @@
 import type { RepoSnapshot } from "@/database/schema/repos";
 import { traceable } from "langsmith/traceable";
 import { logger } from "../logger";
-import { flyFetch, flyFetchJson } from "./util";
+import { FlyAPIError, flyFetch, flyFetchJson } from "./util";
 
 interface FlyMachineCheck {
   name: string;
@@ -126,7 +126,7 @@ export async function createMachine({
       region: volume.region,
       config: {
         image: snapshot.image,
-        guest: { cpu_kind: "shared", cpus: 2, memory_mb: 1024 },
+        guest: { cpu_kind: "shared", cpus: 4, memory_mb: 4096 },
         // size: "performance-1x",
         auto_destroy: false,
         restart: { policy: "no" },
@@ -288,12 +288,21 @@ export const waitForMachineHealthy = ({
           });
           onCheck?.(machine.state, machine.checks);
           if (isHealthy(machine)) return machine;
+          if (machine.state === "stopped") {
+            logger.debug("Machine stopped, aborting", { appId, machineId });
+          }
         } catch (e) {
           logger.warn(
             `Failed to fetch machine ${appId}/${machineId} after start: ${
               (e as Error).message
             }`
           );
+
+          if (e instanceof FlyAPIError && e.code === 404) {
+            throw new Error(
+              `Machine ${appId}/${machineId} not found. It may have been deleted.`
+            );
+          }
         }
 
         if (Date.now() - startTime > timeoutMs) {

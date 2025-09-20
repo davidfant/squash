@@ -5,6 +5,7 @@ source ./.env
 fly auth docker
 
 APP_NAME="squash-template"
+SQUASH_CLI_VERSION=$(cat ../packages/cli/package.json | jq -r '.version')
 
 function build_repo() {
   TEMPLATE_NAME=$1
@@ -21,6 +22,7 @@ function build_repo() {
     echo "Docker tag: $DOCKER_TAG"
     docker build \
       --platform linux/amd64 \
+      --build-arg SQUASH_CLI_VERSION=$SQUASH_CLI_VERSION \
       --build-arg AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
       --build-arg AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
       --build-arg AWS_ENDPOINT_URL_S3=$AWS_ENDPOINT_URL_S3 \
@@ -43,6 +45,7 @@ function build_node_image() {
   docker build \
     --platform linux/amd64 \
     --build-arg NODE_IMAGE=node:$NODE_IMAGE_TAG \
+    --build-arg SQUASH_CLI_VERSION=$SQUASH_CLI_VERSION \
     --tag $DOCKER_TAG \
     --file ./Dockerfile.node \
     .

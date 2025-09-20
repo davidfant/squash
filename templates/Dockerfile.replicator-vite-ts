@@ -5,7 +5,8 @@ RUN apk add --no-cache python3 py3-pip git \
  && corepack enable \
  && corepack prepare pnpm@latest --activate
 
-RUN npm install -g @squashai/cli@0.0.5
+ARG SQUASH_CLI_VERSION=0.0.5
+RUN npm install -g @squashai/cli@$SQUASH_CLI_VERSION
 
 ARG AWS_ACCESS_KEY_ID
 ARG AWS_SECRET_ACCESS_KEY

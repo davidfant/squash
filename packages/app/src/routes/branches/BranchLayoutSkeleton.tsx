@@ -16,15 +16,7 @@ export const BranchLayoutSkeleton = () => (
     </header>
     <div className="flex-1 flex">
       <div className="w-[30%] flex flex-col gap-4 p-2 pt-0">
-        <div className="flex-1 space-y-4 overflow-y-hidden">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="space-y-2">
-              <Skeleton className="h-4 w-3/5" />
-              <Skeleton className="h-4 w-4/5" />
-              <Skeleton className="h-4 w-2/5" />
-            </div>
-          ))}
-        </div>
+        <div className="flex-1" />
         <ChatInput
           placeholder="Type a message..."
           disabled

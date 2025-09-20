@@ -126,7 +126,8 @@ export async function createMachine({
       region: volume.region,
       config: {
         image: snapshot.image,
-        guest: { cpu_kind: "shared", cpus: 4, memory_mb: 4096 },
+        // guest: { cpu_kind: "shared", cpus: 2, memory_mb: 1024 },
+        guest: { cpu_kind: "shared", cpus: 2, memory_mb: 2048 },
         // size: "performance-1x",
         auto_destroy: false,
         restart: { policy: "no" },

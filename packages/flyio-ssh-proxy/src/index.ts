@@ -1,6 +1,6 @@
 import { serve } from "@hono/node-server";
 import { zValidator } from "@hono/zod-validator";
-import { spawn, type ChildProcessWithoutNullStreams } from "child_process";
+import { ChildProcess, spawn } from "child_process";
 import { Hono } from "hono";
 import { jwt } from "hono/jwt";
 import { logger as honoLogger } from "hono/logger";
@@ -10,7 +10,7 @@ import escape from "shell-escape";
 import z from "zod";
 import { jwtPayloadSchema, type AnyProxyEvent } from "./types.js";
 
-function terminate(child: ChildProcessWithoutNullStreams) {
+function terminate(child: ChildProcess) {
   if (!child.killed) {
     child.kill("SIGTERM");
     setTimeout(() => !child.killed && child.kill("SIGKILL"), 5_000);
@@ -35,16 +35,15 @@ const app = new Hono()
             const body = await c.req.valid("json");
             const payload = jwtPayloadSchema.parse(c.get("jwtPayload"));
 
-            console.log(
-              JSON.stringify({
-                message: "Starting Fly.io SSH session",
-                data: {
-                  app: payload.app,
-                  command: body.command,
-                  env: body.env,
-                },
-              })
-            );
+            console.log({
+              message: "Starting Fly.io SSH session",
+              data: {
+                app: payload.app,
+                command: body.command,
+                env: Object.keys(body.env),
+                // env: body.env,
+              },
+            });
 
             const child = spawn(
               "flyctl",
@@ -61,12 +60,10 @@ const app = new Hono()
             );
 
             child.on("spawn", () => {
-              console.log(
-                JSON.stringify({
-                  message: "flyctl process spawned",
-                  data: { app: payload.app },
-                })
-              );
+              console.log({
+                message: "flyctl process spawned",
+                data: { app: payload.app },
+              });
             });
 
             c.req.raw.signal.addEventListener("abort", () => terminate(child));
@@ -96,37 +93,31 @@ const app = new Hono()
               write({ type: "error", data: { message: err.message } });
             });
             child.on("close", (code) => {
-              console.log(
-                JSON.stringify({
-                  message: "flyctl process closed",
-                  data: { app: payload.app, code },
-                })
-              );
+              console.log({
+                message: "flyctl process closed",
+                data: { app: payload.app, code },
+              });
             });
             child.on("exit", async (code) => {
-              console.log(
-                JSON.stringify({
-                  message: "flyctl process exited",
-                  data: { app: payload.app, code },
-                })
-              );
+              console.log({
+                message: "flyctl process exited",
+                data: { app: payload.app, code },
+              });
               await write({ type: "exit", data: { code } });
               await stream.close();
               resolve();
             });
           }
         }).catch(async (err) => {
-          console.error(
-            JSON.stringify({
-              message: "Fly.io SSH Proxy Stream Error",
-              data: {
-                stack: err.stack,
-                name: err.name,
-                cause: err.cause,
-                message: err.message,
-              },
-            })
-          );
+          console.error({
+            message: "Fly.io SSH Proxy Stream Error",
+            data: {
+              stack: err.stack,
+              name: err.name,
+              cause: err.cause,
+              message: err.message,
+            },
+          });
           throw err;
         });
       })
@@ -155,6 +146,9 @@ const app = new Hono()
   });
 
 export type AppType = typeof app;
+
+process.on("unhandledRejection", console.error);
+process.on("uncaughtException", console.error);
 
 serve(
   { fetch: app.fetch, port: Number(process.env.PORT!), hostname: "0.0.0.0" },

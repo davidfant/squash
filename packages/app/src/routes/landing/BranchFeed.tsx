@@ -116,6 +116,7 @@ export function BranchFeed({ repoId }: BranchFeedProps) {
               <ChatInput
                 key={chatInputKey}
                 initialValue={chatInitialValue}
+                clearOnSubmit={false}
                 onSubmit={(content) => {
                   setChatInitialValue({ text: "", files: [] });
                   createBranch.mutate({

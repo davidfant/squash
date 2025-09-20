@@ -33,6 +33,7 @@ export function ChatInput({
   repoPicker,
   onStop,
   onSubmit,
+  clearOnSubmit = true,
 }: {
   initialValue?: ChatInputValue;
   submitting: boolean;
@@ -45,6 +46,7 @@ export function ChatInput({
   repoPicker?: React.ReactNode;
   onStop?(): void;
   onSubmit(value: ChatInputValue): unknown;
+  clearOnSubmit?: boolean;
 }) {
   const [value, setValue] = useState(initialValue?.text ?? "");
   const uploads = useFileUpload(
@@ -77,13 +79,18 @@ export function ChatInput({
 
   const handleSubmit = async () => {
     if (!value.length && !uploads.files.length) return;
+    const submittedValue = { text: value, files: uploads.files };
     try {
-      setValue("");
-      uploads.set([]);
-      await onSubmit({ text: value, files: uploads.files });
+      if (clearOnSubmit) {
+        setValue("");
+        uploads.set([]);
+      }
+      await onSubmit(submittedValue);
     } catch {
-      setValue(value);
-      uploads.set(uploads.files);
+      if (clearOnSubmit) {
+        setValue(submittedValue.text);
+        uploads.set(submittedValue.files);
+      }
     }
   };
 

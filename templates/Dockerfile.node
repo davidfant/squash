@@ -1,0 +1,6 @@
+ARG NODE_IMAGE=node:20-alpine
+FROM ${NODE_IMAGE} AS base
+RUN apk add --no-cache git && corepack enable
+
+ARG SQUASH_CLI_VERSION=0.0.5
+RUN npm install -g @squashai/cli@$SQUASH_CLI_VERSION

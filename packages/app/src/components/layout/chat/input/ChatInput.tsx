@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { FileUIPart } from "ai";
-import { useState } from "react";
+import { useCallback, useState, type ClipboardEvent } from "react";
 import {
   ChatInputAttachButton,
   ChatInputDictateButton,
@@ -56,6 +56,25 @@ export function ChatInput({
   );
   const dictation = useDictation((t) => setValue((v) => (v ? `${v} ${t}` : t)));
 
+  const handlePaste = useCallback(
+    (event: ClipboardEvent<HTMLTextAreaElement>) => {
+      if (disabled) return;
+
+      const clipboardFiles = Array.from(
+        event.clipboardData?.files ?? []
+      ).filter((file) => file.type.startsWith("image/"));
+
+      if (!clipboardFiles.length) return;
+
+      if (!event.clipboardData?.getData("text")) {
+        event.preventDefault();
+      }
+
+      uploads.add(clipboardFiles);
+    },
+    [disabled, uploads.add]
+  );
+
   const handleSubmit = async () => {
     if (!value.length && !uploads.files.length) return;
     try {
@@ -106,6 +125,19 @@ export function ChatInput({
   return (
     <Card className="p-2 transition-all shadow-none border border-input focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-4">
       <CardContent className="flex flex-col gap-2 p-0">
+        {uploads.input}
+        {uploads.files.length > 0 && (
+          <div className="flex flex-wrap gap-2 ml-2">
+            {uploads.files.map((f) => (
+              <FilePreview
+                key={f.id}
+                loading={f.status === "uploading"}
+                file={f}
+                onRemove={() => uploads.remove(f.id)}
+              />
+            ))}
+          </div>
+        )}
         <div className="relative">
           <TextareaComponent
             value={value}
@@ -115,6 +147,7 @@ export function ChatInput({
             placeholder={placeholder}
             onChange={(e) => setValue(e.target.value)}
             className="text-lg border-none shadow-none bg-transparent focus:ring-0 focus-visible:ring-0"
+            onPaste={handlePaste}
             onKeyDown={(e) => {
               if (e.key === "Enter" && e.metaKey) {
                 e.preventDefault();
@@ -134,19 +167,6 @@ export function ChatInput({
             />
           </div>
         </div>
-        {uploads.input}
-        {uploads.files.length > 0 && (
-          <div className="flex flex-wrap gap-2 ml-2">
-            {uploads.files.map((f) => (
-              <FilePreview
-                key={f.id}
-                loading={f.status === "uploading"}
-                file={f}
-                onRemove={() => uploads.remove(f.id)}
-              />
-            ))}
-          </div>
-        )}
         <div className="flex gap-2">
           <ChatInputAttachButton
             disabled={submitting || disabled}

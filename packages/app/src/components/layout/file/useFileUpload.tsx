@@ -53,26 +53,34 @@ export function useFileUpload(initialFiles?: ChatInputFile[]) {
     [getSignedUrl, remove, patchUpload]
   );
 
+  const add = useCallback(
+    (files: File[]) => {
+      if (!files.length) return;
+
+      const newUploads = files.map(
+        (file): ChatInputFile => ({
+          id: Math.random().toString(36).substring(2, 15),
+          type: "file",
+          url: URL.createObjectURL(file),
+          filename: file.name,
+          mediaType: file.type,
+          status: "uploading",
+        })
+      );
+      setFiles((prev) => [...prev, ...newUploads]);
+      newUploads.forEach((u, i) => upload(u.id, files[i]!));
+    },
+    [upload]
+  );
+
   const handleFilesSelected = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files) {
-        const files = Array.from(e.target.files!);
-        const newUploads = files.map(
-          (file): ChatInputFile => ({
-            id: Math.random().toString(36).substring(2, 15),
-            type: "file",
-            url: URL.createObjectURL(file),
-            filename: file.name,
-            mediaType: file.type,
-            status: "uploading",
-          })
-        );
-        setFiles((prev) => [...prev, ...newUploads]);
-        newUploads.forEach((u, i) => upload(u.id, files[i]!));
+        add(Array.from(e.target.files!));
         e.target.value = "";
       }
     },
-    [upload]
+    [add]
   );
 
   const input = (
@@ -85,5 +93,5 @@ export function useFileUpload(initialFiles?: ChatInputFile[]) {
     />
   );
 
-  return { input, files, remove, select, isUploading, set: setFiles };
+  return { input, files, remove, select, add, isUploading, set: setFiles };
 }

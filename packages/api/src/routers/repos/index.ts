@@ -231,26 +231,34 @@ export const reposRouter = new Hono<{
         c.req.header("x-forwarded-for") ??
         c.req.raw.headers.get("x-forwarded-for");
 
-      const thread = await db
-        .insert(schema.messageThread)
-        .values({ ipAddress })
-        .returning()
-        .then(([thread]) => thread!);
+      const textContent = message.parts
+        .filter((p) => p.type === "text")
+        .map((p) => p.text)
+        .join(" ");
 
       const parentId = randomUUID();
       const messageId = randomUUID();
-      const [branch] = await Promise.all([
+      const branchId = randomUUID();
+
+      const [thread, { text: rawTitle }] = await Promise.all([
         db
-          .insert(schema.repoBranch)
-          .values({
-            title: "",
-            name: "",
-            threadId: thread.id,
-            repoId: repoId,
-            createdBy: user.id,
-          })
+          .insert(schema.messageThread)
+          .values({ ipAddress })
           .returning()
-          .then(([branch]) => branch!),
+          .then(([thread]) => thread!),
+        generateText({
+          model: google("gemini-2.5-flash"),
+          prompt: `Generate a concise Jira ticket name (title case, max 50 chars) for this feature request: "${textContent}". Only return the branch name, nothing else.`,
+          providerOptions: {
+            google: { thinkingConfig: { thinkingBudget: 0 } },
+          },
+        }),
+      ]);
+
+      const title = rawTitle.trim();
+      const branchName = `${kebabCase(title)}-${branchId.split("-")[0]}`;
+
+      await Promise.all([
         db.insert(schema.message).values([
           { id: parentId, role: "system", threadId: thread.id, parts: [] },
           {
@@ -261,35 +269,28 @@ export const reposRouter = new Hono<{
             parentId,
           },
         ]),
+        db.insert(schema.repoBranch).values({
+          id: branchId,
+          title,
+          name: branchName,
+          threadId: thread.id,
+          repoId,
+          createdBy: user.id,
+        }),
       ]);
 
-      const stub = c.env.SANDBOX_DO.get(c.env.SANDBOX_DO.idFromName(branch.id));
+      const stub = c.env.SANDBOX_DO.get(c.env.SANDBOX_DO.idFromName(branchId));
       // fire and forget
       hc<SandboxDurableObjectApp>("https://thread", {
         fetch: stub.fetch.bind(stub),
       }).stream.$post({
         json: {
-          branchId: branch.id,
+          branchId,
           userId: user.id,
           message: { id: messageId, parts: message.parts, parentId },
         },
       });
 
-      const textContent = message.parts
-        .filter((p) => p.type === "text")
-        .map((p) => p.text)
-        .join(" ");
-
-      const { text: title } = await generateText({
-        model: google("gemini-2.5-flash"),
-        prompt: `Generate a concise Jira ticket name (title case, max 50 chars) for this feature request: "${textContent}". Only return the branch name, nothing else.`,
-        providerOptions: {
-          google: { thinkingConfig: { thinkingBudget: 0 } },
-        },
-      });
-      const branchName = `${kebabCase(title)}-${branch.id.split("-")[0]}`;
-
-      await db.update(schema.repoBranch).set({ title, name: branchName });
-      return c.json({ id: branch.id });
+      return c.json({ id: branchId });
     }
   );

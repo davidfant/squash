@@ -424,6 +424,7 @@ export class SandboxDurableObject implements AgentAppHandlers {
         .select({
           url: schema.repo.url,
           snapshot: schema.repo.snapshot,
+          branchName: schema.repoBranch.name,
           provider: {
             type: schema.repoProvider.type,
             data: schema.repoProvider.data,
@@ -441,6 +442,8 @@ export class SandboxDurableObject implements AgentAppHandlers {
         .where(eq(schema.repoBranch.id, branchId))
         .then(([repo]) => repo!);
 
+      const branchName = repo.branchName;
+
       await createApp(appId, this.env.FLY_ACCESS_TOKEN, this.env.FLY_ORG_SLUG);
       logger.debug("Created new Fly.io app", { appId });
 
@@ -448,8 +451,7 @@ export class SandboxDurableObject implements AgentAppHandlers {
         appId,
         git: {
           url: repo.url,
-          // TODO: this needs to be synced with the branch name in the DB (which might be generating while starting this for the first time)
-          branch: `feat/${branchId.split("-")[0]}`,
+          branch: branchName,
           workdir: repo.snapshot.workdir,
         },
         snapshot: repo.snapshot,

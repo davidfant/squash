@@ -1,17 +1,17 @@
 import { requireActiveOrganization, requireAuth } from "@/auth/middleware";
 import type { Database } from "@/database";
 import * as schema from "@/database/schema";
-import * as FlyioSandbox from "@/lib/flyio/sandbox";
+import type { SandboxDurableObjectApp } from "@/durable-objects/sandbox";
+import { generateText } from "@/lib/ai";
+import { zUserMessagePart } from "@/routers/schemas";
 import { google } from "@ai-sdk/google";
 import { zValidator } from "@hono/zod-validator";
-import { createAppAuth } from "@octokit/auth-app";
-import { generateText } from "ai";
 import { randomUUID } from "crypto";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { Hono } from "hono";
+import { hc } from "hono/client";
 import kebabCase from "lodash.kebabcase";
 import z from "zod";
-import { zUserMessagePart } from "../chat";
 import { requireRepo } from "./middleware";
 
 export const reposRouter = new Hono<{
@@ -163,145 +163,9 @@ export const reposRouter = new Hono<{
       }
     }
   )
-  .post(
-    "/:repoId/branches",
-    zValidator("param", z.object({ repoId: z.string().uuid() })),
-    zValidator(
-      "json",
-      z.object({
-        message: z.object({ parts: zUserMessagePart.array().min(1) }),
-      })
-    ),
-    requireRepo,
-    async (c) => {
-      const { repoId } = c.req.valid("param");
-      const { message } = c.req.valid("json");
-      const organizationId = c.get("organizationId");
-      const user = c.get("user");
-      const db = c.get("db");
-      const repo = c.get("repo");
-
-      try {
-        const ipAddress =
-          c.req.header("cf-connecting-ip") ??
-          c.req.header("x-forwarded-for") ??
-          c.req.raw.headers.get("x-forwarded-for");
-
-        const thread = await db
-          .insert(schema.messageThread)
-          .values({ ipAddress })
-          .returning()
-          .then(([thread]) => thread!);
-
-        const parentId = randomUUID();
-        await db.insert(schema.message).values([
-          { id: parentId, role: "system", threadId: thread.id, parts: [] },
-          { role: "user", parts: message.parts, threadId: thread.id, parentId },
-        ]);
-
-        const textContent = message.parts
-          .filter((part) => part.type === "text")
-          .map((part) => part.text)
-          .join(" ");
-
-        const { text: title } = await generateText({
-          model: google("gemini-2.5-flash"),
-          prompt: `Generate a concise Jira ticket name (title case, max 50 chars) for this feature request: "${textContent}". Only return the branch name, nothing else.`,
-          providerOptions: {
-            google: { thinkingConfig: { thinkingBudget: 0 } },
-          },
-        });
-
-        const branchId = randomUUID();
-        const branchName = `${kebabCase(title)}-${branchId.split("-")[0]}`;
-
-        const flyioAppIdPrefix = `${organizationId.split("-")[0]}-${
-          repo.id.split("-")[0]
-        }-${branchId.split("-")[0]!}-`;
-        const flyioAppId = `${flyioAppIdPrefix}${kebabCase(title).slice(
-          0,
-          63 - flyioAppIdPrefix.length
-        )}`;
-
-        try {
-          await FlyioSandbox.createApp(
-            flyioAppId,
-            c.env.FLY_ACCESS_TOKEN,
-            c.env.FLY_ORG_SLUG
-          );
-
-          const flyMachine = await FlyioSandbox.createMachine({
-            appId: flyioAppId,
-            git: {
-              url: repo.url,
-              branch: branchName,
-              workdir: repo.snapshot.workdir,
-            },
-            snapshot: repo.snapshot,
-            auth: {
-              github:
-                repo.provider?.type === "github"
-                  ? {
-                      username: "x-access-token",
-                      password: await createAppAuth({
-                        appId: c.env.GITHUB_APP_ID,
-                        privateKey: c.env.GITHUB_APP_PRIVATE_KEY,
-                        installationId: repo.provider.data.installationId,
-                      })({ type: "installation", installationId: "" }).then(
-                        (auth) => auth.token
-                      ),
-                    }
-                  : undefined,
-              aws: !repo.provider
-                ? {
-                    accessKeyId: c.env.R2_REPOS_ACCESS_KEY_ID,
-                    secretAccessKey: c.env.R2_REPOS_SECRET_ACCESS_KEY,
-                    endpointUrl: c.env.R2_REPOS_ENDPOINT_URL_S3,
-                    region: "auto",
-                  }
-                : undefined,
-            },
-            accessToken: c.env.FLY_ACCESS_TOKEN,
-          });
-
-          // Create repo branch record
-          const [repoBranch] = await db
-            .insert(schema.repoBranch)
-            .values({
-              id: branchId,
-              title,
-              name: branchName,
-              sandbox: {
-                type: "flyio",
-                appId: flyioAppId,
-                machineId: flyMachine.id,
-                url: `https://${flyioAppId}.fly.dev`,
-                workdir: repo.snapshot.workdir,
-              },
-              threadId: thread.id,
-              repoId: repoId,
-              createdBy: user.id,
-            })
-            .returning();
-
-          return c.json(repoBranch!);
-        } catch (error) {
-          await FlyioSandbox.deleteApp(
-            branchName,
-            c.env.FLY_ACCESS_TOKEN
-          ).catch(() => {});
-          throw error;
-        }
-      } catch (error) {
-        console.error("Error creating repo branch!", error);
-        console.error("Stack: ", (error as Error).stack);
-        return c.json({ error: "Failed to create repo branch" }, 500);
-      }
-    }
-  )
   .get(
     "/:repoId/branches",
-    zValidator("param", z.object({ repoId: z.string().uuid() })),
+    zValidator("param", z.object({ repoId: z.uuid() })),
     async (c) => {
       const { repoId } = c.req.valid("param");
       const user = c.get("user");
@@ -344,5 +208,88 @@ export const reposRouter = new Hono<{
         .orderBy(desc(schema.repoBranch.createdAt));
 
       return c.json(branches);
+    }
+  )
+  .post(
+    "/:repoId/branches",
+    zValidator("param", z.object({ repoId: z.uuid() })),
+    zValidator(
+      "json",
+      z.object({
+        message: z.object({ parts: zUserMessagePart.array().min(1) }),
+      })
+    ),
+    requireRepo,
+    async (c) => {
+      const { repoId } = c.req.valid("param");
+      const { message } = c.req.valid("json");
+      const user = c.get("user");
+      const db = c.get("db");
+
+      const ipAddress =
+        c.req.header("cf-connecting-ip") ??
+        c.req.header("x-forwarded-for") ??
+        c.req.raw.headers.get("x-forwarded-for");
+
+      const thread = await db
+        .insert(schema.messageThread)
+        .values({ ipAddress })
+        .returning()
+        .then(([thread]) => thread!);
+
+      const parentId = randomUUID();
+      const messageId = randomUUID();
+      const [branch] = await Promise.all([
+        db
+          .insert(schema.repoBranch)
+          .values({
+            title: "",
+            name: "",
+            threadId: thread.id,
+            repoId: repoId,
+            createdBy: user.id,
+          })
+          .returning()
+          .then(([branch]) => branch!),
+        db.insert(schema.message).values([
+          { id: parentId, role: "system", threadId: thread.id, parts: [] },
+          {
+            id: messageId,
+            role: "user",
+            threadId: thread.id,
+            parts: message.parts,
+            parentId,
+          },
+        ]),
+      ]);
+
+      const stub = c.env.SANDBOX_DO.get(c.env.SANDBOX_DO.idFromName(branch.id));
+      // fire and forget
+      hc<SandboxDurableObjectApp>("https://thread", {
+        fetch: stub.fetch.bind(stub),
+      }).stream.$post({
+        json: {
+          branchId: branch.id,
+          userId: user.id,
+          message: { id: messageId, parts: message.parts, parentId },
+        },
+      });
+
+      const textContent = message.parts
+        .filter((p) => p.type === "text")
+        .map((p) => p.text)
+        .join(" ");
+
+      const { text: title } = await generateText({
+        model: google("gemini-2.5-flash"),
+        prompt: `Generate a concise Jira ticket name (title case, max 50 chars) for this feature request: "${textContent}". Only return the branch name, nothing else.`,
+        providerOptions: {
+          google: { thinkingConfig: { thinkingBudget: 0 } },
+        },
+      });
+      const branchName = `${kebabCase(title)}-${branch.id.split("-")[0]}`;
+
+      await db.update(schema.repoBranch).set({ title, name: branchName });
+      return c.json({ id: branch.id });
     }
   );

@@ -65,26 +65,28 @@ export async function buildExampleCode({
         if (index === undefined) return;
         if (parent?.type !== "element" && parent?.type !== "root") return;
 
-        const nodeId = element.properties?.["dataSquashNodeId"] as NodeId;
+        const elNodeId = element.properties?.["dataSquashNodeId"] as NodeId;
 
-        if (state.node.ancestors.get(nodeId)?.has(dep.nodeId)) {
+        if (state.node.ancestors.get(elNodeId)?.has(dep.nodeId)) {
           const lastKey = dep.keys[dep.keys.length - 1]!;
           const lastValue = dep.keys
             .slice(0, -1)
-            .reduce((acc, k) => acc[k], nodeProps as any);
-          if (!found) {
-            found = true;
-            lastValue[lastKey] = {
-              $$typeof: "react.tag",
-              tagName: "placeholder",
-              props: { prop: dep.keys.join("/") },
-            };
-            parent.children[index] = h("placeholder", {
-              prop: dep.keys.join("/"),
-            });
-          } else {
-            parents.push(parent);
-            parent.children[index] = h("rm");
+            .reduce((acc, k) => acc?.[k], nodeProps as any);
+          if (lastValue !== undefined) {
+            if (!found) {
+              found = true;
+              lastValue[lastKey] = {
+                $$typeof: "react.tag",
+                tagName: "placeholder",
+                props: { prop: dep.keys.join("/") },
+              };
+              parent.children[index] = h("placeholder", {
+                prop: dep.keys.join("/"),
+              });
+            } else {
+              parents.push(parent);
+              parent.children[index] = h("rm");
+            }
           }
           return SKIP;
         }

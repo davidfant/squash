@@ -312,4 +312,4 @@ export const tools = {
   }),
 };
 
-export type ClaudeCodeAgentTools = InferUITools<typeof tools>;
+export type ClaudeCodeTools = InferUITools<typeof tools>;

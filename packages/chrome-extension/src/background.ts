@@ -1,4 +1,4 @@
-import type { Snapshot } from "@squash/replicator";
+import type { Snapshot } from "@squashai/replicator";
 import { v4 as uuid } from "uuid";
 
 interface ApiResponse {

@@ -8,6 +8,13 @@
       "when": 1755652283247,
       "tag": "0000_fair_doctor_faustus",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1758215961595,
+      "tag": "0001_freezing_rogue",
+      "breakpoints": true
     }
   ]
 }

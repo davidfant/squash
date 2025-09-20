@@ -15,9 +15,24 @@ export function recmaStripSquashAttribute() {
       );
 
       if (attrs.some((a) => isJSXAttribute(a, "data-squash-text"))) {
-        const parent = ancestors.at(-1)!;
-        // @ts-ignore
-        parent[key].splice(idx, 1, ...node.children);
+        const parent = ancestors.at(-1) as any;
+        const container: any[] = Array.isArray(parent[key!])
+          ? parent[key!]
+          : parent[key!].children;
+        try {
+          container.splice(idx ?? 0, 1, ...node.children);
+        } catch (error) {
+          console.log("WHAT", {
+            // @ts-ignore
+            parent,
+            container,
+            key,
+            idx,
+            attrs,
+          });
+          console.dir(parent, { depth: null });
+          throw error;
+        }
       }
     });
   };

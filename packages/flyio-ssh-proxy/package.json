@@ -1,5 +1,5 @@
 {
-  "name": "@squash/flyio-ssh-proxy",
+  "name": "@squashai/flyio-ssh-proxy",
   "type": "module",
   "version": "0.0.0",
   "exports": {
@@ -18,12 +18,15 @@
   "dependencies": {
     "@cloudflare/containers": "^0.0.25",
     "@hono/node-server": "^1.19.0",
+    "@hono/zod-validator": "^0.7.2",
     "concurrently": "^9.2.1",
     "hono": "^4.9.4",
+    "shell-escape": "^0.2.0",
     "zod": "^4.1.8"
   },
   "devDependencies": {
     "@types/node": "^24.2.1",
+    "@types/shell-escape": "^0.2.3",
     "tsx": "^4.20.3",
     "typescript": "~5.8.3",
     "wrangler": "^4.31.0"

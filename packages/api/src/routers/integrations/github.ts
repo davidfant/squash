@@ -42,7 +42,7 @@ export const githubRouter = new Hono<{
       z.object({
         installation_id: z.string(),
         setup_action: z.enum(["install", "upgrade"]),
-        state: z.string().uuid(),
+        state: z.uuid(),
       })
     ),
     async (c) => {

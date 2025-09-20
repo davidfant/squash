@@ -40,19 +40,21 @@ export function messageToStreamPart(
 
   return (m: SDKMessage) => {
     if (m.type === "user") {
-      for (const part of m.message.content) {
-        switch (part.type) {
-          case "tool_result": {
-            const tc = contentBlocks
-              .filter((cb) => cb.type === "tool-call")
-              .find((cb) => cb.toolCallId === part.tool_use_id);
-            controller.enqueue({
-              type: "tool-result",
-              toolCallId: part.tool_use_id,
-              toolName: tc?.toolName ?? "unknown",
-              result: part.content,
-              providerExecuted: true,
-            });
+      if (Array.isArray(m.message.content)) {
+        for (const part of m.message.content) {
+          switch (part.type) {
+            case "tool_result": {
+              const tc = contentBlocks
+                .filter((cb) => cb.type === "tool-call")
+                .find((cb) => cb.toolCallId === part.tool_use_id);
+              controller.enqueue({
+                type: "tool-result",
+                toolCallId: part.tool_use_id,
+                toolName: tc?.toolName ?? "unknown",
+                result: part.content,
+                providerExecuted: true,
+              });
+            }
           }
         }
       }
@@ -266,8 +268,6 @@ export function messageToStreamPart(
                 }
                 break;
             }
-
-            delete contentBlocks[value.index];
           }
 
           return;

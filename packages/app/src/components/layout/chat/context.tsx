@@ -1,6 +1,10 @@
 import { usePrevious } from "@/hooks/usePrevious";
-import { useChat, type UseChatHelpers } from "@ai-sdk/react";
-import type { ChatMessage } from "@squash/api/agent/types";
+import {
+  useChat,
+  type UseChatHelpers,
+  type UseChatOptions,
+} from "@ai-sdk/react";
+import type { ChatMessage } from "@squashai/api/agent/types";
 import { DefaultChatTransport } from "ai";
 import { createContext, useContext, useEffect, type ReactNode } from "react";
 import { v4 as uuid } from "uuid";
@@ -11,13 +15,15 @@ export const ChatProvider = ({
   children,
   endpoint,
   initialMessages,
+  ...options
 }: {
   children: ReactNode;
   endpoint: string;
   initialMessages?: ChatMessage[];
-}) => {
+} & UseChatOptions<ChatMessage>) => {
   const chat = useChat<ChatMessage>({
     messages: initialMessages,
+    resume: true,
     transport: new DefaultChatTransport({
       api: endpoint,
       credentials: "include",
@@ -27,8 +33,10 @@ export const ChatProvider = ({
         const message = { id: l.id, parts: l.parts, parentId };
         return { body: { message } };
       },
+      prepareReconnectToStreamRequest: () => ({ api: `${endpoint}/stream` }),
     }),
     generateId: uuid,
+    ...options,
   });
 
   const hasInitialMessages = !!initialMessages;

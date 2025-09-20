@@ -1,5 +1,5 @@
 {
-  "name": "@squash/ai-sdk-claude-code",
+  "name": "@squashai/ai-sdk-claude-code",
   "version": "0.0.1",
   "type": "module",
   "main": "./dist/index.js",
@@ -18,7 +18,7 @@
   "dependencies": {
     "@ai-sdk/provider": "^2.0.0",
     "@ai-sdk/provider-utils": "^3.0.8",
-    "@anthropic-ai/claude-code": "^1.0.110",
+    "@anthropic-ai/claude-code": "^1.0.117",
     "zod": "^4.1.5"
   }
 }

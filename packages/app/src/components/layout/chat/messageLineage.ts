@@ -1,6 +1,6 @@
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import type { ChatMessage } from "@squash/api/agent/types";
-import { resolveMessageThreadHistory } from "@squash/api/lib/resolveMessageThreadHistory";
+import type { ChatMessage } from "@squashai/api/agent/types";
+import { resolveMessageThreadHistory } from "@squashai/api/lib/resolveMessageThreadHistory";
 import { useCallback, useMemo } from "react";
 
 interface Leaf {

@@ -129,7 +129,7 @@ export async function structureComponents(
     throw new Error("Failed to structure components");
   }
 
-  return Promise.all(
+  return Promise.allSettled(
     [...state.component.registry.entries()].map(async ([id, item]) => {
       const compId = id as ComponentId;
       const sf = idToSourceFile.get(compId);

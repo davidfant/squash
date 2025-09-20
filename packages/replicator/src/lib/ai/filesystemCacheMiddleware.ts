@@ -64,11 +64,11 @@ async function isExpired(file: string, ttlSeconds?: number) {
 export function filesystemCacheMiddleware(
   options: FSCacheOptions = {}
 ): LanguageModelV2Middleware {
-  if (Math.random()) {
-    throw new Error(
-      "TODO: implement caching using cloudflare KV: https://chatgpt.com/c/68c1f0c9-4034-832f-9095-448e6168e9d5"
-    );
-  }
+  // if (Math.random()) {
+  //   throw new Error(
+  //     "TODO: implement caching using cloudflare KV: https://chatgpt.com/c/68c1f0c9-4034-832f-9095-448e6168e9d5"
+  //   );
+  // }
   return {
     wrapGenerate: async ({ doGenerate, params, model }) => {
       const key = stableKey({ ...params, model });

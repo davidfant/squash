@@ -1,4 +1,5 @@
 import { toast } from "@/components/ui/sonner";
+import { api, useMutation } from "@/hooks/api";
 import type { FileUIPart } from "ai";
 import { useCallback, useMemo, useRef, useState } from "react";
 
@@ -16,13 +17,7 @@ export function useFileUpload(initialFiles?: ChatInputFile[]) {
     [files]
   );
 
-  // const getSignedUrl = useMutation(api.upload.$post);
-  const getSignedUrl = {
-    mutateAsync: (...args: any[]) => ({
-      uploadUrl: "https://example.com/upload",
-      publicUrl: "https://example.com/public",
-    }),
-  };
+  const getSignedUrl = useMutation(api.upload.$post);
   const patchUpload = useCallback(
     (id: string, partial: Partial<ChatInputFile>) =>
       setFiles((prev) =>
@@ -41,7 +36,7 @@ export function useFileUpload(initialFiles?: ChatInputFile[]) {
     async (id: string, file: File) => {
       try {
         const signed = await getSignedUrl.mutateAsync({
-          filename: file.name,
+          json: { filename: file.name },
         });
         await fetch(signed.uploadUrl, {
           method: "PUT",
@@ -58,26 +53,34 @@ export function useFileUpload(initialFiles?: ChatInputFile[]) {
     [getSignedUrl, remove, patchUpload]
   );
 
+  const add = useCallback(
+    (files: File[]) => {
+      if (!files.length) return;
+
+      const newUploads = files.map(
+        (file): ChatInputFile => ({
+          id: Math.random().toString(36).substring(2, 15),
+          type: "file",
+          url: URL.createObjectURL(file),
+          filename: file.name,
+          mediaType: file.type,
+          status: "uploading",
+        })
+      );
+      setFiles((prev) => [...prev, ...newUploads]);
+      newUploads.forEach((u, i) => upload(u.id, files[i]!));
+    },
+    [upload]
+  );
+
   const handleFilesSelected = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files) {
-        const files = Array.from(e.target.files!);
-        const newUploads = files.map(
-          (file): ChatInputFile => ({
-            id: Math.random().toString(36).substring(2, 15),
-            type: "file",
-            url: URL.createObjectURL(file),
-            filename: file.name,
-            mediaType: file.type,
-            status: "uploading",
-          })
-        );
-        setFiles((prev) => [...prev, ...newUploads]);
-        newUploads.forEach((u, i) => upload(u.id, files[i]!));
+        add(Array.from(e.target.files!));
         e.target.value = "";
       }
     },
-    [upload]
+    [add]
   );
 
   const input = (
@@ -90,5 +93,5 @@ export function useFileUpload(initialFiles?: ChatInputFile[]) {
     />
   );
 
-  return { input, files, remove, select, isUploading, set: setFiles };
+  return { input, files, remove, select, add, isUploading, set: setFiles };
 }

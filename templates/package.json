@@ -1,0 +1,10 @@
+{
+  "name": "squash-template",
+  "version": "0.0.0",
+  "devDependencies": {
+    "@squashai/cli": "workspace:*"
+  },
+  "scripts": {
+    "push": "./push.sh"
+  }
+}

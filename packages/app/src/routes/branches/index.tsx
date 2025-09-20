@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/resizable";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { api, useQuery } from "@/hooks/api";
-import type { ChatMessage } from "@squash/api/agent/types";
+import type { ChatMessage } from "@squashai/api/agent/types";
 import { useState } from "react";
 import { useParams } from "react-router";
 import { BranchPreview } from "./BranchPreview";
@@ -21,56 +21,30 @@ function Component({ branchId }: { branchId: string }) {
   const [isHistoryEnabled, setIsHistoryEnabled] = useState(false);
 
   const session = authClient.useSession();
-  const threadMessages = useQuery(api.chat.branches[":branchId"].$get, {
-    params: { branchId },
-    enabled: !!session.data?.user,
-  });
-
-  const handleHistoryToggle = (enabled: boolean) => {
-    setIsHistoryEnabled(enabled);
-  };
-
-  const handleSelectCommit = (sha: string) => {
-    setPreview(sha);
-  };
-
-  const handleHideChatSidebar = () => {
-    console.log("Hide chat sidebar");
-  };
-
-  const handleRefresh = () => {
-    console.log("Refresh");
-    window.location.reload();
-  };
-
-  const handleOpenInNewTab = () => {
-    console.log("Open in new tab");
-    window.open(window.location.href, "_blank");
-  };
-
-  const handleInvite = () => {
-    console.log("Invite collaborators");
-  };
-
-  const handleUpgrade = () => {
-    console.log("Upgrade plan");
-  };
+  const threadMessages = useQuery(
+    api.repos.branches[":branchId"].messages.$get,
+    { params: { branchId }, enabled: !!session.data?.user }
+  );
 
   return (
     <ChatProvider
-      endpoint={`${import.meta.env.VITE_API_URL}/chat/branches/${branchId}`}
+      endpoint={`${
+        import.meta.env.VITE_API_URL
+      }/repos/branches/${branchId}/messages`}
       initialMessages={threadMessages.data as ChatMessage[]}
+      onFinish={(step) => {
+        const latestSha = step.messages
+          .flatMap((m) => m.parts)
+          .findLast((part) => part.type === "tool-GitCommit")
+          ?.output?.commitSha;
+        if (latestSha) setPreview(latestSha);
+      }}
     >
       <SidebarProvider className="flex flex-col h-screen">
         <BranchHeader
           title={branch.name}
           isHistoryEnabled={isHistoryEnabled}
-          onHistoryToggle={handleHistoryToggle}
-          onHideChatSidebar={handleHideChatSidebar}
-          onRefresh={handleRefresh}
-          onOpenInNewTab={handleOpenInNewTab}
-          onInvite={handleInvite}
-          onUpgrade={handleUpgrade}
+          onHistoryToggle={setIsHistoryEnabled}
           publicUrl="https://my-awesome-landing-page.com"
         />
         <ResizablePanelGroup
@@ -86,7 +60,7 @@ function Component({ branchId }: { branchId: string }) {
             {isHistoryEnabled ? (
               <HistoryPanel
                 onClose={() => setIsHistoryEnabled(false)}
-                onSelectCommit={handleSelectCommit}
+                onSelectCommit={setPreview}
                 className="w-full"
                 threadId={branchId}
               />

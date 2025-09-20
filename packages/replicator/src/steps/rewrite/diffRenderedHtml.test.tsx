@@ -6,34 +6,34 @@ const diff = (html: string, node: ReactNode) =>
   diffRenderedHtml(html, renderToStaticMarkup(node));
 
 describe("diffRenderedHtml", () => {
-  describe("null", () => {
-    test("identical", () => {
-      expect(diff("<div>Hello</div>", <div>Hello</div>)).toBeNull();
+  describe("null", async () => {
+    test("identical", async () => {
+      expect(await diff("<div>Hello</div>", <div>Hello</div>)).toBeUndefined();
     });
 
-    test("attribute order is different", () => {
+    test("attribute order is different", async () => {
       expect(
-        diff(
+        await diff(
           "<div class='a' id='b'>Hello</div>",
           <div id="b" className="a">
             Hello
           </div>
         )
-      ).toBeNull();
+      ).toBeUndefined();
     });
 
-    test("attribute is empty string vs true", () => {
+    test("attribute is empty string vs true", async () => {
       expect(
-        diff(
+        await diff(
           `<button disabled="">Hello</button>`,
           <button disabled>Hello</button>
         )
-      ).toBeNull();
+      ).toBeUndefined();
     });
 
-    test("whitespace is different", () => {
+    test("whitespace is different", async () => {
       expect(
-        diff(
+        await diff(
           `
             <div>
               Hello
@@ -41,13 +41,13 @@ describe("diffRenderedHtml", () => {
           `,
           <div>Hello</div>
         )
-      ).toBeNull();
+      ).toBeUndefined();
     });
 
-    describe("style invariants", () => {
-      test("order", () => {
+    describe("style invariants", async () => {
+      test("order", async () => {
         expect(
-          diff(
+          await diff(
             `<div style="position:absolute; top:0; left:0; right:0; bottom:0" />`,
             <div
               style={{
@@ -59,61 +59,73 @@ describe("diffRenderedHtml", () => {
               }}
             />
           )
-        ).toBeNull();
+        ).toBeUndefined();
       });
 
-      test("0px <=> 0", () => {
+      test("0px <=> 0", async () => {
         expect(
-          diff(
+          await diff(
             `<div style="width: 0px; clip: rect(0px, 0px, 0px, 0px)" />`,
             <div style={{ width: 0, clip: "rect(0 0 0 0)" }} />
           )
-        ).toBeNull();
+        ).toBeUndefined();
       });
 
-      test("overflow-wrap <=> word-wrap", () => {
+      test("overflow-wrap <=> word-wrap", async () => {
         expect(
-          diff(
+          await diff(
             `<div style="overflow-wrap: break-word" />`,
             <div style={{ wordWrap: "break-word" }} />
           )
-        ).toBeNull();
+        ).toBeUndefined();
       });
 
-      test("empty", () => {
-        expect(diff(`<div />`, <div style={{}} />)).toBeNull();
+      test("untrimmed", async () => {
+        expect(
+          await diff(
+            `<div style="--width: 0px  " />`,
+            <div style={{ ["--width" as any]: " 0px" }} />
+          )
+        ).toBeUndefined();
+      });
+
+      test("empty", async () => {
+        expect(await diff(`<div />`, <div style={{}} />)).toBeUndefined();
       });
     });
 
-    describe("class invariants", () => {
-      test("order", () => {
+    describe("class invariants", async () => {
+      test("order", async () => {
         expect(
-          diff(`<div class="c b a" />`, <div className="a b c" />)
-        ).toBeNull();
+          await diff(`<div class="c b a" />`, <div className="a b c" />)
+        ).toBeUndefined();
       });
 
-      test("whitespace is different", () => {
+      test("whitespace is different", async () => {
         expect(
-          diff(`<div class="a b   c" />`, <div className="  a   b c " />)
-        ).toBeNull();
+          await diff(`<div class="a b   c" />`, <div className="  a   b c " />)
+        ).toBeUndefined();
       });
     });
   });
 
-  describe("diff", () => {
-    test("attribute is missing", () => {
-      const d = diff(`<button disabled>Hello</button>`, <button>Hello</button>);
+  describe("diff", async () => {
+    test("attribute is missing", async () => {
+      const d = await diff(
+        `<button disabled>Hello</button>`,
+        <button>Hello</button>
+      );
       expect(d).toMatchSnapshot();
     });
 
-    test("tag is different", () => {
+    test("tag is different", async () => {
       expect(
-        diff(`<button>Hello</button>`, <div>Hello</div>)
+        await diff(`<button>Hello</button>`, <div>Hello</div>)
       ).toMatchSnapshot();
     });
 
-    test("child is missing", () => {
-      const d = diff(
+    test("child is missing", async () => {
+      const d = await diff(
         `<div>Hello</div>`,
         <div>
           <div>Hello</div>

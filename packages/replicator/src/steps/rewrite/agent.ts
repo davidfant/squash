@@ -127,7 +127,7 @@ export async function rewrite(
 
   const content = Prompts.initialUserMessage(
     minifiedCode,
-    componentName,
+    !componentName,
     deps,
     examples,
     { maxNumExamples: 5 }
@@ -237,7 +237,8 @@ export async function rewrite(
   );
   lastValidationError?.nodeIds.forEach((id) => skippedExampleIds.add(id));
 
-  if (latest && skippedExampleIds.size !== examples.length) {
+  // if (latest && skippedExampleIds.size !== examples.length) {
+  if (latest) {
     const registryItem: ComponentRegistryItem = {
       id: componentId,
       dir: path.join("components", componentId),
@@ -256,7 +257,8 @@ export async function rewrite(
     const replaced = replaceExamples(
       { id: componentId, name: latest.component.name },
       state,
-      skippedExampleIds
+      new Set()
+      // skippedExampleIds
     );
 
     replaced.forEach((status, nodeId) => state.node.status.set(nodeId, status));

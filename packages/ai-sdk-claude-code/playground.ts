@@ -1,7 +1,4 @@
-import { type SDKMessage } from "@anthropic-ai/claude-code";
-import { streamText, tool, type ToolSet } from "ai";
-import { z } from "zod/v4/mini";
-import { ClaudeCodeLanguageModel } from "./src";
+import { query, type SDKMessage } from "@anthropic-ai/claude-code";
 
 const msgs: SDKMessage[] = [
   {
@@ -406,53 +403,52 @@ const msgs: SDKMessage[] = [
   },
 ];
 
-const stream = streamText({
-  model: new ClaudeCodeLanguageModel(() => Promise.resolve(msgs)),
-  prompt: "Give me the package name",
-  tools: [
-    "Task",
-    "Bash",
-    "Glob",
-    "Grep",
-    "ExitPlanMode",
-    "Read",
-    "Edit",
-    "MultiEdit",
-    "Write",
-    "NotebookEdit",
-    "WebFetch",
-    "TodoWrite",
-    "WebSearch",
-    "BashOutput",
-    "KillBash",
-  ].reduce(
-    (acc, toolName) => ({
-      ...acc,
-      [toolName]: tool({
-        type: "provider-defined",
-        id: `anthropic.${toolName}`,
-        name: toolName,
-        args: {},
-        inputSchema: z.any(),
-      }),
-    }),
-    {} as ToolSet
-  ),
-});
+const cwd = "/Users/fant/repos/lp/lp/packages/replicator/playground";
+// const stream = streamText({
+//   model: new ClaudeCodeLanguageModel(cwd),
+//   prompt: [
+//     {
+//       role: "user",
+//       content: [
+//         { type: "text", text: "what is in the image" },
+//         {
+//           type: "image",
+//           image:
+//             "https://upload.wikimedia.org/wikipedia/commons/a/a7/Camponotus_flavomarginatus_ant.jpg",
+//         },
+//       ],
+//     },
+//   ],
+//   tools,
+// });
 
-for await (const chunk of stream.toUIMessageStream()) {
-  console.log(chunk);
-}
-
-// for await (const msg of query({
-//   prompt: "Give me the package name",
-//   options: {
-//     cwd: "/Users/fant/repos/lp/lp/packages/replicator/playground",
-//     executable: "node",
-//     includePartialMessages: true,
-//     permissionMode: "acceptEdits",
-//   },
-// })) {
-//   console.dir(msg, { depth: null });
-//   console.log("---");
+// for await (const chunk of stream.toUIMessageStream()) {
+//   console.log(chunk);
 // }
+
+for await (const msg of query({
+  prompt: "who are you?",
+  options: {
+    cwd,
+    executable: "node",
+    includePartialMessages: true,
+    permissionMode: "acceptEdits",
+    hooks: {
+      UserPromptSubmit: [
+        {
+          hooks: [
+            async ({ cwd }) => {
+              process.exit(0);
+              // throw new Error("test");
+              console.log("hook", cwd);
+              return { async: true };
+            },
+          ],
+        },
+      ],
+    },
+  },
+})) {
+  console.dir(msg, { depth: null });
+  console.log("---");
+}

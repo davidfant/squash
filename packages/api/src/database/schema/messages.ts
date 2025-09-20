@@ -10,6 +10,7 @@ import {
   uuid,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
+import { user } from "./auth";
 import { repoBranch } from "./repos";
 
 export const messageRole = pgEnum("message_role", [
@@ -47,6 +48,7 @@ export const message = pgTable(
       .notNull()
       .references(() => messageThread.id),
     parentId: uuid("parent_id").references((): AnyPgColumn => message.id),
+    createdBy: uuid("created_by").references(() => user.id),
   },
   (table) => [
     index("message_parent_id_index").on(table.parentId),

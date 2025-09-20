@@ -1,6 +1,7 @@
 import { api, useQuery } from "@/hooks/api";
 import { keepPreviousData } from "@tanstack/react-query";
 import { createContext, useContext, useState, type ReactNode } from "react";
+import { BranchLayoutSkeleton } from "./BranchLayoutSkeleton";
 import type { Branch } from "./types";
 
 export type ScreenSize = "desktop" | "tablet" | "mobile";
@@ -61,7 +62,14 @@ export const BranchContextProvider = ({
 
   const toggleScreenSize = () => setScreenSize(getNextScreenSize(screenSize));
 
-  if (!branch.data) return null;
+  const [toggle, setToggle] = useState(false);
+  // useEffect(() => {
+  //   setInterval(() => {
+  //     setToggle((prev) => !prev);
+  //   }, 1000);
+  // }, []);
+
+  if (!branch.data || toggle) return <BranchLayoutSkeleton />;
   return (
     <BranchContext.Provider
       value={{

@@ -1,6 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import type { ChatMessage } from "@squash/api/agent/types";
-import type { ChatStatus } from "ai";
+import type { ChatMessage } from "@squashai/api/agent/types";
 import {
   Check,
   EyeIcon,
@@ -10,12 +9,22 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import type { Todo } from "../TodoList";
-import { FileBadge } from "./FileBadge";
+import type { Todo } from "../../TodoList";
+import { FileBadge } from "../FileBadge";
 
 interface TextBlock {
   type: "text";
   content: string;
+}
+
+interface AbortBlock {
+  type: "abort";
+}
+
+interface GitCommitBlock {
+  type: "commit";
+  title: string;
+  sha: string;
 }
 
 export interface EventBlockItem {
@@ -29,28 +38,28 @@ interface EventBlock {
   streaming: boolean;
 }
 
-type Block = TextBlock | EventBlock;
+type Block = TextBlock | AbortBlock | GitCommitBlock | EventBlock;
 
-export function messagePartsToEvents(
-  parts: ChatMessage["parts"],
-  status: ChatStatus
-): Block[] {
+export function groupMessageEvents(parts: ChatMessage["parts"]): Block[] {
   const blocks: Block[] = [];
   let currentEvents: EventBlockItem[] = [];
   let todos: Todo[] = [];
 
+  const flushEvents = () => {
+    if (!!currentEvents.length) {
+      blocks.push({
+        type: "events",
+        events: currentEvents,
+        streaming: false,
+      });
+      currentEvents = [];
+    }
+  };
+
   for (const part of parts) {
     switch (part.type) {
       case "text":
-        if (!!currentEvents.length) {
-          blocks.push({
-            type: "events",
-            events: currentEvents,
-            streaming: false,
-          });
-          currentEvents = [];
-        }
-
+        flushEvents();
         blocks.push({ type: "text", content: part.text });
         break;
       case "tool-ClaudeCodeRead": {
@@ -59,9 +68,7 @@ export function messagePartsToEvents(
           icon: EyeIcon,
           label: (
             <>
-              <span>
-                {part.state === "output-available" ? "Read" : "Reading"}
-              </span>
+              <span>Read</span>
               {path && <FileBadge path={path} />}
             </>
           ),
@@ -74,9 +81,7 @@ export function messagePartsToEvents(
           icon: FilePenIcon,
           label: (
             <>
-              <span>
-                {part.state === "output-available" ? "Updated" : "Updating"}
-              </span>
+              <span>Edit</span>
               {path && <FileBadge path={path} />}
             </>
           ),
@@ -147,11 +152,7 @@ export function messagePartsToEvents(
           icon: SearchIcon,
           label: (
             <>
-              <span>
-                {part.state === "output-available"
-                  ? "Searched for"
-                  : "Searching for"}
-              </span>
+              <span>Search for</span>
               {!!part.input?.pattern && (
                 <Badge variant="outline" className="border-none bg-muted">
                   {part.input?.pattern}
@@ -162,6 +163,22 @@ export function messagePartsToEvents(
         });
         break;
       }
+      case "tool-GitCommit": {
+        if (part.state === "output-available") {
+          flushEvents();
+          blocks.push({
+            type: "commit",
+            title: part.input.title,
+            sha: part.output.commitSha,
+          });
+          break;
+        }
+      }
+      case "data-AbortRequest": {
+        flushEvents();
+        blocks.push({ type: "abort" });
+        break;
+      }
       default: {
         if (part.type.startsWith("tool-")) {
           console.warn(`Unknown tool:`, part);
@@ -170,13 +187,7 @@ export function messagePartsToEvents(
     }
   }
 
-  if (!!currentEvents.length) {
-    blocks.push({
-      type: "events",
-      events: currentEvents,
-      streaming: status === "streaming",
-    });
-  }
+  flushEvents();
 
   return blocks;
 }

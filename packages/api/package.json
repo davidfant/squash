@@ -1,5 +1,5 @@
 {
-  "name": "@squash/api",
+  "name": "@squashai/api",
   "type": "module",
   "version": "0.0.2",
   "exports": {
@@ -37,14 +37,15 @@
     "@opentelemetry/context-async-hooks": "^2.0.1",
     "@opentelemetry/exporter-trace-otlp-proto": "^0.203.0",
     "@opentelemetry/sdk-trace-base": "^2.0.1",
-    "@squash/ai-sdk-claude-code": "workspace:*",
-    "@squash/flyio-ssh-proxy": "workspace:*",
-    "@squash/replicator": "workspace:*",
-    "@squash/replicator-git-sync": "workspace:*",
+    "@squashai/ai-sdk-claude-code": "workspace:*",
+    "@squashai/flyio-ssh-proxy": "workspace:*",
+    "@squashai/replicator": "workspace:*",
+    "@squashai/replicator-git-sync": "workspace:*",
     "ai": "^5.0.5",
     "aws4fetch": "^1.0.20",
     "better-auth": "^1.2.12",
     "drizzle-orm": "^0.44.2",
+    "eventsource-parser": "^3.0.5",
     "hono": "^4.9.0",
     "jsonwebtoken": "^9.0.2",
     "langsmith": "^0.3.53",
@@ -52,9 +53,11 @@
     "lodash.kebabcase": "^4.1.1",
     "lodash.upperfirst": "^4.3.1",
     "nanotar": "^0.2.0",
+    "openai": "^5.21.0",
     "zod": "^4.0.16"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250918.0",
     "@types/lodash.camelcase": "^4.3.9",
     "@types/lodash.kebabcase": "^4.1.9",
     "@types/lodash.upperfirst": "^4.3.9",

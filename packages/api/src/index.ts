@@ -1,10 +1,14 @@
+import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { logger } from "hono/logger";
+import { logger as honoLogger } from "hono/logger";
 import { requestId } from "hono/request-id";
+import { OpenAI } from "openai";
+import z from "zod";
 import { authMiddleware } from "./auth/middleware";
 import { databaseMiddleware } from "./database/middleware";
-import { chatRouter } from "./routers/chat";
+import { createSignedUrl } from "./lib/cloudflare";
+import { logger } from "./lib/logger";
 import { githubRouter } from "./routers/integrations/github";
 import { replicatorRouter } from "./routers/replicator";
 import { reposRouter } from "./routers/repos";
@@ -14,16 +18,61 @@ import { repoProvidersRouter } from "./routers/repos/providers";
 const app = new Hono<{ Bindings: CloudflareBindings }>()
   .use("*", cors({ origin: process.env.APP_URL, credentials: true }))
   .use(requestId())
-  .use(logger())
+  .use(honoLogger())
   .use(databaseMiddleware)
   .use(authMiddleware)
   .on(["GET", "POST"], "/auth/*", (c) => c.get("auth").handler(c.req.raw))
-  .route("/chat", chatRouter)
   .route("/replicator", replicatorRouter)
   .route("/repos/providers", repoProvidersRouter)
   .route("/repos/branches", repoBranchesRouter)
   .route("/repos", reposRouter)
-  .route("/integrations/github", githubRouter);
+  .route("/integrations/github", githubRouter)
+  .post(
+    "/upload",
+    zValidator("json", z.object({ filename: z.string() })),
+    async (c) => {
+      const filename = c.req.valid("json").filename;
+      const res = await createSignedUrl(filename, {
+        accessKeyId: c.env.R2_UPLOADS_ACCESS_KEY_ID,
+        secretAccessKey: c.env.R2_UPLOADS_SECRET_ACCESS_KEY,
+        bucketUrl: c.env.R2_UPLOADS_BUCKET_URL,
+        endpointUrl: c.env.R2_UPLOADS_ENDPOINT_URL_S3,
+      });
+      return c.json(res);
+    }
+  )
+  .post("/transcribe", async (c) => {
+    const formData = await c.req.raw.formData();
+    const file = formData.get("file");
+    if (!(file instanceof File)) return c.json({ error: "Missing file" }, 400);
+
+    const openai = new OpenAI({ apiKey: c.env.OPENAI_API_KEY });
+    const result = await openai.audio.transcriptions.create({
+      file,
+      model: "gpt-4o-transcribe",
+    });
+
+    return c.text(result.text);
+  })
+  .onError(async (err, c) => {
+    logger.error("Hono Unhandled Error", {
+      requestId: c.get("requestId"),
+      route: c.req.path,
+      query: c.req.query(),
+      headers: Object.fromEntries(c.req.raw.headers.entries()),
+      body: await c.req.raw
+        .clone()
+        .text()
+        .catch(() => "Failed to read body"),
+      stack: err.stack,
+      name: err.name,
+      cause: err.cause,
+      message: err.message,
+    });
+    throw err;
+  });
 
 export default app;
 export type AppType = typeof app;
+
+export { SandboxDurableObject } from "./durable-objects/sandbox";

@@ -151,10 +151,10 @@ function buildDescendantsFromProps(
         if (el.nodeId) out.push({ nodeId: el.nodeId, keys });
       }
       // TODO: write a test to verify that this works
-      if (val.$$typeof === "react.fragment") {
-        const f = val as Metadata.ReactFiber.PropValue.Fragment;
-        f.children.forEach((c, i) => collect(c, [...keys, i], out));
-      }
+      // if (val.$$typeof === "react.fragment") {
+      //   const f = val as Metadata.ReactFiber.PropValue.Fragment;
+      //   f.children.forEach((c, i) => collect(c, [...keys, "children", i], out));
+      // }
 
       for (const [k, v] of Object.entries(val)) collect(v, [...keys, k], out);
     }

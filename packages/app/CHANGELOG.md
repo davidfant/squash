@@ -1,4 +1,4 @@
-# @squash/app
+# @squashai/app
 
 ## 0.0.3
 
@@ -6,7 +6,7 @@
 
 - Updated dependencies
   - dev-server-utils@0.0.4
-  - @squash/api@0.0.2
+  - @squashai/api@0.0.2
 
 ## 0.0.2
 
@@ -14,7 +14,7 @@
 
 - Updated dependencies
   - dev-server-utils@0.0.2
-  - @squash/api@0.0.1
+  - @squashai/api@0.0.1
 
 ## 0.0.1
 

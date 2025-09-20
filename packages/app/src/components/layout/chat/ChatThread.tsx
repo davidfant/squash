@@ -7,11 +7,13 @@ import {
   type ChatInputValue,
 } from "@/components/layout/chat/input/ChatInput";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { api, useMutation } from "@/hooks/api";
 import { useBranchContext } from "@/routes/branches/context";
-import type { ChatMessage } from "@squash/api/agent/types";
+import type { ChatMessage } from "@squashai/api/agent/types";
 import type { FileUIPart } from "ai";
 import { AlertCircle } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import { v4 as uuid } from "uuid";
 import { useChatContext } from "./context";
@@ -24,10 +26,12 @@ function ChatInputWithScrollToBottom({
   parentId,
   initialValue,
   ready,
+  onStop,
 }: {
   parentId: string;
   initialValue: ChatInputValue | undefined;
   ready: boolean;
+  onStop: () => Promise<unknown>;
 }) {
   const { status, sendMessage } = useChatContext();
   const { scrollToBottom } = useStickToBottomContext();
@@ -39,6 +43,7 @@ function ChatInputWithScrollToBottom({
       placeholder="Type a message..."
       submitting={status === "submitted" || status === "streaming"}
       maxRows={10}
+      onStop={onStop}
       onSubmit={(value) => {
         sendMessage({
           ...value,
@@ -59,21 +64,12 @@ export function ChatThread({
   ready: boolean;
   initialValue?: ChatInputValue;
 }) {
-  const { setPreview, preview } = useBranchContext();
+  const { setPreview } = useBranchContext();
   const { messages: allMessages, status, sendMessage } = useChatContext();
   const messages = useMessageLineage(allMessages, id);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
 
-  // Get the ID of the most recent message
-  const mostRecentMessageId =
-    messages.activePath[messages.activePath.length - 1]?.id;
-
-  useEffect(() => {
-    const last = messages.activePath[messages.activePath.length - 1];
-    if (last?.role === "user" && !!last.parts.length) {
-      sendMessage(undefined);
-    }
-  }, [!!messages.activePath.length]);
+  const mostRecentMessageId = messages.activePath.slice(-1)[0]?.id;
 
   const handleRetry = (assistantId: string, editedMessage?: ChatMessage) => {
     if (status === "submitted" || status === "streaming") return;
@@ -123,6 +119,10 @@ export function ChatThread({
     setEditingMessageId(null);
   };
 
+  const stop = useMutation(
+    api.repos.branches[":branchId"].messages.abort.$post
+  );
+
   const handleVariantChange = (parentId: string, chosenChildId: string) => {
     const newActivePath = messages.switchVariant(parentId, chosenChildId);
     const lastSha = newActivePath
@@ -131,44 +131,19 @@ export function ChatThread({
     if (lastSha) setPreview(lastSha.data.sha);
   };
 
-  // Extract todos from the most recent todoWrite tool output
-  const currentTodos = useMemo(() => {
-    // Don't show todos when a new message has been submitted
-    if (status === "submitted") {
-      return [];
-    }
-
-    // Find the most recent todoWrite tool output by traversing messages in reverse
-    for (let i = messages.activePath.length - 1; i >= 0; i--) {
-      const message = messages.activePath[i];
-      if (message && message.role === "assistant") {
-        // Traverse parts in reverse order within each message to find the most recent
-        for (let j = message.parts.length - 1; j >= 0; j--) {
-          const part = message.parts[j];
-          if (
-            part &&
-            part.type === "tool-todoWrite" &&
-            "state" in part &&
-            part.state === "output-available" &&
-            "output" in part &&
-            part.output?.todos
-          ) {
-            console.log(
-              "Found todos in message",
-              i,
-              "part",
-              j,
-              ":",
-              part.output.todos
-            );
-            return part.output.todos;
-          }
-        }
-      }
-    }
-    console.log("No todos found in messages");
-    return [];
-  }, [messages.activePath, status]);
+  const todos = useMemo(
+    () =>
+      messages.activePath
+        .flatMap((p) => p.parts)
+        .filter((p) => p.type === "tool-ClaudeCodeTodoWrite")
+        .findLast((p) => p.state === "output-available")
+        ?.input.todos.map((t, index) => ({
+          id: index.toString(),
+          content: t.status === "in_progress" ? t.activeForm : t.content,
+          status: t.status,
+        })),
+    [messages.activePath]
+  );
 
   return (
     <StickToBottom
@@ -178,7 +153,7 @@ export function ChatThread({
       resize="smooth"
     >
       <div className="flex-1 w-full overflow-hidden">
-        <ConversationContent className="p-2 pr-4">
+        <ConversationContent className="pt-0 pl-2 pb-2 pr-4">
           {messages.activePath.map((m) => {
             switch (m.role) {
               case "user":
@@ -256,13 +231,24 @@ export function ChatThread({
         </ConversationContent>
         <ConversationScrollButton />
       </div>
-      <TodoList todos={currentTodos} />
 
       <div className="p-2 pt-0">
+        {!!todos?.length && (
+          // margin-inline: 12px;
+          // margin-bottom: 0;
+          // border-bottom-right-radius: 0;
+          // border-bottom-left-radius: 0;
+          // border-bottom: none;
+          // background: unset;
+          <Card className="mb-2 p-2">
+            <TodoList todos={todos} />
+          </Card>
+        )}
         <ChatInputWithScrollToBottom
           parentId={messages.activePath[messages.activePath.length - 1]?.id!}
           initialValue={initialValue}
           ready={ready}
+          onStop={() => stop.mutateAsync({ param: { branchId: id }, json: {} })}
         />
       </div>
     </StickToBottom>

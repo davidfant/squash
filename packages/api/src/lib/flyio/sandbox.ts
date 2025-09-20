@@ -172,9 +172,17 @@ export async function createMachine({
             "sh",
             "-lc",
             `
+              set -e
+
               ${snapshot.cmd.prepare ?? ""}
 
               cd $WORKDIR
+
+              if [ -n "$GITHUB_USERNAME" ] && [ -n "$GITHUB_PASSWORD" ]; then
+                echo "Configuring git credential helper..."
+                git config --global credential.helper store
+                printf "https://%s:%s@github.com\n" "$GITHUB_USERNAME" "$GITHUB_PASSWORD" > ~/.git-credentials
+              fi
 
               if [ ! -d ".git" ]; then
                 echo "Initializing git repo in $WORKDIR..."

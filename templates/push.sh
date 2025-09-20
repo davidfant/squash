@@ -6,9 +6,9 @@ fly auth docker
 
 APP_NAME="squash-template"
 
-function build() {
+function build_repo() {
   TEMPLATE_NAME=$1
-  echo "Building $TEMPLATE_NAME"
+  echo "Building template: $TEMPLATE_NAME"
   pushd $TEMPLATE_NAME
     TEMPLATE_VERSION=$(cat package.json | jq -r '.version')
 
@@ -17,9 +17,8 @@ function build() {
     git remote set-url origin $GIT_URL
     git push --tags
 
-
     DOCKER_TAG="registry.fly.io/$APP_NAME:$TEMPLATE_NAME-v$TEMPLATE_VERSION"
-    echo "DOCKER TAG: $DOCKER_TAG"
+    echo "Docker tag: $DOCKER_TAG"
     docker build \
       --platform linux/amd64 \
       --build-arg AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
@@ -34,8 +33,26 @@ function build() {
   popd
 }
 
+function build_node_image() {
+  NODE_IMAGE_TAG=$1
+  echo "Building node image: $NODE_IMAGE_TAG"
+
+  DOCKER_TAG="registry.fly.io/$APP_NAME:node-$NODE_IMAGE_TAG"
+
+  echo "Docker tag: $DOCKER_TAG"
+  docker build \
+    --platform linux/amd64 \
+    --build-arg NODE_IMAGE=node:$NODE_IMAGE_TAG \
+    --tag $DOCKER_TAG \
+    --file ./Dockerfile.node \
+    .
+  
+  docker push $DOCKER_TAG
+}
+
 if ! flyctl apps list | grep -q $APP_NAME; then
   flyctl apps create $APP_NAME
 fi
 
-build replicator-vite-ts
+build_repo replicator-vite-ts
+build_node_image 20-alpine

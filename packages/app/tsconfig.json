@@ -3,7 +3,7 @@
   "include": ["src/**/*"],
   "compilerOptions": {
     "types": ["vite/client"],
-    "jsx": "react-jsx",
+    "jsx": "preserve",
     "baseUrl": ".",
     "rootDir": "./src",
     "outDir": "./dist",

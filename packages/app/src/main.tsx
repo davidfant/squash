@@ -14,6 +14,10 @@ import { LandingPage } from "./routes/landing";
 import { LoginPage } from "./routes/login";
 import { NewRepoFromProvider, NewRepoPage } from "./routes/new/repo";
 import { NewRepoManualPage } from "./routes/new/repo/manual";
+import { NextLandingPage } from "./routes/next";
+import { NextLandingPage2 } from "./routes/next/2";
+import { NextLandingPage3 } from "./routes/next/3";
+import { NextLandingPage4 } from "./routes/next/4";
 import { RepoPage } from "./routes/repos";
 
 i18n.use(initReactI18next).init({
@@ -34,6 +38,10 @@ createRoot(document.getElementById("root")!).render(
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/extension-auth" element={<ExtensionAuthPage />} />
+            <Route path="/next" element={<NextLandingPage />} />
+            <Route path="/next-2" element={<NextLandingPage2 />} />
+            <Route path="/next-3" element={<NextLandingPage3 />} />
+            <Route path="/next-4" element={<NextLandingPage4 />} />
             <Route path="/repos/:repoId" element={<RepoPage />} />
             <Route
               path="/repos/:repoId/branches/:branchId"

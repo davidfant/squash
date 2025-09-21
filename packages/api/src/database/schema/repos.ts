@@ -24,7 +24,6 @@ export interface RepoBranchSandbox {
   type: "flyio";
   appId: string;
   machineId: string;
-  url: string;
   workdir: string;
 }
 

@@ -1,10 +1,13 @@
-import React, { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -12,26 +15,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Switch } from "@/components/ui/switch";
 import {
   ArrowLeft,
-  GitBranch,
-  Loader2,
   ChevronDown,
   ChevronRight,
+  GitBranch,
+  Loader2,
 } from "lucide-react";
+import { useState } from "react";
+import { EnvVariablesSection } from "./EnvVariablesSection";
+import {
+  frameworks,
+  getFrameworkDisplay,
+  getFrameworkIcon,
+} from "./FrameworkConstants";
 import type {
+  EnvVariable,
+  FrameworkInfo,
   ProviderData,
   SelectedRepo,
-  FrameworkInfo,
-  EnvVariable,
 } from "./types";
-import { frameworks, getFrameworkIcon, getFrameworkDisplay } from "./FrameworkConstants";
-import { EnvVariablesSection } from "./EnvVariablesSection";
 
 interface FrameworkConfigurationProps {
   provider: ProviderData;
@@ -61,7 +65,7 @@ export function FrameworkConfiguration({
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
   const [showEnvVariables, setShowEnvVariables] = useState(false);
   const [envVariables, setEnvVariables] = useState<EnvVariable[]>([
-    { key: "", value: "" }
+    { key: "", value: "" },
   ]);
   const [projectName, setProjectName] = useState(selectedRepo.name);
 
@@ -78,27 +82,34 @@ export function FrameworkConfiguration({
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <span className="text-sm text-muted-foreground">Importing from GitHub</span>
+          <span className="text-sm text-muted-foreground">
+            Importing from GitHub
+          </span>
           <div className="flex items-center gap-2">
-            <Avatar className="size-5">
-              <AvatarImage src={`https://github.com/${selectedAccount?.name}.png`} alt={selectedAccount?.name} />
-              <AvatarFallback>
-                {selectedAccount?.name?.[0]?.toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <span className="text-sm font-medium">{selectedAccount?.name}/{selectedRepo.name}</span>
+            <Avatar
+              className="size-5"
+              image={`https://github.com/${selectedAccount?.name}.png`}
+              name={selectedAccount?.name}
+            />
+            <span className="text-sm font-medium">
+              {selectedAccount?.name}/{selectedRepo.name}
+            </span>
             <GitBranch className="size-3 text-muted-foreground ml-1" />
             <span className="text-sm text-muted-foreground">main</span>
           </div>
         </div>
       </CardHeader>
-      
+
       <CardContent>
         {isDetecting ? (
           <div className="flex flex-col items-center justify-center py-16">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            <span className="mt-4 text-muted-foreground">Analyzing repository...</span>
-            <span className="mt-2 text-sm text-muted-foreground">This may take a few moments</span>
+            <span className="mt-4 text-muted-foreground">
+              Analyzing repository...
+            </span>
+            <span className="mt-2 text-sm text-muted-foreground">
+              This may take a few moments
+            </span>
           </div>
         ) : frameworkInfo && editedInfo ? (
           <div className="space-y-6">
@@ -119,7 +130,9 @@ export function FrameworkConfiguration({
                       <SelectItem value="personal">
                         <div className="flex items-center gap-2">
                           <Avatar className="size-5">
-                            <AvatarImage src={`https://github.com/${selectedAccount?.name}.png`} />
+                            <AvatarImage
+                              src={`https://github.com/${selectedAccount?.name}.png`}
+                            />
                             <AvatarFallback>
                               {selectedAccount?.name?.[0]?.toUpperCase()}
                             </AvatarFallback>
@@ -130,11 +143,13 @@ export function FrameworkConfiguration({
                     </SelectContent>
                   </Select>
                 </div>
-                
+
                 <span className="text-muted-foreground text-xl mt-9">/</span>
-                
+
                 <div className="flex-1 space-y-2">
-                  <Label className="text-sm text-muted-foreground">Project Name</Label>
+                  <Label className="text-sm text-muted-foreground">
+                    Project Name
+                  </Label>
                   <Input
                     className="w-full"
                     value={projectName}
@@ -145,16 +160,24 @@ export function FrameworkConfiguration({
 
               {/* Framework Preset */}
               <div className="space-y-2">
-                <Label className="text-sm text-muted-foreground">Framework Preset</Label>
-                <Select 
+                <Label className="text-sm text-muted-foreground">
+                  Framework Preset
+                </Label>
+                <Select
                   value={editedInfo.name}
-                  onValueChange={(value) => setEditedInfo({ ...editedInfo, name: value })}
+                  onValueChange={(value) =>
+                    setEditedInfo({ ...editedInfo, name: value })
+                  }
                 >
                   <SelectTrigger className="w-full">
                     {editedInfo.name ? (
                       <div className="flex items-center gap-2 flex-1">
                         {getFrameworkIcon(editedInfo.name) ? (
-                          <img src={getFrameworkIcon(editedInfo.name)!} alt={editedInfo.name} className="h-5 w-5" />
+                          <img
+                            src={getFrameworkIcon(editedInfo.name)!}
+                            alt={editedInfo.name}
+                            className="h-5 w-5"
+                          />
                         ) : (
                           <span className="text-lg">🔧</span>
                         )}
@@ -176,7 +199,11 @@ export function FrameworkConfiguration({
                     {frameworks.map((framework) => (
                       <SelectItem key={framework.value} value={framework.value}>
                         <div className="flex items-center gap-2">
-                          <img src={framework.icon} alt={framework.display} className="h-5 w-5" />
+                          <img
+                            src={framework.icon}
+                            alt={framework.display}
+                            className="h-5 w-5"
+                          />
                           <span>{framework.display}</span>
                         </div>
                       </SelectItem>
@@ -187,22 +214,21 @@ export function FrameworkConfiguration({
 
               {/* Root Directory */}
               <div className="space-y-2">
-                <Label className="text-sm text-muted-foreground">Root Directory</Label>
+                <Label className="text-sm text-muted-foreground">
+                  Root Directory
+                </Label>
                 <div className="flex gap-2">
-                  <Input
-                    className="w-full"
-                    value="./"
-                    placeholder="./"
-                  />
-                  <Button variant="outline">
-                    Edit
-                  </Button>
+                  <Input className="w-full" value="./" placeholder="./" />
+                  <Button variant="outline">Edit</Button>
                 </div>
               </div>
 
               {/* Build and Output Settings */}
               <Card className="py-2">
-                <Collapsible open={showAdvancedSettings} onOpenChange={setShowAdvancedSettings}>
+                <Collapsible
+                  open={showAdvancedSettings}
+                  onOpenChange={setShowAdvancedSettings}
+                >
                   <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium cursor-pointer hover:text-foreground transition-colors w-full px-3 h-[var(--input-height)] text-left">
                     {showAdvancedSettings ? (
                       <ChevronDown className="h-4 w-4" />
@@ -215,20 +241,29 @@ export function FrameworkConfiguration({
                     <CardContent className="space-y-4 pt-0 pb-6 px-3">
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <Label className="text-sm text-muted-foreground">Build Command</Label>
+                          <Label className="text-sm text-muted-foreground">
+                            Build Command
+                          </Label>
                           <Switch />
                         </div>
                         <Input
                           className="w-full font-mono text-sm"
                           value={editedInfo.entrypoint}
-                          onChange={(e) => setEditedInfo({ ...editedInfo, entrypoint: e.target.value })}
+                          onChange={(e) =>
+                            setEditedInfo({
+                              ...editedInfo,
+                              entrypoint: e.target.value,
+                            })
+                          }
                           placeholder="npm run build or next build"
                         />
                       </div>
 
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <Label className="text-sm text-muted-foreground">Output Directory</Label>
+                          <Label className="text-sm text-muted-foreground">
+                            Output Directory
+                          </Label>
                           <Switch />
                         </div>
                         <Input
@@ -240,7 +275,9 @@ export function FrameworkConfiguration({
 
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <Label className="text-sm text-muted-foreground">Install Command</Label>
+                          <Label className="text-sm text-muted-foreground">
+                            Install Command
+                          </Label>
                           <Switch />
                         </div>
                         <Input
@@ -252,13 +289,20 @@ export function FrameworkConfiguration({
 
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <Label className="text-sm text-muted-foreground">Development Server Port</Label>
+                          <Label className="text-sm text-muted-foreground">
+                            Development Server Port
+                          </Label>
                         </div>
                         <Input
                           className="w-full"
                           type="number"
                           value={editedInfo.port}
-                          onChange={(e) => setEditedInfo({ ...editedInfo, port: parseInt(e.target.value) || 3000 })}
+                          onChange={(e) =>
+                            setEditedInfo({
+                              ...editedInfo,
+                              port: parseInt(e.target.value) || 3000,
+                            })
+                          }
                         />
                       </div>
                     </CardContent>
@@ -277,7 +321,7 @@ export function FrameworkConfiguration({
 
             {/* Deploy Button */}
             <div className="pt-4">
-              <Button 
+              <Button
                 onClick={onConfirm}
                 disabled={!editedInfo || importPending}
                 className="w-full text-base"
@@ -298,4 +342,4 @@ export function FrameworkConfiguration({
       </CardContent>
     </Card>
   );
-} 
+}

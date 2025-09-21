@@ -186,12 +186,15 @@ export class SandboxDurableObject implements AgentAppHandlers {
     });
 
     const context = { ...sandbox, accessToken: this.env.FLY_ACCESS_TOKEN };
+    const url = new URL(this.env.PREVIEW_PROXY_URL);
+    url.host = `${sandbox.appId}.${url.host}`;
+
     if (body.sha) {
       await gitReset(context, body.sha);
-      return { url: sandbox.url, sha: body.sha };
+      return { url: url.toString(), sha: body.sha };
     } else {
       const sha = await gitCurrentCommit(context);
-      return { url: sandbox.url, sha };
+      return { url: url.toString(), sha };
     }
   }
 
@@ -442,8 +445,6 @@ export class SandboxDurableObject implements AgentAppHandlers {
         .where(eq(schema.repoBranch.id, branchId))
         .then(([repo]) => repo!);
 
-      const branchName = repo.branchName;
-
       await createApp(appId, this.env.FLY_ACCESS_TOKEN, this.env.FLY_ORG_SLUG);
       logger.debug("Created new Fly.io app", { appId });
 
@@ -451,7 +452,7 @@ export class SandboxDurableObject implements AgentAppHandlers {
         appId,
         git: {
           url: repo.url,
-          branch: branchName,
+          branch: repo.branchName,
           workdir: repo.snapshot.workdir,
         },
         snapshot: repo.snapshot,
@@ -489,7 +490,6 @@ export class SandboxDurableObject implements AgentAppHandlers {
         type: "flyio",
         appId,
         machineId: machine.id,
-        url: `https://${appId}.fly.dev`,
         workdir: repo.snapshot.workdir,
       };
     } catch (error) {

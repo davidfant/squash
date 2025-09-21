@@ -54,7 +54,7 @@ export function Avatar({
   name,
   ...props
 }: React.ComponentProps<typeof AvatarRoot> & {
-  image: string;
+  image?: string;
   name: string;
 }) {
   return (

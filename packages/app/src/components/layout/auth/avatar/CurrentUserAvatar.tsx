@@ -1,5 +1,5 @@
 import { authClient } from "@/auth";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,25 +12,6 @@ import { Check, LogOut } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { CreateOrganizationMenuItem } from "./CreateOrganizationMenuItem";
 // import { InviteUserMenuItem } from "./InviteUserMenuItem";
-
-const OrganizationAvatar = ({
-  name,
-  src,
-  className,
-}: {
-  name: string | undefined;
-  src: string | undefined;
-  className?: string;
-}) => {
-  return (
-    <Avatar className={className}>
-      <AvatarImage src={src ?? undefined} />
-      <AvatarFallback className="bg-primary text-primary-foreground">
-        {name?.charAt(0)}
-      </AvatarFallback>
-    </Avatar>
-  );
-};
 
 export function CurrentUserAvatar({
   fallback,
@@ -60,9 +41,9 @@ export function CurrentUserAvatar({
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button className="focus:outline-none">
-            <OrganizationAvatar
-              name={org.data?.name ?? session.data.user.name ?? undefined}
-              src={org.data?.logo ?? session.data.user.image ?? undefined}
+            <Avatar
+              name={org.data?.name ?? session.data.user.name ?? ""}
+              image={org.data?.logo ?? session.data.user.image ?? undefined}
               className="cursor-pointer size-8"
             />
           </button>
@@ -84,9 +65,9 @@ export function CurrentUserAvatar({
           {!!org?.data && (
             <>
               <div className="flex items-center gap-2 p-2">
-                <OrganizationAvatar
+                <Avatar
                   name={org.data.name}
-                  src={org.data.logo ?? undefined}
+                  image={org.data.logo ?? undefined}
                   className="size-6"
                 />
                 <p className="truncate min-w-0 font-medium text-sm">

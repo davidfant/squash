@@ -29,6 +29,7 @@
   "migrations": [{ "tag": "v1", "new_classes": ["SandboxDurableObject"] }],
   "vars": {
     "APP_URL": "http://localhost:5173",
+    "PREVIEW_PROXY_URL": "http://localhost:8788",
     "R2_FILE_TRANSFER_BUCKET_NAME": "file-transfer",
     "R2_REPOS_BUCKET_NAME": "repos",
     "REPLICATOR_GIT_SYNC_API_URL": "http://localhost:8888",
@@ -40,6 +41,7 @@
     "production": {
       "vars": {
         "APP_URL": "https://app.squash.build",
+        "PREVIEW_PROXY_URL": "https://preview.squash.build",
         "R2_FILE_TRANSFER_BUCKET_NAME": "file-transfer",
         "R2_REPOS_BUCKET_NAME": "repos",
         "REPLICATOR_GIT_SYNC_API_URL": "http://localhost:8888",

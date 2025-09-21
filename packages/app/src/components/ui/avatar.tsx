@@ -3,7 +3,7 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-function Avatar({
+export function AvatarRoot({
   className,
   ...props
 }: React.ComponentProps<typeof AvatarPrimitive.Root>) {
@@ -19,7 +19,7 @@ function Avatar({
   );
 }
 
-function AvatarImage({
+export function AvatarImage({
   className,
   ...props
 }: React.ComponentProps<typeof AvatarPrimitive.Image>) {
@@ -32,7 +32,7 @@ function AvatarImage({
   );
 }
 
-function AvatarFallback({
+export function AvatarFallback({
   className,
   ...props
 }: React.ComponentProps<typeof AvatarPrimitive.Fallback>) {
@@ -48,4 +48,19 @@ function AvatarFallback({
   );
 }
 
-export { Avatar, AvatarFallback, AvatarImage };
+export function Avatar({
+  className,
+  image,
+  name,
+  ...props
+}: React.ComponentProps<typeof AvatarRoot> & {
+  image: string;
+  name: string;
+}) {
+  return (
+    <AvatarRoot className={className}>
+      <AvatarImage src={image} alt={name} />
+      <AvatarFallback>{name.charAt(0)}</AvatarFallback>
+    </AvatarRoot>
+  );
+}

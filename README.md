@@ -20,6 +20,18 @@ openssl rsa -in private.dev.pem -pubout -out public.dev.pem
 
 # TODO
 
+## p0
+
+- [ ] Replace old LP w next, move branches to /builds/:id
+- [ ] Clone screenshot doesn't work
+- [ ] max height/scfoll in textbox
+- [ ] attach button on /next not working
+- [ ] add repo picker to input
+- [x] clean up branch preview header (share, menu, history)
+- [ ] fly io ssh proxy
+- [ ] don't show recent prototypes if the list is empty
+- [x] loading
+
 - [ ] Send a message while agent is running
 - [ ] Hooks for tsc
 - [ ] Google OAuth

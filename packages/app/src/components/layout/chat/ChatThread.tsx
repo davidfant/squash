@@ -148,11 +148,11 @@ export function ChatThread({
   return (
     <StickToBottom
       key={String(ready)}
-      className="h-full w-full flex flex-col relative"
+      className="h-full w-full flex flex-col"
       initial="instant"
       resize="smooth"
     >
-      <div className="flex-1 w-full overflow-hidden">
+      <div className="flex-1 w-full overflow-hidden relative">
         <ConversationContent className="pt-0 pl-2 pb-2 pr-4">
           {messages.activePath.map((m) => {
             switch (m.role) {

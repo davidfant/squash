@@ -30,6 +30,7 @@ interface GitCommitBlock {
 
 export interface EventBlockItem {
   icon: LucideIcon;
+  loading: boolean;
   label: ReactNode;
 }
 
@@ -40,6 +41,9 @@ interface EventBlock {
 }
 
 type Block = TextBlock | AbortBlock | GitCommitBlock | EventBlock;
+
+const isToolLoading = (state: `input-${string}` | `output-${string}`) =>
+  state.startsWith("input-");
 
 export function groupMessageEvents(parts: ChatMessage["parts"]): Block[] {
   const blocks: Block[] = [];
@@ -67,6 +71,7 @@ export function groupMessageEvents(parts: ChatMessage["parts"]): Block[] {
         const path = part.input?.file_path;
         currentEvents.push({
           icon: EyeIcon,
+          loading: isToolLoading(part.state),
           label: (
             <>
               <span>Read</span>
@@ -82,6 +87,7 @@ export function groupMessageEvents(parts: ChatMessage["parts"]): Block[] {
         const path = part.input?.file_path;
         currentEvents.push({
           icon: FilePenIcon,
+          loading: part.state.startsWith("input-"),
           label: (
             <>
               <span>Edit</span>
@@ -94,6 +100,7 @@ export function groupMessageEvents(parts: ChatMessage["parts"]): Block[] {
       case "tool-ClaudeCodeBash": {
         currentEvents.push({
           icon: TerminalIcon,
+          loading: isToolLoading(part.state),
           label: part.input?.description,
         });
         break;
@@ -124,6 +131,7 @@ export function groupMessageEvents(parts: ChatMessage["parts"]): Block[] {
           currentEvents.push(
             ...completed.map((t) => ({
               icon: Check,
+              loading: isToolLoading(part.state),
               label: `Completed '${t.content}'`,
             }))
           );
@@ -141,6 +149,7 @@ export function groupMessageEvents(parts: ChatMessage["parts"]): Block[] {
       case "tool-ClaudeCodeGlob": {
         currentEvents.push({
           icon: FolderSearch,
+          loading: isToolLoading(part.state),
           label: (
             <>
               <span>
@@ -160,6 +169,7 @@ export function groupMessageEvents(parts: ChatMessage["parts"]): Block[] {
       case "tool-ClaudeCodeGrep": {
         currentEvents.push({
           icon: SearchIcon,
+          loading: isToolLoading(part.state),
           label: (
             <>
               <span>Search for</span>

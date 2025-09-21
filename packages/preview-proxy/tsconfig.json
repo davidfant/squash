@@ -1,9 +1,7 @@
 {
   "extends": "../../tsconfig.base.json",
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "worker-configuration.d.ts"],
   "compilerOptions": {
-    "types": ["vite/client"],
-    "jsx": "preserve",
     "baseUrl": ".",
     "rootDir": "./src",
     "outDir": "./dist",

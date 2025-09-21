@@ -186,12 +186,15 @@ export class SandboxDurableObject implements AgentAppHandlers {
     });
 
     const context = { ...sandbox, accessToken: this.env.FLY_ACCESS_TOKEN };
+    const url = new URL(this.env.PREVIEW_PROXY_URL);
+    url.host = `${sandbox.appId}.${url.host}`;
+
     if (body.sha) {
       await gitReset(context, body.sha);
-      return { url: sandbox.url, sha: body.sha };
+      return { url: url.toString(), sha: body.sha };
     } else {
       const sha = await gitCurrentCommit(context);
-      return { url: sandbox.url, sha };
+      return { url: url.toString(), sha };
     }
   }
 
@@ -424,6 +427,7 @@ export class SandboxDurableObject implements AgentAppHandlers {
         .select({
           url: schema.repo.url,
           snapshot: schema.repo.snapshot,
+          branchName: schema.repoBranch.name,
           provider: {
             type: schema.repoProvider.type,
             data: schema.repoProvider.data,
@@ -448,8 +452,7 @@ export class SandboxDurableObject implements AgentAppHandlers {
         appId,
         git: {
           url: repo.url,
-          // TODO: this needs to be synced with the branch name in the DB (which might be generating while starting this for the first time)
-          branch: `feat/${branchId.split("-")[0]}`,
+          branch: repo.branchName,
           workdir: repo.snapshot.workdir,
         },
         snapshot: repo.snapshot,
@@ -487,7 +490,6 @@ export class SandboxDurableObject implements AgentAppHandlers {
         type: "flyio",
         appId,
         machineId: machine.id,
-        url: `https://${appId}.fly.dev`,
         workdir: repo.snapshot.workdir,
       };
     } catch (error) {

@@ -499,6 +499,12 @@ importers:
         specifier: ^4.31.0
         version: 4.33.1(@cloudflare/workers-types@4.20250918.0)
 
+  packages/preview-proxy:
+    devDependencies:
+      wrangler:
+        specifier: ^4.31.0
+        version: 4.33.1(@cloudflare/workers-types@4.20250918.0)
+
   packages/replicator:
     dependencies:
       '@ai-sdk/anthropic':

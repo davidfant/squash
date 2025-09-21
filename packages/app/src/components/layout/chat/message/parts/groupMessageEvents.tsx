@@ -6,6 +6,7 @@ import {
   FilePenIcon,
   FolderSearch,
   SearchIcon,
+  TerminalIcon,
   type LucideIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -75,7 +76,9 @@ export function groupMessageEvents(parts: ChatMessage["parts"]): Block[] {
         });
         break;
       }
-      case "tool-ClaudeCodeEdit": {
+      case "tool-ClaudeCodeEdit":
+      case "tool-ClaudeCodeMultiEdit":
+      case "tool-ClaudeCodeWrite": {
         const path = part.input?.file_path;
         currentEvents.push({
           icon: FilePenIcon,
@@ -85,6 +88,13 @@ export function groupMessageEvents(parts: ChatMessage["parts"]): Block[] {
               {path && <FileBadge path={path} />}
             </>
           ),
+        });
+        break;
+      }
+      case "tool-ClaudeCodeBash": {
+        currentEvents.push({
+          icon: TerminalIcon,
+          label: part.input?.description,
         });
         break;
       }

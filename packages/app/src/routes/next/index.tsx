@@ -49,7 +49,7 @@ function BranchCard({
   );
 
   return (
-    <Link to={`/branches/${branch.id}`}>
+    <Link to={`/repos/${branch.repo.id}/branches/${branch.id}`}>
       <Card className="pt-0 overflow-hidden group">
         <div className="aspect-video w-full bg-muted" />
         <CardContent className="flex items-center">
@@ -244,7 +244,7 @@ export function NextLandingPage() {
         <HeaderMenu />
       </header>
 
-      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-8 px-6 pb-20 pt-16">
+      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-6 pb-20 pt-16 gap-16">
         <section className="flex flex-col items-center gap-6 text-center">
           <Badge variant="secondary" className="px-3 py-1.5 rounded-full">
             Build anything with AI
@@ -257,7 +257,7 @@ export function NextLandingPage() {
             spin up a branch, preview, and deployment-ready project for you.
           </p>
 
-          <div className="mt-16 mb-16 w-full max-w-2xl">
+          <div className="w-full max-w-2xl">
             <ChatInput
               key={chatInputKey}
               initialValue={chatInitialValue}

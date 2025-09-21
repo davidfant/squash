@@ -19,6 +19,9 @@ const MemoizedMarkdownBlock = memo(
             {children}
           </a>
         ),
+        code: ({ children }) => (
+          <code className="block w-full overflow-y-auto">{children}</code>
+        ),
       }}
     >
       {content}

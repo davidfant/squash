@@ -47,6 +47,7 @@ export async function streamClaudeCodeAgent(
       // TODO: deny read/write to files that are gitignored
       // TODO: should we move this to @squashai/cli?
       // allows bypassPermissions when running in as sudo user
+      // command.push(`SHELL=/bin/sh`);
       command.push(`IS_SANDBOX=1`);
       command.push(`ANTHROPIC_API_KEY=${opts.env.ANTHROPIC_API_KEY}`);
       command.push("squash");

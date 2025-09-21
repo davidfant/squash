@@ -148,7 +148,7 @@ export function ChatThread({
   return (
     <StickToBottom
       key={String(ready)}
-      className="h-full w-full flex flex-col"
+      className="h-full w-full flex flex-col relative"
       initial="instant"
       resize="smooth"
     >
@@ -240,7 +240,7 @@ export function ChatThread({
           // border-bottom-left-radius: 0;
           // border-bottom: none;
           // background: unset;
-          <Card className="mb-2 p-2">
+          <Card className="mb-2 p-2 shadow-none">
             <TodoList todos={todos} />
           </Card>
         )}

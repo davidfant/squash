@@ -16,7 +16,7 @@ export function MessageParts({ parts }: { parts: ChatMessage["parts"] }) {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-3">
       {blocks.map((block, idx) => {
         switch (block.type) {
           case "text":

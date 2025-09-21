@@ -1,5 +1,4 @@
-import React from "react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -10,7 +9,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ExternalLink, GitBranch, Lock, Unlock, ArrowRight } from "lucide-react";
+import {
+  ArrowRight,
+  ExternalLink,
+  GitBranch,
+  Lock,
+  Unlock,
+} from "lucide-react";
 import type { ProviderData } from "./types";
 
 interface RepositorySelectorProps {
@@ -53,12 +58,11 @@ export function RepositorySelector({
               {provider.accounts.map((account) => (
                 <SelectItem key={account.id} value={account.id}>
                   <div className="flex items-center gap-2">
-                    <Avatar className="size-5">
-                      <AvatarImage src={account.avatarUrl} alt={account.name} />
-                      <AvatarFallback>
-                        {account.name[0]?.toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
+                    <Avatar
+                      className="size-5"
+                      image={account.avatarUrl}
+                      name={account.name}
+                    />
                     <span>{account.name}</span>
                   </div>
                 </SelectItem>
@@ -127,4 +131,4 @@ export function RepositorySelector({
       </CardContent>
     </Card>
   );
-} 
+}

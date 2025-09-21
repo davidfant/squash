@@ -1,4 +1,4 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
@@ -89,7 +89,7 @@ export function FrameworkConfiguration({
             <Avatar
               className="size-5"
               image={`https://github.com/${selectedAccount?.name}.png`}
-              name={selectedAccount?.name}
+              name={selectedAccount?.name ?? ""}
             />
             <span className="text-sm font-medium">
               {selectedAccount?.name}/{selectedRepo.name}
@@ -129,14 +129,11 @@ export function FrameworkConfiguration({
                     <SelectContent>
                       <SelectItem value="personal">
                         <div className="flex items-center gap-2">
-                          <Avatar className="size-5">
-                            <AvatarImage
-                              src={`https://github.com/${selectedAccount?.name}.png`}
-                            />
-                            <AvatarFallback>
-                              {selectedAccount?.name?.[0]?.toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
+                          <Avatar
+                            className="size-5"
+                            image={`https://github.com/${selectedAccount?.name}.png`}
+                            name={selectedAccount?.name ?? ""}
+                          />
                           <span>{selectedAccount?.name || "Personal"}</span>
                         </div>
                       </SelectItem>

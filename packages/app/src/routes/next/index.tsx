@@ -23,7 +23,7 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { CloneScreenshotAction } from "@/routes/next/CloneScreenshotAction";
 import { SiGithub } from "@icons-pack/react-simple-icons";
 import { useQuery as useReactQuery } from "@tanstack/react-query";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, MoreHorizontal, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router";
 import { HeaderMenu } from "./HeaderMenu";
@@ -36,7 +36,13 @@ type BranchSummary = RepoBranchesResult extends Array<infer Item>
   ? Item
   : never;
 
-function BranchCard({ branch }: { branch: BranchSummary }) {
+function BranchCard({
+  branch,
+  onDelete,
+}: {
+  branch: BranchSummary;
+  onDelete: () => void;
+}) {
   const formattedDate = new Date(branch.updatedAt).toLocaleDateString(
     undefined,
     { month: "short", day: "numeric" }
@@ -44,20 +50,47 @@ function BranchCard({ branch }: { branch: BranchSummary }) {
 
   return (
     <Link to={`/branches/${branch.id}`}>
-      <Card className="pt-0 overflow-hidden">
+      <Card className="pt-0 overflow-hidden group">
         <div className="aspect-video w-full bg-muted" />
-        <CardContent className="flex items-center gap-3">
+        <CardContent className="flex items-center">
           <Avatar
             image={branch.createdBy.image ?? ""}
             name={branch.createdBy.name ?? ""}
-            className="size-8"
+            className="size-8 mr-3"
           />
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium">{branch.title}</p>
             <p className="truncate text-xs text-muted-foreground">
               {formattedDate} • {branch.createdBy.name}
             </p>
           </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-6 group-hover:opacity-100 transition-opacity text-muted-foreground"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+              >
+                <MoreHorizontal />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete();
+                }}
+                variant="destructive"
+              >
+                <Trash2 />
+                Delete branch
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </CardContent>
       </Card>
     </Link>
@@ -158,6 +191,9 @@ export function NextLandingPage() {
       }
     },
   });
+  const deleteBranch = useMutation(api.repos.branches[":branchId"].$delete, {
+    onSuccess: () => branches.refetch(),
+  });
 
   const selectedRepo = useMemo(
     () => repos.data?.find((repo) => repo.id === selectedRepoId) ?? null,
@@ -214,14 +250,14 @@ export function NextLandingPage() {
             Build anything with AI
           </Badge>
           <h1 className="text-balance text-4xl font-semibold tracking-tight sm:text-5xl">
-            What do you want to create?
+            Prototype your next feature
           </h1>
           <p className="max-w-2xl text-balance text-lg text-muted-foreground">
             Start building with a single prompt. Describe your idea and we'll
             spin up a branch, preview, and deployment-ready project for you.
           </p>
 
-          <div className="mt-16 mb-16 w-full max-w-3xl">
+          <div className="mt-16 mb-16 w-full max-w-2xl">
             <ChatInput
               key={chatInputKey}
               initialValue={chatInitialValue}
@@ -291,13 +327,19 @@ export function NextLandingPage() {
             </DropdownMenu>
           </div>
 
-          <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+          <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
             {branches.isPending
               ? Array.from({ length: 6 }).map((_, index) => (
                   <SkeletonBranchCard key={index} />
                 ))
               : branches.data?.map((branch) => (
-                  <BranchCard key={branch.id} branch={branch} />
+                  <BranchCard
+                    key={branch.id}
+                    branch={branch}
+                    onDelete={() =>
+                      deleteBranch.mutate({ param: { branchId: branch.id } })
+                    }
+                  />
                 ))}
           </div>
         </section>

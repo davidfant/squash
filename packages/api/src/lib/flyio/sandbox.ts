@@ -127,7 +127,7 @@ export async function createMachine({
       config: {
         image: snapshot.image,
         // guest: { cpu_kind: "shared", cpus: 2, memory_mb: 1024 },
-        guest: { cpu_kind: "shared", cpus: 2, memory_mb: 2048 },
+        guest: { cpu_kind: "shared", cpus: 2, memory_mb: 1024 },
         // size: "performance-1x",
         auto_destroy: false,
         restart: { policy: "no" },
@@ -174,6 +174,8 @@ export async function createMachine({
             "-lc",
             `
               set -e
+
+              sysctl -w fs.inotify.max_user_watches=262144
 
               ${snapshot.cmd.prepare ?? ""}
 

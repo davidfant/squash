@@ -1,10 +1,14 @@
 import { FilePreview } from "@/components/layout/file/FilePreview";
-import { useFileUpload } from "@/components/layout/file/useFileUpload";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { FileUIPart } from "ai";
-import { useCallback, useState, type ClipboardEvent } from "react";
+import {
+  useCallback,
+  useState,
+  type ClipboardEvent,
+  type ReactNode,
+} from "react";
 import {
   ChatInputAttachButton,
   ChatInputDictateButton,
@@ -13,6 +17,7 @@ import {
   ChatInputStopButton,
   ChatInputSubmitButton,
 } from "./buttons";
+import { useChatInputFileUploads } from "./ChatInputFileUploadsContext";
 import { DictationOverlay } from "./DictationOverlay";
 import { useDictation } from "./useDictation";
 
@@ -30,7 +35,7 @@ export function ChatInput({
   placeholder,
   disabled = false,
   Textarea: TextareaComponent = Textarea,
-  repoPicker,
+  extra,
   onStop,
   onSubmit,
   clearOnSubmit = true,
@@ -43,19 +48,13 @@ export function ChatInput({
   placeholder?: string;
   disabled?: boolean;
   Textarea?: typeof Textarea;
-  repoPicker?: React.ReactNode;
+  extra?: ReactNode;
   onStop?(): void;
   onSubmit(value: ChatInputValue): unknown;
   clearOnSubmit?: boolean;
 }) {
   const [value, setValue] = useState(initialValue?.text ?? "");
-  const uploads = useFileUpload(
-    initialValue?.files.map((f) => ({
-      ...f,
-      id: Math.random().toString(36).substring(2, 15),
-      status: "uploaded",
-    }))
-  );
+  const uploads = useChatInputFileUploads();
   const dictation = useDictation((t) => setValue((v) => (v ? `${v} ${t}` : t)));
 
   const handlePaste = useCallback(
@@ -74,7 +73,7 @@ export function ChatInput({
 
       uploads.add(clipboardFiles);
     },
-    [disabled, uploads.add]
+    [disabled, uploads]
   );
 
   const handleSubmit = async () => {
@@ -179,7 +178,7 @@ export function ChatInput({
             disabled={submitting || disabled}
             onClick={uploads.select}
           />
-          {repoPicker}
+          {extra}
           <div className="flex-1" />
           {buttons}
         </div>

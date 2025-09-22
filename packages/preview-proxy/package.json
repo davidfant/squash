@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "scripts": {
     "dev": "pnpm typegen && wrangler dev",
-    "push": "wrangler deploy --minify --env production",
+    "_push": "wrangler deploy --minify --env production",
     "typegen": "wrangler types --env-interface CloudflareBindings"
   },
   "devDependencies": {

@@ -4,6 +4,7 @@ import {
   ChatInput,
   type ChatInputValue,
 } from "@/components/layout/chat/input/ChatInput";
+import { ChatInputFileUploadsProvider } from "@/components/layout/chat/input/ChatInputFileUploadsContext";
 import type { ChatInputFile } from "@/components/layout/file/useFileUpload";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -20,13 +21,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/sonner";
 import { api, useMutation, useQuery, type QueryOutput } from "@/hooks/api";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { CloneScreenshotAction } from "@/routes/next/CloneScreenshotAction";
+import { CloneScreenshotAction } from "@/routes/next/components/CloneScreenshotAction";
 import { SiGithub } from "@icons-pack/react-simple-icons";
 import { useQuery as useReactQuery } from "@tanstack/react-query";
 import { Check, ChevronsUpDown, MoreHorizontal, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router";
-import { HeaderMenu } from "./HeaderMenu";
+import { HeaderMenu } from "./components/HeaderMenu";
+import { RepoSelect } from "./components/RepoSelect";
+import { useCurrentRepo } from "./hooks/useCurrentRepo";
 
 type RepoBranchesResult = QueryOutput<
   (typeof api.repos)[":repoId"]["branches"]["$get"]
@@ -114,6 +117,7 @@ export function NextLandingPage() {
   const session = authClient.useSession();
   const navigate = useNavigate();
   const repos = useQuery(api.repos.$get, { params: {} });
+  const { currentRepoId } = useCurrentRepo();
 
   const [chatInitialValue, setChatInitialValue] =
     useLocalStorage<ChatInputValue>("BranchFeed.chatInitialValue", {
@@ -186,8 +190,8 @@ export function NextLandingPage() {
 
   const createBranch = useMutation(api.repos[":repoId"].branches.$post, {
     onSuccess: (data) => {
-      if (selectedRepoId && selectedRepoId !== "all") {
-        navigate(`/repos/${selectedRepoId}/branches/${data.id}`);
+      if (currentRepoId) {
+        navigate(`/repos/${currentRepoId}/branches/${data.id}`);
       }
     },
   });
@@ -201,13 +205,13 @@ export function NextLandingPage() {
   );
 
   const handleSubmit = (content: ChatInputValue) => {
-    if (!selectedRepoId || selectedRepoId === "all") {
-      toast.error("Select a specific repository to continue");
+    if (!currentRepoId) {
+      toast.error("Select a repository to continue");
       return;
     }
 
     createBranch.mutate({
-      param: { repoId: selectedRepoId },
+      param: { repoId: currentRepoId },
       json: {
         message: {
           parts: [{ type: "text", text: content.text }, ...content.files],
@@ -226,7 +230,7 @@ export function NextLandingPage() {
   const handleScreenshotUploaded = (file: ChatInputFile) => {
     setChatInitialValue({
       text: "Clone this screenshot into a working app.",
-      files: [file],
+      files: [],
     });
     setChatInputKey((value) => value + 1);
   };
@@ -249,7 +253,7 @@ export function NextLandingPage() {
           <Badge variant="secondary" className="px-3 py-1.5 rounded-full">
             Build anything with AI
           </Badge>
-          <h1 className="text-balance text-4xl font-semibold tracking-tight sm:text-5xl">
+          <h1 className="text-balance text-4xl font-light tracking-tight sm:text-5xl">
             Prototype your next feature
           </h1>
           <p className="max-w-2xl text-balance text-lg text-muted-foreground">
@@ -257,38 +261,43 @@ export function NextLandingPage() {
             spin up a branch, preview, and deployment-ready project for you.
           </p>
 
-          <div className="w-full max-w-2xl">
-            <ChatInput
-              key={chatInputKey}
-              initialValue={chatInitialValue}
-              clearOnSubmit={false}
-              onSubmit={handleSubmit}
-              placeholder="What do you want to build?"
-              submitting={createBranch.isPending}
-              minRows={3}
-              disabled={
-                !selectedRepoId ||
-                selectedRepoId === "all" ||
-                createBranch.isPending
-              }
-            />
-
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-              <CloneScreenshotAction
-                onScreenshotUploaded={handleScreenshotUploaded}
+          <ChatInputFileUploadsProvider initialValue={chatInitialValue.files}>
+            <div className="w-full max-w-2xl">
+              <ChatInput
+                key={chatInputKey}
+                initialValue={chatInitialValue}
+                clearOnSubmit={false}
+                onSubmit={handleSubmit}
+                placeholder="What do you want to build?"
+                submitting={createBranch.isPending}
+                minRows={3}
+                maxRows={10}
+                disabled={!currentRepoId || createBranch.isPending}
+                extra={
+                  <RepoSelect
+                    disabled={createBranch.isPending}
+                    onScreenshotUploaded={handleScreenshotUploaded}
+                  />
+                }
               />
-              <Link to="/new/repo">
-                <Suggestion suggestion="Import from Github" size="default">
-                  <SiGithub />
-                  Import from Github
-                </Suggestion>
-              </Link>
+
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                <CloneScreenshotAction
+                  onScreenshotUploaded={handleScreenshotUploaded}
+                />
+                <Link to="/new/repo">
+                  <Suggestion suggestion="Import from Github" size="default">
+                    <SiGithub />
+                    Import from Github
+                  </Suggestion>
+                </Link>
+              </div>
             </div>
-          </div>
+          </ChatInputFileUploadsProvider>
         </section>
 
         <section className="space-y-6">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="flex gap-3 items-center justify-between">
             <div>
               <h2 className="text-2xl">Recent Prototypes</h2>
               <p className="text-sm text-muted-foreground">

@@ -3,6 +3,7 @@ import {
   ChatInput,
   type ChatInputValue,
 } from "@/components/layout/chat/input/ChatInput";
+import { ChatInputFileUploadsProvider } from "@/components/layout/chat/input/ChatInputFileUploadsContext";
 import {
   BranchCard,
   EmptyState,
@@ -113,54 +114,64 @@ export function BranchFeed({ repoId }: BranchFeedProps) {
           <div className="mx-auto max-w-[1000px] p-6">
             {/* Quick Actions */}
             <div className="mt-16 mb-16">
-              <ChatInput
-                key={chatInputKey}
-                initialValue={chatInitialValue}
-                clearOnSubmit={false}
-                onSubmit={(content) => {
-                  setChatInitialValue({ text: "", files: [] });
-                  createBranch.mutate({
-                    param: { repoId },
-                    json: {
-                      message: {
-                        parts: [
-                          { type: "text", text: content.text },
-                          ...content.files,
-                        ],
+              <ChatInputFileUploadsProvider
+                initialValue={chatInitialValue.files.map((f) => ({
+                  ...f,
+                  id: Math.random().toString(36).substring(2, 15),
+                  status: "uploaded" as const,
+                }))}
+              >
+                <ChatInput
+                  key={chatInputKey}
+                  initialValue={chatInitialValue}
+                  clearOnSubmit={false}
+                  onSubmit={(content) => {
+                    setChatInitialValue({ text: "", files: [] });
+                    createBranch.mutate({
+                      param: { repoId },
+                      json: {
+                        message: {
+                          parts: [
+                            { type: "text", text: content.text },
+                            ...content.files,
+                          ],
+                        },
                       },
-                    },
-                  });
-                }}
-                placeholder="What do you want to build?"
-                submitting={createBranch.isPending}
-                minRows={3}
-                repoPicker={
-                  repos.data && repos.data.length > 0 ? (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          className="rounded-full text-muted-foreground h-auto px-3"
-                        >
-                          <FolderGit2 className="h-4 w-4 mr-2" />
-                          {selectedRepo?.name || "Select repo"}
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start">
-                        {repos.data.map((repo) => (
-                          <Link key={repo.id} to={`/repos/${repo.id}`}>
-                            <DropdownMenuItem
-                              className={repo.id === repoId ? "bg-accent" : ""}
-                            >
-                              {repo.name}
-                            </DropdownMenuItem>
-                          </Link>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  ) : null
-                }
-              />
+                    });
+                  }}
+                  placeholder="What do you want to build?"
+                  submitting={createBranch.isPending}
+                  minRows={3}
+                  extra={
+                    repos.data && repos.data.length > 0 ? (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            className="rounded-full text-muted-foreground h-auto px-3"
+                          >
+                            <FolderGit2 className="h-4 w-4 mr-2" />
+                            {selectedRepo?.name || "Select repo"}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start">
+                          {repos.data.map((repo) => (
+                            <Link key={repo.id} to={`/repos/${repo.id}`}>
+                              <DropdownMenuItem
+                                className={
+                                  repo.id === repoId ? "bg-accent" : ""
+                                }
+                              >
+                                {repo.name}
+                              </DropdownMenuItem>
+                            </Link>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    ) : null
+                  }
+                />
+              </ChatInputFileUploadsProvider>
 
               <Suggestions>
                 {defaultSuggestions.map((s, index) => (

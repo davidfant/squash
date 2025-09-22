@@ -63,12 +63,6 @@ export const BranchContextProvider = ({
   const toggleScreenSize = () => setScreenSize(getNextScreenSize(screenSize));
 
   if (!branch.data) return <BranchLayoutSkeleton />;
-  console.log(
-    "loading",
-    preview.isLoading,
-    preview.isPending,
-    preview.isFetching
-  );
   return (
     <BranchContext.Provider
       value={{

@@ -24,7 +24,7 @@ export function BranchCard({ branch, onDelete }: BranchCardProps) {
   return (
     <Card
       key={branch.id}
-      className="group relative border border-border/50 bg-card hover:bg-accent/5 transition-colors shadow-none overflow-hidden py-0"
+      className="group relative border border-border/50 bg-card hover:bg-accent/5 transition-colors shadow-none overflow-hidden py-0 cursor-pointer"
     >
       <Link
         to={`/repos/${branch.repo.id}/branches/${branch.id}`}

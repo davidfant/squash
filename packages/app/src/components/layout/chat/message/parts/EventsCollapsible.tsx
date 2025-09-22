@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { usePrevious } from "@/hooks/usePrevious";
 import { AnimatePresence, motion } from "framer-motion";
+import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { type EventBlockItem } from "./groupMessageEvents";
 
@@ -17,7 +18,11 @@ const Event = ({
     className="flex items-center gap-2 text-muted-foreground text-sm min-h-7 cursor-pointer"
     onClick={onClick}
   >
-    <event.icon className="size-3 flex-shrink-0" />
+    {event.loading ? (
+      <Loader2 className="size-3 flex-shrink-0 animate-spin" />
+    ) : (
+      <event.icon className="size-3 flex-shrink-0" />
+    )}
     <div className="flex-1 inline space-x-2 overflow-hidden [&>*]:max-w-full">
       {event.label}
     </div>

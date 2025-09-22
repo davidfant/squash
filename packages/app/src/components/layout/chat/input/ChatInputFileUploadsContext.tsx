@@ -9,7 +9,7 @@ export interface ChatInputFileUploadsContextValue {
   files: ChatInputFile[];
   isUploading: boolean;
   input: React.JSX.Element;
-  add: (files: File[]) => void;
+  add: (files: File[]) => Promise<void>;
   remove: (id: string) => void;
   select: () => void;
   set: (files: ChatInputFile[]) => void;
@@ -20,7 +20,10 @@ const ChatInputFileUploadsContext =
     files: [],
     isUploading: false,
     input: <input />,
-    add: () => console.warn("add not implemented"),
+    add: () => {
+      console.warn("add not implemented");
+      return Promise.resolve();
+    },
     remove: () => console.warn("remove not implemented"),
     select: () => console.warn("select not implemented"),
     set: () => console.warn("set not implemented"),

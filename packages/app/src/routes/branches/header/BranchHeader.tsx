@@ -4,9 +4,9 @@ export const BranchHeader = ({ title }: { title: string }) => (
   <header className="flex items-center gap-2 p-2">
     <Link to="/" className="flex items-center">
       <img
-        src="/circle.svg"
+        src="/preview-gradients/0.jpg"
         alt="Squash"
-        className="size-8 hover:opacity-80 transition-opacity"
+        className="size-8 hover:opacity-80 transition-opacity rounded-full"
       />
     </Link>
     <span className="font-medium text-sm">{title}</span>

@@ -54,7 +54,7 @@ export function useFileUpload(initialFiles?: ChatInputFile[]) {
   );
 
   const add = useCallback(
-    (files: File[]) => {
+    async (files: File[]) => {
       if (!files.length) return;
 
       const newUploads = files.map(
@@ -68,7 +68,7 @@ export function useFileUpload(initialFiles?: ChatInputFile[]) {
         })
       );
       setFiles((prev) => [...prev, ...newUploads]);
-      newUploads.forEach((u, i) => upload(u.id, files[i]!));
+      await Promise.all(newUploads.map((u, i) => upload(u.id, files[i]!)));
     },
     [upload]
   );

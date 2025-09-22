@@ -1,3 +1,11 @@
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MoreHorizontal, Trash2 } from "lucide-react";
 import { Link } from "react-router";
 
 export function BranchCard({
@@ -22,7 +30,7 @@ export function BranchCard({
   return (
     <Link to={`/branches/${branch.id}`}>
       <div
-        className="aspect-[4/3] w-full relative rounded-xl flex flex-col overflow-hidden shadow-sm"
+        className="aspect-[4/3] w-full relative rounded-xl flex flex-col overflow-hidden shadow-sm group"
         style={{
           backgroundImage: `url(/preview-gradients/${index % 4}.jpg)`,
           backgroundSize: "cover",
@@ -44,6 +52,32 @@ export function BranchCard({
           </p>
           <p className="text-sm text-primary-foreground/70">{formattedDate}</p>
         </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              size="icon"
+              className="opacity-0 group-hover:opacity-100 transition-opacity absolute top-0 right-0 bg-transparent shadow-none hover:bg-primary-foreground/10"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+            >
+              <MoreHorizontal />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+              variant="destructive"
+            >
+              <Trash2 />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </Link>
   );

@@ -22,18 +22,18 @@ openssl rsa -in private.dev.pem -pubout -out public.dev.pem
 
 ## p0
 
-- [ ] Replace old LP w next, move branches to /builds/:id
+- [x] Replace old LP w next, move branches to /builds/:id
 - [x] Clone screenshot doesn't work
 - [x] max height/scfoll in textbox
 - [x] attach button on /next not working
-- [ ] add repo picker to input
+- [x] add repo picker to input
 - [x] clean up branch preview header (share, menu, history)
 - [ ] fly io ssh proxy
-- [ ] don't show recent prototypes if the list is empty
+- [x] don't show recent prototypes if the list is empty
 - [x] loading
-- [ ] persist e.g. current branch and filtered repo previews
+- [x] persist e.g. current branch and filtered repo previews
 - [ ] get starter repo working
-- [ ] typing placeholder
+- [x] typing placeholder
 - [ ] animated presence for ChatInput height?
 
 - [ ] Send a message while agent is running

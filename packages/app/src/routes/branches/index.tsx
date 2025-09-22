@@ -41,12 +41,7 @@ function Component({ branchId }: { branchId: string }) {
       }}
     >
       <SidebarProvider className="flex flex-col h-screen">
-        <BranchHeader
-          title={branch.name}
-          isHistoryEnabled={isHistoryEnabled}
-          onHistoryToggle={setIsHistoryEnabled}
-          publicUrl="https://my-awesome-landing-page.com"
-        />
+        <BranchHeader title={branch.name} />
         <ResizablePanelGroup
           direction="horizontal"
           className="flex-1 overflow-hidden"

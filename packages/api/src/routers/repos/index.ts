@@ -177,6 +177,7 @@ export const reposRouter = new Hono<{
           id: schema.repoBranch.id,
           title: schema.repoBranch.title,
           name: schema.repoBranch.name,
+          imageUrl: schema.repoBranch.imageUrl,
           createdAt: schema.repoBranch.createdAt,
           updatedAt: schema.repoBranch.updatedAt,
           repo: { id: schema.repo.id, name: schema.repo.name },

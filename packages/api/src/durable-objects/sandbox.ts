@@ -121,10 +121,7 @@ const createAgentApp = (handlers: AgentAppHandlers) =>
         route: c.req.path,
         query: c.req.query(),
         headers: Object.fromEntries(c.req.raw.headers.entries()),
-        body: await c.req.raw
-          .clone()
-          .text()
-          .catch(() => "Failed to read body"),
+        body: await c.req.text().catch(() => "Failed to read body"),
         stack: err.stack,
         name: err.name,
         cause: err.cause,
@@ -186,8 +183,9 @@ export class SandboxDurableObject implements AgentAppHandlers {
     });
 
     const context = { ...sandbox, accessToken: this.env.FLY_ACCESS_TOKEN };
-    const url = new URL(this.env.PREVIEW_PROXY_URL);
-    url.host = `${sandbox.appId}.${url.host}`;
+    // const url = new URL(this.env.PREVIEW_PROXY_URL);
+    // url.host = `${sandbox.appId}.${url.host}`;
+    const url = this.previewUrl(sandbox);
 
     if (body.sha) {
       await gitReset(context, body.sha);
@@ -196,6 +194,10 @@ export class SandboxDurableObject implements AgentAppHandlers {
       const sha = await gitCurrentCommit(context);
       return { url: url.toString(), sha };
     }
+  }
+
+  private previewUrl(sandbox: schema.RepoBranchSandbox): string {
+    return `https://${sandbox.appId}.fly.dev`;
   }
 
   public async abort(
@@ -360,8 +362,14 @@ export class SandboxDurableObject implements AgentAppHandlers {
             await streamClaudeCodeAgent(writer, messages, context, {
               env: this.env,
               threadId,
+              previewUrl: this.previewUrl(sandbox),
               abortSignal: abortController.signal,
               messageMetadata,
+              onScreenshot: (imageUrl) =>
+                db
+                  .update(schema.repoBranch)
+                  .set({ imageUrl, updatedAt: new Date() })
+                  .where(eq(schema.repoBranch.id, body.branchId)),
             });
             writer.write({ type: "finish" });
           },

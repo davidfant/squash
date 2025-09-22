@@ -8,7 +8,12 @@ export type AllTools = ClaudeCodeTools &
   InferUITools<{ GitCommit: ReturnType<typeof GitCommit> }>;
 
 export type ChatMessageData = {
-  GitSha: { sha: string; title: string; description: string };
+  GitSha: {
+    sha: string;
+    title: string;
+    description: string;
+    url: string | undefined;
+  };
   AgentSession: { type: "claude-code"; data: unknown };
   AbortRequest: { messageId: string; reason: string };
   Sandbox: {

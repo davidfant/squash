@@ -62,14 +62,7 @@ export const BranchContextProvider = ({
 
   const toggleScreenSize = () => setScreenSize(getNextScreenSize(screenSize));
 
-  const [toggle, setToggle] = useState(false);
-  // useEffect(() => {
-  //   setInterval(() => {
-  //     setToggle((prev) => !prev);
-  //   }, 1000);
-  // }, []);
-
-  if (!branch.data || toggle) return <BranchLayoutSkeleton />;
+  if (!branch.data) return <BranchLayoutSkeleton />;
   return (
     <BranchContext.Provider
       value={{

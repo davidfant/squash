@@ -1,0 +1,16 @@
+{
+  "name": "@squashai/screenshot-api",
+  "type": "module",
+  "version": "0.0.0",
+  "scripts": {
+    "dev": "pnpm typegen && wrangler dev --x-remote-bindings",
+    "push": "wrangler deploy --minify --env production",
+    "typegen": "wrangler types --env-interface CloudflareBindings"
+  },
+  "devDependencies": {
+    "wrangler": "^4.31.0"
+  },
+  "dependencies": {
+    "@cloudflare/puppeteer": "^1.0.4"
+  }
+}

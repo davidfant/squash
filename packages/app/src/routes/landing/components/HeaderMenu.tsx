@@ -74,9 +74,7 @@ export function HeaderMenu() {
         <DropdownMenuSeparator />
 
         {/* Organizations group */}
-        <DropdownMenuLabel className="text-xs text-muted-foreground px-3 py-2">
-          Organizations
-        </DropdownMenuLabel>
+        <DropdownMenuLabel>Organizations</DropdownMenuLabel>
         {organizations.map((org) => (
           <DropdownMenuItem
             key={org.id}

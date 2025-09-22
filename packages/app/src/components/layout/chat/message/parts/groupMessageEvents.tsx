@@ -191,8 +191,8 @@ export function groupMessageEvents(parts: ChatMessage["parts"]): Block[] {
             title: part.input.title,
             sha: part.output.commitSha,
           });
-          break;
         }
+        break;
       }
       case "data-AbortRequest": {
         flushEvents();

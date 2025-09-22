@@ -59,6 +59,7 @@
     "react-textarea-autosize": "^8.5.9",
     "sonner": "^2.0.6",
     "use-stick-to-bottom": "^1.1.1",
+    "usehooks-ts": "^3.1.1",
     "uuid": "^11.1.0"
   },
   "devDependencies": {

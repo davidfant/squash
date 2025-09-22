@@ -20,6 +20,22 @@ openssl rsa -in private.dev.pem -pubout -out public.dev.pem
 
 # TODO
 
+## p0
+
+- [x] Replace old LP w next, move branches to /builds/:id
+- [x] Clone screenshot doesn't work
+- [x] max height/scfoll in textbox
+- [x] attach button on /next not working
+- [x] add repo picker to input
+- [x] clean up branch preview header (share, menu, history)
+- [ ] fly io ssh proxy
+- [x] don't show recent prototypes if the list is empty
+- [x] loading
+- [x] persist e.g. current branch and filtered repo previews
+- [ ] get starter repo working
+- [x] typing placeholder
+- [ ] animated presence for ChatInput height?
+
 - [ ] Send a message while agent is running
 - [ ] Hooks for tsc
 - [ ] Google OAuth

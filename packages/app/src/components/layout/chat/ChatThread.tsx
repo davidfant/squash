@@ -6,6 +6,7 @@ import {
   ChatInput,
   type ChatInputValue,
 } from "@/components/layout/chat/input/ChatInput";
+import { ChatInputFileUploadsProvider } from "@/components/layout/chat/input/ChatInputFileUploadsContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { api, useMutation } from "@/hooks/api";
@@ -36,22 +37,24 @@ function ChatInputWithScrollToBottom({
   const { status, sendMessage } = useChatContext();
   const { scrollToBottom } = useStickToBottomContext();
   return (
-    <ChatInput
-      disabled={!ready}
-      initialValue={initialValue}
-      autoFocus
-      placeholder="Type a message..."
-      submitting={status === "submitted" || status === "streaming"}
-      maxRows={10}
-      onStop={onStop}
-      onSubmit={(value) => {
-        sendMessage({
-          ...value,
-          metadata: { createdAt: new Date().toISOString(), parentId },
-        });
-        scrollToBottom();
-      }}
-    />
+    <ChatInputFileUploadsProvider initialValue={initialValue?.files}>
+      <ChatInput
+        disabled={!ready}
+        initialValue={initialValue}
+        autoFocus
+        placeholder="Type a message..."
+        submitting={status === "submitted" || status === "streaming"}
+        maxRows={10}
+        onStop={onStop}
+        onSubmit={(value) => {
+          sendMessage({
+            ...value,
+            metadata: { createdAt: new Date().toISOString(), parentId },
+          });
+          scrollToBottom();
+        }}
+      />
+    </ChatInputFileUploadsProvider>
   );
 }
 
@@ -148,11 +151,11 @@ export function ChatThread({
   return (
     <StickToBottom
       key={String(ready)}
-      className="h-full w-full flex flex-col relative"
+      className="h-full w-full flex flex-col"
       initial="instant"
       resize="smooth"
     >
-      <div className="flex-1 w-full overflow-hidden">
+      <div className="flex-1 w-full overflow-hidden relative">
         <ConversationContent className="pt-0 pl-2 pb-2 pr-4">
           {messages.activePath.map((m) => {
             switch (m.role) {
@@ -166,28 +169,32 @@ export function ChatThread({
                 if (isEditing) {
                   return (
                     <div className="w-full" key={m.id}>
-                      <ChatInput
-                        initialValue={{
-                          text: textContent,
-                          files: m.parts.filter(
-                            (p) => p.type === "file"
-                          ) as FileUIPart[],
-                        }}
-                        submitting={false}
-                        autoFocus
-                        placeholder="Edit your message..."
-                        disabled={false}
-                        onSubmit={(value) => handleEditSubmit(m.id, value)}
-                      />
-                      <div className="flex gap-2 mt-2 justify-end">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setEditingMessageId(null)}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
+                      <ChatInputFileUploadsProvider
+                        initialValue={m.parts.filter((p) => p.type === "file")}
+                      >
+                        <ChatInput
+                          initialValue={{
+                            text: textContent,
+                            files: m.parts.filter(
+                              (p) => p.type === "file"
+                            ) as FileUIPart[],
+                          }}
+                          submitting={false}
+                          autoFocus
+                          placeholder="Edit your message..."
+                          disabled={false}
+                          onSubmit={(value) => handleEditSubmit(m.id, value)}
+                        />
+                        <div className="flex gap-2 mt-2 justify-end">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditingMessageId(null)}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </ChatInputFileUploadsProvider>
                     </div>
                   );
                 }

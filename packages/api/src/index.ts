@@ -60,10 +60,7 @@ const app = new Hono<{ Bindings: CloudflareBindings }>()
       route: c.req.path,
       query: c.req.query(),
       headers: Object.fromEntries(c.req.raw.headers.entries()),
-      body: await c.req.raw
-        .clone()
-        .text()
-        .catch(() => "Failed to read body"),
+      body: await c.req.text().catch(() => "Failed to read body"),
       stack: err.stack,
       name: err.name,
       cause: err.cause,

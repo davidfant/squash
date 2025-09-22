@@ -228,6 +228,7 @@ export async function streamAgent(
                   sha: tc.output.commitSha,
                   title: tc.input.title,
                   description: tc.input.body,
+                  url: undefined,
                 },
               });
             }

@@ -1,0 +1,41 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "screenshot-api",
+  "main": "src/index.ts",
+  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_date": "2025-05-08",
+  "observability": {
+    "enabled": true
+  },
+  "upload_source_maps": true,
+  "dev": {
+    "port": 8789
+  },
+  "vars": {
+    "BUCKET_URL": "https://pub-19dc0e7a76ea4e3a9c6b55f9392d1a14.r2.dev"
+  },
+  "r2_buckets": [
+    {
+      "binding": "BUCKET",
+      "bucket_name": "uploads-dev",
+      "experimental_remote": true
+    }
+  ],
+  "browser": {
+    "binding": "BROWSER"
+  },
+  "env": {
+    "production": {
+      "vars": {
+        "BUCKET_URL": "https://uploads.squash.build"
+      },
+      "r2_buckets": [
+        {
+          "binding": "BUCKET",
+          "bucket_name": "uploads",
+          "experimental_remote": true
+        }
+      ]
+    }
+  }
+}

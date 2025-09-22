@@ -23,7 +23,7 @@ export async function checkoutLatestCommit(
     const title = "Starting point";
     const description =
       "This is the starting point before any changes have been made.";
-    const data = { sha: currentSha, title, description };
+    const data = { sha: currentSha, title, description, url: undefined };
     logger.info("No latest commit found, using current commit", {
       sha: currentSha,
     });

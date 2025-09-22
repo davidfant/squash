@@ -6,7 +6,6 @@ import {
 } from "@/components/layout/chat/input/ChatInput";
 import { ChatInputFileUploadsProvider } from "@/components/layout/chat/input/ChatInputFileUploadsContext";
 import type { ChatInputFile } from "@/components/layout/file/useFileUpload";
-import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,9 +23,10 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { CloneScreenshotAction } from "@/routes/next/components/CloneScreenshotAction";
 import { SiGithub } from "@icons-pack/react-simple-icons";
 import { useQuery as useReactQuery } from "@tanstack/react-query";
-import { Check, ChevronsUpDown, MoreHorizontal, Trash2 } from "lucide-react";
+import { Check, ChevronsUpDown } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router";
+import { BranchCard } from "./components/BranchCard";
 import { HeaderMenu } from "./components/HeaderMenu";
 import { RepoSelect } from "./components/RepoSelect";
 import { useCurrentRepo } from "./hooks/useCurrentRepo";
@@ -38,67 +38,6 @@ type RepoBranchesResult = QueryOutput<
 type BranchSummary = RepoBranchesResult extends Array<infer Item>
   ? Item
   : never;
-
-function BranchCard({
-  branch,
-  onDelete,
-}: {
-  branch: BranchSummary;
-  onDelete: () => void;
-}) {
-  const formattedDate = new Date(branch.updatedAt).toLocaleDateString(
-    undefined,
-    { month: "short", day: "numeric" }
-  );
-
-  return (
-    <Link to={`/repos/${branch.repo.id}/branches/${branch.id}`}>
-      <Card className="pt-0 overflow-hidden group">
-        <div className="aspect-video w-full bg-muted" />
-        <CardContent className="flex items-center">
-          <Avatar
-            image={branch.createdBy.image ?? ""}
-            name={branch.createdBy.name ?? ""}
-            className="size-8 mr-3"
-          />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">{branch.title}</p>
-            <p className="truncate text-xs text-muted-foreground">
-              {formattedDate} • {branch.createdBy.name}
-            </p>
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-6 group-hover:opacity-100 transition-opacity text-muted-foreground"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-              >
-                <MoreHorizontal />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete();
-                }}
-                variant="destructive"
-              >
-                <Trash2 />
-                Delete branch
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </CardContent>
-      </Card>
-    </Link>
-  );
-}
 
 const SkeletonBranchCard = () => (
   <Card className="pt-0 overflow-hidden">
@@ -341,10 +280,11 @@ export function NextLandingPage() {
               ? Array.from({ length: 6 }).map((_, index) => (
                   <SkeletonBranchCard key={index} />
                 ))
-              : branches.data?.map((branch) => (
+              : branches.data?.map((branch, index) => (
                   <BranchCard
                     key={branch.id}
                     branch={branch}
+                    index={index}
                     onDelete={() =>
                       deleteBranch.mutate({ param: { branchId: branch.id } })
                     }

@@ -41,7 +41,7 @@ function Component({ branchId }: { branchId: string }) {
       }}
     >
       <SidebarProvider className="flex flex-col h-screen">
-        <BranchHeader title={branch.name} />
+        <BranchHeader title={branch.title} />
         <ResizablePanelGroup
           direction="horizontal"
           className="flex-1 overflow-hidden"

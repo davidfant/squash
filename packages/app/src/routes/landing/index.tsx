@@ -127,11 +127,11 @@ export function LandingPage() {
                 initialValue={chatInitialValue}
                 clearOnSubmit={false}
                 onSubmit={handleSubmit}
-                submitting={createBranch.isPending}
+                submitting={createRepo.isPending || createBranch.isPending}
                 minRows={3}
                 maxRows={10}
                 Textarea={TextareaWithPlaceholder as any}
-                disabled={createBranch.isPending}
+                disabled={createRepo.isPending || createBranch.isPending}
                 extra={<RepoSelect />}
               />
 

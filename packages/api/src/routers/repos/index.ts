@@ -283,16 +283,17 @@ export const reposRouter = new Hono<{
       ]);
 
       const stub = c.env.SANDBOX_DO.get(c.env.SANDBOX_DO.idFromName(branchId));
-      // fire and forget
-      hc<SandboxDurableObjectApp>("https://thread", {
-        fetch: stub.fetch.bind(stub),
-      }).stream.$post({
-        json: {
-          branchId,
-          userId: user.id,
-          message: { id: messageId, parts: message.parts, parentId },
-        },
-      });
+      c.executionCtx.waitUntil(
+        hc<SandboxDurableObjectApp>("https://thread", {
+          fetch: stub.fetch.bind(stub),
+        }).stream.$post({
+          json: {
+            branchId,
+            userId: user.id,
+            message: { id: messageId, parts: message.parts, parentId },
+          },
+        })
+      );
 
       return c.json({ id: branchId });
     }

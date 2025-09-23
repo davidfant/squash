@@ -154,6 +154,7 @@ export const requireRepoBranch = createMiddleware<
       branch: {
         id: string;
         name: string;
+        title: string;
         sandbox: RepoBranchSandbox | null;
         createdAt: Date;
         updatedAt: Date;
@@ -172,6 +173,7 @@ export const requireRepoBranch = createMiddleware<
   const [branch] = await db
     .select({
       id: schema.repoBranch.id,
+      title: schema.repoBranch.title,
       name: schema.repoBranch.name,
       sandbox: schema.repoBranch.sandbox,
       createdAt: schema.repoBranch.createdAt,

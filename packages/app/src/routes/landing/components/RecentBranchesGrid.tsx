@@ -46,7 +46,7 @@ export function RecentBranchesGrid() {
     },
   });
 
-  if (repos.all?.length === 0) return null;
+  if (branches.data?.length === 0) return null;
   return (
     <section className="space-y-6">
       <div className="flex gap-3 items-center justify-between">

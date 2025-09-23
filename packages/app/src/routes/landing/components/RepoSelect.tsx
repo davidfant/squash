@@ -13,7 +13,7 @@ import { Link } from "react-router";
 import { useRepos } from "../hooks/useRepos";
 import { useScreenshotUpload } from "../hooks/useScreenshotUpload";
 
-export function RepoSelect() {
+export function RepoSelect({ disabled = false }: { disabled?: boolean }) {
   const repos = useRepos();
   const uploadScreenshot = useScreenshotUpload();
 
@@ -22,7 +22,7 @@ export function RepoSelect() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         {repos.current ? (
-          <Button variant="ghost" className="rounded-full">
+          <Button variant="ghost" className="rounded-full" disabled={disabled}>
             <BoxIcon />
             {repos.current.name}
           </Button>

@@ -135,6 +135,7 @@ export type SandboxDurableObjectApp = ReturnType<typeof createAgentApp>;
 export class SandboxDurableObject implements AgentAppHandlers {
   private readonly app: SandboxDurableObjectApp;
   private run: ActiveRunContext | null = null;
+  private startingRun: Promise<void> | null = null;
 
   constructor(
     private readonly state: DurableObjectState,
@@ -153,13 +154,48 @@ export class SandboxDurableObject implements AgentAppHandlers {
       return this.getOrCreateSandbox(body.branchId);
     });
 
-    if (sandbox) await this.startRun(body, sandbox);
+    if (sandbox) {
+      this.startingRun = this.startRun(body, sandbox).finally(() => {
+        this.startingRun = null;
+      });
+      try {
+        await this.startingRun;
+      } catch (error) {
+        logger.error("Failed to start run", {
+          branchId: body.branchId,
+          messageId: body.message.id,
+          error,
+        });
+        throw error;
+      }
+    }
     if (!this.run) return c.text("No stream to listen to", 409);
     return this.listen(c);
   }
 
   public async listen(c: Context): Promise<Response> {
-    if (!this.run) return c.text("", 200);
+    if (!this.run) {
+      const requestId = c.get("requestId");
+      if (this.startingRun) {
+        logger.info("Listener waiting for run to start", { requestId });
+        try {
+          await this.startingRun;
+        } catch (error) {
+          logger.error("Run failed to start while listener waiting", {
+            requestId,
+            error,
+          });
+          return c.text("Run failed to start", 409);
+        }
+        if (!this.run) {
+          logger.debug("No run after waiting for start", { requestId });
+          return c.text("", 200);
+        }
+      } else {
+        logger.debug("Listener connected with no active run", { requestId });
+        return c.text("", 200);
+      }
+    }
 
     const stream = this.createReadableStream(this.run);
     const headers = new Headers(this.run.headers);

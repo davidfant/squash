@@ -32,7 +32,7 @@ export function BranchCard({
       <div
         className="aspect-[4/3] w-full relative rounded-xl flex flex-col overflow-hidden shadow-sm group"
         style={{
-          backgroundImage: `url(/preview-gradients/${index % 4}.jpg)`,
+          backgroundImage: `url(/preview/abstract/${index % 4}.jpg)`,
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}

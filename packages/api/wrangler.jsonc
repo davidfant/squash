@@ -42,7 +42,7 @@
     "production": {
       "vars": {
         "APP_URL": "https://app.squash.build",
-        "SCREENSHOT_API_URL": "https://screenshots-api-production.squash.workers.dev",
+        "SCREENSHOT_API_URL": "https://screenshot-api-production.squash.workers.dev",
         "PREVIEW_PROXY_URL": "https://preview.squash.build",
         "R2_FILE_TRANSFER_BUCKET_NAME": "file-transfer",
         "R2_REPOS_BUCKET_NAME": "repos",

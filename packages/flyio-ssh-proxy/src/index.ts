@@ -73,7 +73,6 @@ const app = new Hono()
               [
                 "ssh",
                 "console",
-                // "--pty",
                 "--app",
                 payload.app,
                 "--command",

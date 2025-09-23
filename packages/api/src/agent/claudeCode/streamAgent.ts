@@ -137,10 +137,9 @@ export async function streamClaudeCodeAgent(
   );
   if (!shouldCommit) return;
 
-  // get url of the thing
-  // const screenshotPromise = fetch(
-  //   `${opts.env.SCREENSHOT_API_URL}?url=${encodeURIComponent(opts.previewUrl)}`
-  // ).then((r) => r.json<{ url: string }>());
+  const screenshotPromise = fetch(
+    `${opts.env.SCREENSHOT_API_URL}?url=${encodeURIComponent(opts.previewUrl)}`
+  ).then((r) => r.json<{ url: string }>());
 
   const history = messages
     .filter((m) => m.role === "assistant" || m.role === "user")
@@ -200,8 +199,8 @@ export async function streamClaudeCodeAgent(
     tools: { GitCommit: GitCommit(sandbox) },
     toolChoice: { type: "tool", toolName: "GitCommit" },
     onStepFinish: async (step) => {
-      // const screenshot = await screenshotPromise;
-      // await opts.onScreenshot(screenshot.url);
+      const screenshot = await screenshotPromise;
+      await opts.onScreenshot(screenshot.url);
       step.toolResults.forEach((tc) => {
         if (!tc.dynamic && tc.toolName === "GitCommit") {
           writer.write({
@@ -211,8 +210,7 @@ export async function streamClaudeCodeAgent(
               sha: tc.output.commitSha,
               title: tc.input.title,
               description: tc.input.body,
-              // url: screenshot.url,
-              url: undefined,
+              url: screenshot.url,
             },
           });
         }

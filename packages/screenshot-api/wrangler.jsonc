@@ -35,7 +35,10 @@
           "bucket_name": "uploads",
           "experimental_remote": true
         }
-      ]
+      ],
+      "browser": {
+        "binding": "BROWSER"
+      }
     }
   }
 }

@@ -223,11 +223,18 @@ export class SandboxDurableObject implements AgentAppHandlers {
 
   private shouldStartNewRun(body: StreamRequestBody): boolean {
     if (!this.run) {
-      logger.debug("Starting new run because no run is active", body);
+      logger.debug("Starting new run because no run is active", {
+        branchId: body.branchId,
+        messageId: body.message.id,
+      });
       return true;
     }
     if (this.run.messageId === body.message.id) {
-      logger.debug("Skipping new run because message id is the same", body);
+      logger.debug("Skipping new run because message id is the same", {
+        branchId: body.branchId,
+        messageId: body.message.id,
+        runMessageId: this.run.messageId,
+      });
       return false;
     }
     if (this.run.status === "running" || this.run.status === "stopping") {
@@ -288,7 +295,11 @@ export class SandboxDurableObject implements AgentAppHandlers {
         ];
       }
     })();
-    logger.debug("Resolved messages", { messages });
+    logger.debug("Resolved messages", {
+      branchId: body.branchId,
+      threadId,
+      messageCount: messages.length,
+    });
     const nextParentId = messages.slice(-1)[0]!.id;
     const context: FlyioExecSandboxContext = {
       appId: sandbox.appId,
@@ -319,7 +330,10 @@ export class SandboxDurableObject implements AgentAppHandlers {
           generateId: randomUUID,
           onFinish: async ({ responseMessage }) => {
             logger.debug("Finished streaming response message", {
-              responseMessage,
+              threadId,
+              responseMessageId: responseMessage.id,
+              partsCount: responseMessage.parts.length,
+              usageCount: usage.length,
             });
             await db.insert(schema.message).values({
               id: responseMessage.id,
@@ -590,7 +604,12 @@ export class SandboxDurableObject implements AgentAppHandlers {
     if (this.run !== run) return;
     run.status = status;
 
-    logger.debug("Finishing run", { run, status });
+    logger.debug("Finishing run", {
+      messageId: run.messageId,
+      threadId: run.threadId,
+      status,
+      listenerCount: run.listeners.size,
+    });
     for (const [listenerId, controller] of run.listeners.entries()) {
       run.listeners.delete(listenerId);
       try {
@@ -604,9 +623,19 @@ export class SandboxDurableObject implements AgentAppHandlers {
   private disposeRun() {
     if (!this.run) return;
     try {
-      logger.debug("Disposing run", { run: this.run });
+      logger.debug("Disposing run", {
+        messageId: this.run.messageId,
+        threadId: this.run.threadId,
+        status: this.run.status,
+        usageCount: this.run.usage.length,
+      });
       this.run.abortController.abort(new DOMException("dispose", "AbortError"));
-      logger.debug("Disposed run", { run: this.run });
+      logger.debug("Disposed run", {
+        messageId: this.run.messageId,
+        threadId: this.run.threadId,
+        status: this.run.status,
+        usageCount: this.run.usage.length,
+      });
     } catch {}
     this.run = null;
   }

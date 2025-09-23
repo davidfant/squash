@@ -20,22 +20,22 @@ function terminate(child: ChildProcess) {
 async function ping(appId: string) {
   const url = `https://${appId}.fly.dev`;
   try {
-    const response = await fetch(url, { 
-      method: 'HEAD',
-      signal: AbortSignal.timeout(10000)
+    const response = await fetch(url, {
+      method: "HEAD",
+      signal: AbortSignal.timeout(10000),
     });
     console.log({
       message: "Fly.io app ping successful",
-      data: { app: appId, status: response.status, url }
+      data: { app: appId, status: response.status, url },
     });
   } catch (error) {
     console.warn({
       message: "Fly.io app ping failed",
-      data: { 
-        app: appId, 
+      data: {
+        app: appId,
         error: error instanceof Error ? error.message : String(error),
         url,
-      }
+      },
     });
   }
 }
@@ -52,11 +52,11 @@ const app = new Hono()
       z.object({ command: z.string(), env: z.record(z.string(), z.string()) })
     ),
     (c) => {
-      c.header('Content-Type', 'text/event-stream; charset=utf-8');
-      c.header('Cache-Control', 'no-cache, no-transform');
-      c.header('Connection', 'keep-alive');
-      c.header('X-Accel-Buffering', 'no');
-      c.header('Content-Encoding', 'identity');
+      c.header("Content-Type", "text/event-stream; charset=utf-8");
+      c.header("Cache-Control", "no-cache, no-transform");
+      c.header("Connection", "keep-alive");
+      c.header("X-Accel-Buffering", "no");
+      c.header("Content-Encoding", "identity");
       return streamSSE(c, (stream) => {
         return new Promise<void>(async (resolve) => {
           {
@@ -100,7 +100,10 @@ const app = new Hono()
             child.stdout.on("data", (buf) => {
               console.debug({
                 message: "flyctl process stdout",
-                data: { app: payload.app, data: buf.toString("utf8").slice(0, 512) },
+                data: {
+                  app: payload.app,
+                  data: buf.toString("utf8").slice(0, 512),
+                },
               });
               write({ type: "stdout", data: buf.toString("utf8") });
             });
@@ -129,13 +132,13 @@ const app = new Hono()
                 message: "flyctl process exited",
                 data: { app: payload.app, code },
               });
-              
+
               clearInterval(pingInterval);
               console.log({
                 message: "Fly.io app ping interval cleared",
-                data: { app: payload.app }
+                data: { app: payload.app },
               });
-              
+
               await write({ type: "exit", data: { code } });
               await stream.close();
               resolve();
@@ -153,7 +156,7 @@ const app = new Hono()
           });
           throw err;
         });
-      })
+      });
     }
   )
   .onError(async (err, c) => {

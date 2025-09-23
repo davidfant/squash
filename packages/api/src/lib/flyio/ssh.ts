@@ -46,7 +46,7 @@ export async function* streamSSH(opts: {
       url: opts.url,
       status: res.status,
       statusText: res.statusText,
-      body: body.slice(0, 512),
+      body,
     });
     throw new Error(`HTTP ${res.status}`);
   }
@@ -57,7 +57,13 @@ export async function* streamSSH(opts: {
       const parser = createParser({
         onEvent: (event) => {
           const data = JSON.parse(event.data) as AnyProxyEvent;
-          logger.debug("Received SSH proxy message", { data });
+          if (data.type === "stdout") {
+            logger.debug("Received SSH proxy stdout", {
+              data: data.data.slice(0, 512),
+            });
+          } else {
+            logger.debug("Received SSH proxy message", { data });
+          }
           handler(data);
         },
         onError: (error) =>

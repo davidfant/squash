@@ -59,7 +59,7 @@ export function LandingPage() {
         json: {
           name: `base-${Date.now()}`,
           url: "s3://repos/templates/base-vite-ts",
-          defaultBranch: "main",
+          defaultBranch: "master",
           hidden: true,
           snapshot: {
             type: "docker",
@@ -99,7 +99,7 @@ export function LandingPage() {
       <header className="mx-auto flex max-w-7xl items-center justify-between px-6 h-14">
         <Link to="/" className="flex items-center gap-2">
           <img
-            src="/preview-gradients/0.jpg"
+            src="/preview/gradients/0.jpg"
             alt="Squash"
             className="size-8 rounded-full"
           />{" "}
@@ -127,12 +127,16 @@ export function LandingPage() {
                 initialValue={chatInitialValue}
                 clearOnSubmit={false}
                 onSubmit={handleSubmit}
-                submitting={createBranch.isPending}
+                submitting={createRepo.isPending || createBranch.isPending}
                 minRows={3}
                 maxRows={10}
                 Textarea={TextareaWithPlaceholder as any}
-                disabled={createBranch.isPending}
-                extra={<RepoSelect />}
+                disabled={createRepo.isPending || createBranch.isPending}
+                extra={
+                  <RepoSelect
+                    disabled={createRepo.isPending || createBranch.isPending}
+                  />
+                }
               />
 
               <div className="mt-6 flex flex-wrap items-center justify-center gap-3">

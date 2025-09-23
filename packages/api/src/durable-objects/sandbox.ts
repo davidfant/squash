@@ -135,6 +135,7 @@ export type SandboxDurableObjectApp = ReturnType<typeof createAgentApp>;
 export class SandboxDurableObject implements AgentAppHandlers {
   private readonly app: SandboxDurableObjectApp;
   private run: ActiveRunContext | null = null;
+  private startingRun: Promise<void> | null = null;
 
   constructor(
     private readonly state: DurableObjectState,
@@ -153,13 +154,48 @@ export class SandboxDurableObject implements AgentAppHandlers {
       return this.getOrCreateSandbox(body.branchId);
     });
 
-    if (sandbox) await this.startRun(body, sandbox);
+    if (sandbox) {
+      this.startingRun = this.startRun(body, sandbox).finally(() => {
+        this.startingRun = null;
+      });
+      try {
+        await this.startingRun;
+      } catch (error) {
+        logger.error("Failed to start run", {
+          branchId: body.branchId,
+          messageId: body.message.id,
+          error,
+        });
+        throw error;
+      }
+    }
     if (!this.run) return c.text("No stream to listen to", 409);
     return this.listen(c);
   }
 
   public async listen(c: Context): Promise<Response> {
-    if (!this.run) return c.text("", 200);
+    if (!this.run) {
+      const requestId = c.get("requestId");
+      if (this.startingRun) {
+        logger.info("Listener waiting for run to start", { requestId });
+        try {
+          await this.startingRun;
+        } catch (error) {
+          logger.error("Run failed to start while listener waiting", {
+            requestId,
+            error,
+          });
+          return c.text("Run failed to start", 409);
+        }
+        if (!this.run) {
+          logger.debug("No run after waiting for start", { requestId });
+          return c.text("", 200);
+        }
+      } else {
+        logger.debug("Listener connected with no active run", { requestId });
+        return c.text("", 200);
+      }
+    }
 
     const stream = this.createReadableStream(this.run);
     const headers = new Headers(this.run.headers);
@@ -223,11 +259,18 @@ export class SandboxDurableObject implements AgentAppHandlers {
 
   private shouldStartNewRun(body: StreamRequestBody): boolean {
     if (!this.run) {
-      logger.debug("Starting new run because no run is active", body);
+      logger.debug("Starting new run because no run is active", {
+        branchId: body.branchId,
+        messageId: body.message.id,
+      });
       return true;
     }
     if (this.run.messageId === body.message.id) {
-      logger.debug("Skipping new run because message id is the same", body);
+      logger.debug("Skipping new run because message id is the same", {
+        branchId: body.branchId,
+        messageId: body.message.id,
+        runMessageId: this.run.messageId,
+      });
       return false;
     }
     if (this.run.status === "running" || this.run.status === "stopping") {
@@ -288,7 +331,11 @@ export class SandboxDurableObject implements AgentAppHandlers {
         ];
       }
     })();
-    logger.debug("Resolved messages", { messages });
+    logger.debug("Resolved messages", {
+      branchId: body.branchId,
+      threadId,
+      messageCount: messages.length,
+    });
     const nextParentId = messages.slice(-1)[0]!.id;
     const context: FlyioExecSandboxContext = {
       appId: sandbox.appId,
@@ -319,7 +366,10 @@ export class SandboxDurableObject implements AgentAppHandlers {
           generateId: randomUUID,
           onFinish: async ({ responseMessage }) => {
             logger.debug("Finished streaming response message", {
-              responseMessage,
+              threadId,
+              responseMessageId: responseMessage.id,
+              partsCount: responseMessage.parts.length,
+              usageCount: usage.length,
             });
             await db.insert(schema.message).values({
               id: responseMessage.id,
@@ -436,6 +486,7 @@ export class SandboxDurableObject implements AgentAppHandlers {
           url: schema.repo.url,
           snapshot: schema.repo.snapshot,
           branchName: schema.repoBranch.name,
+          defaultBranchName: schema.repo.defaultBranch,
           provider: {
             type: schema.repoProvider.type,
             data: schema.repoProvider.data,
@@ -460,6 +511,7 @@ export class SandboxDurableObject implements AgentAppHandlers {
         appId,
         git: {
           url: repo.url,
+          defaultBranch: repo.defaultBranchName,
           branch: repo.branchName,
           workdir: repo.snapshot.workdir,
         },
@@ -588,7 +640,12 @@ export class SandboxDurableObject implements AgentAppHandlers {
     if (this.run !== run) return;
     run.status = status;
 
-    logger.debug("Finishing run", { run, status });
+    logger.debug("Finishing run", {
+      messageId: run.messageId,
+      threadId: run.threadId,
+      status,
+      listenerCount: run.listeners.size,
+    });
     for (const [listenerId, controller] of run.listeners.entries()) {
       run.listeners.delete(listenerId);
       try {
@@ -602,9 +659,19 @@ export class SandboxDurableObject implements AgentAppHandlers {
   private disposeRun() {
     if (!this.run) return;
     try {
-      logger.debug("Disposing run", { run: this.run });
+      logger.debug("Disposing run", {
+        messageId: this.run.messageId,
+        threadId: this.run.threadId,
+        status: this.run.status,
+        usageCount: this.run.usage.length,
+      });
       this.run.abortController.abort(new DOMException("dispose", "AbortError"));
-      logger.debug("Disposed run", { run: this.run });
+      logger.debug("Disposed run", {
+        messageId: this.run.messageId,
+        threadId: this.run.threadId,
+        status: this.run.status,
+        usageCount: this.run.usage.length,
+      });
     } catch {}
     this.run = null;
   }

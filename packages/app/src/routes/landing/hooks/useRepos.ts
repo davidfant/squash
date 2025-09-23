@@ -1,5 +1,5 @@
 import { api, useQuery } from "@/hooks/api";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { useLocalStorage } from "usehooks-ts";
 
 export function useRepos() {
@@ -14,11 +14,11 @@ export function useRepos() {
     [repos.data, currentRepoId]
   );
 
-  useEffect(() => {
-    if (!currentRepoId && repos.data?.length) {
-      setCurrentRepoId(repos.data[0]!.id);
-    }
-  }, [repos.data]);
+  // useEffect(() => {
+  //   if (currentRepoId === undefined && repos.data?.length) {
+  //     setCurrentRepoId(repos.data[0]!.id);
+  //   }
+  // }, [repos.data]);
 
   return {
     all: repos.data,

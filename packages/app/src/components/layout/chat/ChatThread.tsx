@@ -74,15 +74,13 @@ export function ChatThread({
 
   const mostRecentMessageId = messages.activePath.slice(-1)[0]?.id;
 
-  const handleRetry = (assistantId: string, editedMessage?: ChatMessage) => {
+  const handleRetry = (assistantId: string) => {
     if (status === "submitted" || status === "streaming") return;
     const idx = messages.activePath.findIndex((m) => m.id === assistantId);
     if (idx === -1) return;
-    const prevUser =
-      editedMessage ||
-      [...messages.activePath.slice(0, idx)]
-        .reverse()
-        .find((m) => m.role === "user");
+    const prevUser = [...messages.activePath.slice(0, idx)]
+      .reverse()
+      .find((m) => m.role === "user");
     if (!prevUser) return;
 
     const parentId = prevUser.metadata!.parentId;
@@ -97,28 +95,24 @@ export function ChatThread({
   };
 
   const handleEditSubmit = (messageId: string, value: ChatInputValue) => {
-    const message = messages.activePath.find((m) => m.id === messageId);
-    if (!message) return;
+    const currMessage = messages.activePath.find((m) => m.id === messageId);
+    if (!currMessage) return;
 
-    // Create an edited version of the message
     const editedMessage: ChatMessage = {
-      ...message,
-      parts: [{ type: "text", text: value.text }, ...value.files],
+      role: "user",
+      id: uuid(),
+      parts: [...value.files, { type: "text", text: value.text }],
+      metadata: {
+        parentId: currMessage.metadata!.parentId,
+        createdAt: new Date().toISOString(),
+      },
     };
 
-    // Find the next assistant message to trigger retry with the edited message
-    const messageIndex = messages.activePath.findIndex(
-      (m) => m.id === messageId
-    );
-    const nextAssistantMessage = messages.activePath
-      .slice(messageIndex + 1)
-      .find((m) => m.role === "assistant");
-
-    if (nextAssistantMessage) {
-      handleRetry(nextAssistantMessage.id, editedMessage);
-    }
-
-    // Clear editing state
+    sendMessage(editedMessage);
+    messages.switchVariant(currMessage.metadata!.parentId, messageId, [
+      ...allMessages,
+      editedMessage,
+    ]);
     setEditingMessageId(null);
   };
 

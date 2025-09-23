@@ -20,8 +20,12 @@ function build_repo() {
     TEMPLATE_VERSION=$(cat package.json | jq -r '.version')
 
     GIT_URL=s3://repos/templates/$TEMPLATE_NAME
-    # git remote add origin $GIT_URL
-    git remote set-url origin $GIT_URL
+    # if added, set, if not, add
+    if git remote get-url origin; then
+      git remote set-url origin $GIT_URL
+    else
+      git remote add origin $GIT_URL
+    fi
     git push --tags
 
     DOCKER_TAG="registry.fly.io/$APP_NAME:$TEMPLATE_NAME-v$TEMPLATE_VERSION"

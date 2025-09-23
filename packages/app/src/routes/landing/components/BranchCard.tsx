@@ -32,7 +32,7 @@ export function BranchCard({
       <div
         className="aspect-[4/3] w-full relative rounded-xl flex flex-col overflow-hidden shadow-sm group"
         style={{
-          backgroundImage: `url(/preview-gradients/${index % 4}.jpg)`,
+          backgroundImage: `url(/preview/abstract/${index % 4}.jpg)`,
           backgroundSize: "cover",
           backgroundPosition: "center",
         }}
@@ -42,15 +42,17 @@ export function BranchCard({
             <img
               src={branch.imageUrl}
               alt={branch.title}
-              className="h-full aspect-[4/3] object-cover rounded-lg border-[3px] border-white/30 shadow-lg"
+              className="h-full aspect-[4/3] object-cover rounded-lg border-3 border-primary-foreground/30 shadow-lg"
             />
           )}
         </div>
-        <div className="flex p-3 pt-0">
-          <p className="text-sm text-primary-foreground flex-1 truncate">
+        <div className="flex gap-2 p-3 pt-0">
+          <p className="text-sm text-primary-foreground flex-1 truncate text-shadow-md dark:text-shadow-none">
             {branch.title}
           </p>
-          <p className="text-sm text-primary-foreground/70">{formattedDate}</p>
+          <p className="text-sm text-primary-foreground/70 text-shadow-md dark:text-shadow-none">
+            {formattedDate}
+          </p>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

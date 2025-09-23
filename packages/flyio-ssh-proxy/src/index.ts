@@ -17,6 +17,29 @@ function terminate(child: ChildProcess) {
   }
 }
 
+async function ping(appId: string) {
+  const url = `https://${appId}.fly.dev`;
+  try {
+    const response = await fetch(url, {
+      method: "HEAD",
+      signal: AbortSignal.timeout(10000),
+    });
+    console.log({
+      message: "Fly.io app ping successful",
+      data: { app: appId, status: response.status, url },
+    });
+  } catch (error) {
+    console.warn({
+      message: "Fly.io app ping failed",
+      data: {
+        app: appId,
+        error: error instanceof Error ? error.message : String(error),
+        url,
+      },
+    });
+  }
+}
+
 const app = new Hono()
   .use(requestId())
   .use(honoLogger())
@@ -28,8 +51,13 @@ const app = new Hono()
       "json",
       z.object({ command: z.string(), env: z.record(z.string(), z.string()) })
     ),
-    (c) =>
-      streamSSE(c, (stream) => {
+    (c) => {
+      c.header("Content-Type", "text/event-stream; charset=utf-8");
+      c.header("Cache-Control", "no-cache, no-transform");
+      c.header("Connection", "keep-alive");
+      c.header("X-Accel-Buffering", "no");
+      c.header("Content-Encoding", "identity");
+      return streamSSE(c, (stream) => {
         return new Promise<void>(async (resolve) => {
           {
             const body = await c.req.valid("json");
@@ -37,12 +65,7 @@ const app = new Hono()
 
             console.log({
               message: "Starting Fly.io SSH session",
-              data: {
-                app: payload.app,
-                command: body.command,
-                env: Object.keys(body.env),
-                // env: body.env,
-              },
+              data: { app: payload.app, env: Object.keys(body.env) },
             });
 
             const child = spawn(
@@ -50,7 +73,6 @@ const app = new Hono()
               [
                 "ssh",
                 "console",
-                // "--pty",
                 "--app",
                 payload.app,
                 "--command",
@@ -58,6 +80,9 @@ const app = new Hono()
               ],
               { env: { ...process.env, ...body.env } }
             );
+
+            const pingInterval = setInterval(() => ping(payload.app), 60000);
+            ping(payload.app);
 
             child.on("spawn", () => {
               console.log({
@@ -72,14 +97,17 @@ const app = new Hono()
               stream.writeSSE({ data: JSON.stringify(ev) });
 
             child.stdout.on("data", (buf) => {
-              console.error({
+              console.debug({
                 message: "flyctl process stdout",
-                data: { app: payload.app, data: buf.toString("utf8") },
+                data: {
+                  app: payload.app,
+                  data: buf.toString("utf8").slice(0, 512),
+                },
               });
               write({ type: "stdout", data: buf.toString("utf8") });
             });
             child.stderr.on("data", (buf) => {
-              console.error({
+              console.debug({
                 message: "flyctl process stderr",
                 data: { app: payload.app, data: buf.toString("utf8") },
               });
@@ -103,6 +131,13 @@ const app = new Hono()
                 message: "flyctl process exited",
                 data: { app: payload.app, code },
               });
+
+              clearInterval(pingInterval);
+              console.log({
+                message: "Fly.io app ping interval cleared",
+                data: { app: payload.app },
+              });
+
               await write({ type: "exit", data: { code } });
               await stream.close();
               resolve();
@@ -120,12 +155,13 @@ const app = new Hono()
           });
           throw err;
         });
-      })
+      });
+    }
   )
   .onError(async (err, c) => {
     console.error(
       JSON.stringify({
-        message: "Fly.io SSH Proxy Hono Unhandled Error",
+        message: "Fly.io SSH Proxy Hono Error",
         data: {
           requestId: c.get("requestId"),
           route: c.req.path,

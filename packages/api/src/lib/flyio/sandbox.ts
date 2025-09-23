@@ -105,7 +105,7 @@ export async function createMachine({
   snapshot,
 }: {
   appId: string;
-  git: { url: string; branch: string; workdir: string };
+  git: { url: string; defaultBranch: string; branch: string; workdir: string };
   auth: {
     github?: { username: string; password: string };
     aws?: {
@@ -192,12 +192,12 @@ export async function createMachine({
                 git init
                 git remote add origin "$GIT_REPO_URL"
   
-                # Get the default branch from the remote (works for main/master or others)
-                DEFAULT_BRANCH=$(git ls-remote --symref origin HEAD | awk '/^ref:/ {print $2}' | sed 's|refs/heads/||')
-  
-                echo "Pulling default branch ($DEFAULT_BRANCH) from $GIT_REPO_URL..."
-                git fetch origin "$DEFAULT_BRANCH"
-                git reset --hard "origin/$DEFAULT_BRANCH"
+                echo "Pulling default branch (${
+                  git.defaultBranch
+                }) from $GIT_REPO_URL..."
+                
+                git fetch origin "${git.defaultBranch}"
+                git reset --hard "origin/${git.defaultBranch}"
   
                 echo "Creating new branch $GIT_BRANCH..."
                 git checkout -b "$GIT_BRANCH"

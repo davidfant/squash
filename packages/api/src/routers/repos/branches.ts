@@ -53,7 +53,6 @@ export const repoBranchesRouter = new Hono<{
           eq(schema.repo.organizationId, organizationId),
           isNull(schema.repo.deletedAt),
           eq(schema.member.userId, user.id),
-          eq(schema.repo.hidden, false),
           isNull(schema.repoBranch.deletedAt)
         )
       )

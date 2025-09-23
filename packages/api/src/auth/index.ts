@@ -3,6 +3,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { jwt, organization } from "better-auth/plugins";
 import { randomUUID } from "crypto";
 import { asc, eq } from "drizzle-orm";
+import kebabCase from "lodash.kebabcase";
 import { createDatabase, type Database } from "../database";
 import * as schema from "../database/schema/auth";
 
@@ -13,8 +14,8 @@ async function createDefaultOrganization(db: Database, user: User) {
     .insert(schema.organization)
     .values({
       id: organizationId,
-      name: "My Hypershape",
-      slug: `my-hypershape-${user.id.split("-")[0]}`,
+      name: user.name,
+      slug: `${kebabCase(user.name)}-${user.id.split("-")[0]}`,
       logo: user.image,
     })
     .execute();

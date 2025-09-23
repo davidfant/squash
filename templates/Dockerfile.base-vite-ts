@@ -1,0 +1,24 @@
+FROM node:20-alpine
+
+RUN apk add --no-cache python3 py3-pip git \
+ && pip3 install --break-system-packages --no-cache-dir git-remote-s3 \
+ && corepack enable
+
+ARG SQUASH_CLI_VERSION=0.0.5
+RUN npm install -g @squashai/cli@$SQUASH_CLI_VERSION
+
+ARG AWS_ACCESS_KEY_ID
+ARG AWS_SECRET_ACCESS_KEY
+ARG AWS_ENDPOINT_URL_S3
+ARG AWS_DEFAULT_REGION=auto
+ARG GIT_URL=s3://repos/templates/base-vite-ts
+ARG GIT_TAG
+
+WORKDIR /root/repo
+RUN git clone --depth 1 --branch $GIT_TAG $GIT_URL /root/repo \
+ && rm -rf .git
+
+RUN pnpm install
+
+ENV PORT=5173
+CMD ["sh", "-lc", "pnpm dev --port $PORT"]

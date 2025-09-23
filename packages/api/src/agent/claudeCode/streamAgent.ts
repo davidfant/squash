@@ -137,7 +137,6 @@ export async function streamClaudeCodeAgent(
   );
   if (!shouldCommit) return;
 
-  // get url of the thing
   const screenshotPromise = fetch(
     `${opts.env.SCREENSHOT_API_URL}?url=${encodeURIComponent(opts.previewUrl)}`
   ).then((r) => r.json<{ url: string }>());

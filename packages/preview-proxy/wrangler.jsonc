@@ -17,7 +17,7 @@
   "env": {
     "production": {
       "vars": {
-        "PREVIEW_ROOT": ".preview.squash.build"
+        "PREVIEW_ROOT": ".magicsite.app"
       }
     }
   }

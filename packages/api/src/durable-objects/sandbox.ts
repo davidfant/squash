@@ -219,21 +219,22 @@ export class SandboxDurableObject implements AgentAppHandlers {
     });
 
     const context = { ...sandbox, accessToken: this.env.FLY_ACCESS_TOKEN };
-    // const url = new URL(this.env.PREVIEW_PROXY_URL);
-    // url.host = `${sandbox.appId}.${url.host}`;
     const url = this.previewUrl(sandbox);
 
     if (body.sha) {
       await gitReset(context, body.sha);
-      return { url: url.toString(), sha: body.sha };
+      return { url, sha: body.sha };
     } else {
       const sha = await gitCurrentCommit(context);
-      return { url: url.toString(), sha };
+      return { url, sha };
     }
   }
 
   private previewUrl(sandbox: schema.RepoBranchSandbox): string {
-    return `https://${sandbox.appId}.fly.dev`;
+    const url = new URL(this.env.PREVIEW_PROXY_URL);
+    url.host = `${sandbox.appId}.${url.host}`;
+    return url.toString();
+    // return `https://${sandbox.appId}.fly.dev`;
   }
 
   public async abort(

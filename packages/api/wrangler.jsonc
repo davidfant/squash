@@ -43,7 +43,7 @@
       "vars": {
         "APP_URL": "https://app.squash.build",
         "SCREENSHOT_API_URL": "https://screenshot-api-production.squash.workers.dev",
-        "PREVIEW_PROXY_URL": "https://preview.squash.build",
+        "PREVIEW_PROXY_URL": "https://magicsite.app",
         "R2_FILE_TRANSFER_BUCKET_NAME": "file-transfer",
         "R2_REPOS_BUCKET_NAME": "repos",
         "REPLICATOR_GIT_SYNC_API_URL": "http://localhost:8888",

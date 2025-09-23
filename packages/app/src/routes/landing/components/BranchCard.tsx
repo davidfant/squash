@@ -37,7 +37,7 @@ export function BranchCard({
           backgroundPosition: "center",
         }}
       >
-        <div className="flex-1 min-h-0 flex items-center justify-center p-[10%]">
+        <div className="flex-1 min-h-0 flex items-center justify-center p-[7%]">
           {branch.imageUrl && (
             <img
               src={branch.imageUrl}

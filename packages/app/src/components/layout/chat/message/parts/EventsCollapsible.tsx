@@ -70,6 +70,7 @@ export function EventsCollapsible({
                     </span>
                   </>
                 ),
+                loading: events.some((event) => event.loading),
                 icon: firstEvent.icon,
               }
         }

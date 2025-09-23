@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 
 export const placeholderSuffixes = [
-  "research loan underwriting data...",
-  "review employment contracts...",
-  "find all quantum computing researchers in the US...",
+  "replicate this screen in my app...",
+  "prototype a new feature in my dashboard...",
+  "experiment with onboarding flow variants...",
+  "add a dark mode toggle to my settings...",
+  "try out a different navigation menu...",
 ];
 
 export function useChatInputPlaceholder() {

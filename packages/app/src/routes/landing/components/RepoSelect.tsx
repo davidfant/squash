@@ -17,7 +17,7 @@ export function RepoSelect() {
   const repos = useRepos();
   const uploadScreenshot = useScreenshotUpload();
 
-  // if (!repos || repos?.length === 0) return null;
+  if (!repos.all?.length) return null;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>

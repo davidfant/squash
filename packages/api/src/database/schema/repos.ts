@@ -44,6 +44,7 @@ export const repo = pgTable("repo", {
   deletedAt: timestamp("deleted_at"),
   defaultBranch: text("default_branch").notNull(),
   private: boolean("private").notNull(),
+  hidden: boolean("hidden").notNull().default(false),
   providerId: uuid("provider_id").references(() => repoProvider.id),
   externalId: text("external_id"),
   organizationId: uuid("organization_id")

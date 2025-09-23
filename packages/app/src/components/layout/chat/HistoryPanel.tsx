@@ -43,14 +43,7 @@ export function HistoryPanel({
 
     // Go through active path and find messages with git commits
     activePath.forEach((message) => {
-      const gitSha = message.parts.find(
-        (
-          p: any
-        ): p is {
-          type: "data-GitSha";
-          data: { sha: string; title: string; description: string };
-        } => p.type === "data-GitSha"
-      );
+      const gitSha = message.parts.find((p) => p.type === "data-GitSha");
 
       if (!gitSha || processedCommits.has(message.id)) return;
       processedCommits.add(message.id);

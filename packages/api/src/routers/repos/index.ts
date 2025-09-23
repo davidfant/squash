@@ -45,7 +45,8 @@ export const reposRouter = new Hono<{
         and(
           eq(schema.organization.id, organizationId),
           isNull(schema.repo.deletedAt),
-          eq(schema.member.userId, user.id)
+          eq(schema.member.userId, user.id),
+          eq(schema.repo.hidden, false)
         )
       );
 
@@ -79,34 +80,37 @@ export const reposRouter = new Hono<{
     zValidator(
       "json",
       z.object({
-        snapshot: z.object({
-          type: z.literal("docker"),
-          port: z.number(),
-          image: z.string(),
-          workdir: z.string(),
-          cmd: z.object({
-            prepare: z.string().optional(),
-            entrypoint: z.string(),
-          }),
-        }),
+        hidden: z.boolean().optional(),
+        snapshot: z
+          .object({
+            type: z.literal("docker"),
+            port: z.number(),
+            image: z.string(),
+            workdir: z.string(),
+            cmd: z.object({
+              prepare: z.string().optional(),
+              entrypoint: z.string(),
+            }),
+          })
+          .optional(),
       })
     ),
     requireRepo,
     async (c) => {
       const repo = c.get("repo");
       const db = c.get("db");
-      const { snapshot } = c.req.valid("json");
+      const update = c.req.valid("json");
 
       try {
         // Update the repo with new snapshot
         await db
           .update(schema.repo)
-          .set({ snapshot: snapshot, updatedAt: new Date() })
+          .set({ ...update, updatedAt: new Date() })
           .where(eq(schema.repo.id, repo.id));
 
         return c.json({
-          message: "Snapshot updated successfully",
-          snapshot: snapshot,
+          message: "Repository updated successfully",
+          ...update,
         });
       } catch (error) {
         console.error("Error updating snapshot:", error);
@@ -122,6 +126,7 @@ export const reposRouter = new Hono<{
         name: z.string(),
         url: z.string().url(),
         defaultBranch: z.string(),
+        hidden: z.boolean().optional(),
         snapshot: z.object({
           type: z.literal("docker"),
           port: z.number(),
@@ -137,7 +142,7 @@ export const reposRouter = new Hono<{
     requireAuth,
     requireActiveOrganization,
     async (c) => {
-      const { name, url, defaultBranch, snapshot } = c.req.valid("json");
+      const data = c.req.valid("json");
       const organizationId = c.get("organizationId");
       const db = c.get("db");
 
@@ -145,14 +150,11 @@ export const reposRouter = new Hono<{
         const [newRepo] = await db
           .insert(schema.repo)
           .values({
-            name,
-            url,
-            defaultBranch,
+            ...data,
             private: false,
             providerId: null,
             externalId: null,
             organizationId,
-            snapshot,
           })
           .returning();
 
@@ -206,7 +208,7 @@ export const reposRouter = new Hono<{
             isNull(schema.repoBranch.deletedAt)
           )
         )
-        .orderBy(desc(schema.repoBranch.createdAt));
+        .orderBy(desc(schema.repoBranch.updatedAt));
 
       return c.json(branches);
     }

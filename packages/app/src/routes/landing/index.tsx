@@ -9,7 +9,7 @@ import { toast } from "@/components/ui/sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { api, useMutation } from "@/hooks/api";
 import { SiGithub } from "@icons-pack/react-simple-icons";
-import { memo, useState } from "react";
+import { memo } from "react";
 import { Link, Navigate, useNavigate } from "react-router";
 import { useLocalStorage } from "usehooks-ts";
 import { CloneScreenshotAction } from "./components/CloneScreenshotAction";
@@ -19,10 +19,17 @@ import { RepoSelect } from "./components/RepoSelect";
 import { useChatInputPlaceholder } from "./hooks/useChatInputPlaceholder";
 import { useRepos } from "./hooks/useRepos";
 
+const MemoizedTextarea = memo(Textarea);
 const TextareaWithPlaceholder = memo(
-  (props: React.ComponentProps<typeof Textarea>) => (
-    <Textarea {...props} placeholder={useChatInputPlaceholder()} />
-  )
+  (props: React.ComponentProps<typeof Textarea>) => {
+    const placeholder = useChatInputPlaceholder();
+    return (
+      <MemoizedTextarea
+        {...props}
+        placeholder={!!props.value ? undefined : placeholder}
+      />
+    );
+  }
 );
 
 export function LandingPage() {
@@ -35,20 +42,44 @@ export function LandingPage() {
       text: "",
       files: [],
     });
-  const [chatInputKey, setChatInputKey] = useState(0);
+
+  const createRepo = useMutation(api.repos.$post, {
+    onError: () => toast.error("Failed to create repository"),
+  });
 
   const createBranch = useMutation(api.repos[":repoId"].branches.$post, {
     onSuccess: (data) => navigate(`/branches/${data.id}`),
   });
 
-  const handleSubmit = (content: ChatInputValue) => {
-    if (!repos.current) {
-      toast.error("Select a repository to continue");
-      return;
-    }
+  const handleSubmit = async (content: ChatInputValue) => {
+    const repoId = await (async () => {
+      if (repos.current) return repos.current.id;
 
-    createBranch.mutate({
-      param: { repoId: repos.current.id },
+      const newRepo = await createRepo.mutateAsync({
+        json: {
+          name: `base-${Date.now()}`,
+          url: "s3://repos/templates/base-vite-ts",
+          defaultBranch: "main",
+          hidden: true,
+          snapshot: {
+            type: "docker",
+            port: 5173,
+            image: "registry.fly.io/squash-template:base-vite-ts-v0.0.1",
+            workdir: "/repo",
+            cmd: {
+              prepare:
+                "if [ ! -d $WORKDIR/.git ]; then mv /root/repo/* $WORKDIR; fi",
+              entrypoint: "pnpm dev --port $PORT",
+            },
+          },
+        },
+      });
+
+      return newRepo.id;
+    })();
+
+    await createBranch.mutateAsync({
+      param: { repoId },
       json: {
         message: {
           parts: [{ type: "text", text: content.text }, ...content.files],
@@ -77,7 +108,7 @@ export function LandingPage() {
         <HeaderMenu />
       </header>
 
-      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-6 py-32 gap-32">
+      <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-6 py-24 gap-32">
         <section className="flex flex-col items-center gap-12 text-center">
           {/* <Badge variant="secondary" className="px-3 py-1.5 rounded-full">
             Build anything with AI
@@ -93,7 +124,6 @@ export function LandingPage() {
           <ChatInputFileUploadsProvider initialValue={chatInitialValue.files}>
             <div className="w-full max-w-2xl">
               <ChatInput
-                key={chatInputKey}
                 initialValue={chatInitialValue}
                 clearOnSubmit={false}
                 onSubmit={handleSubmit}

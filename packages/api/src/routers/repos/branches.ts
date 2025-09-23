@@ -7,7 +7,7 @@ import type { SandboxDurableObjectApp } from "@/durable-objects/sandbox";
 import * as FlyioSandbox from "@/lib/flyio/sandbox";
 import { zUserMessagePart } from "@/routers/schemas";
 import { zValidator } from "@hono/zod-validator";
-import { eq } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { Hono } from "hono";
 import { hc } from "hono/client";
 import z from "zod";
@@ -18,6 +18,49 @@ export const repoBranchesRouter = new Hono<{
   Variables: { db: Database };
 }>()
   .use(requireAuth, requireActiveOrganization)
+  .get("/", requireAuth, requireActiveOrganization, async (c) => {
+    const user = c.get("user");
+    const db = c.get("db");
+    const organizationId = c.get("organizationId");
+
+    const branches = await db
+      .select({
+        id: schema.repoBranch.id,
+        title: schema.repoBranch.title,
+        name: schema.repoBranch.name,
+        imageUrl: schema.repoBranch.imageUrl,
+        createdAt: schema.repoBranch.createdAt,
+        updatedAt: schema.repoBranch.updatedAt,
+        repo: { id: schema.repo.id, name: schema.repo.name },
+        createdBy: {
+          id: schema.user.id,
+          name: schema.user.name,
+          image: schema.user.image,
+        },
+      })
+      .from(schema.repo)
+      .innerJoin(
+        schema.repoBranch,
+        eq(schema.repo.id, schema.repoBranch.repoId)
+      )
+      .innerJoin(schema.user, eq(schema.repoBranch.createdBy, schema.user.id))
+      .innerJoin(
+        schema.member,
+        eq(schema.repo.organizationId, schema.member.organizationId)
+      )
+      .where(
+        and(
+          eq(schema.repo.organizationId, organizationId),
+          isNull(schema.repo.deletedAt),
+          eq(schema.member.userId, user.id),
+          eq(schema.repo.hidden, false),
+          isNull(schema.repoBranch.deletedAt)
+        )
+      )
+      .orderBy(desc(schema.repoBranch.updatedAt));
+
+    return c.json(branches);
+  })
   .get(
     "/:branchId",
     zValidator("param", z.object({ branchId: z.uuid() })),

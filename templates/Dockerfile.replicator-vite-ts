@@ -22,4 +22,4 @@ RUN git clone --depth 1 --branch $GIT_TAG $GIT_URL /root/repo \
 RUN pnpm install
 
 ENV PORT=5173
-CMD ["sh", "-lc", "pnpm dev --host 0.0.0.0 --port $PORT"]
+CMD ["sh", "-lc", "pnpm dev --port $PORT"]

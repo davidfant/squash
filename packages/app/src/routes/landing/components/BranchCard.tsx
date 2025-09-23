@@ -42,7 +42,7 @@ export function BranchCard({
             <img
               src={branch.imageUrl}
               alt={branch.title}
-              className="h-full object-contain rounded-lg border-[3px] border-white/30 shadow-lg"
+              className="h-full aspect-[4/3] object-cover rounded-lg border-[3px] border-white/30 shadow-lg"
             />
           )}
         </div>

@@ -34,7 +34,7 @@ openssl rsa -in private.dev.pem -pubout -out public.dev.pem
 - [x] persist e.g. current branch and filtered repo previews
 - [ ] get starter repo working
 - [x] typing placeholder
-- [ ] animated presence for ChatInput height?
+- [x] animated presence for ChatInput height?
 
 - [ ] Send a message while agent is running
 - [ ] Hooks for tsc

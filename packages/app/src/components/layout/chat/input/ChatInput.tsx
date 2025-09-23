@@ -152,7 +152,7 @@ export function ChatInput({
             maxRows={maxRows}
             placeholder={placeholder}
             onChange={(e) => setValue(e.target.value)}
-            className="text-lg border-none shadow-none bg-transparent focus:ring-0 focus-visible:ring-0"
+            className="text-lg border-none shadow-none bg-transparent focus:ring-0 focus-visible:ring-0 transition-all"
             onPaste={handlePaste}
             onKeyDown={(e) => {
               if (e.key === "Enter" && e.metaKey) {

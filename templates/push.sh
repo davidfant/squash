@@ -7,6 +7,12 @@ fly auth docker
 APP_NAME="squash-template"
 SQUASH_CLI_VERSION=$(cat ../packages/cli/package.json | jq -r '.version')
 
+quiet() {
+  BUILDKIT_PROGRESS=plain "$@" 2>&1 \
+    | grep -vE '^\[\+\] Building|^ =>|^# ' \
+    | sed -u '/^ =>/d'
+}
+
 function build_repo() {
   TEMPLATE_NAME=$1
   echo "Building template: $TEMPLATE_NAME"
@@ -20,7 +26,7 @@ function build_repo() {
 
     DOCKER_TAG="registry.fly.io/$APP_NAME:$TEMPLATE_NAME-v$TEMPLATE_VERSION"
     echo "Docker tag: $DOCKER_TAG"
-    docker build \
+    quiet docker build \
       --platform linux/amd64 \
       --build-arg SQUASH_CLI_VERSION=$SQUASH_CLI_VERSION \
       --build-arg AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
@@ -42,7 +48,7 @@ function build_node_image() {
   DOCKER_TAG="registry.fly.io/$APP_NAME:node-$NODE_IMAGE_TAG"
 
   echo "Docker tag: $DOCKER_TAG"
-  docker build \
+  quiet docker build \
     --platform linux/amd64 \
     --build-arg NODE_IMAGE=node:$NODE_IMAGE_TAG \
     --build-arg SQUASH_CLI_VERSION=$SQUASH_CLI_VERSION \
@@ -57,5 +63,6 @@ if ! flyctl apps list | grep -q $APP_NAME; then
   flyctl apps create $APP_NAME
 fi
 
+build_repo base-vite-ts
 build_repo replicator-vite-ts
 build_node_image 20-alpine

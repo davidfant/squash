@@ -23,6 +23,7 @@ export function useRepos() {
   return {
     all: repos.data,
     current,
+    currentId: currentRepoId,
     setCurrent: setCurrentRepoId,
     isLoading: repos.isPending,
   };

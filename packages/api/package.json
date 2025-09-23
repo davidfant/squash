@@ -18,7 +18,7 @@
   },
   "scripts": {
     "dev": "pnpm typegen && concurrently \"pnpm dev:wrangler\" \"pnpm dev:tsc\"",
-    "dev:wrangler": "wrangler dev --x-remote-bindings",
+    "dev:wrangler": "pnpm drizzle-kit push && wrangler dev --x-remote-bindings",
     "dev:tsc": "tsc --watch --preserveWatchOutput",
     "drizzle:migrate:dev": "drizzle-kit push",
     "drizzle:migrate:prod": "DOTENV_CONFIG_PATH=.dev.vars.prod drizzle-kit migrate",

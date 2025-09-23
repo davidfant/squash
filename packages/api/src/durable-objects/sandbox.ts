@@ -436,6 +436,7 @@ export class SandboxDurableObject implements AgentAppHandlers {
           url: schema.repo.url,
           snapshot: schema.repo.snapshot,
           branchName: schema.repoBranch.name,
+          defaultBranchName: schema.repo.defaultBranch,
           provider: {
             type: schema.repoProvider.type,
             data: schema.repoProvider.data,
@@ -460,6 +461,7 @@ export class SandboxDurableObject implements AgentAppHandlers {
         appId,
         git: {
           url: repo.url,
+          defaultBranch: repo.defaultBranchName,
           branch: repo.branchName,
           workdir: repo.snapshot.workdir,
         },

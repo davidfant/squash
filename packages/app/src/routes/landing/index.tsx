@@ -59,7 +59,7 @@ export function LandingPage() {
         json: {
           name: `base-${Date.now()}`,
           url: "s3://repos/templates/base-vite-ts",
-          defaultBranch: "main",
+          defaultBranch: "master",
           hidden: true,
           snapshot: {
             type: "docker",

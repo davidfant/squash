@@ -46,11 +46,13 @@ export function BranchCard({
             />
           )}
         </div>
-        <div className="flex p-3 pt-0">
-          <p className="text-sm text-primary-foreground flex-1 truncate">
+        <div className="flex gap-2 p-3 pt-0">
+          <p className="text-sm text-primary-foreground flex-1 truncate text-shadow-md dark:text-shadow-none">
             {branch.title}
           </p>
-          <p className="text-sm text-primary-foreground/70">{formattedDate}</p>
+          <p className="text-sm text-primary-foreground/70 text-shadow-md dark:text-shadow-none">
+            {formattedDate}
+          </p>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

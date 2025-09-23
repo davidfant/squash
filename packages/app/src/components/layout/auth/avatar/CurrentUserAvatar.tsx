@@ -8,6 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useQueryClient } from "@tanstack/react-query";
 import { Check, LogOut } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { CreateOrganizationMenuItem } from "./CreateOrganizationMenuItem";
@@ -22,10 +23,13 @@ export function CurrentUserAvatar({
   const orgs = authClient.useListOrganizations();
   const org = authClient.useActiveOrganization();
   const { t } = useTranslation("auth");
+  const queryClient = useQueryClient();
 
   const setActiveOrganization = async (organizationId: string) => {
     try {
       await authClient.organization.setActive({ organizationId });
+      queryClient.cancelQueries();
+      queryClient.invalidateQueries();
     } catch (error) {
       console.error("Failed to set active organization:", error);
     }

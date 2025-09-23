@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "@/components/ui/sonner";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useQueryClient } from "@tanstack/react-query";
 import { Check, LogOut, Moon, Sun } from "lucide-react";
 import { useState } from "react";
 
@@ -20,6 +21,7 @@ export function HeaderMenu() {
   const activeOrg = authClient.useActiveOrganization();
   const session = authClient.useSession();
   const { theme, toggleTheme } = useTheme();
+  const queryClient = useQueryClient();
 
   const [isSwitching, setIsSwitching] = useState(false);
 
@@ -31,6 +33,8 @@ export function HeaderMenu() {
     try {
       setIsSwitching(true);
       await authClient.organization.setActive({ organizationId });
+      queryClient.cancelQueries();
+      queryClient.invalidateQueries();
       await Promise.all([orgs.refetch(), activeOrg.refetch()]);
     } catch (error) {
       console.error("Failed to switch organization", error);
@@ -48,7 +52,7 @@ export function HeaderMenu() {
           <Avatar
             image={active?.logo ?? ""}
             name={active?.name}
-            className="size-8"
+            className="size-6"
           />
           <span>{active.name}</span>
         </Button>

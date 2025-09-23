@@ -101,7 +101,7 @@ export function LandingPage() {
           <img
             src="/preview/gradients/0.jpg"
             alt="Squash"
-            className="size-8 rounded-full"
+            className="size-6 rounded-full"
           />{" "}
           Squash
         </Link>

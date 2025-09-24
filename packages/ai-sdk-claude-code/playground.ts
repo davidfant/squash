@@ -1,4 +1,5 @@
 import { query, type SDKMessage } from "@anthropic-ai/claude-code";
+import { randomUUID } from "crypto";
 
 const msgs: SDKMessage[] = [
   {
@@ -426,8 +427,16 @@ const cwd = "/Users/fant/repos/lp/lp/packages/replicator/playground";
 //   console.log(chunk);
 // }
 
-for await (const msg of query({
-  prompt: "who are you?",
+const q = query({
+  // prompt: "who are you?",
+  prompt: (async function* () {
+    yield {
+      type: "user",
+      session_id: randomUUID(),
+      parent_tool_use_id: null,
+      message: { role: "user", content: "who ar eyou" },
+    };
+  })(),
   options: {
     cwd,
     executable: "node",
@@ -437,10 +446,20 @@ for await (const msg of query({
       UserPromptSubmit: [
         {
           hooks: [
-            async ({ cwd }) => {
-              process.exit(0);
-              // throw new Error("test");
-              console.log("hook", cwd);
+            async () => {
+              return {
+                continue: true,
+                systemMessage: "Always respond in Swedish",
+              };
+            },
+          ],
+        },
+      ],
+      SessionStart: [
+        {
+          hooks: [
+            async () => {
+              console.log("XXX session start");
               return { async: true };
             },
           ],
@@ -448,7 +467,8 @@ for await (const msg of query({
       ],
     },
   },
-})) {
+});
+for await (const msg of q) {
   console.dir(msg, { depth: null });
   console.log("---");
 }

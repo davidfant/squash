@@ -172,6 +172,17 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
           stdout: (full.stdout ?? "").slice(streamed.stdout.length),
           stderr: (full.stderr ?? "").slice(streamed.stderr.length),
         };
+        logger.debug("Stream data", {
+          streamed: {
+            stdout: streamed.stdout.length,
+            stderr: streamed.stderr.length,
+          },
+          full: { stdout: full.stdout?.length, stderr: full.stderr?.length },
+          unstreamed: {
+            stdout: unstreamed.stdout.length,
+            stderr: unstreamed.stderr.length,
+          },
+        });
         if (unstreamed.stdout) {
           logger.debug("Unstreamed stdout", {
             length: unstreamed.stdout.length,

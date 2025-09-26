@@ -3,14 +3,13 @@ import { requireActiveOrganization, requireAuth } from "@/auth/middleware";
 import type { Database } from "@/database";
 import * as schema from "@/database/schema";
 import { loadBranchMessages } from "@/database/util/load-branch-messages";
-import type { SandboxDurableObjectApp } from "@/durable-objects/sandbox";
-import * as FlyioSandbox from "@/lib/flyio/sandbox";
-import { zUserMessagePart } from "@/routers/schemas";
+import { logger } from "@/lib/logger";
+import { resolveMessageThreadHistory } from "@/lib/resolveMessageThreadHistory";
 import { zValidator } from "@hono/zod-validator";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { Hono } from "hono";
-import { hc } from "hono/client";
 import z from "zod";
+import { zUserMessagePart } from "../schemas";
 import { requireRepoBranch } from "./middleware";
 
 export const repoBranchesRouter = new Hono<{
@@ -64,10 +63,7 @@ export const repoBranchesRouter = new Hono<{
     "/:branchId",
     zValidator("param", z.object({ branchId: z.uuid() })),
     requireRepoBranch,
-    (c) => {
-      const { sandbox, ...branch } = c.get("branch");
-      return c.json(branch);
-    }
+    (c) => c.json(c.get("branch"))
   )
   .get(
     "/:branchId/messages",
@@ -116,14 +112,65 @@ export const repoBranchesRouter = new Hono<{
       const body = c.req.valid("json");
       const params = c.req.valid("param");
       const user = c.get("user");
+      const db = c.get("db");
 
-      const stub = c.env.SANDBOX_DO.get(
-        c.env.SANDBOX_DO.idFromName(params.branchId)
+      const allMessages = await loadBranchMessages(
+        db,
+        params.branchId,
+        user.id
       );
-      return hc<SandboxDurableObjectApp>("https://thread", {
-        fetch: stub.fetch.bind(stub),
-      }).stream.$post({
-        json: { ...body, branchId: params.branchId, userId: user.id },
+      if (!allMessages.length) {
+        logger.debug("No messages found in branch", {
+          branchId: params.branchId,
+        });
+        return c.json({ error: "No messages found in branch" }, 400);
+      }
+      if (!allMessages.some((m) => m.id === body.message.parentId)) {
+        logger.debug("Parent message not found in branch", {
+          branchId: params.branchId,
+          parentId: body.message.parentId,
+        });
+        return c.json({ error: "Parent message not found in branch" }, 400);
+      }
+
+      const threadId = allMessages[0]!.threadId;
+      logger.info("Found messages in thread", {
+        threadId,
+        count: allMessages.length,
+      });
+      const messages = await (async () => {
+        if (allMessages.some((m) => m.id === body.message.id)) {
+          return resolveMessageThreadHistory(allMessages, body.message.id);
+        } else {
+          const { id, parts, parentId } = body.message;
+          const [message] = await db
+            .insert(schema.message)
+            .values({
+              id,
+              role: "user",
+              parts,
+              threadId,
+              parentId,
+              createdBy: user.id,
+            })
+            .returning();
+          return [
+            ...resolveMessageThreadHistory(allMessages, parentId),
+            { ...message!, parentId },
+          ];
+        }
+      })();
+      logger.debug("Resolved messages", {
+        branchId: params.branchId,
+        threadId,
+        count: messages.length,
+      });
+
+      const sandbox = c.env.DAYTONA_SANDBOX_MANAGER.getByName(params.branchId);
+      return sandbox.startAgent({
+        messages,
+        threadId,
+        branchId: params.branchId,
       });
     }
   )
@@ -134,12 +181,8 @@ export const repoBranchesRouter = new Hono<{
     requireRepoBranch,
     async (c) => {
       const params = c.req.valid("param");
-      const stub = c.env.SANDBOX_DO.get(
-        c.env.SANDBOX_DO.idFromName(params.branchId)
-      );
-      return hc<SandboxDurableObjectApp>("https://thread", {
-        fetch: stub.fetch.bind(stub),
-      }).listen.$post();
+      const sandbox = c.env.DAYTONA_SANDBOX_MANAGER.getByName(params.branchId);
+      return sandbox.listenToAgent();
     }
   )
   .post(
@@ -150,33 +193,30 @@ export const repoBranchesRouter = new Hono<{
     async (c) => {
       const body = c.req.valid("json");
       const params = c.req.valid("param");
-      const stub = c.env.SANDBOX_DO.get(
-        c.env.SANDBOX_DO.idFromName(params.branchId)
-      );
-      const res = await hc<SandboxDurableObjectApp>("https://thread", {
-        fetch: stub.fetch.bind(stub),
-      }).preview.$post({
-        json: { sha: body.sha, branchId: params.branchId },
-      });
-      return c.json(await res.json());
+      const sandbox = c.env.DAYTONA_SANDBOX_MANAGER.getByName(params.branchId);
+
+      if (body.sha && !(await sandbox.isAgentRunning())) {
+        await sandbox.gitReset(body.sha, undefined);
+        const url = await sandbox.url();
+        return c.json({ url, sha: body.sha });
+      } else {
+        const url = await sandbox.url();
+        return c.json({
+          url,
+          sha: await sandbox.gitCurrentCommit(undefined),
+        });
+      }
     }
   )
   .post(
     "/:branchId/messages/abort",
     zValidator("param", z.object({ branchId: z.uuid() })),
-    zValidator("json", z.object({ messageId: z.uuid().optional() })),
     requireAuth,
     async (c) => {
       const params = c.req.valid("param");
-      const body = c.req.valid("json");
-      const stub = c.env.SANDBOX_DO.get(
-        c.env.SANDBOX_DO.idFromName(params.branchId)
-      );
-      return hc<SandboxDurableObjectApp>("https://thread", {
-        fetch: stub.fetch.bind(stub),
-      }).abort.$post({
-        json: { branchId: params.branchId, messageId: body.messageId },
-      });
+      const sandbox = c.env.DAYTONA_SANDBOX_MANAGER.getByName(params.branchId);
+      await sandbox.stopAgent();
+      return c.json({ success: true });
     }
   )
   .delete(
@@ -186,25 +226,15 @@ export const repoBranchesRouter = new Hono<{
     async (c) => {
       const db = c.get("db");
       const branch = c.get("branch");
-      if (branch.sandbox?.type === "flyio") {
-        const stub = c.env.SANDBOX_DO.get(
-          c.env.SANDBOX_DO.idFromName(branch.id)
-        );
-        await hc<SandboxDurableObjectApp>("https://thread", {
-          fetch: stub.fetch.bind(stub),
-        }).abort.$post({
-          json: { branchId: branch.id },
-        });
-        await FlyioSandbox.deleteApp(
-          branch.sandbox.appId,
-          c.env.FLY_ACCESS_TOKEN
-        );
-      }
+      const sandbox = c.env.DAYTONA_SANDBOX_MANAGER.getByName(branch.id);
+      await sandbox.stopAgent();
+      await sandbox.destroy();
 
       await db
         .update(schema.repoBranch)
-        .set({ deletedAt: new Date(), sandbox: null })
+        .set({ deletedAt: new Date() })
         .where(eq(schema.repoBranch.id, branch.id));
+
       return c.json({ success: true });
     }
   );

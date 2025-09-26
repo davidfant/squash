@@ -1,3 +1,10 @@
 packages:
-  - "packages/*"
-  - "templates"
+  - packages/*
+  - templates
+  - "!packages/chrome-extension"
+  - "!packages/flyio-ssh-proxy"
+  - "!packages/preview-proxy"
+  - "!packages/replicator"
+  - "!packages/replicator-git-sync"
+patchedDependencies:
+  "@daytonaio/sdk": patches/@daytonaio__sdk.patch

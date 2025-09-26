@@ -8,7 +8,7 @@ import { requestId } from "hono/request-id";
 import { streamSSE } from "hono/streaming";
 import escape from "shell-escape";
 import z from "zod";
-import { jwtPayloadSchema, type AnyProxyEvent } from "./types.js";
+import { jwtPayloadSchema, type Event } from "./types.js";
 
 function terminate(child: ChildProcess) {
   if (!child.killed) {
@@ -81,10 +81,14 @@ const app = new Hono()
               { env: { ...process.env, ...body.env } }
             );
 
-            const pingInterval = setInterval(() => ping(payload.app), 60000);
-            ping(payload.app);
+            // const pingInterval = setInterval(() => ping(payload.app), 60000);
+            // ping(payload.app);
+
+            const write = (ev: Event.Any) =>
+              stream.writeSSE({ data: JSON.stringify(ev) });
 
             child.on("spawn", () => {
+              write({ type: "start", timestamp: new Date().toISOString() });
               console.log({
                 message: "flyctl process spawned",
                 data: { app: payload.app },
@@ -92,9 +96,6 @@ const app = new Hono()
             });
 
             c.req.raw.signal.addEventListener("abort", () => terminate(child));
-
-            const write = (ev: AnyProxyEvent) =>
-              stream.writeSSE({ data: JSON.stringify(ev) });
 
             child.stdout.on("data", (buf) => {
               console.debug({
@@ -104,21 +105,33 @@ const app = new Hono()
                   data: buf.toString("utf8").slice(0, 512),
                 },
               });
-              write({ type: "stdout", data: buf.toString("utf8") });
+              write({
+                type: "stdout",
+                data: buf.toString("utf8"),
+                timestamp: new Date().toISOString(),
+              });
             });
             child.stderr.on("data", (buf) => {
               console.debug({
                 message: "flyctl process stderr",
                 data: { app: payload.app, data: buf.toString("utf8") },
               });
-              write({ type: "stderr", data: buf.toString("utf8") });
+              write({
+                type: "stderr",
+                data: buf.toString("utf8"),
+                timestamp: new Date().toISOString(),
+              });
             });
             child.on("error", (err) => {
               console.error({
                 message: "flyctl process error",
                 data: { app: payload.app, message: err.message },
               });
-              write({ type: "error", data: { message: err.message } });
+              write({
+                type: "error",
+                error: err.message,
+                timestamp: new Date().toISOString(),
+              });
             });
             child.on("close", (code) => {
               console.log({
@@ -132,13 +145,24 @@ const app = new Hono()
                 data: { app: payload.app, code },
               });
 
-              clearInterval(pingInterval);
+              // clearInterval(pingInterval);
               console.log({
                 message: "Fly.io app ping interval cleared",
                 data: { app: payload.app },
               });
 
-              await write({ type: "exit", data: { code } });
+              if (code === 0) {
+                await write({
+                  type: "complete",
+                  timestamp: new Date().toISOString(),
+                });
+              } else {
+                await write({
+                  type: "error",
+                  error: `Process exited with code ${code}`,
+                  timestamp: new Date().toISOString(),
+                });
+              }
               await stream.close();
               resolve();
             });
@@ -166,7 +190,7 @@ const app = new Hono()
           requestId: c.get("requestId"),
           route: c.req.path,
           query: c.req.query(),
-          headers: Object.fromEntries(c.req.raw.headers.entries()),
+          // headers: Object.fromEntries(c.req.raw.headers.entries()),
           body: await c.req.text().catch(() => "Failed to read body"),
           stack: err.stack,
           name: err.name,

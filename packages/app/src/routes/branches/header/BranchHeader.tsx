@@ -6,7 +6,7 @@ export const BranchHeader = ({ title }: { title: string }) => (
       <img
         src="/preview/gradients/0.jpg"
         alt="Squash"
-        className="size-8 hover:opacity-80 transition-opacity rounded-full"
+        className="size-6 hover:opacity-80 transition-opacity rounded-full"
       />
     </Link>
     <span className="font-medium text-sm">{title}</span>

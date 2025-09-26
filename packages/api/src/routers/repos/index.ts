@@ -1,15 +1,14 @@
 import { requireActiveOrganization, requireAuth } from "@/auth/middleware";
 import type { Database } from "@/database";
 import * as schema from "@/database/schema";
-import type { SandboxDurableObjectApp } from "@/durable-objects/sandbox";
 import { generateText } from "@/lib/ai";
 import { zUserMessagePart } from "@/routers/schemas";
+import { zSandboxSnapshotConfig } from "@/sandbox/zod";
 import { google } from "@ai-sdk/google";
 import { zValidator } from "@hono/zod-validator";
 import { randomUUID } from "crypto";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { Hono } from "hono";
-import { hc } from "hono/client";
 import kebabCase from "lodash.kebabcase";
 import z from "zod";
 import { requireRepo } from "./middleware";
@@ -81,18 +80,7 @@ export const reposRouter = new Hono<{
       "json",
       z.object({
         hidden: z.boolean().optional(),
-        snapshot: z
-          .object({
-            type: z.literal("docker"),
-            port: z.number(),
-            image: z.string(),
-            workdir: z.string(),
-            cmd: z.object({
-              prepare: z.string().optional(),
-              entrypoint: z.string(),
-            }),
-          })
-          .optional(),
+        snapshot: zSandboxSnapshotConfig.optional(),
       })
     ),
     requireRepo,
@@ -127,16 +115,7 @@ export const reposRouter = new Hono<{
         url: z.string().url(),
         defaultBranch: z.string(),
         hidden: z.boolean().optional(),
-        snapshot: z.object({
-          type: z.literal("docker"),
-          port: z.number(),
-          image: z.string(),
-          workdir: z.string(),
-          cmd: z.object({
-            prepare: z.string().optional(),
-            entrypoint: z.string(),
-          }),
-        }),
+        snapshot: zSandboxSnapshotConfig,
       })
     ),
     requireAuth,
@@ -228,6 +207,7 @@ export const reposRouter = new Hono<{
       const { message } = c.req.valid("json");
       const user = c.get("user");
       const db = c.get("db");
+      const repo = c.get("repo");
 
       const ipAddress =
         c.req.header("cf-connecting-ip") ??
@@ -263,13 +243,20 @@ export const reposRouter = new Hono<{
 
       await Promise.all([
         db.insert(schema.message).values([
-          { id: parentId, role: "system", threadId: thread.id, parts: [] },
+          {
+            id: parentId,
+            role: "system",
+            threadId: thread.id,
+            parts: [],
+            createdAt: new Date(),
+          },
           {
             id: messageId,
             role: "user",
             threadId: thread.id,
             parts: message.parts,
             parentId,
+            createdAt: new Date(Date.now() + 1),
           },
         ]),
         db.insert(schema.repoBranch).values({
@@ -279,21 +266,31 @@ export const reposRouter = new Hono<{
           threadId: thread.id,
           repoId,
           createdBy: user.id,
+          sandboxProvider: "daytona",
         }),
       ]);
 
-      const stub = c.env.SANDBOX_DO.get(c.env.SANDBOX_DO.idFromName(branchId));
-      c.executionCtx.waitUntil(
-        hc<SandboxDurableObjectApp>("https://thread", {
-          fetch: stub.fetch.bind(stub),
-        }).stream.$post({
-          json: {
-            branchId,
-            userId: user.id,
-            message: { id: messageId, parts: message.parts, parentId },
-          },
-        })
-      );
+      if (repo.snapshot.type !== "daytona") {
+        throw new Error("Only daytona snapshots are supported for Daytona");
+      }
+
+      const config = repo.snapshot;
+      const promise = (async () => {
+        const manager = c.env.DAYTONA_SANDBOX_MANAGER.getByName(branchId);
+        await manager.init({
+          config,
+          repo: { id: repoId, branch: branchName },
+        });
+        await manager.startAgent({
+          messages: [
+            { id: parentId, role: "system", parts: [] },
+            { id: messageId, role: "user", parts: message.parts },
+          ],
+          threadId: thread.id,
+          branchId,
+        });
+      })();
+      c.executionCtx.waitUntil(promise);
 
       return c.json({ id: branchId });
     }

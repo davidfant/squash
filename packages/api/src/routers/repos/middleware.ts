@@ -1,12 +1,8 @@
 import { type User } from "@/auth/middleware";
 import type { Database } from "@/database";
-import type {
-  RepoBranchSandbox,
-  RepoProviderData,
-  RepoProviderType,
-  RepoSnapshot,
-} from "@/database/schema";
+import type { RepoProviderData, RepoProviderType } from "@/database/schema";
 import * as schema from "@/database/schema";
+import type { Sandbox } from "@/sandbox/types";
 import { createAppAuth } from "@octokit/auth-app";
 import { Octokit } from "@octokit/rest";
 import { and, desc, eq, isNull } from "drizzle-orm";
@@ -87,7 +83,7 @@ export const requireRepo = createMiddleware<
         name: string;
         url: string;
         defaultBranch: string;
-        snapshot: RepoSnapshot;
+        snapshot: Sandbox.Snapshot.Config.Any;
         provider: {
           id: string;
           type: RepoProviderType;
@@ -155,7 +151,6 @@ export const requireRepoBranch = createMiddleware<
         id: string;
         name: string;
         title: string;
-        sandbox: RepoBranchSandbox | null;
         createdAt: Date;
         updatedAt: Date;
         createdBy: { id: string; name: string; image: string | null };
@@ -175,7 +170,6 @@ export const requireRepoBranch = createMiddleware<
       id: schema.repoBranch.id,
       title: schema.repoBranch.title,
       name: schema.repoBranch.name,
-      sandbox: schema.repoBranch.sandbox,
       createdAt: schema.repoBranch.createdAt,
       updatedAt: schema.repoBranch.updatedAt,
       createdBy: {

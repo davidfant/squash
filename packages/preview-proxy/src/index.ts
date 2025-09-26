@@ -15,7 +15,6 @@ export default {
 
     const upstream = new URL(req.url);
     upstream.hostname = `${previewId}.fly.dev`;
-    // upstream.host = `${previewId}.fant.io`;
     upstream.port = "";
 
     if (req.headers.get("upgrade")?.toLowerCase() === "websocket") {

@@ -1,11 +1,21 @@
 import type { ClaudeCodeTools } from "@squashai/ai-sdk-claude-code";
-import type { InferUITools, UIMessage } from "ai";
-import type { CustomAgentTools } from "./custom/types";
+import type { InferUITools, Tool, UIMessage } from "ai";
 import type { GitCommit } from "./git";
 
-export type AllTools = ClaudeCodeTools &
-  CustomAgentTools &
-  InferUITools<{ GitCommit: ReturnType<typeof GitCommit> }>;
+export interface SandboxTaskToolInput {
+  id: string;
+  title: string;
+  stream: Array<{ type: "stdout" | "stderr"; data: string }>;
+}
+export interface SandboxTaskToolOutput {
+  summary: string | undefined;
+}
+export type SandboxTaskTool = Tool<SandboxTaskToolInput, SandboxTaskToolOutput>;
+
+export type AllTools = ClaudeCodeTools & {
+  GitCommit: ReturnType<typeof GitCommit>;
+  SandboxTask: SandboxTaskTool;
+};
 
 export type ChatMessageData = {
   GitSha: {
@@ -15,11 +25,7 @@ export type ChatMessageData = {
     url: string | undefined;
   };
   AgentSession: { type: "claude-code"; data: unknown };
-  AbortRequest: { messageId: string; reason: string };
-  Sandbox: {
-    status: "pending" | "starting" | "running";
-    checks: Array<{ name: string; ok: boolean }>;
-  };
+  AbortRequest: { reason: string };
 };
 export interface ChatMessageMetadata {
   createdAt: string;
@@ -28,5 +34,5 @@ export interface ChatMessageMetadata {
 export type ChatMessage = UIMessage<
   ChatMessageMetadata,
   ChatMessageData,
-  AllTools
+  InferUITools<AllTools>
 >;

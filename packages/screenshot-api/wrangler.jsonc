@@ -18,7 +18,7 @@
     {
       "binding": "BUCKET",
       "bucket_name": "uploads-dev",
-      "experimental_remote": true
+      "remote": true
     }
   ],
   "browser": {
@@ -33,7 +33,7 @@
         {
           "binding": "BUCKET",
           "bucket_name": "uploads",
-          "experimental_remote": true
+          "remote": true
         }
       ],
       "browser": {

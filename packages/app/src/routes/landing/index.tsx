@@ -62,14 +62,29 @@ export function LandingPage() {
           defaultBranch: "master",
           hidden: true,
           snapshot: {
-            type: "docker",
+            type: "daytona",
+            snapshot: "base-vite-ts:v0.0.1",
             port: 5173,
-            image: "registry.fly.io/squash-template:base-vite-ts-v0.0.1",
-            workdir: "/repo",
-            cmd: {
-              prepare:
-                "if [ ! -d $WORKDIR/.git ]; then mv /root/repo/* $WORKDIR; fi",
-              entrypoint: "pnpm dev --port $PORT",
+            cwd: "/repo",
+            env: {},
+            tasks: {
+              install: [
+                {
+                  id: "install",
+                  title: "Install dependencies",
+                  type: "command",
+                  command: "pnpm",
+                  args: ["install"],
+                },
+              ],
+              dev: {
+                id: "dev",
+                title: "Start development server",
+                type: "command",
+                command: "pnpm",
+                args: ["dev"],
+              },
+              build: [],
             },
           },
         },
@@ -101,7 +116,7 @@ export function LandingPage() {
           <img
             src="/preview/gradients/0.jpg"
             alt="Squash"
-            className="size-8 rounded-full"
+            className="size-6 rounded-full"
           />{" "}
           Squash
         </Link>

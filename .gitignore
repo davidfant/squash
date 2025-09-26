@@ -26,10 +26,13 @@ dist-ssr
 
 .wrangler
 .dev.vars*
+.prod.vars*
 !.dev.vars.example
 
 .turbo
 .mastra
+.vercel
+.claude
 *.tsbuildinfo
 
 worker-configuration.d.ts

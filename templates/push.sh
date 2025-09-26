@@ -28,45 +28,48 @@ function build_repo() {
     fi
     git push --tags
 
-    DOCKER_TAG="registry.fly.io/$APP_NAME:$TEMPLATE_NAME-v$TEMPLATE_VERSION"
+    DOCKER_TAG="$TEMPLATE_NAME:v$TEMPLATE_VERSION"
     echo "Docker tag: $DOCKER_TAG"
     quiet docker build \
       --platform linux/amd64 \
       --build-arg SQUASH_CLI_VERSION=$SQUASH_CLI_VERSION \
-      --build-arg AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
-      --build-arg AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
-      --build-arg AWS_ENDPOINT_URL_S3=$AWS_ENDPOINT_URL_S3 \
-      --build-arg GIT_TAG=v$TEMPLATE_VERSION \
       --tag $DOCKER_TAG \
       --file ../Dockerfile.$TEMPLATE_NAME \
       .
+      # --build-arg AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID \
+      # --build-arg AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY \
+      # --build-arg AWS_ENDPOINT_URL_S3=$AWS_ENDPOINT_URL_S3 \
+      # --build-arg GIT_TAG=v$TEMPLATE_VERSION \
     
-    docker push $DOCKER_TAG
+    # FLY_DOCKER_TAG="registry.fly.io/$APP_NAME:$DOCKER_TAG"
+    # docker tag $DOCKER_TAG $FLY_DOCKER_TAG
+    # docker push $DOCKER_TAG
+    daytona snapshot push "$DOCKER_TAG" --name "$DOCKER_TAG" --entrypoint "sleep infinity" || echo "Did not push snapshot"
   popd
 }
 
-function build_node_image() {
-  NODE_IMAGE_TAG=$1
-  echo "Building node image: $NODE_IMAGE_TAG"
+# function build_node_image() {
+#   NODE_IMAGE_TAG=$1
+#   echo "Building node image: $NODE_IMAGE_TAG"
 
-  DOCKER_TAG="registry.fly.io/$APP_NAME:node-$NODE_IMAGE_TAG"
+#   DOCKER_TAG="registry.fly.io/$APP_NAME:node-$NODE_IMAGE_TAG"
 
-  echo "Docker tag: $DOCKER_TAG"
-  quiet docker build \
-    --platform linux/amd64 \
-    --build-arg NODE_IMAGE=node:$NODE_IMAGE_TAG \
-    --build-arg SQUASH_CLI_VERSION=$SQUASH_CLI_VERSION \
-    --tag $DOCKER_TAG \
-    --file ./Dockerfile.node \
-    .
+#   echo "Docker tag: $DOCKER_TAG"
+#   quiet docker build \
+#     --platform linux/amd64 \
+#     --build-arg NODE_IMAGE=node:$NODE_IMAGE_TAG \
+#     --build-arg SQUASH_CLI_VERSION=$SQUASH_CLI_VERSION \
+#     --tag $DOCKER_TAG \
+#     --file ./Dockerfile.node \
+#     .
   
-  docker push $DOCKER_TAG
-}
+#   docker push $DOCKER_TAG
+# }
 
-if ! flyctl apps list | grep -q $APP_NAME; then
-  flyctl apps create $APP_NAME
-fi
+# if ! flyctl apps list | grep -q $APP_NAME; then
+#   flyctl apps create $APP_NAME
+# fi
 
 build_repo base-vite-ts
-build_repo replicator-vite-ts
-build_node_image 20-alpine
+# build_repo replicator-vite-ts
+# build_node_image 20-alpine

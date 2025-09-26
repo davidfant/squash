@@ -1,7 +1,7 @@
-import type { AnyProxyEvent } from "@squashai/flyio-ssh-proxy";
 import { createParser } from "eventsource-parser";
-import { logger } from "../logger";
-import { toAsyncIterator } from "../toAsyncIterator";
+import { logger } from "../../lib/logger";
+import { toAsyncIterator } from "../../lib/toAsyncIterator";
+import type { Sandbox } from "../types";
 
 /**
  * Connects to your SSH-over-WS proxy and returns an async generator
@@ -16,7 +16,7 @@ export async function* streamSSH(opts: {
   env: Record<string, string>;
   command: string;
   abortSignal: AbortSignal;
-}): AsyncIterableIterator<[AnyProxyEvent]> {
+}): AsyncIterableIterator<[Sandbox.Exec.Event.Any]> {
   logger.debug("Connecting to SSH proxy", { url: opts.url });
 
   let res: Response;
@@ -52,11 +52,11 @@ export async function* streamSSH(opts: {
   }
 
   const done = new AbortController();
-  yield* toAsyncIterator<[AnyProxyEvent]>(
+  yield* toAsyncIterator<[Sandbox.Exec.Event.Any]>(
     (handler) => {
       const parser = createParser({
         onEvent: (event) => {
-          const data = JSON.parse(event.data) as AnyProxyEvent;
+          const data = JSON.parse(event.data) as Sandbox.Exec.Event.Any;
           if (data.type === "stdout") {
             logger.debug("Received SSH proxy stdout", {
               data: data.data.slice(0, 512),

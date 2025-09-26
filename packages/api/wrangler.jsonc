@@ -11,65 +11,48 @@
     "enabled": true
   },
   "upload_source_maps": true,
-  "r2_buckets": [
-    {
-      "binding": "R2_FILE_TRANSFER_BUCKET",
-      "bucket_name": "file-transfer",
-      "experimental_remote": true
-    },
-    {
-      "binding": "REPLICATOR_BUCKET",
-      "bucket_name": "replicator",
-      "experimental_remote": true
-    }
-  ],
+  "rules": [{ "type": "Text", "globs": ["**/*.md"], "fallthrough": true }],
   "durable_objects": {
-    "bindings": [{ "name": "SANDBOX_DO", "class_name": "SandboxDurableObject" }]
+    "bindings": [
+      {
+        "name": "DAYTONA_SANDBOX_MANAGER",
+        "class_name": "DaytonaSandboxManager"
+      }
+    ]
   },
-  "migrations": [{ "tag": "v1", "new_classes": ["SandboxDurableObject"] }],
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["DaytonaSandboxManager"] }
+  ],
   "vars": {
+    "SQUASH_CLI_VERSION": "0.0.5",
     "APP_URL": "http://localhost:5173",
     "SCREENSHOT_API_URL": "http://localhost:8789",
-    "PREVIEW_PROXY_URL": "http://localhost:8788",
-    "R2_FILE_TRANSFER_BUCKET_NAME": "file-transfer",
-    "R2_REPOS_BUCKET_NAME": "repos",
-    "REPLICATOR_GIT_SYNC_API_URL": "http://localhost:8888",
-    "TZ": "utc",
-    "LANGSMITH_TRACING": "true",
-    "LANGSMITH_ENDPOINT": "https://api.smith.langchain.com"
+    "TZ": "utc"
   },
   "env": {
     "production": {
       "vars": {
+        "SQUASH_CLI_VERSION": "0.0.5",
         "APP_URL": "https://app.squash.build",
         "SCREENSHOT_API_URL": "https://screenshot-api-production.squash.workers.dev",
-        "PREVIEW_PROXY_URL": "https://preview.squash.build",
-        "R2_FILE_TRANSFER_BUCKET_NAME": "file-transfer",
-        "R2_REPOS_BUCKET_NAME": "repos",
-        "REPLICATOR_GIT_SYNC_API_URL": "http://localhost:8888",
-        "TZ": "utc",
-        "LANGSMITH_TRACING": "true",
-        "LANGSMITH_ENDPOINT": "https://api.smith.langchain.com"
+        "TZ": "utc"
       },
-      "r2_buckets": [
-        {
-          "binding": "R2_FILE_TRANSFER_BUCKET",
-          "bucket_name": "file-transfer",
-          "experimental_remote": true
-        },
-        {
-          "binding": "REPLICATOR_BUCKET",
-          "bucket_name": "replicator",
-          "experimental_remote": true
-        }
-      ],
       "durable_objects": {
         "bindings": [
-          { "name": "SANDBOX_DO", "class_name": "SandboxDurableObject" }
+          {
+            "name": "DAYTONA_SANDBOX_MANAGER",
+            "class_name": "DaytonaSandboxManager"
+          }
         ]
       },
-      "migrations": [{ "tag": "v1", "new_classes": ["SandboxDurableObject"] }]
+      "migrations": [
+        { "tag": "v1", "new_classes": ["SandboxDurableObject"] },
+        {
+          "tag": "v2",
+          "new_sqlite_classes": ["DaytonaSandboxManager"],
+          "deleted_classes": ["SandboxDurableObject"]
+        }
+      ]
     }
-  },
-  "rules": [{ "type": "Text", "globs": ["**/*.md"], "fallthrough": true }]
+  }
 }

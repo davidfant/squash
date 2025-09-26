@@ -7,18 +7,22 @@ RUN apk add --no-cache python3 py3-pip git \
 ARG SQUASH_CLI_VERSION=0.0.5
 RUN npm install -g @squashai/cli@$SQUASH_CLI_VERSION
 
-ARG AWS_ACCESS_KEY_ID
-ARG AWS_SECRET_ACCESS_KEY
-ARG AWS_ENDPOINT_URL_S3
-ARG AWS_DEFAULT_REGION=auto
-ARG GIT_URL=s3://repos/templates/base-vite-ts
-ARG GIT_TAG
+WORKDIR /repo
 
-WORKDIR /root/repo
-RUN git clone --depth 1 --branch $GIT_TAG $GIT_URL /root/repo \
- && rm -rf .git
+COPY package.json .
+COPY pnpm-lock.yaml .
 
 RUN pnpm install
 
+COPY vite.config.js .
+COPY tsconfig.json .
+COPY index.html .
+COPY src/ ./src/
+
+RUN git init \
+ && git add . \
+ && git config --global user.email "agent@squash.build" \
+ && git config --global user.name "Squash" \
+ && git commit -m "Initial commit"
+
 ENV PORT=5173
-CMD ["sh", "-lc", "pnpm dev --port $PORT"]

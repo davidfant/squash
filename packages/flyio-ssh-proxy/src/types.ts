@@ -7,18 +7,29 @@ export const jwtPayloadSchema = z.object({
 
 export type JWTPayload = z.infer<typeof jwtPayloadSchema>;
 
-interface ProxyEvent<T extends string, D> {
-  type: T;
-  data: D;
+export namespace Event {
+  export interface Start {
+    type: "start";
+    timestamp: string;
+  }
+  export interface Stdout {
+    type: "stdout";
+    data: string;
+    timestamp: string;
+  }
+  export interface Stderr {
+    type: "stderr";
+    data: string;
+    timestamp: string;
+  }
+  export interface Complete {
+    type: "complete";
+    timestamp: string;
+  }
+  export interface Error {
+    type: "error";
+    error: string;
+    timestamp: string;
+  }
+  export type Any = Start | Stdout | Stderr | Complete | Error;
 }
-
-export type ProxyStdoutEvent = ProxyEvent<"stdout", string>;
-export type ProxyStderrEvent = ProxyEvent<"stderr", string>;
-export type ProxyExitEvent = ProxyEvent<"exit", { code: number | null }>;
-export type ProxyErrorEvent = ProxyEvent<"error", { message: string }>;
-
-export type AnyProxyEvent =
-  | ProxyStdoutEvent
-  | ProxyStderrEvent
-  | ProxyExitEvent
-  | ProxyErrorEvent;

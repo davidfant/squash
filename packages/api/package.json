@@ -18,11 +18,12 @@
   },
   "scripts": {
     "dev": "pnpm typegen && concurrently \"pnpm dev:wrangler\" \"pnpm dev:tsc\"",
-    "dev:wrangler": "pnpm drizzle-kit push && wrangler dev --x-remote-bindings",
+    "dev:wrangler": "pnpm drizzle-kit push && wrangler dev",
     "dev:tsc": "tsc --watch --preserveWatchOutput",
     "drizzle:migrate:dev": "drizzle-kit push",
-    "drizzle:migrate:prod": "DOTENV_CONFIG_PATH=.dev.vars.prod drizzle-kit migrate",
+    "drizzle:migrate:prod": "DOTENV_CONFIG_PATH=.prod.vars drizzle-kit migrate",
     "push": "wrangler deploy --minify --env production",
+    "playground": "tsx --env-file .env.local playground.ts",
     "build": "tsc -b",
     "typegen": "wrangler types --env-interface CloudflareBindings"
   },
@@ -30,6 +31,8 @@
     "@ai-sdk/anthropic": "^2.0.0",
     "@ai-sdk/google": "^2.0.0",
     "@ai-sdk/openai": "^2.0.3",
+    "@ai-sdk/provider": "^2.0.0",
+    "@daytonaio/sdk": "^0.105.1",
     "@hono/zod-validator": "^0.7.1",
     "@neondatabase/serverless": "^1.0.1",
     "@octokit/auth-app": "^8.0.2",
@@ -38,15 +41,13 @@
     "@opentelemetry/exporter-trace-otlp-proto": "^0.203.0",
     "@opentelemetry/sdk-trace-base": "^2.0.1",
     "@squashai/ai-sdk-claude-code": "workspace:*",
-    "@squashai/flyio-ssh-proxy": "workspace:*",
-    "@squashai/replicator": "workspace:*",
-    "@squashai/replicator-git-sync": "workspace:*",
     "ai": "^5.0.5",
     "aws4fetch": "^1.0.20",
     "better-auth": "^1.2.12",
     "drizzle-orm": "^0.44.2",
     "eventsource-parser": "^3.0.5",
     "hono": "^4.9.0",
+    "jsonlines": "^0.1.1",
     "jsonwebtoken": "^9.0.2",
     "langsmith": "^0.3.53",
     "lodash.camelcase": "^4.3.0",
@@ -54,16 +55,20 @@
     "lodash.upperfirst": "^4.3.1",
     "nanotar": "^0.2.0",
     "openai": "^5.21.0",
+    "shell-escape": "^0.2.0",
     "zod": "^4.0.16"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250918.0",
+    "@types/jsonlines": "^0.1.5",
     "@types/lodash.camelcase": "^4.3.9",
     "@types/lodash.kebabcase": "^4.1.9",
     "@types/lodash.upperfirst": "^4.3.9",
+    "@types/shell-escape": "^0.2.3",
     "concurrently": "^9.2.0",
     "dotenv": "^17.2.0",
     "drizzle-kit": "^0.31.4",
-    "wrangler": "^4.31.0"
+    "tsx": "^4.20.5",
+    "wrangler": "^4.40.0"
   }
 }

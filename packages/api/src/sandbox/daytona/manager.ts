@@ -71,7 +71,15 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
           })();
 
           await this.storage.set("sandboxId", sandbox.id);
-          if (sandbox.state !== "started") await sandbox.start();
+          // TODO: add better handling when this fails because of "State change in progress"
+          if (sandbox.state !== "started") {
+            await sandbox.start().catch((error) => {
+              logger.error("Error starting sandbox", {
+                error,
+                state: sandbox.state,
+              });
+            });
+          }
         },
       },
       {
@@ -164,6 +172,14 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
             streamed.stderr += data;
           }
         );
+
+        const result = await sandbox.process.getSessionCommand(
+          exec.sessionId,
+          exec.commandId
+        );
+
+        // TODO(fant): if we don't get reports about errors bc no AgentSession
+        // is being saved, the unstreamed logic can be removed.
         const full = await sandbox.process.getSessionCommandLogs(
           exec.sessionId,
           exec.commandId
@@ -172,36 +188,33 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
           stdout: (full.stdout ?? "").slice(streamed.stdout.length),
           stderr: (full.stderr ?? "").slice(streamed.stderr.length),
         };
-        logger.debug("Stream data", {
-          streamed: {
-            stdout: streamed.stdout.length,
-            stderr: streamed.stderr.length,
-          },
-          full: { stdout: full.stdout?.length, stderr: full.stderr?.length },
-          unstreamed: {
-            stdout: unstreamed.stdout.length,
-            stderr: unstreamed.stderr.length,
-          },
-        });
-        if (unstreamed.stdout) {
+        // logger.debug("Stream data", {
+        //   streamed: {
+        //     stdout: streamed.stdout.length,
+        //     stderr: streamed.stderr.length,
+        //   },
+        //   full: { stdout: full.stdout?.length, stderr: full.stderr?.length },
+        //   unstreamed: {
+        //     stdout: unstreamed.stdout.length,
+        //     stderr: unstreamed.stderr.length,
+        //   },
+        // });
+
+        if (!!unstreamed.stdout.length) {
           logger.debug("Unstreamed stdout", {
             length: unstreamed.stdout.length,
             data: unstreamed.stdout.slice(0, 512),
           });
-          add({ type: "stdout", data: unstreamed.stdout, timestamp: now() });
+          // add({ type: "stdout", data: unstreamed.stdout, timestamp: now() });
         }
-        if (unstreamed.stderr) {
+        if (!!unstreamed.stderr.length) {
           logger.debug("Unstreamed stderr", {
             length: unstreamed.stderr.length,
             data: unstreamed.stderr.slice(0, 512),
           });
-          add({ type: "stderr", data: unstreamed.stderr, timestamp: now() });
+          // add({ type: "stderr", data: unstreamed.stderr, timestamp: now() });
         }
 
-        const result = await sandbox.process.getSessionCommand(
-          exec.sessionId,
-          exec.commandId
-        );
         logger.debug("Command result", {
           id: result.id,
           exitCode: result.exitCode,

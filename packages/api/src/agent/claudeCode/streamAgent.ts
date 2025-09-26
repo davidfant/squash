@@ -45,6 +45,9 @@ export async function streamClaudeCodeAgent(
             JSON.stringify(prompt.content),
             "--options",
             JSON.stringify({ appendSystemPrompt }),
+            ...(session?.data
+              ? ["--session", JSON.stringify(session.data.data)]
+              : []),
           ],
           env: {
             IS_SANDBOX: "1",

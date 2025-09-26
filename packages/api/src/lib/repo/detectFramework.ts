@@ -1,4 +1,4 @@
-import type { RepoSnapshot } from "@/database/schema/repos";
+import type { Sandbox } from "@/sandbox/types";
 import type { Octokit } from "@octokit/rest";
 
 interface PackageJson {
@@ -219,12 +219,29 @@ function getDefaultFramework(): FrameworkInfo {
 
 export function createSnapshotFromFramework(
   framework: FrameworkInfo
-): RepoSnapshot {
+): Sandbox.Snapshot.Config.Any {
   return {
     type: "docker",
     port: framework.port,
     image: "node:20-alpine",
-    workdir: "/app",
-    cmd: { entrypoint: framework.entrypoint },
+    cwd: "/repo",
+    env: {},
+    tasks: {
+      install: [
+        {
+          id: "install",
+          title: "Install dependencies",
+          type: "command",
+          command: "npm install",
+        },
+      ],
+      dev: {
+        id: "dev",
+        title: "Start development server",
+        type: "command",
+        command: framework.entrypoint,
+      },
+      build: [],
+    },
   };
 }

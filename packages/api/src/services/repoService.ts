@@ -1,7 +1,12 @@
+import type { RepoProviderData } from "@/database/schema/repos";
+import {
+  createSnapshotFromFramework,
+  detectFramework,
+  type FrameworkInfo,
+} from "@/lib/repo/detectFramework";
+import type { Sandbox } from "@/sandbox/types";
 import { createAppAuth } from "@octokit/auth-app";
 import { Octokit } from "@octokit/rest";
-import type { RepoProviderData, RepoSnapshot } from "@/database/schema/repos";
-import { detectFramework, createSnapshotFromFramework, type FrameworkInfo } from "@/lib/repo/detectFramework";
 
 interface DetectFrameworkParams {
   repo: {
@@ -29,29 +34,29 @@ export class RepoService {
    */
   static async detectAndApplyFramework(
     params: DetectFrameworkParams
-  ): Promise<{ framework: FrameworkInfo; snapshot: RepoSnapshot }> {
+  ): Promise<{
+    framework: FrameworkInfo;
+    snapshot: Sandbox.Snapshot.Config.Any;
+  }> {
     const octokit = this.createOctokit(params.provider, params.env);
     const { owner, name } = this.parseGitUrl(params.repo.url);
-    
+
     const framework = await detectFramework(
       octokit,
       owner,
       name,
       params.repo.defaultBranch || undefined
     );
-    
+
     const snapshot = createSnapshotFromFramework(framework);
-    
-    console.log(
-      `Framework detection for ${owner}/${name}:`,
-      {
-        framework: framework.name,
-        confidence: framework.confidence,
-        port: framework.port,
-        detectedFrom: framework.detected,
-      }
-    );
-    
+
+    console.log(`Framework detection for ${owner}/${name}:`, {
+      framework: framework.name,
+      confidence: framework.confidence,
+      port: framework.port,
+      detectedFrom: framework.detected,
+    });
+
     return { framework, snapshot };
   }
 
@@ -86,7 +91,7 @@ export class RepoService {
   static parseGitUrl(url: string): ParsedGitUrl {
     // Remove .git suffix if present
     const cleanUrl = url.replace(/\.git$/, "");
-    
+
     // Handle SSH URLs (git@github.com:owner/repo)
     if (cleanUrl.startsWith("git@")) {
       const parts = cleanUrl.split(":");
@@ -100,16 +105,16 @@ export class RepoService {
         }
       }
     }
-    
+
     // Handle HTTPS URLs
     const urlParts = cleanUrl.split("/");
     const name = urlParts.pop();
     const owner = urlParts.pop();
-    
+
     if (!owner || !name) {
       throw new Error(`Invalid git URL format: ${url}`);
     }
-    
+
     return { owner: owner!, name: name! };
   }
-} 
+}

@@ -33,10 +33,9 @@ function Component({ branchId }: { branchId: string }) {
       }/repos/branches/${branchId}/messages`}
       initialMessages={threadMessages.data as ChatMessage[]}
       onFinish={(step) => {
-        const latestSha = step.messages
-          .flatMap((m) => m.parts)
-          .findLast((part) => part.type === "tool-GitCommit")
-          ?.output?.commitSha;
+        const latestSha = step.message.parts.findLast(
+          (part) => part.type === "tool-GitCommit"
+        )?.output?.sha;
         if (latestSha) setPreview(latestSha);
       }}
     >

@@ -18,13 +18,15 @@ function createDeferred<T = void>(): Deferred<T> {
 }
 
 export function toAsyncIterator<R extends [...any[]]>(
-  onHandler: (...arg: any[]) => unknown,
-  options?: { signal?: AbortSignal } // ← make sure `signal` is typed
+  onHandler: (
+    add: (...arg: R) => unknown
+  ) => Function | Promise<unknown> | unknown,
+  options?: { signal?: AbortSignal }
 ): AsyncIterableIterator<R> {
-  const comEvents: any[] = [];
+  const comEvents: R[] = [];
   const unconsumedDeferred: Deferred<IteratorResult<any>>[] = [];
 
-  const unHandle = onHandler((...args: any[]) => {
+  const handlerResponse = onHandler((...args: R) => {
     const deferred = unconsumedDeferred.shift();
     if (deferred) {
       deferred.resolve({ value: args, done: false });
@@ -40,7 +42,7 @@ export function toAsyncIterator<R extends [...any[]]>(
   const finish = () => {
     if (finished) return; // idempotent
     finished = true;
-    if (typeof unHandle === "function") unHandle();
+    if (typeof handlerResponse === "function") handlerResponse();
     abortSignal?.removeEventListener("abort", finish);
 
     // resolve any pending `next()` calls
@@ -48,6 +50,10 @@ export function toAsyncIterator<R extends [...any[]]>(
       deferred.resolve({ value: undefined, done: true });
     }
   };
+
+  if (handlerResponse instanceof Promise) {
+    handlerResponse.then(finish);
+  }
 
   /* ---------- wire up the AbortSignal ---------- */
   if (abortSignal?.aborted) {

@@ -49,3 +49,7 @@ openssl rsa -in private.dev.pem -pubout -out public.dev.pem
 - [ ] create new chat
 - [ ] point and click chat
 - [ ] Password protected preview urls
+
+- [x] abort returns 500
+- [ ] daytona preview warning
+- [x] flickers between previews when e.g. resetting to an older one

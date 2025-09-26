@@ -1,27 +1,22 @@
 import { streamText } from "@/lib/ai";
-import type { FlyioExecSandboxContext } from "@/lib/flyio/exec";
-import * as FlyioSSH from "@/lib/flyio/ssh";
 import { logger } from "@/lib/logger";
+import type { Sandbox } from "@/sandbox/types";
 import { google } from "@ai-sdk/google";
 import { ClaudeCodeLanguageModel, tools } from "@squashai/ai-sdk-claude-code";
-import type { JWTPayload } from "@squashai/flyio-ssh-proxy";
 import {
   convertToModelMessages,
   type UIMessageStreamOptions,
   type UIMessageStreamWriter,
 } from "ai";
-import jwt from "jsonwebtoken";
+import { randomUUID } from "crypto";
 import { GitCommit } from "../git";
 import type { ChatMessage } from "../types";
 import appendSystemPrompt from "./prompt.md";
 
-const stringify = (json: unknown) =>
-  `'${JSON.stringify(json).replace(/'/g, `'\\''`)}'`;
-
 export async function streamClaudeCodeAgent(
   writer: UIMessageStreamWriter<ChatMessage>,
   messages: ChatMessage[],
-  sandbox: FlyioExecSandboxContext,
+  sandbox: Sandbox.Manager.Base,
   opts: {
     threadId: string;
     previewUrl: string;
@@ -33,56 +28,37 @@ export async function streamClaudeCodeAgent(
 ) {
   const session = messages
     .flatMap((m) => m.parts)
-    .findLast((p) => p.type === "data-AgentSession")?.data;
+    .findLast((p) => p.type === "data-AgentSession");
 
   logger.debug("Starting agent stream", {
-    sandbox: sandbox.appId,
-    machineId: sandbox.machineId,
-    session,
+    sandbox: sandbox.name,
+    sessionDataId: session?.id ?? null,
   });
 
   const agentStream = streamText({
-    model: new ClaudeCodeLanguageModel(sandbox.workdir, async function* ({
-      prompt,
-    }) {
-      const command: string[] = [];
-      // TODO: deny read/write to files that are gitignored
-      // TODO: should we move this to @squashai/cli?
-      // allows bypassPermissions when running in as sudo user
-      // command.push(`SHELL=/bin/sh`);
-      command.push(`IS_SANDBOX=1`);
-      command.push(`ANTHROPIC_API_KEY=${opts.env.ANTHROPIC_API_KEY}`);
-      command.push("squash");
-      if (session) command.push("--session", stringify(session.data));
-      command.push("--cwd", sandbox.workdir);
-      command.push("--prompt", stringify(prompt.content));
-      command.push("--options", stringify({ appendSystemPrompt }));
-
-      const payload: JWTPayload = {
-        app: sandbox.appId,
-        cwd: sandbox.workdir,
-      };
-      const token = jwt.sign(payload, opts.env.FLY_SSH_PROXY_JWT_PRIVATE_KEY, {
-        expiresIn: "1m",
-        algorithm: "RS256",
-      });
-      logger.debug("Streaming SSH", {
-        url: `${opts.env.FLY_SSH_PROXY_URL}/ssh`,
-        payload,
-      });
+    model: new ClaudeCodeLanguageModel("", async function* ({ prompt }) {
+      const stream = await sandbox.execute(
+        {
+          command: "squash",
+          args: [
+            "--prompt",
+            JSON.stringify(prompt.content),
+            "--options",
+            JSON.stringify({ appendSystemPrompt }),
+          ],
+          env: {
+            IS_SANDBOX: "1",
+            ANTHROPIC_API_KEY: opts.env.ANTHROPIC_API_KEY,
+            // SHELL: "/bin/sh",
+          },
+        },
+        opts.abortSignal
+      );
 
       let stdoutBuffer = "";
-      const stream = await FlyioSSH.streamSSH({
-        url: `${opts.env.FLY_SSH_PROXY_URL}/ssh`,
-        token,
-        env: { FLY_API_TOKEN: opts.env.FLY_ACCESS_TOKEN },
-        command: command.join(" "),
-        abortSignal: opts.abortSignal,
-      });
-
-      for await (const [message] of stream) {
-        if (message.type !== "stdout") continue;
-        stdoutBuffer += message.data;
+      for await (const ev of stream) {
+        if (ev.type !== "stdout") continue;
+        stdoutBuffer += ev.data;
         let newlineIndex;
         while ((newlineIndex = stdoutBuffer.indexOf("\n")) !== -1) {
           const line = stdoutBuffer.slice(0, newlineIndex).trim();
@@ -97,6 +73,7 @@ export async function streamClaudeCodeAgent(
             ) {
               writer.write({
                 type: "data-AgentSession",
+                id: randomUUID(),
                 data: { type: "claude-code", data: data.session },
               });
             }
@@ -110,6 +87,7 @@ export async function streamClaudeCodeAgent(
     }),
     messages: convertToModelMessages(messages),
     tools,
+    abortSignal: opts.abortSignal,
     onError: ({ error }) => {
       logger.error("Error in ClaudeCode agent", { error });
     },
@@ -199,18 +177,24 @@ export async function streamClaudeCodeAgent(
     tools: { GitCommit: GitCommit(sandbox) },
     toolChoice: { type: "tool", toolName: "GitCommit" },
     onStepFinish: async (step) => {
-      const screenshot = await screenshotPromise;
-      await opts.onScreenshot(screenshot.url);
+      const screenshot = await screenshotPromise.catch((e) => {
+        logger.error("Error getting screenshot", e);
+        return undefined;
+      });
+      if (screenshot) {
+        await opts.onScreenshot(screenshot.url);
+      }
+
       step.toolResults.forEach((tc) => {
         if (!tc.dynamic && tc.toolName === "GitCommit") {
           writer.write({
             type: "data-GitSha",
             id: tc.toolCallId,
             data: {
-              sha: tc.output.commitSha,
+              sha: tc.output.sha,
               title: tc.input.title,
               description: tc.input.body,
-              url: screenshot.url,
+              url: screenshot?.url,
             },
           });
         }

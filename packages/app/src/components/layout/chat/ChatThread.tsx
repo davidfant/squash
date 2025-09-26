@@ -7,6 +7,7 @@ import {
   type ChatInputValue,
 } from "@/components/layout/chat/input/ChatInput";
 import { ChatInputFileUploadsProvider } from "@/components/layout/chat/input/ChatInputFileUploadsContext";
+import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { api, useMutation } from "@/hooks/api";
@@ -34,7 +35,7 @@ function ChatInputWithScrollToBottom({
   ready: boolean;
   onStop: () => Promise<unknown>;
 }) {
-  const { status, sendMessage } = useChatContext();
+  const { status, sendMessage, error } = useChatContext();
   const { scrollToBottom } = useStickToBottomContext();
   return (
     <ChatInputFileUploadsProvider initialValue={initialValue?.files}>
@@ -68,7 +69,12 @@ export function ChatThread({
   initialValue?: ChatInputValue;
 }) {
   const { setPreview } = useBranchContext();
-  const { messages: allMessages, status, sendMessage } = useChatContext();
+  const {
+    messages: allMessages,
+    status,
+    sendMessage,
+    error,
+  } = useChatContext();
   const messages = useMessageLineage(allMessages, id);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
 
@@ -109,7 +115,7 @@ export function ChatThread({
     };
 
     sendMessage(editedMessage);
-    messages.switchVariant(currMessage.metadata!.parentId, messageId, [
+    messages.switchVariant(currMessage.metadata!.parentId, editedMessage.id, [
       ...allMessages,
       editedMessage,
     ]);
@@ -225,8 +231,11 @@ export function ChatThread({
           )}
 
           {status === "error" && (
-            <div className="overflow-hidden mb-2 text-destructive flex items-center gap-1">
-              <AlertCircle className="w-4 h-4" /> Error
+            <div className="ml-7">
+              <Alert className="text-muted-foreground">
+                <AlertCircle className="w-4 h-4" />
+                <AlertTitle>{error?.message ?? "Unknown error"}</AlertTitle>
+              </Alert>
             </div>
           )}
         </ConversationContent>
@@ -249,7 +258,7 @@ export function ChatThread({
           parentId={messages.activePath[messages.activePath.length - 1]?.id!}
           initialValue={initialValue}
           ready={ready}
-          onStop={() => stop.mutateAsync({ param: { branchId: id }, json: {} })}
+          onStop={() => stop.mutateAsync({ param: { branchId: id } })}
         />
       </div>
     </StickToBottom>

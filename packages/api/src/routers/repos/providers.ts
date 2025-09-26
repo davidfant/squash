@@ -1,6 +1,7 @@
 import { requireActiveOrganization, requireAuth } from "@/auth/middleware";
 import type { Database } from "@/database";
 import * as schema from "@/database/schema";
+import { zSandboxSnapshotConfig } from "@/sandbox/zod";
 import { RepoService } from "@/services/repoService";
 import { zValidator } from "@hono/zod-validator";
 import { and, desc, eq, isNull } from "drizzle-orm";
@@ -171,19 +172,7 @@ export const repoProvidersRouter = new Hono<{
     zValidator("param", z.object({ providerId: z.string() })),
     zValidator(
       "json",
-      z.object({
-        repoId: z.string(),
-        snapshot: z.object({
-          type: z.literal("docker"),
-          port: z.number(),
-          image: z.string(),
-          workdir: z.string(),
-          cmd: z.object({
-            prepare: z.string().optional(),
-            entrypoint: z.string(),
-          }),
-        }),
-      })
+      z.object({ repoId: z.string(), snapshot: zSandboxSnapshotConfig })
     ),
     requireRepoProvider,
     async (c) => {

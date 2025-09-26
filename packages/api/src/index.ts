@@ -10,7 +10,6 @@ import { databaseMiddleware } from "./database/middleware";
 import { createSignedUrl } from "./lib/cloudflare";
 import { logger } from "./lib/logger";
 import { githubRouter } from "./routers/integrations/github";
-import { replicatorRouter } from "./routers/replicator";
 import { reposRouter } from "./routers/repos";
 import { repoBranchesRouter } from "./routers/repos/branches";
 import { repoProvidersRouter } from "./routers/repos/providers";
@@ -22,7 +21,6 @@ const app = new Hono<{ Bindings: CloudflareBindings }>()
   .use(databaseMiddleware)
   .use(authMiddleware)
   .on(["GET", "POST"], "/auth/*", (c) => c.get("auth").handler(c.req.raw))
-  .route("/replicator", replicatorRouter)
   .route("/repos/providers", repoProvidersRouter)
   .route("/repos/branches", repoBranchesRouter)
   .route("/repos", reposRouter)
@@ -59,7 +57,6 @@ const app = new Hono<{ Bindings: CloudflareBindings }>()
       requestId: c.get("requestId"),
       route: c.req.path,
       query: c.req.query(),
-      headers: Object.fromEntries(c.req.raw.headers.entries()),
       body: await c.req.text().catch(() => "Failed to read body"),
       stack: err.stack,
       name: err.name,
@@ -72,4 +69,5 @@ const app = new Hono<{ Bindings: CloudflareBindings }>()
 export default app;
 export type AppType = typeof app;
 
-export { SandboxDurableObject } from "./durable-objects/sandbox";
+export { DaytonaSandboxManager } from "./sandbox/daytona/manager";
+export { VercelSandboxManager } from "./sandbox/vercel/manager";

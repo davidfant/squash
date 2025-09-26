@@ -18,7 +18,7 @@ export const AssistantMessage = ({
   <div className={cn("group space-y-3", className)}>
     <MessageHeader author="Squash" />
     <div className="ml-7">
-      <MessageParts parts={message.parts} />
+      <MessageParts parts={message.parts} loading={loading} />
       {/* Only show MessageActions when not streaming */}
       {!loading && (
         <AssistantMessageActions className="-ml-3" onRetry={onRetry} />

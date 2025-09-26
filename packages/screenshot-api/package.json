@@ -3,12 +3,12 @@
   "type": "module",
   "version": "0.0.0",
   "scripts": {
-    "dev": "pnpm typegen && wrangler dev --x-remote-bindings",
+    "dev": "pnpm typegen && wrangler dev",
     "push": "wrangler deploy --minify --env production",
     "typegen": "wrangler types --env-interface CloudflareBindings"
   },
   "devDependencies": {
-    "wrangler": "^4.31.0"
+    "wrangler": "^4.40.0"
   },
   "dependencies": {
     "@cloudflare/puppeteer": "^1.0.4"

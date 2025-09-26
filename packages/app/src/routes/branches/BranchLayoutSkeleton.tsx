@@ -7,11 +7,11 @@ export const BranchLayoutSkeleton = () => (
   <SidebarProvider className="flex h-screen flex-col">
     <header className="flex items-center justify-between pr-2 py-2">
       <div className="w-[30%] flex min-w-0 items-center gap-2 pl-2">
-        <Skeleton className="size-8 rounded-full" />
+        <Skeleton className="size-6 rounded-full" />
         <Skeleton className="h-6 w-32" />
       </div>
       <div className="flex items-center gap-2">
-        <Skeleton className="h-10 w-22" />
+        <Skeleton className="h-8 w-22" />
       </div>
     </header>
     <div className="flex-1 flex">

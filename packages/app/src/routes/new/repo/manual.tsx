@@ -32,24 +32,25 @@ export function NewRepoManualPage() {
       return;
     }
 
-    createRepo.mutate({
-      json: {
-        name: name.trim(),
-        url: url.trim(),
-        defaultBranch: defaultBranch.trim(),
-        snapshot: {
-          type: "docker",
-          image: `registry.fly.io/squash-template:${template}-${version}`,
-          port: 5173,
-          workdir: "/repo",
-          cmd: {
-            prepare:
-              "if [ ! -d $WORKDIR/.git ]; then mv /root/repo/* $WORKDIR; fi",
-            entrypoint: "pnpm dev --host 0.0.0.0 --port $PORT",
-          },
-        },
-      },
-    });
+    alert("TODO: create repo...");
+    // createRepo.mutate({
+    //   json: {
+    //     name: name.trim(),
+    //     url: url.trim(),
+    //     defaultBranch: defaultBranch.trim(),
+    //     snapshot: {
+    //       type: "docker",
+    //       image: `registry.fly.io/squash-template:${template}-${version}`,
+    //       port: 5173,
+    //       cwd: "/repo",
+    //       cmd: {
+    //         prepare:
+    //           "if [ ! -d $WORKDIR/.git ]; then mv /root/repo/* $WORKDIR; fi",
+    //         entrypoint: "pnpm dev --host 0.0.0.0 --port $PORT",
+    //       },
+    //     },
+    //   },
+    // });
   };
 
   return (

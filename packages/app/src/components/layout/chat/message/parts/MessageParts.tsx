@@ -8,13 +8,22 @@ import { EventsCollapsible } from "./EventsCollapsible";
 import { GitCommitAlert } from "./GitCommitAlert";
 import { groupMessageEvents } from "./groupMessageEvents";
 
-export function MessageParts({ parts }: { parts: ChatMessage["parts"] }) {
+export function MessageParts({
+  parts,
+  loading,
+}: {
+  parts: ChatMessage["parts"];
+  loading?: boolean;
+}) {
   const blocks = useMemo(() => groupMessageEvents(parts), [parts]);
-
   if (!blocks.length) {
-    return <Skeleton className="h-4 w-48" />;
+    if (loading) return <Skeleton className="h-4 w-48" />;
+    return (
+      <p className="text-muted-foreground italic">
+        Failed to respond. Please try again.
+      </p>
+    );
   }
-
   return (
     <div className="space-y-3">
       {blocks.map((block, idx) => {

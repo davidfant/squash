@@ -101,7 +101,16 @@ export function groupMessageEvents(parts: ChatMessage["parts"]): Block[] {
         currentEvents.push({
           icon: TerminalIcon,
           loading: isToolLoading(part.state),
-          label: part.input?.description,
+          label:
+            part.input?.description ??
+            (!!part.input?.command && (
+              <Badge
+                variant="outline"
+                className="border-none bg-muted max-w-10"
+              >
+                {part.input?.command}
+              </Badge>
+            )),
         });
         break;
       }
@@ -189,7 +198,7 @@ export function groupMessageEvents(parts: ChatMessage["parts"]): Block[] {
           blocks.push({
             type: "commit",
             title: part.input.title,
-            sha: part.output.commitSha,
+            sha: part.output.sha,
           });
         }
         break;

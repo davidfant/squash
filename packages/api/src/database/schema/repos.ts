@@ -1,3 +1,4 @@
+import type { Sandbox } from "@/sandbox/types";
 import { relations, type InferEnum } from "drizzle-orm";
 import {
   boolean,
@@ -12,23 +13,16 @@ import {
 import { organization, user } from "./auth";
 import { messageThread } from "./messages";
 
-export interface RepoSnapshot {
-  type: "docker";
-  port: number;
-  image: string;
-  workdir: string;
-  cmd: { prepare?: string; entrypoint: string };
-}
-
-export interface RepoBranchSandbox {
-  type: "flyio";
-  appId: string;
-  machineId: string;
-  workdir: string;
-}
-
 export const repoProviderType = pgEnum("repo_provider_type", ["github"]);
 export type RepoProviderType = InferEnum<typeof repoProviderType>;
+
+export const sandboxProviderType = pgEnum("sandbox_provider_type", [
+  "cloudflare",
+  "fly",
+  "vercel",
+  "daytona",
+]);
+export type SandboxProviderType = InferEnum<typeof sandboxProviderType>;
 
 export interface RepoProviderData {
   installationId: string;
@@ -38,7 +32,7 @@ export const repo = pgTable("repo", {
   id: uuid().primaryKey().defaultRandom(),
   url: text().notNull(),
   name: text().notNull(),
-  snapshot: json("snapshot").$type<RepoSnapshot>().notNull(),
+  snapshot: json("snapshot").$type<Sandbox.Snapshot.Config.Any>().notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),
@@ -58,7 +52,9 @@ export const repoBranch = pgTable(
     id: uuid().primaryKey().defaultRandom(),
     title: text().notNull(),
     name: text().notNull(),
-    sandbox: json("sandbox").$type<RepoBranchSandbox>(),
+    sandboxProvider: sandboxProviderType("sandbox_provider")
+      .notNull()
+      .default("cloudflare"),
     imageUrl: text("image_url"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),

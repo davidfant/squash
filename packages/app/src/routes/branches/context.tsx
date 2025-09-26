@@ -56,6 +56,7 @@ export const BranchContextProvider = ({
       }),
     {
       params: { branchId, sha: currentSha },
+      refetchInterval: 60_000,
       ...({ placeholderData: keepPreviousData } as any),
     }
   );

@@ -1,0 +1,2 @@
+CREATE TYPE "public"."sandbox_provider_type" AS ENUM('cloudflare', 'fly', 'vercel', 'daytona');--> statement-breakpoint
+ALTER TABLE "repo_branch" ADD COLUMN "sandbox_provider" "sandbox_provider_type" DEFAULT 'cloudflare' NOT NULL;

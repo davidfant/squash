@@ -15,7 +15,10 @@ const zSandboxSnapshotCommandTask = zSandboxSnapshotTaskBase.extend({
 
 const zSandboxSnapshotFunctionTask = zSandboxSnapshotTaskBase.extend({
   type: z.literal("function"),
-  function: z.function(),
+  function: z.custom<Sandbox.Snapshot.Task.Function["function"]>(
+    (val) => typeof val === "function",
+    { message: "Expected a function" }
+  ),
 }) satisfies z.ZodType<Sandbox.Snapshot.Task.Function>;
 
 const zSandboxSnapshotTask = z.union([

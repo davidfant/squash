@@ -1,3 +1,4 @@
+import type { Sandbox } from "@/sandbox/types";
 import type { ClaudeCodeTools } from "@squashai/ai-sdk-claude-code";
 import type { InferUITools, Tool, UIMessage } from "ai";
 import type { GitCommit } from "./git";
@@ -5,7 +6,7 @@ import type { GitCommit } from "./git";
 export interface SandboxTaskToolInput {
   id: string;
   title: string;
-  stream: Array<{ type: "stdout" | "stderr"; data: string }>;
+  events: Sandbox.Exec.Event.Any[];
 }
 export interface SandboxTaskToolOutput {
   summary: string | undefined;
@@ -14,7 +15,6 @@ export type SandboxTaskTool = Tool<SandboxTaskToolInput, SandboxTaskToolOutput>;
 
 export type AllTools = ClaudeCodeTools & {
   GitCommit: ReturnType<typeof GitCommit>;
-  SandboxTask: SandboxTaskTool;
 };
 
 export type ChatMessageData = {
@@ -35,4 +35,10 @@ export type ChatMessage = UIMessage<
   ChatMessageMetadata,
   ChatMessageData,
   InferUITools<AllTools>
+>;
+
+export type StartSandboxMessage = UIMessage<
+  ChatMessageMetadata,
+  ChatMessageData,
+  InferUITools<{ SandboxTask: SandboxTaskTool }>
 >;

@@ -56,6 +56,7 @@ export async function streamClaudeCodeAgent(
       );
 
       let stdoutBuffer = "";
+      let savedAgentSession = false;
       for await (const ev of stream) {
         if (ev.type !== "stdout") continue;
         stdoutBuffer += ev.data;
@@ -76,6 +77,7 @@ export async function streamClaudeCodeAgent(
                 id: randomUUID(),
                 data: { type: "claude-code", data: data.session },
               });
+              savedAgentSession = true;
             }
 
             if (typeof data === "object" && !!data.type) {
@@ -83,6 +85,10 @@ export async function streamClaudeCodeAgent(
             }
           } catch {}
         }
+      }
+
+      if (!savedAgentSession) {
+        throw new Error("Agent session not saved");
       }
     }),
     messages: convertToModelMessages(messages),

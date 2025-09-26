@@ -232,7 +232,7 @@ export const repoBranchesRouter = new Hono<{
 
       await db
         .update(schema.repoBranch)
-        .set({ deletedAt: new Date(), sandbox: null })
+        .set({ deletedAt: new Date() })
         .where(eq(schema.repoBranch.id, branch.id));
 
       return c.json({ success: true });

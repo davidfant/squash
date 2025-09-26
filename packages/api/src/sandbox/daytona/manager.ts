@@ -172,14 +172,22 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
             streamed.stderr += data;
           }
         );
-        // const full = await sandbox.process.getSessionCommandLogs(
-        //   exec.sessionId,
-        //   exec.commandId
-        // );
-        // const unstreamed = {
-        //   stdout: (full.stdout ?? "").slice(streamed.stdout.length),
-        //   stderr: (full.stderr ?? "").slice(streamed.stderr.length),
-        // };
+
+        const result = await sandbox.process.getSessionCommand(
+          exec.sessionId,
+          exec.commandId
+        );
+
+        // TODO(fant): if we don't get reports about errors bc no AgentSession
+        // is being saved, the unstreamed logic can be removed.
+        const full = await sandbox.process.getSessionCommandLogs(
+          exec.sessionId,
+          exec.commandId
+        );
+        const unstreamed = {
+          stdout: (full.stdout ?? "").slice(streamed.stdout.length),
+          stderr: (full.stderr ?? "").slice(streamed.stderr.length),
+        };
         // logger.debug("Stream data", {
         //   streamed: {
         //     stdout: streamed.stdout.length,
@@ -192,25 +200,21 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
         //   },
         // });
 
-        // if (!!unstreamed.stdout.length) {
-        //   logger.debug("Unstreamed stdout", {
-        //     length: unstreamed.stdout.length,
-        //     data: unstreamed.stdout.slice(0, 512),
-        //   });
-        //   add({ type: "stdout", data: unstreamed.stdout, timestamp: now() });
-        // }
-        // if (!!unstreamed.stderr.length) {
-        //   logger.debug("Unstreamed stderr", {
-        //     length: unstreamed.stderr.length,
-        //     data: unstreamed.stderr.slice(0, 512),
-        //   });
-        //   add({ type: "stderr", data: unstreamed.stderr, timestamp: now() });
-        // }
+        if (!!unstreamed.stdout.length) {
+          logger.debug("Unstreamed stdout", {
+            length: unstreamed.stdout.length,
+            data: unstreamed.stdout.slice(0, 512),
+          });
+          // add({ type: "stdout", data: unstreamed.stdout, timestamp: now() });
+        }
+        if (!!unstreamed.stderr.length) {
+          logger.debug("Unstreamed stderr", {
+            length: unstreamed.stderr.length,
+            data: unstreamed.stderr.slice(0, 512),
+          });
+          // add({ type: "stderr", data: unstreamed.stderr, timestamp: now() });
+        }
 
-        const result = await sandbox.process.getSessionCommand(
-          exec.sessionId,
-          exec.commandId
-        );
         logger.debug("Command result", {
           id: result.id,
           exitCode: result.exitCode,

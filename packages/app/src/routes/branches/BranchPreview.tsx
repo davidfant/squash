@@ -1,13 +1,35 @@
+import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { Loader2 } from "lucide-react";
+import { useChat } from "@ai-sdk/react";
+import type { StartSandboxMessage } from "@squashai/api/agent/types";
+import { DefaultChatTransport } from "ai";
+import { AnimatePresence, motion } from "framer-motion";
+import { AlertCircle, Check, Loader2 } from "lucide-react";
 import { useRef } from "react";
 import { useBranchContext } from "./context";
 
 export function BranchPreview({ className }: { className?: string }) {
-  const { screenSize, branch, previewPath, preview, setPreviewPath } =
-    useBranchContext();
+  const { screenSize, previewPath, preview, branch } = useBranchContext();
   const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  const stream = useChat<StartSandboxMessage>({
+    messages: [],
+    resume: true,
+    transport: new DefaultChatTransport({
+      credentials: "include",
+      prepareReconnectToStreamRequest: () => ({
+        api: `${import.meta.env.VITE_API_URL}/repos/branches/${
+          branch.id
+        }/preview/stream`,
+      }),
+    }),
+  });
+  const tasks = stream.messages
+    .flatMap((m) => m.parts)
+    .filter((p) => p.type === "tool-SandboxTask")
+    .filter((t) => !!t.input?.title);
 
   // useEffect(
   //   () =>
@@ -76,23 +98,67 @@ export function BranchPreview({ className }: { className?: string }) {
   //   );
   // }
 
+  const placeholder = (
+    <div className="flex flex-col gap-2 h-full items-center justify-center">
+      <AnimatePresence initial={false}>
+        <motion.div
+          layout
+          key="label"
+          transition={{ duration: 0.18, ease: "easeOut" }}
+        >
+          <Label className="text-muted-foreground">
+            Your preview is loading...
+          </Label>
+        </motion.div>
+        {tasks.map((t) => {
+          const alert =
+            t.state === "output-error" ? (
+              <Alert variant="destructive">
+                <AlertCircle />
+                <AlertTitle>{t.input?.title}</AlertTitle>
+              </Alert>
+            ) : (
+              <Alert className="text-muted-foreground">
+                {t.state === "output-available" ? (
+                  <Check />
+                ) : (
+                  <Loader2 className="animate-spin" />
+                )}
+                <AlertTitle>{t.input?.title}</AlertTitle>
+              </Alert>
+            );
+          return (
+            <motion.div
+              layout
+              key={t.toolCallId}
+              initial={{ opacity: 0, scale: 0.95, y: -6 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.93, y: 6 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+              className="w-full max-w-sm"
+            >
+              {alert}
+            </motion.div>
+          );
+        })}
+      </AnimatePresence>
+    </div>
+  );
+
   return (
     <div className={cn("relative h-full", className)}>
       <Card className="p-0 h-full overflow-hidden shadow-none bg-muted">
-        {preview ? (
+        {!!preview && (
           <iframe
             ref={iframeRef}
             src={`${preview.url}${previewPath}`}
             className={cn(
-              "h-full mx-auto transition-all duration-300",
+              "h-full mx-auto transition-all duration-300 z-2",
               getPreviewWidth()
             )}
           />
-        ) : (
-          <div className="flex h-full items-center justify-center">
-            <Loader2 className="size-8 animate-spin opacity-30" />
-          </div>
         )}
+        <div className="absolute inset-0 z-1">{placeholder}</div>
       </Card>
       {/* <AnimatePresence mode="wait">
         {comment && (

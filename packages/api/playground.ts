@@ -1,55 +1,52 @@
-import { Sandbox } from "@vercel/sandbox";
-import { spawn } from "child_process";
-import ms from "ms";
-import { setTimeout } from "timers/promises";
+import { google } from "@ai-sdk/google";
+import { streamText, tool } from "ai";
+import { z } from "zod";
 
-async function main() {
-  const sandbox = await Sandbox.create({
-    source: {
-      url: "https://github.com/vercel/sandbox-example-next.git",
-      type: "git",
-    },
-    resources: { vcpus: 2 },
-    timeout: ms("5m"),
-    ports: [3000],
-    runtime: "node22",
-  });
+// async function main() {
+//   const sandbox = await Sandbox.create({
+//     source: {
+//       url: "https://github.com/vercel/sandbox-example-next.git",
+//       type: "git",
+//     },
+//     resources: { vcpus: 2 },
+//     timeout: ms("5m"),
+//     ports: [3000],
+//     runtime: "node22",
+//   });
 
-  // const install = await sandbox.runCommand({
-  //   cmd: "npm",
-  //   args: ["install", "--loglevel", "info"],
-  //   stderr: process.stderr,
-  //   stdout: process.stdout,
-  // });
+//   // const install = await sandbox.runCommand({
+//   //   cmd: "npm",
+//   //   args: ["install", "--loglevel", "info"],
+//   //   stderr: process.stderr,
+//   //   stdout: process.stdout,
+//   // });
 
-  console.log(`Installing dependencies...`);
-  await sandbox.runCommand({
-    cmd: "npm",
-    args: ["install", "--global", "@squashai/cli"],
-    stderr: process.stderr,
-    stdout: process.stdout,
-  });
-  console.log(`Installed dependencies...`);
+//   console.log(`Installing dependencies...`);
+//   await sandbox.runCommand({
+//     cmd: "npm",
+//     args: ["install", "--global", "@squashai/cli"],
+//     stderr: process.stderr,
+//     stdout: process.stdout,
+//   });
+//   console.log(`Installed dependencies...`);
 
-  // if (install.exitCode != 0) {
-  //   console.log("installing packages failed");
-  //   process.exit(1);
-  // }
+//   // if (install.exitCode != 0) {
+//   //   console.log("installing packages failed");
+//   //   process.exit(1);
+//   // }
 
-  // console.log(`Starting the development server...`);
-  // await sandbox.runCommand({
-  //   cmd: "npm",
-  //   args: ["run", "dev"],
-  //   stderr: process.stderr,
-  //   stdout: process.stdout,
-  //   detached: true,
-  // });
+//   // console.log(`Starting the development server...`);
+//   // await sandbox.runCommand({
+//   //   cmd: "npm",
+//   //   args: ["run", "dev"],
+//   //   stderr: process.stderr,
+//   //   stdout: process.stdout,
+//   //   detached: true,
+//   // });
 
-  await setTimeout(500);
-  spawn("open", [sandbox.domain(3000)]);
-}
-
-main().catch(console.error);
+//   await setTimeout(500);
+//   spawn("open", [sandbox.domain(3000)]);
+// }
 
 // import { google } from "@ai-sdk/google";
 // import { JWTPayload } from "@squashai/flyio-ssh-proxy";
@@ -153,47 +150,51 @@ main().catch(console.error);
 //   }
 // }
 
-// async function main2() {
-//   console.log("🚀 Starting AI SDK streamText with echo tool...\n");
+async function main2() {
+  console.log("🚀 Starting AI SDK streamText with echo tool...\n");
 
-//   try {
-//     const result = await streamText({
-//       model: google("gemini-2.5-flash"),
-//       prompt:
-//         'Please use the echo tool to repeat back "Hello from the echo tool!"',
-//       tools: {
-//         echo: tool({
-//           description: "Echo back the provided message",
-//           inputSchema: z.object({
-//             message: z.string().describe("The message to echo back"),
-//           }),
-//           execute: async ({ message }: { message: string }) => {
-//             console.log("🔧 Echo tool called with message:", message);
-//             return {
-//               message: message,
-//               timestamp: new Date().toISOString(),
-//             };
-//           },
-//         }),
-//       },
-//     });
+  try {
+    const result = await streamText({
+      model: google("gemini-2.5-flash"),
+      prompt:
+        'Please use the echo tool to repeat back "Hello from the echo tool!"',
+      tools: {
+        echo: tool({
+          description: "Echo back the provided message",
+          inputSchema: z.object({
+            message: z.string().describe("The message to echo back"),
+          }),
+          execute: async ({ message }: { message: string }) => {
+            console.log("🔧 Echo tool called with message:", message);
+            return {
+              message: message,
+              timestamp: new Date().toISOString(),
+            };
+          },
+        }),
+      },
+    });
 
-//     console.log("📝 Streaming response parts:\n");
+    console.log("📝 Streaming response parts:\n");
 
-//     // Stream and log all parts
-//     for await (const part of result.fullStream) {
-//       console.log("❤️", part);
-//       console.log(""); // Empty line for readability
-//     }
+    // Stream and log all parts
+    // for await (const part of result.fullStream) {
+    //   console.log("❤️", part);
+    //   console.log(""); // Empty line for readability
+    // }
+    for await (const part of result.toUIMessageStream()) {
+      console.log("❤️", part);
+      console.log(""); // Empty line for readability
+    }
 
-//     // Get the final result
-//     const finalText = await result.text;
-//     console.log("🎉 Final response text:");
-//     console.log(finalText);
-//   } catch (error) {
-//     console.error("❌ Error:", error);
-//   }
-// }
+    // Get the final result
+    const finalText = await result.text;
+    console.log("🎉 Final response text:");
+    console.log(finalText);
+  } catch (error) {
+    console.error("❌ Error:", error);
+  }
+}
 
 // async function main() {
 //   for await (const part of sandboxTaskToToolCall(
@@ -216,3 +217,5 @@ main().catch(console.error);
 
 // // Run the main function
 // main().catch(console.error);
+
+main2().catch(console.error);

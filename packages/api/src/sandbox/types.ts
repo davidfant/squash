@@ -17,7 +17,9 @@ export namespace Sandbox {
 
       export interface Function extends Base {
         type: "function";
-        function: () => unknown;
+        function: () =>
+          | Promise<Exec.Event.Any[]>
+          | AsyncGenerator<Exec.Event.Any>;
       }
 
       export type Any = Command | Function;
@@ -107,7 +109,8 @@ export namespace Sandbox {
       init(opts: Options<C>): Promise<void>;
       isStarted(): Promise<boolean>;
       start(): Promise<void>;
-      url(): Promise<string>;
+      waitUntilStarted(): Promise<void>;
+      getPreviewUrl(): Promise<string>;
       execute(
         request: Exec.Request,
         abortSignal?: AbortSignal
@@ -128,7 +131,8 @@ export namespace Sandbox {
         threadId: string;
         branchId: string;
       }): Promise<Response>;
-      listenToAgent(): Promise<Response>;
+      listenToAgent(): Response;
+      listenToStart(): Response;
       stopAgent(): Promise<void>;
     }
   }

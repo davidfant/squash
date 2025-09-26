@@ -70,4 +70,3 @@ export default app;
 export type AppType = typeof app;
 
 export { DaytonaSandboxManager } from "./sandbox/daytona/manager";
-export { VercelSandboxManager } from "./sandbox/vercel/manager";

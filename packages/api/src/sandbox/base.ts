@@ -15,15 +15,33 @@ import escape from "shell-escape";
 import type { Sandbox } from "./types";
 import {
   checkoutLatestCommit,
+  executeTasks,
   runCommand,
   storage,
   type Storage,
 } from "./util";
 
-interface RunDetails {
+interface Handle {
+  type: string;
   buffer: Uint8Array[];
   listeners: Map<string, ReadableStreamDefaultController<Uint8Array>>;
-  stream: Promise<unknown> | null;
+  done: Promise<unknown> | null;
+  controller: AbortController;
+}
+
+function createReadableStream(handle: Handle) {
+  const listenerId = randomUUID();
+  return new ReadableStream<Uint8Array>({
+    start: (controller) => {
+      handle.listeners.set(listenerId, controller);
+      for (const part of handle.buffer) {
+        controller.enqueue(part);
+      }
+    },
+    cancel: () => {
+      handle.listeners.delete(listenerId);
+    },
+  });
 }
 
 export abstract class BaseSandboxManagerDurableObject<
@@ -35,13 +53,11 @@ export abstract class BaseSandboxManagerDurableObject<
 {
   abstract name: string;
 
-  protected starting: Promise<void> | null = null;
   protected storage: Storage<S>;
-  // protected abortController: AbortController = new AbortController();
-  private run: {
-    controller: AbortController;
-    promise: Promise<RunDetails>;
-  } | null = null;
+  private handles: {
+    start: Handle | null;
+    agent: Handle | null;
+  } = { start: null, agent: null };
   private encoder = new TextEncoder();
 
   constructor(
@@ -62,131 +78,39 @@ export abstract class BaseSandboxManagerDurableObject<
     return options;
   }
 
-  protected async assertStarted(): Promise<void> {
+  async start(): Promise<void> {
     await this.state.blockConcurrencyWhile(async () => {
-      if (await this.isStarted()) return;
-      if (!this.starting) this.starting = this.start();
+      if (!this.handles.start && !(await this.isStarted())) {
+        const tasks = await this.getStartTasks();
+        const controller = new AbortController();
+
+        const start: Handle = {
+          type: "start",
+          controller,
+          buffer: [],
+          listeners: new Map(),
+          done: Promise.resolve(executeTasks(tasks, this))
+            .then((s) => (s ? this.consumeStream(s, start) : undefined))
+            .finally(() => (this.handles.start = null)),
+        };
+        this.handles.start = start;
+      }
     });
-    await this.starting;
   }
 
-  abstract start(): Promise<void>;
+  async waitUntilStarted(): Promise<void> {
+    await this.start();
+    await this.handles.start?.done;
+  }
+
   abstract isStarted(): Promise<boolean>;
-  abstract url(): Promise<string>;
+  abstract getPreviewUrl(): Promise<string>;
   abstract execute(
     request: Sandbox.Exec.Request,
     abortSignal: AbortSignal | undefined
   ): AsyncGenerator<Sandbox.Exec.Event.Any>;
   abstract destroy(): Promise<void>;
-
-  protected async performTasks(
-    tasks: Sandbox.Snapshot.Task.Any[]
-  ): Promise<void> {
-    const completed = new Set<string>();
-    const failed = new Set<string>();
-    const running = new Map<string, Promise<void>>();
-
-    const canExecute = (task: Sandbox.Snapshot.Task.Any): boolean =>
-      (task.dependsOn ?? []).every((depId: string) => completed.has(depId));
-
-    const executeTask = async (
-      task: Sandbox.Snapshot.Task.Any
-    ): Promise<void> => {
-      logger.debug("Executing task", { taskId: task.id });
-      try {
-        if (task.type === "command") {
-          const stream = await this.execute(
-            { command: task.command, args: task.args },
-            undefined
-          );
-          await runCommand(stream);
-        } else if (task.type === "function") {
-          await task.function();
-        }
-        completed.add(task.id);
-        logger.debug("Task completed", { taskId: task.id });
-      } catch (error) {
-        failed.add(task.id);
-        logger.error("Task failed", { taskId: task.id, error });
-        throw new Error(
-          `Task ${task.id} failed: ${
-            error instanceof Error ? error.message : String(error)
-          }`
-        );
-      }
-    };
-
-    // Main processing loop
-    while (completed.size + failed.size < tasks.length) {
-      // Find tasks that can be executed (dependencies met and not already running/completed/failed)
-      tasks
-        .filter(
-          (task) =>
-            !completed.has(task.id) &&
-            !failed.has(task.id) &&
-            !running.has(task.id) &&
-            canExecute(task)
-        )
-        .forEach((task) => running.set(task.id, executeTask(task)));
-
-      // If no tasks are running and we haven't completed all tasks, we have a problem
-      if (running.size === 0) {
-        const remainingTasks = tasks.filter(
-          (task) => !completed.has(task.id) && !failed.has(task.id)
-        );
-
-        if (!!remainingTasks.length) {
-          const taskIds = remainingTasks.map((t) => t.id).join(", ");
-          logger.error(
-            "Cannot proceed: remaining tasks have unmet dependencies or circular dependencies",
-            { taskIds, completed: [...completed], failed: [...failed] }
-          );
-          throw new Error(
-            `Cannot proceed: remaining tasks [${taskIds}] have unmet dependencies or circular dependencies`
-          );
-        }
-        break;
-      }
-
-      await Promise.race(Array.from(running.values())).catch(() => {});
-
-      // Clean up completed/failed tasks from running tasks map
-      const settledPromises = await Promise.allSettled(
-        Array.from(running.entries()).map(async ([taskId, promise]) => {
-          try {
-            await promise;
-            return { taskId, settled: true };
-          } catch {
-            return { taskId, settled: true };
-          }
-        })
-      );
-
-      for (const result of settledPromises) {
-        if (result.status === "fulfilled" && result.value.settled) {
-          running.delete(result.value.taskId);
-        }
-      }
-    }
-
-    // Check if all tasks completed successfully
-    if (!!failed.size) {
-      const failedTaskIds = Array.from(failed).join(", ");
-      throw new Error(
-        `Task execution failed. Failed tasks: [${failedTaskIds}]`
-      );
-    }
-
-    if (completed.size !== tasks.length) {
-      const incompleteTasks = tasks
-        .filter((task) => !completed.has(task.id))
-        .map((task) => task.id)
-        .join(", ");
-      throw new Error(
-        `Not all tasks completed successfully. Incomplete tasks: [${incompleteTasks}]`
-      );
-    }
-  }
+  abstract getStartTasks(): Promise<Sandbox.Snapshot.Task.Any[]>;
 
   async gitPush(abortSignal: AbortSignal | undefined): Promise<void> {
     const options = await this.getOptions();
@@ -247,7 +171,7 @@ export abstract class BaseSandboxManagerDurableObject<
     sha: string,
     abortSignal: AbortSignal | undefined
   ): Promise<void> {
-    await this.assertStarted();
+    await this.waitUntilStarted();
     logger.info("Resetting git to", { sha });
     const stream = await this.execute(
       { command: "git", args: ["reset", "--hard", sha] },
@@ -258,7 +182,7 @@ export abstract class BaseSandboxManagerDurableObject<
   async gitCurrentCommit(
     abortSignal: AbortSignal | undefined
   ): Promise<string> {
-    await this.assertStarted();
+    await this.waitUntilStarted();
     logger.info("Getting current git commit");
     const stream = await this.execute(
       { command: "git", args: ["rev-parse", "HEAD"] },
@@ -270,7 +194,7 @@ export abstract class BaseSandboxManagerDurableObject<
   }
 
   async isAgentRunning(): Promise<boolean> {
-    return !!this.run;
+    return !!this.handles.agent;
   }
 
   async startAgent(req: {
@@ -279,47 +203,51 @@ export abstract class BaseSandboxManagerDurableObject<
     branchId: string;
   }): Promise<Response> {
     await this.state.blockConcurrencyWhile(async () => {
-      if (!this.run) {
+      if (!this.handles.agent) {
         logger.debug("Starting new agent run because no run is active");
-        return;
+      } else {
+        logger.debug("Stopping existing agent run because new run started");
+        this.handles.agent.controller.abort(
+          new DOMException("superseded", "AbortError")
+        );
+        this.handles.agent = null;
       }
 
-      logger.debug("Stopping existing agent run because new run started");
-      this.run.controller.abort(new DOMException("superseded", "AbortError"));
-      this.run = null;
+      const controller = new AbortController();
+      const agent: Handle = {
+        type: "agent",
+        controller,
+        buffer: [],
+        listeners: new Map(),
+        done: this.waitUntilStarted()
+          .then(() => this.createAgentStream(req, controller))
+          .then((s) => (s ? this.consumeStream(s, agent) : undefined))
+          .finally(() => (this.handles.agent = null)),
+      };
+      this.handles.agent = agent;
     });
 
-    const controller = new AbortController();
-    this.run = {
-      controller,
-      promise: this.assertStarted().then(() =>
-        this.createAgentRun(req, controller)
-      ),
-    };
     return this.listenToAgent();
   }
 
-  async listenToAgent(): Promise<Response> {
-    if (!this.run) {
-      logger.debug("Cannot listen to agent because no run is active");
+  listenToAgent(): Response {
+    if (!this.handles.agent) {
+      logger.debug("No agent handle to listen to");
       return new Response(null, { status: 204 });
     }
+    return this.listen(this.handles.agent);
+  }
 
-    const run = await this.run.promise;
-    const listenerId = randomUUID();
-    const stream = new ReadableStream<Uint8Array>({
-      start: (controller) => {
-        run.listeners.set(listenerId, controller);
-        for (const part of run.buffer) {
-          controller.enqueue(part);
-        }
-      },
-      cancel: () => {
-        run.listeners.delete(listenerId);
-      },
-    });
+  listenToStart(): Response {
+    if (!this.handles.start) {
+      logger.debug("No start handle to listen to");
+      return new Response(null, { status: 204 });
+    }
+    return this.listen(this.handles.start);
+  }
 
-    return new Response(stream, {
+  private listen = (handle: Handle) =>
+    new Response(createReadableStream(handle), {
       status: 200,
       headers: {
         "content-type": "text/event-stream",
@@ -327,18 +255,16 @@ export abstract class BaseSandboxManagerDurableObject<
         connection: "keep-alive",
       },
     });
-  }
 
-  private async createAgentRun(
+  private async createAgentStream(
     req: {
       messages: ChatMessage[];
       threadId: string;
       branchId: string;
     },
     controller: AbortController
-  ): Promise<RunDetails> {
-    const run: RunDetails = { buffer: [], listeners: new Map(), stream: null };
-    if (controller.signal.aborted) return run;
+  ) {
+    if (controller.signal.aborted) return undefined;
 
     const db = createDatabase(env);
     const nextParentId = req.messages.slice(-1)[0]!.id;
@@ -364,7 +290,7 @@ export abstract class BaseSandboxManagerDurableObject<
         return undefined;
       };
 
-    const stream = createUIMessageStream<ChatMessage>({
+    return createUIMessageStream<ChatMessage>({
       originalMessages: req.messages, // just needed for id generation
       generateId: randomUUID,
       onFinish: async ({ responseMessage }) => {
@@ -393,7 +319,7 @@ export abstract class BaseSandboxManagerDurableObject<
         await streamClaudeCodeAgent(writer, req.messages, this, {
           env: this.env,
           threadId: req.threadId,
-          previewUrl: await this.url(),
+          previewUrl: await this.getPreviewUrl(),
           abortSignal: controller.signal,
           messageMetadata,
           onScreenshot: (imageUrl) =>
@@ -405,66 +331,60 @@ export abstract class BaseSandboxManagerDurableObject<
         writer.write({ type: "finish" });
       },
     });
-
-    run.stream = this.consumeStream(run, stream, controller.signal);
-    return run;
   }
 
   async stopAgent(): Promise<void> {
-    if (!this.run) return;
+    if (!this.handles.agent) return;
 
-    this.run.controller.abort(new DOMException("user-abort", "AbortError"));
+    this.handles.agent.controller.abort(
+      new DOMException("user-abort", "AbortError")
+    );
+    this.broadcast(
+      { type: "data-AbortRequest", data: { reason: "client-stop" } },
+      this.handles.agent
+    );
 
-    this.broadcast(await this.run.promise, {
-      type: "data-AbortRequest",
-      data: { reason: "client-stop" },
-    });
-
-    this.run = null;
+    this.handles.agent = null;
   }
 
   private async consumeStream(
-    run: RunDetails,
     stream: ReadableStream<InferUIMessageChunk<ChatMessage>>,
-    abortSignal: AbortSignal | undefined
+    handle: Handle
   ): Promise<void> {
     const reader = stream.getReader();
     try {
-      while (abortSignal?.aborted !== true) {
+      while (handle.controller.signal.aborted !== true) {
         const { value, done } = await reader.read();
         if (done) break;
-        if (value) this.broadcast(run, value);
+        if (value) this.broadcast(value, handle);
       }
-      logger.debug("Consumed stream");
-      this.run = null;
+      logger.debug("Consumed stream", { type: handle.type });
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
         return;
       }
-      logger.error("Agent stream failed", error);
+      logger.error("Stream failed", { type: handle.type, error });
     } finally {
-      for (const listener of run.listeners.values()) {
+      for (const listener of handle.listeners.values() ?? []) {
         try {
           listener.close();
         } catch (error) {
-          logger.warn("Failed to close listener", { error });
+          logger.warn("Failed to close listener", { type: handle.type, error });
         }
       }
       reader.releaseLock();
-      logger.debug("Closed listeners and reader");
+      logger.debug("Closed listeners and reader", { type: handle.type });
     }
   }
 
-  private broadcast(run: RunDetails, part: InferUIMessageChunk<ChatMessage>) {
-    logger.debug("Broadcasting chunk", JSON.stringify(part).slice(0, 512));
+  private broadcast(part: InferUIMessageChunk<ChatMessage>, handle: Handle) {
+    logger.debug("Broadcasting chunk", {
+      type: handle.type,
+      part: JSON.stringify(part).slice(0, 512),
+    });
     const encoded = this.encoder.encode(`data: ${JSON.stringify(part)}\n\n`);
-    run.buffer.push(encoded);
-    for (const listener of run.listeners.values()) {
-      try {
-        listener.enqueue(encoded);
-      } catch (error) {
-        logger.warn("Failed to enqueue chunk to listener", { error });
-      }
-    }
+    handle.buffer.push(encoded);
+
+    for (const l of handle.listeners.values()) l.enqueue(encoded);
   }
 }

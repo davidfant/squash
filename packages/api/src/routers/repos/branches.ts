@@ -204,7 +204,7 @@ export const repoBranchesRouter = new Hono<{
         }
       })();
 
-      const target = new URL(await sandbox.url());
+      const target = new URL(await sandbox.getPreviewUrl());
       const proxy = new URL(c.env.PREVIEW_PROXY_URL);
       const url = [
         proxy.protocol,
@@ -218,6 +218,17 @@ export const repoBranchesRouter = new Hono<{
         target.hash,
       ].join("");
       return c.json({ url, sha });
+    }
+  )
+  .get(
+    "/:branchId/preview/stream",
+    zValidator("param", z.object({ branchId: z.uuid() })),
+    requireRepoBranch,
+    async (c) => {
+      const params = c.req.valid("param");
+      const sandbox = c.env.DAYTONA_SANDBOX_MANAGER.getByName(params.branchId);
+      await sandbox.start();
+      return sandbox.listenToStart();
     }
   )
   .post(

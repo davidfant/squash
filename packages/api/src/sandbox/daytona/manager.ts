@@ -151,17 +151,41 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
         const exec = await this.startCommand(sandbox, request, abortSignal);
         add({ type: "start", timestamp: now() });
 
+        const streamed = { stdout: "", stderr: "" };
         await sandbox.process.getSessionCommandLogs(
           exec.sessionId,
           exec.commandId,
-          (data: string) => add({ type: "stdout", data, timestamp: now() }),
-          (data: string) => add({ type: "stderr", data, timestamp: now() })
+          (data: string) => {
+            add({ type: "stdout", data, timestamp: now() });
+            streamed.stdout += data;
+          },
+          (data: string) => {
+            add({ type: "stderr", data, timestamp: now() });
+            streamed.stderr += data;
+          }
         );
-        const logs = await sandbox.process.getSessionCommandLogs(
+        const full = await sandbox.process.getSessionCommandLogs(
           exec.sessionId,
           exec.commandId
         );
-        logger.debug("Command logs", logs);
+        const unstreamed = {
+          stdout: (full.stdout ?? "").slice(streamed.stdout.length),
+          stderr: (full.stderr ?? "").slice(streamed.stderr.length),
+        };
+        if (unstreamed.stdout) {
+          logger.debug("Unstreamed stdout", {
+            length: unstreamed.stdout.length,
+            data: unstreamed.stdout.slice(0, 512),
+          });
+          add({ type: "stdout", data: unstreamed.stdout, timestamp: now() });
+        }
+        if (unstreamed.stderr) {
+          logger.debug("Unstreamed stderr", {
+            length: unstreamed.stderr.length,
+            data: unstreamed.stderr.slice(0, 512),
+          });
+          add({ type: "stderr", data: unstreamed.stderr, timestamp: now() });
+        }
 
         const result = await sandbox.process.getSessionCommand(
           exec.sessionId,

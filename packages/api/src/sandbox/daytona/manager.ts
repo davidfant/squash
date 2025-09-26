@@ -71,7 +71,15 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
           })();
 
           await this.storage.set("sandboxId", sandbox.id);
-          if (sandbox.state !== "started") await sandbox.start();
+          // TODO: add better handling when this fails because of "State change in progress"
+          if (sandbox.state !== "started") {
+            await sandbox.start().catch((error) => {
+              logger.error("Error starting sandbox", {
+                error,
+                state: sandbox.state,
+              });
+            });
+          }
         },
       },
       {
@@ -183,14 +191,14 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
             stderr: unstreamed.stderr.length,
           },
         });
-        if (unstreamed.stdout) {
+        if (!!unstreamed.stdout.length) {
           logger.debug("Unstreamed stdout", {
             length: unstreamed.stdout.length,
             data: unstreamed.stdout.slice(0, 512),
           });
           add({ type: "stdout", data: unstreamed.stdout, timestamp: now() });
         }
-        if (unstreamed.stderr) {
+        if (!!unstreamed.stderr.length) {
           logger.debug("Unstreamed stderr", {
             length: unstreamed.stderr.length,
             data: unstreamed.stderr.slice(0, 512),

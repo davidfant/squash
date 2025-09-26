@@ -63,7 +63,7 @@ const app = new Hono<{ Bindings: CloudflareBindings }>()
       cause: err.cause,
       message: err.message,
     });
-    throw err;
+    return c.json({ error: "Internal server error" }, 500);
   });
 
 export default app;

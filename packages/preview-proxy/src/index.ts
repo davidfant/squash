@@ -14,19 +14,21 @@ export default {
     }
 
     const upstream = new URL(req.url);
-    upstream.hostname = `${previewId}.fly.dev`;
+    upstream.hostname = `${previewId}.proxy.daytona.works`;
+    // upstream.hostname = previewId.replaceAll("---", ".");
     upstream.port = "";
 
     if (req.headers.get("upgrade")?.toLowerCase() === "websocket") {
       return fetch(upstream, req);
     }
 
-    req.headers.set("X-Daytona-Skip-Preview-Warning", "true");
-    req.headers.set("X-Daytona-Disable-CORS", "true");
+    const headers = new Headers(req.headers);
+    headers.set("X-Daytona-Skip-Preview-Warning", "true");
+    headers.set("X-Daytona-Disable-CORS", "true");
 
     const init: RequestInit = {
       method: req.method,
-      headers: new Headers(req.headers),
+      headers,
       body: req.body,
       redirect: "follow",
     };

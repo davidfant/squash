@@ -157,6 +157,12 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
           (data: string) => add({ type: "stdout", data, timestamp: now() }),
           (data: string) => add({ type: "stderr", data, timestamp: now() })
         );
+        const logs = await sandbox.process.getSessionCommandLogs(
+          exec.sessionId,
+          exec.commandId
+        );
+        logger.debug("Command logs", logs);
+
         const result = await sandbox.process.getSessionCommand(
           exec.sessionId,
           exec.commandId

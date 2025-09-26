@@ -21,6 +21,9 @@ export default {
       return fetch(upstream, req);
     }
 
+    req.headers.set("X-Daytona-Skip-Preview-Warning", "true");
+    req.headers.set("X-Daytona-Disable-CORS", "true");
+
     const init: RequestInit = {
       method: req.method,
       headers: new Headers(req.headers),

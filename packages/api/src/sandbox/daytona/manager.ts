@@ -67,7 +67,10 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
             }
           }
 
-          if (!sandbox) {
+          if (
+            !sandbox ||
+            ["destroyed", "destroying"].includes(sandbox.state!)
+          ) {
             yield {
               type: "stdout",
               data: "Creating new sandbox",
@@ -88,18 +91,21 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
           }
 
           await that.storage.set("sandboxId", sandbox.id);
-          // TODO: add better handling when this fails because of "State change in progress"
           if (sandbox.state !== "started") {
             yield {
               type: "stdout",
               data: "Starting sandbox",
               timestamp: new Date().toISOString(),
             };
+            if (sandbox.state === "stopping") {
+              await sandbox.waitUntilStopped();
+            }
             await sandbox.start().catch((error) => {
               logger.error("Error starting sandbox", {
-                error,
                 state: sandbox.state,
+                error,
               });
+              throw error;
             });
           }
         },

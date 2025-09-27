@@ -434,7 +434,11 @@ const q = query({
       type: "user",
       session_id: randomUUID(),
       parent_tool_use_id: null,
-      message: { role: "user", content: "who ar eyou" },
+      message: {
+        role: "user",
+        content:
+          "do exactly as i say!! first read src/test.ts and then write the content to `const a: boolean = 321;`, then tell me what error you get",
+      },
     };
   })(),
   options: {
@@ -447,6 +451,7 @@ const q = query({
         {
           hooks: [
             async () => {
+              console.log("XXX USER PROMPT SUBMIT");
               return {
                 continue: true,
                 systemMessage: "Always respond in Swedish",

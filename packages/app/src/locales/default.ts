@@ -10,17 +10,17 @@ export default {
       signIn: {
         title: "Welcome back",
         description:
-          "To continue building with Hypershape, sign in with your Google account.",
+          "To continue prototyping with Squash, sign in with your Google account.",
         buttonText: "Continue with Google",
         switch: {
-          text: "Already have an account?",
-          cta: "Sign in",
+          text: "Don't have an account?",
+          cta: "Sign up",
         },
       },
       signUp: {
         title: "Create an account",
         description:
-          "To start building with Hypershape, sign in with your Google account.",
+          "To start prototyping with Squash, sign in with your Google account.",
         buttonText: "Continue with Google",
         switch: {
           text: "Already have an account?",

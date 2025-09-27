@@ -93,6 +93,7 @@ export const invitation = pgTable("invitation", {
   inviterId: uuid("inviter_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
+  path: text("path"),
   usageCount: integer("usage_count").default(0).notNull(),
   maxUsages: integer("max_usages").default(1).notNull(),
 });
@@ -103,7 +104,7 @@ export const organizationRelations = relations(organization, ({ many }) => ({
 }));
 
 export const jwks = pgTable("jwks", {
-  id: uuid("id").primaryKey(),         
+  id: uuid("id").primaryKey(),
   publicKey: text("public_key").notNull(),
   privateKey: text("private_key").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),

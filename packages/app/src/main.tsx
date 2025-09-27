@@ -8,10 +8,11 @@ import { BrowserRouter, Route, Routes } from "react-router";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import "./index.css";
 import resources from "./locales/default";
+import { InvitePage } from "./routes/auth/invite";
+import { LoginPage } from "./routes/auth/login";
 import { BranchPage } from "./routes/branches";
 import { ExtensionAuthPage } from "./routes/extension-auth";
 import { LandingPage } from "./routes/landing";
-import { LoginPage } from "./routes/login";
 import { NewRepoFromProvider, NewRepoPage } from "./routes/new/repo";
 import { NewRepoManualPage } from "./routes/new/repo/manual";
 
@@ -32,6 +33,7 @@ createRoot(document.getElementById("root")!).render(
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/invite/:inviteId" element={<InvitePage />} />
             <Route path="/extension-auth" element={<ExtensionAuthPage />} />
             <Route path="/branches/:branchId" element={<BranchPage />} />
             <Route path="/new/repo" element={<NewRepoPage />} />

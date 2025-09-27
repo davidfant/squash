@@ -2,7 +2,7 @@ import { requireActiveOrganization, requireAuth } from "@/auth/middleware";
 import type { Database } from "@/database";
 import * as schema from "@/database/schema";
 import { generateText } from "@/lib/ai";
-import { zUserMessagePart } from "@/routers/schemas";
+import { zUserMessagePart } from "@/routers/zod";
 import { zSandboxSnapshotConfig } from "@/sandbox/zod";
 import { google } from "@ai-sdk/google";
 import { zValidator } from "@hono/zod-validator";

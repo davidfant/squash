@@ -18,21 +18,15 @@ export default {
     // upstream.hostname = previewId.replaceAll("---", ".");
     upstream.port = "";
 
-    if (req.headers.get("upgrade")?.toLowerCase() === "websocket") {
-      return fetch(upstream, req);
-    }
-
     const headers = new Headers(req.headers);
     headers.set("X-Daytona-Skip-Preview-Warning", "true");
     headers.set("X-Daytona-Disable-CORS", "true");
 
-    const init: RequestInit = {
+    return fetch(upstream, {
       method: req.method,
       headers,
       body: req.body,
       redirect: "follow",
-    };
-
-    return fetch(upstream, init);
+    });
   },
 };

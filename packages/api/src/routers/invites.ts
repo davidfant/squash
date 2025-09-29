@@ -196,23 +196,24 @@ export const invitesRouter = new Hono<{
         }
 
         // Add user to organization
-        await db.transaction(async (tx) => {
-          await tx.insert(schema.member).values({
+        const tx = db;
+        // await db.transaction(async (tx) => {
+        await Promise.all([
+          tx.insert(schema.member).values({
             userId: user.id,
             organizationId: invite.organizationId,
             role: invite.role,
-          });
-
-          await tx
+          }),
+          tx
             .update(schema.invitation)
             .set({ usageCount: invite.usageCount + 1 })
-            .where(eq(schema.invitation.id, invite.id));
-
-          await tx
+            .where(eq(schema.invitation.id, invite.id)),
+          tx
             .update(schema.session)
             .set({ activeOrganizationId: invite.organizationId })
-            .where(eq(schema.session.userId, user.id));
-        });
+            .where(eq(schema.session.userId, user.id)),
+        ]);
+        // });
 
         return c.json({
           success: true,

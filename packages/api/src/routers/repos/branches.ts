@@ -204,20 +204,7 @@ export const repoBranchesRouter = new Hono<{
         }
       })();
 
-      const target = new URL(await sandbox.getPreviewUrl());
-      const proxy = new URL(c.env.PREVIEW_PROXY_URL);
-      const url = [
-        proxy.protocol,
-        "//",
-        // target.hostname.replaceAll(".", "---"),
-        target.hostname.split(".")[0],
-        ".",
-        proxy.host,
-        target.pathname,
-        target.search,
-        target.hash,
-      ].join("");
-      return c.json({ url, sha });
+      return c.json({ sha, url: await sandbox.getPreviewUrl() });
     }
   )
   .get(

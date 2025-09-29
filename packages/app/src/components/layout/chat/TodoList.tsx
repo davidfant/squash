@@ -12,8 +12,7 @@ interface TodoListProps {
 }
 
 export function TodoList({ todos }: TodoListProps) {
-  if (!todos.length) return null;
-
+  if (!todos.filter((t) => t.status !== "completed").length) return null;
   return (
     <div className="space-y-1">
       {todos.map((todo, index) => {

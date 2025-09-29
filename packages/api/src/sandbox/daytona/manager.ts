@@ -329,7 +329,20 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
     ]);
     const sandbox = await this.daytona.get(sandboxId);
     const preview = await sandbox.getPreviewLink(options.config.port);
-    return preview.url;
+
+    const target = new URL(preview.url);
+    const proxy = new URL(env.PREVIEW_PROXY_URL);
+    return [
+      proxy.protocol,
+      "//",
+      // target.hostname.replaceAll(".", "---"),
+      target.hostname.split(".")[0],
+      ".",
+      proxy.host,
+      target.pathname,
+      target.search,
+      target.hash,
+    ].join("");
   }
 
   async destroy(): Promise<void> {

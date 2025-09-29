@@ -45,6 +45,8 @@ export async function streamClaudeCodeAgent(
             JSON.stringify(prompt.content),
             "--options",
             JSON.stringify({ appendSystemPrompt }),
+            "--model",
+            "claude-sonnet-4-5-20250929",
             ...(session?.data
               ? ["--session", JSON.stringify(session.data.data)]
               : []),

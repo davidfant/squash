@@ -1,5 +1,11 @@
 # @squashai/cli
 
+## 0.0.6
+
+### Patch Changes
+
+- add model option
+
 ## 0.0.5
 
 ### Patch Changes

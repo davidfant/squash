@@ -9,7 +9,7 @@ import { zValidator } from "@hono/zod-validator";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { Hono } from "hono";
 import z from "zod";
-import { zUserMessagePart } from "../schemas";
+import { zUserMessagePart } from "../zod";
 import { requireRepoBranch } from "./middleware";
 
 export const repoBranchesRouter = new Hono<{

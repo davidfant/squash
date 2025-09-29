@@ -50,12 +50,12 @@ export function groupMessageEvents(parts: ChatMessage["parts"]): Block[] {
   let currentEvents: EventBlockItem[] = [];
   let todos: Todo[] = [];
 
-  const flushEvents = () => {
+  const flushEvents = (streaming: boolean = false) => {
     if (!!currentEvents.length) {
       blocks.push({
         type: "events",
         events: currentEvents,
-        streaming: false,
+        streaming,
       });
       currentEvents = [];
     }
@@ -216,7 +216,7 @@ export function groupMessageEvents(parts: ChatMessage["parts"]): Block[] {
     }
   }
 
-  flushEvents();
+  flushEvents(true);
 
   return blocks;
 }

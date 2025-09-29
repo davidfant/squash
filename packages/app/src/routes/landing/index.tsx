@@ -63,7 +63,7 @@ export function LandingPage() {
           hidden: true,
           snapshot: {
             type: "daytona",
-            snapshot: "base-vite-ts:v0.0.1",
+            snapshot: "base-vite-ts:v0.0.2",
             port: 5173,
             cwd: "/repo",
             env: {},

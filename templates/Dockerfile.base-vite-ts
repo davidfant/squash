@@ -18,6 +18,7 @@ COPY vite.config.js .
 COPY tsconfig.json .
 COPY index.html .
 COPY src/ ./src/
+COPY .claude/ .claude/
 
 RUN git init \
  && git add . \

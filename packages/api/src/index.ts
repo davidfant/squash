@@ -10,6 +10,7 @@ import { databaseMiddleware } from "./database/middleware";
 import { createSignedUrl } from "./lib/cloudflare";
 import { logger } from "./lib/logger";
 import { githubRouter } from "./routers/integrations/github";
+import { invitesRouter } from "./routers/invites";
 import { reposRouter } from "./routers/repos";
 import { repoBranchesRouter } from "./routers/repos/branches";
 import { repoProvidersRouter } from "./routers/repos/providers";
@@ -24,6 +25,7 @@ const app = new Hono<{ Bindings: CloudflareBindings }>()
   .route("/repos/providers", repoProvidersRouter)
   .route("/repos/branches", repoBranchesRouter)
   .route("/repos", reposRouter)
+  .route("/invites", invitesRouter)
   .route("/integrations/github", githubRouter)
   .post(
     "/upload",

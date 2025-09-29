@@ -7,6 +7,7 @@ import {
   useCallback,
   useState,
   type ClipboardEvent,
+  type DragEvent,
   type ReactNode,
 } from "react";
 import {
@@ -54,6 +55,7 @@ export function ChatInput({
   clearOnSubmit?: boolean;
 }) {
   const [value, setValue] = useState(initialValue?.text ?? "");
+  const [isDragOver, setIsDragOver] = useState(false);
   const uploads = useChatInputFileUploads();
   const dictation = useDictation((t) => setValue((v) => (v ? `${v} ${t}` : t)));
 
@@ -74,6 +76,57 @@ export function ChatInput({
       uploads.add(clipboardFiles);
     },
     [disabled, uploads]
+  );
+
+  const handleDragEnter = useCallback(
+    (event: DragEvent<HTMLDivElement>) => {
+      if (disabled) return;
+      const hasFiles = Array.from(event.dataTransfer?.items ?? []).some(
+        (item) => item.kind === "file"
+      );
+      if (!hasFiles) return;
+      event.preventDefault();
+      event.stopPropagation();
+      setIsDragOver(true);
+    },
+    [disabled]
+  );
+
+  const handleDragOver = useCallback(
+    (event: DragEvent<HTMLDivElement>) => {
+      if (disabled) return;
+      const hasFiles = Array.from(event.dataTransfer?.items ?? []).some(
+        (item) => item.kind === "file"
+      );
+      if (!hasFiles) return;
+      event.preventDefault();
+      event.stopPropagation();
+      event.dataTransfer.dropEffect = "copy";
+      if (!isDragOver) {
+        setIsDragOver(true);
+      }
+    },
+    [disabled, isDragOver]
+  );
+
+  const handleDragLeave = useCallback((event: DragEvent<HTMLDivElement>) => {
+    const nextTarget = event.relatedTarget as Node | null;
+    if (!nextTarget || !event.currentTarget.contains(nextTarget)) {
+      setIsDragOver(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback(
+    (event: DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setIsDragOver(false);
+      if (disabled) return;
+      const files = Array.from(event.dataTransfer?.files ?? []);
+      if (!files.length) return;
+      uploads.add(files);
+    },
+    [disabled, uploads.add]
   );
 
   const handleSubmit = async () => {
@@ -129,7 +182,16 @@ export function ChatInput({
   })();
 
   return (
-    <Card className="p-2 transition-all shadow-none border border-input focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-4">
+    <Card
+      className={cn(
+        "relative p-2 transition-all shadow-none border border-input focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-4 overflow-hidden",
+        isDragOver && "border-blue-500 ring-blue-500/40 ring-4"
+      )}
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       <CardContent className="flex flex-col gap-2 p-0">
         {uploads.input}
         {uploads.files.length > 0 && (
@@ -183,6 +245,16 @@ export function ChatInput({
           {buttons}
         </div>
       </CardContent>
+      <div
+        className={cn(
+          "pointer-events-none absolute inset-0 bg-background opacity-0 transition-opacity text-sm font-medium text-blue-500",
+          isDragOver && "opacity-100"
+        )}
+      >
+        <div className="flex items-center justify-center h-full w-full bg-blue-500/10">
+          Drop files to attach
+        </div>
+      </div>
     </Card>
   );
 }

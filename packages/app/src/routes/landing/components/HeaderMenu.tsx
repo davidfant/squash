@@ -44,17 +44,17 @@ export function HeaderMenu() {
     }
   };
 
-  if (!session.data?.user || !active) return null;
+  if (!session.data?.user) return null;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" disabled={isSwitching} className="gap-2 px-2">
           <Avatar
             image={active?.logo ?? ""}
-            name={active?.name}
+            name={active?.name ?? ""}
             className="size-6"
           />
-          <span>{active.name}</span>
+          <span>{active?.name ?? ""}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
@@ -63,11 +63,13 @@ export function HeaderMenu() {
           <div className="flex items-center gap-3">
             <Avatar
               image={active?.logo ?? ""}
-              name={active.name}
+              name={active?.name ?? ""}
               className="size-8"
             />
             <div className="flex flex-col">
-              <span className="text-sm font-semibold">{active.name}</span>
+              <span className="text-sm font-semibold">
+                {active?.name ?? ""}
+              </span>
               <span className="text-xs text-muted-foreground">
                 {session.data.user.email}
               </span>

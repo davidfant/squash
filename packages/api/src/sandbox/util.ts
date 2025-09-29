@@ -168,6 +168,8 @@ export const executeTasks = (
               inputTextDelta: d,
             });
             input.events.push(e);
+
+            if (e.type === "error") throw new Error(e.error);
           }
 
           completed.add(task.id);

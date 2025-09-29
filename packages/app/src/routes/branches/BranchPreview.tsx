@@ -1,12 +1,9 @@
-import { Alert, AlertTitle } from "@/components/ui/alert";
+import { SandboxTaskStream } from "@/components/blocks/SandboxTaskStream";
 import { Card } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useChat } from "@ai-sdk/react";
 import type { StartSandboxMessage } from "@squashai/api/agent/types";
 import { DefaultChatTransport } from "ai";
-import { AnimatePresence, motion } from "framer-motion";
-import { AlertCircle, Check, Loader2 } from "lucide-react";
 import { useRef } from "react";
 import { useBranchContext } from "./context";
 
@@ -100,48 +97,7 @@ export function BranchPreview({ className }: { className?: string }) {
 
   const placeholder = (
     <div className="flex flex-col gap-2 h-full items-center justify-center">
-      <AnimatePresence initial={false}>
-        <motion.div
-          layout
-          key="label"
-          transition={{ duration: 0.18, ease: "easeOut" }}
-        >
-          <Label className="text-muted-foreground">
-            Your preview is loading...
-          </Label>
-        </motion.div>
-        {tasks.map((t) => {
-          const alert =
-            t.state === "output-error" ? (
-              <Alert variant="destructive">
-                <AlertCircle />
-                <AlertTitle>{t.input?.title}</AlertTitle>
-              </Alert>
-            ) : (
-              <Alert className="text-muted-foreground">
-                {t.state === "output-available" ? (
-                  <Check />
-                ) : (
-                  <Loader2 className="animate-spin" />
-                )}
-                <AlertTitle>{t.input?.title}</AlertTitle>
-              </Alert>
-            );
-          return (
-            <motion.div
-              layout
-              key={t.toolCallId}
-              initial={{ opacity: 0, scale: 0.95, y: -6 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.93, y: 6 }}
-              transition={{ duration: 0.18, ease: "easeOut" }}
-              className="w-full max-w-sm"
-            >
-              {alert}
-            </motion.div>
-          );
-        })}
-      </AnimatePresence>
+      <SandboxTaskStream stream={stream} label="Your preview is loading..." />
     </div>
   );
 

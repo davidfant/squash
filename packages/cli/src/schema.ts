@@ -41,6 +41,7 @@ export const ClaudeCodeOptionsSchema = z.object({
 export const ClaudeCodeCLIOptionsSchema = z.object({
   agent: z.enum(["claude-code"]),
   prompt: z.preprocess(parseJson, PromptSchema),
+  model: z.string().optional(),
   session: z.preprocess(parseJson, ClaudeCodeSessionSchema).optional(),
   options: z.preprocess(parseJson, ClaudeCodeOptionsSchema).optional(),
   cwd: z.string().default(process.cwd()),

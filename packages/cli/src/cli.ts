@@ -27,6 +27,7 @@ export async function main(argv: string[] = process.argv) {
     .option("--agent <name>", "claude-code", "claude-code")
     .option("--prompt <prompt>")
     .option("--session <json>")
+    .option("--model <name>")
     .option("--cwd <path>", "working directory for the agent", process.cwd())
     .option("--options <json>");
   //     .addHelpText(

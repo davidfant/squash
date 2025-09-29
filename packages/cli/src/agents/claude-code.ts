@@ -56,6 +56,7 @@ export async function runClaudeCode(
     options: {
       cwd: req.cwd,
       resume: req.session?.id,
+      model: req.model,
       executable: "node",
       includePartialMessages: true,
       permissionMode: "bypassPermissions",

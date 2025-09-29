@@ -4,6 +4,7 @@ import type { ChatMessage } from "@squashai/api/agent/types";
 import { CircleSlash } from "lucide-react";
 import { useMemo } from "react";
 import { Markdown } from "../../../Markdown";
+import { useChatContext } from "../../context";
 import { EventsCollapsible } from "./EventsCollapsible";
 import { GitCommitAlert } from "./GitCommitAlert";
 import { groupMessageEvents } from "./groupMessageEvents";
@@ -16,6 +17,7 @@ export function MessageParts({
   loading?: boolean;
 }) {
   const blocks = useMemo(() => groupMessageEvents(parts), [parts]);
+  const streaming = useChatContext().status === "streaming";
   if (!blocks.length) {
     if (loading) return <Skeleton className="h-4 w-48" />;
     return (
@@ -46,7 +48,7 @@ export function MessageParts({
               <EventsCollapsible
                 key={idx}
                 events={block.events}
-                streaming={block.streaming}
+                streaming={streaming}
               />
             );
         }

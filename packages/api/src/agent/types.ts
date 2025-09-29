@@ -37,7 +37,7 @@ export type ChatMessage = UIMessage<
   InferUITools<AllTools>
 >;
 
-export type StartSandboxMessage = UIMessage<
+export type SandboxTaskMessage = UIMessage<
   ChatMessageMetadata,
   ChatMessageData,
   InferUITools<{ SandboxTask: SandboxTaskTool }>

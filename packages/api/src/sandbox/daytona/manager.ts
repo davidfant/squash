@@ -1,7 +1,10 @@
+import { createDatabase } from "@/database";
+import * as schema from "@/database/schema";
 import { logger } from "@/lib/logger";
 import { toAsyncIterator } from "@/lib/toAsyncIterator";
 import { Daytona, Sandbox as DaytonaSandbox } from "@daytonaio/sdk";
 import { env } from "cloudflare:workers";
+import { eq } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { setTimeout } from "node:timers/promises";
 import escape from "shell-escape";
@@ -111,6 +114,49 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
         },
       },
       {
+        id: "pull-latest-changes",
+        title: "Loading latest changes",
+        type: "function",
+        function: async function* () {
+          const db = createDatabase(env);
+          const repo = await db
+            .select()
+            .from(schema.repo)
+            .where(eq(schema.repo.id, options.repo.id))
+            .then(([repo]) => repo);
+          if (!repo) throw new Error(`Repo not found: ${options.repo.id}`);
+
+          logger.info("Pulling latest changes", options.repo);
+          yield* that.execute(
+            {
+              command: "sh",
+              args: [
+                "-c",
+                `
+                set -e;
+
+                if ! git remote get-url origin > /dev/null 2>&1; then
+                  git remote add origin ${repo.url}
+                  git fetch origin
+                  git reset --hard origin/${repo.defaultBranch}
+                  git checkout -b ${options.repo.branch}
+                fi`,
+              ],
+              // TODO: generate creds that can only access the specific repo if it's in the R2 bucket
+              env: {
+                AWS_ENDPOINT_URL_S3: env.R2_REPOS_ENDPOINT_URL_S3,
+                AWS_ACCESS_KEY_ID: env.R2_REPOS_ACCESS_KEY_ID,
+                AWS_SECRET_ACCESS_KEY: env.R2_REPOS_SECRET_ACCESS_KEY,
+                AWS_DEFAULT_REGION: "auto",
+              },
+              cwd: options.config.cwd,
+            },
+            undefined
+          );
+        },
+        dependsOn: ["create-sandbox"],
+      },
+      {
         id: "install-squash-cli",
         title: "Install Squash",
         dependsOn: ["create-sandbox"],
@@ -124,7 +170,11 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
       },
       ...options.config.tasks.install.map((task) => ({
         ...task,
-        dependsOn: [...(task.dependsOn ?? []), "create-sandbox"],
+        dependsOn: [
+          ...(task.dependsOn ?? []),
+          "create-sandbox",
+          "pull-latest-changes",
+        ],
       })),
       {
         id: "start-dev-server",

@@ -17,39 +17,46 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
 > {
   name = "daytona";
   private readonly daytona = new Daytona({ apiKey: env.DAYTONA_API_KEY });
+  private sandbox: DaytonaSandbox | null = null;
 
-  private async isDevServerRunning(
-    sandboxId: string,
-    devServer: { sessionId: string; commandId: string }
-  ): Promise<boolean> {
+  private async getSandbox(): Promise<DaytonaSandbox> {
+    if (this.sandbox) return this.sandbox;
+    const sandboxId = await this.storage.get("sandboxId");
+    const sandbox = await this.daytona.get(sandboxId);
+    this.sandbox = sandbox;
+    return sandbox;
+  }
+
+  private async isDevServerRunning(): Promise<boolean> {
     try {
-      const sandbox = await this.daytona.get(sandboxId);
+      const [sandbox, devServer] = await Promise.all([
+        this.getSandbox(),
+        this.storage.get("devServer", null),
+      ]);
+      if (!devServer) return false;
       const command = await sandbox.process.getSessionCommand(
         devServer.sessionId,
         devServer.commandId
       );
-      return command.exitCode === 0;
+      return command.exitCode === undefined;
     } catch {
       return false;
     }
   }
 
   async isStarted(): Promise<boolean> {
-    const sandboxId = await this.storage.get("sandboxId");
     try {
-      const sandbox = await this.daytona.get(sandboxId);
-      return sandbox.state === "started";
+      const sandbox = await this.getSandbox();
+      const isDevServerRunningP = this.isDevServerRunning();
+      await sandbox.refreshData();
+      return sandbox.state === "started" && (await isDevServerRunningP);
     } catch {
       return false;
     }
   }
 
   async getStartTasks(): Promise<Sandbox.Snapshot.Task.Any[]> {
-    const [options, sandboxId] = await Promise.all([
-      this.getOptions(),
-      this.storage.get("sandboxId", null),
-    ]);
-
+    const options = await this.getOptions();
     const that = this;
     return [
       {
@@ -57,17 +64,13 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
         title: "Start environment",
         type: "function",
         function: async function* () {
-          let sandbox: DaytonaSandbox | null = null;
-
-          if (sandboxId) {
-            sandbox = await that.daytona.get(sandboxId).catch(() => null);
-            if (sandbox) {
-              yield {
-                type: "stdout",
-                data: "Using existing sandbox",
-                timestamp: new Date().toISOString(),
-              };
-            }
+          let sandbox = await that.getSandbox().catch(() => null);
+          if (sandbox) {
+            yield {
+              type: "stdout",
+              data: "Using existing sandbox\n",
+              timestamp: new Date().toISOString(),
+            };
           }
 
           if (
@@ -76,9 +79,12 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
           ) {
             yield {
               type: "stdout",
-              data: "Creating new sandbox",
+              data: "Creating new sandbox\n",
               timestamp: new Date().toISOString(),
             };
+            logger.debug("Creating new sandbox", {
+              snapshot: options.config.snapshot,
+            });
             sandbox = await that.daytona.create({
               public: true,
               snapshot: options.config.snapshot,
@@ -86,9 +92,10 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
               autoStopInterval: 5,
               envVars: options.config.env,
             });
+            logger.debug("Created new sandbox", { sandboxId: sandbox.id });
             yield {
               type: "stdout",
-              data: "Created new sandbox",
+              data: "Created new sandbox\n",
               timestamp: new Date().toISOString(),
             };
           }
@@ -97,12 +104,16 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
           if (sandbox.state !== "started") {
             yield {
               type: "stdout",
-              data: "Starting sandbox",
+              data: "Starting sandbox\n",
               timestamp: new Date().toISOString(),
             };
             if (sandbox.state === "stopping") {
+              logger.debug("Waiting for sandbox to stop", {
+                sandboxId: sandbox.id,
+              });
               await sandbox.waitUntilStopped();
             }
+            logger.debug("Starting sandbox", { sandboxId: sandbox.id });
             await sandbox.start().catch((error) => {
               logger.error("Error starting sandbox", {
                 state: sandbox.state,
@@ -111,6 +122,8 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
               throw error;
             });
           }
+
+          that.sandbox = sandbox;
         },
       },
       {
@@ -137,8 +150,8 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
 
                 if ! git remote get-url origin > /dev/null 2>&1; then
                   git remote add origin ${repo.url}
-                  git fetch origin
-                  git reset --hard origin/${repo.defaultBranch}
+                  git fetch --depth 1 origin ${repo.defaultBranch}
+                  git checkout --force origin/${repo.defaultBranch}
                   git checkout -b ${options.repo.branch}
                 fi`,
               ],
@@ -185,18 +198,10 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
         ],
         type: "function",
         function: async function* () {
-          const [sandboxId, devServer] = await Promise.all([
-            that.storage.get("sandboxId"),
-            that.storage.get("devServer", null),
-          ]);
-          const [sandbox, isDevServerRunning] = await Promise.all([
-            that.daytona.get(sandboxId),
-            devServer && that.isDevServerRunning(sandboxId, devServer),
-          ]);
+          const isDevServerRunning = await that.isDevServerRunning();
 
-          if (!sandboxId || !isDevServerRunning) {
+          if (!isDevServerRunning) {
             const devServer = await that.startCommand(
-              sandbox,
               {
                 command: options.config.tasks.dev.command,
                 args: options.config.tasks.dev.args ?? [],
@@ -205,7 +210,7 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
             );
             yield {
               type: "stdout",
-              data: "Starting development server...",
+              data: "Starting development server...\n",
               timestamp: new Date().toISOString(),
             };
 
@@ -213,14 +218,16 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
           }
 
           while (true) {
-            const preview = await sandbox.getPreviewLink(options.config.port);
+            const preview = await that.sandbox!.getPreviewLink(
+              options.config.port
+            );
             const response = await fetch(preview.url, { method: "GET" });
             if (response.ok) {
               const text = await response.text();
               if (text.length) {
                 yield {
                   type: "stdout",
-                  data: "Dev server started",
+                  data: "Dev server started\n",
                   timestamp: new Date().toISOString(),
                 };
                 break;
@@ -229,7 +236,7 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
             logger.debug("Waiting for dev server", { url: preview.url });
             yield {
               type: "stdout",
-              data: "Waiting for dev server...",
+              data: "Waiting for dev server...\n",
               timestamp: new Date().toISOString(),
             };
             await setTimeout(200);
@@ -248,11 +255,9 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
     const now = () => new Date().toISOString();
     const gen = await toAsyncIterator<[Sandbox.Exec.Event.Any]>(async (add) => {
       try {
-        const sandboxId = await this.storage.get("sandboxId");
-        const sandbox = await this.daytona.get(sandboxId);
-
-        const exec = await this.startCommand(sandbox, request, abortSignal);
+        const exec = await this.startCommand(request, abortSignal);
         add({ type: "start", timestamp: now() });
+        const sandbox = await this.getSandbox();
 
         const streamed = { stdout: "", stderr: "" };
         await sandbox.process.getSessionCommandLogs(
@@ -341,10 +346,10 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
   }
 
   private async startCommand(
-    sandbox: DaytonaSandbox,
     request: Sandbox.Exec.Request,
     abortSignal: AbortSignal | undefined
   ): Promise<{ sessionId: string; commandId: string }> {
+    const sandbox = await this.getSandbox();
     const sessionId = randomUUID();
     logger.debug("Creating exec session", { sessionId });
     await sandbox.process.createSession(sessionId);
@@ -373,11 +378,10 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
 
   async getPreviewUrl(): Promise<string> {
     await this.waitUntilStarted();
-    const [options, sandboxId] = await Promise.all([
+    const [options, sandbox] = await Promise.all([
       this.getOptions(),
-      this.storage.get("sandboxId"),
+      this.getSandbox(),
     ]);
-    const sandbox = await this.daytona.get(sandboxId);
     const preview = await sandbox.getPreviewLink(options.config.port);
 
     const target = new URL(preview.url);
@@ -396,8 +400,7 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
   }
 
   async destroy(): Promise<void> {
-    const sandboxId = await this.storage.get("sandboxId");
-    const sandbox = await this.daytona.get(sandboxId);
+    const sandbox = await this.getSandbox();
     await sandbox.delete();
   }
 }

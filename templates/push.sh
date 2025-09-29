@@ -21,12 +21,12 @@ function build_repo() {
 
     GIT_URL=s3://repos/templates/$TEMPLATE_NAME
     # if added, set, if not, add
-    if git remote get-url origin; then
-      git remote set-url origin $GIT_URL
-    else
-      git remote add origin $GIT_URL
-    fi
-    git push --tags
+    # if git remote get-url origin; then
+    #   git remote set-url origin $GIT_URL
+    # else
+    #   git remote add origin $GIT_URL
+    # fi
+    # git push --tags
 
     DOCKER_TAG="$TEMPLATE_NAME:v$TEMPLATE_VERSION"
     echo "Docker tag: $DOCKER_TAG"

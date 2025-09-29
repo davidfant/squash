@@ -188,7 +188,15 @@ export const executeTasks = (
             error instanceof Error ? error.message : String(error);
           c.enqueue({ type: "tool-output-error", toolCallId, errorText });
           failed.add(task.id);
-          logger.error("Task failed", { taskId: task.id, error });
+          logger.error("Task failed", {
+            taskId: task.id,
+            error: {
+              stack: (error as Error).stack,
+              name: (error as Error).name,
+              cause: (error as Error).cause,
+              message: (error as Error).message,
+            },
+          });
           throw new Error(`Task ${task.id} failed: ${errorText}`);
         } finally {
           running.delete(task.id);

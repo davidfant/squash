@@ -195,16 +195,19 @@ export const repoBranchesRouter = new Hono<{
       const params = c.req.valid("param");
       const sandbox = c.env.DAYTONA_SANDBOX_MANAGER.getByName(params.branchId);
 
-      const sha = await (async () => {
-        if (body.sha && !(await sandbox.isAgentRunning())) {
-          await sandbox.gitReset(body.sha, undefined);
-          return body.sha;
-        } else {
-          return await sandbox.gitCurrentCommit(undefined);
-        }
-      })();
+      const [sha, url] = await Promise.all([
+        (async () => {
+          if (body.sha && !(await sandbox.isAgentRunning())) {
+            await sandbox.gitReset(body.sha, undefined);
+            return body.sha;
+          } else {
+            return await sandbox.gitCurrentCommit(undefined);
+          }
+        })(),
+        sandbox.getPreviewUrl(),
+      ]);
 
-      return c.json({ sha, url: await sandbox.getPreviewUrl() });
+      return c.json({ sha, url });
     }
   )
   .get(

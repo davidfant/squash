@@ -96,7 +96,7 @@ export function BranchPreview({ className }: { className?: string }) {
   // }
 
   const placeholder = (
-    <div className="flex flex-col gap-2 h-full items-center justify-center">
+    <div className="flex flex-col gap-2 h-full items-center pt-[30%] p-8 overflow-y-auto">
       <SandboxTaskStream stream={stream} label="Your preview is loading..." />
     </div>
   );
@@ -114,7 +114,9 @@ export function BranchPreview({ className }: { className?: string }) {
             )}
           />
         )}
-        <div className="absolute inset-0 z-1">{placeholder}</div>
+        <div className="absolute inset-0 z-1 overflow-y-auto">
+          {placeholder}
+        </div>
       </Card>
       {/* <AnimatePresence mode="wait">
         {comment && (

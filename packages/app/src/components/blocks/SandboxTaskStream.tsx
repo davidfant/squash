@@ -2,9 +2,15 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
 import type { UseChatHelpers } from "@ai-sdk/react";
 import type { SandboxTaskMessage } from "@squashai/api/agent/types";
+import type { Sandbox } from "@squashai/api/sandbox/types";
 import { AnimatePresence, motion } from "framer-motion";
 import { AlertCircle, Check, Loader2 } from "lucide-react";
 import { useState } from "react";
+
+const stdoutOrStderr = (
+  e: Sandbox.Exec.Event.Any
+): e is Sandbox.Exec.Event.Stdout | Sandbox.Exec.Event.Stderr =>
+  e.type === "stdout" || e.type === "stderr";
 
 export function SandboxTaskStream({
   label,
@@ -19,6 +25,8 @@ export function SandboxTaskStream({
     .flatMap((m) => m.parts)
     .filter((p) => p.type === "tool-SandboxTask")
     .filter((t) => !!t.input?.title);
+  console.log("SandboxTaskStream", tasks);
+
   if (!tasks.length) return null;
   return (
     <AnimatePresence initial={false}>
@@ -38,11 +46,11 @@ export function SandboxTaskStream({
               <AlertCircle />
               <AlertTitle>{t.input?.title}</AlertTitle>
               {showDetails && (
-                <AlertDescription>
+                <AlertDescription className="font-mono whitespace-pre-wrap">
                   {t.input?.events
-                    ?.filter((e) => e.type === "stdout" || e.type === "stderr")
-                    .map((e) => e.data)
-                    .join("\n")}
+                    ?.filter(stdoutOrStderr)
+                    .map((e) => `[${e.timestamp}] ${e.data}`)
+                    .join("")}
                 </AlertDescription>
               )}
             </Alert>
@@ -55,11 +63,11 @@ export function SandboxTaskStream({
               )}
               <AlertTitle>{t.input?.title}</AlertTitle>
               {showDetails && (
-                <AlertDescription className="font-mono">
+                <AlertDescription className="font-mono whitespace-pre-wrap">
                   {t.input?.events
-                    ?.filter((e) => e.type === "stdout" || e.type === "stderr")
-                    .map((e) => e.data)
-                    .join("\n")}
+                    ?.filter(stdoutOrStderr)
+                    .map((e) => `[${e.timestamp}] ${e.data}`)
+                    .join("")}
                 </AlertDescription>
               )}
             </Alert>

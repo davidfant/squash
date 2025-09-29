@@ -2,7 +2,7 @@ import { SandboxTaskStream } from "@/components/blocks/SandboxTaskStream";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useChat } from "@ai-sdk/react";
-import type { StartSandboxMessage } from "@squashai/api/agent/types";
+import type { SandboxTaskMessage } from "@squashai/api/agent/types";
 import { DefaultChatTransport } from "ai";
 import { useRef } from "react";
 import { useBranchContext } from "./context";
@@ -11,7 +11,7 @@ export function BranchPreview({ className }: { className?: string }) {
   const { screenSize, previewPath, preview, branch } = useBranchContext();
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  const stream = useChat<StartSandboxMessage>({
+  const stream = useChat<SandboxTaskMessage>({
     messages: [],
     resume: true,
     transport: new DefaultChatTransport({

@@ -385,6 +385,40 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
     return { sessionId, commandId: command.cmdId! };
   }
 
+  // async hydrateAgentSession(session: {
+  //   type: "claude-code";
+  //   id: string;
+  //   data: unknown;
+  // }): Promise<void> {
+  //   logger.debug("Hydrating agent session", {
+  //     type: session.type,
+  //     id: session.id,
+  //   });
+
+  //   const [sandbox, options] = await Promise.all([
+  //     this.getSandbox(),
+  //     this.getOptions(),
+  //   ]);
+  //   const homeDir = await sandbox.getUserHomeDir();
+  //   if (!homeDir) throw new Error("Home directory not found");
+  //   const sessionsDir = path.join(
+  //     homeDir,
+  //     ".claude",
+  //     "projects",
+  //     options.config.cwd.replace(/\//g, "-")
+  //   );
+  //   const filePath = path.join(sessionsDir, `${session.id}.jsonl`);
+  //   const sessionData = (session.data as any[])
+  //     .map((l) => JSON.stringify(l))
+  //     .join("\n");
+  //   logger.debug("Uploading agent session file", {
+  //     id: session.id,
+  //     filePath,
+  //     data: sessionData.slice(0, 512),
+  //   });
+  //   await sandbox.fs.uploadFile(Buffer.from(sessionData), filePath);
+  // }
+
   async getPreviewUrl(): Promise<string> {
     await this.waitUntilStarted();
     const [options, sandbox] = await Promise.all([

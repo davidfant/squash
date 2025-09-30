@@ -26,7 +26,6 @@ export async function main(argv: string[] = process.argv) {
     .version(pkgJson.version)
     .option("--agent <name>", "claude-code", "claude-code")
     .option("--prompt <prompt>")
-    .option("--session <json>")
     .option("--model <name>")
     .option("--cwd <path>", "working directory for the agent", process.cwd())
     .option("--options <json>");
@@ -50,5 +49,5 @@ export async function main(argv: string[] = process.argv) {
   }
 
   // exit asap even if there are active handles (process._getActiveHandles)
-  // process.exit(0);
+  process.exit(0);
 }

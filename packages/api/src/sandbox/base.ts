@@ -315,6 +315,10 @@ export abstract class BaseSandboxManagerDurableObject<
           messageMetadata: messageMetadata({ part: { type: "start" } }),
         });
 
+        const agentSession = req.messages
+          .flatMap((m) => m.parts)
+          .findLast((p) => p.type === "data-AgentSession");
+
         await raceWithAbortSignal(this.waitUntilStarted(), controller.signal);
         await raceWithAbortSignal(
           checkoutLatestCommit(req.messages, this, db),
@@ -323,6 +327,7 @@ export abstract class BaseSandboxManagerDurableObject<
         await streamClaudeCodeAgent(writer, req.messages, this, {
           env: this.env,
           threadId: req.threadId,
+          agentSessionId: agentSession?.data.id,
           previewUrl: await this.getPreviewUrl(),
           abortSignal: controller.signal,
           messageMetadata,

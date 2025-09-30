@@ -19,6 +19,7 @@ export async function streamClaudeCodeAgent(
   sandbox: Sandbox.Manager.Base,
   opts: {
     threadId: string;
+    agentSessionId: string | undefined;
     previewUrl: string;
     env: CloudflareBindings;
     abortSignal: AbortSignal;
@@ -26,13 +27,9 @@ export async function streamClaudeCodeAgent(
     onScreenshot(url: string): void;
   }
 ) {
-  const session = messages
-    .flatMap((m) => m.parts)
-    .findLast((p) => p.type === "data-AgentSession");
-
   logger.debug("Starting agent stream", {
     sandbox: sandbox.name,
-    sessionDataId: session?.id ?? null,
+    agentSessionId: opts.agentSessionId,
   });
 
   const agentStream = streamText({
@@ -44,12 +41,12 @@ export async function streamClaudeCodeAgent(
             "--prompt",
             JSON.stringify(prompt.content),
             "--options",
-            JSON.stringify({ appendSystemPrompt }),
+            JSON.stringify({
+              appendSystemPrompt,
+              sessionId: opts.agentSessionId,
+            }),
             "--model",
             "claude-sonnet-4-5-20250929",
-            ...(session?.data
-              ? ["--session", JSON.stringify(session.data.data)]
-              : []),
           ],
           env: {
             IS_SANDBOX: "1",
@@ -80,7 +77,11 @@ export async function streamClaudeCodeAgent(
               writer.write({
                 type: "data-AgentSession",
                 id: randomUUID(),
-                data: { type: "claude-code", data: data.session },
+                data: {
+                  type: "claude-code",
+                  id: data.session.id,
+                  data: data.session.data,
+                },
               });
               savedAgentSession = true;
             }

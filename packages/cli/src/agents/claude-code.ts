@@ -5,15 +5,6 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-async function hydrateSession(session: ClaudeCodeSession, dir: string) {
-  const sessionFilePath = path.join(dir, `${session.id}.jsonl`);
-  await fs.mkdir(dir, { recursive: true });
-  await fs.writeFile(
-    sessionFilePath,
-    session.steps.map((step) => JSON.stringify(step)).join("\n")
-  );
-}
-
 export async function runClaudeCode(
   req: ClaudeCodeCLIOptions,
   signal: AbortSignal
@@ -24,8 +15,6 @@ export async function runClaudeCode(
     "projects",
     req.cwd.replace(/\//g, "-")
   );
-
-  if (req.session) await hydrateSession(req.session, sessionsDir);
 
   const q = query({
     prompt: (async function* () {
@@ -55,7 +44,7 @@ export async function runClaudeCode(
     })(),
     options: {
       cwd: req.cwd,
-      resume: req.session?.id,
+      resume: req.options?.sessionId,
       model: req.model,
       executable: "node",
       includePartialMessages: true,
@@ -66,7 +55,7 @@ export async function runClaudeCode(
 
   signal.addEventListener("abort", () => q.interrupt());
 
-  let sessionId = req.session?.id;
+  let sessionId = req.options?.sessionId;
   for await (const msg of q) {
     console.log(JSON.stringify(msg));
     if (msg.type === "system" && typeof msg.session_id === "string") {
@@ -82,7 +71,7 @@ export async function runClaudeCode(
   );
   return {
     id: sessionId,
-    steps: sessionJsonl
+    data: sessionJsonl
       .split("\n")
       .filter((l) => !!l.trim())
       .map((l) => JSON.parse(l)),

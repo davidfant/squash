@@ -130,7 +130,7 @@ export namespace Sandbox {
         messages: ChatMessage[];
         threadId: string;
         branchId: string;
-      }): Promise<Response>;
+      }): Promise<void>;
       listenToAgent(): Response;
       listenToStart(): Response;
       stopAgent(): Promise<void>;

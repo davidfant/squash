@@ -241,6 +241,12 @@ export const reposRouter = new Hono<{
       const title = rawTitle.trim();
       const branchName = `${kebabCase(title)}-${branchId.split("-")[0]}`;
 
+      const manager = c.env.DAYTONA_SANDBOX_MANAGER.getByName(branchId);
+
+      if (repo.snapshot.type !== "daytona") {
+        throw new Error("Only daytona snapshots are supported for Daytona");
+      }
+
       await Promise.all([
         db.insert(schema.message).values([
           {
@@ -268,29 +274,20 @@ export const reposRouter = new Hono<{
           createdBy: user.id,
           sandboxProvider: "daytona",
         }),
+        manager.init({
+          config: repo.snapshot,
+          repo: { id: repoId, branch: branchName },
+        }),
       ]);
 
-      if (repo.snapshot.type !== "daytona") {
-        throw new Error("Only daytona snapshots are supported for Daytona");
-      }
-
-      const config = repo.snapshot;
-      const promise = (async () => {
-        const manager = c.env.DAYTONA_SANDBOX_MANAGER.getByName(branchId);
-        await manager.init({
-          config,
-          repo: { id: repoId, branch: branchName },
-        });
-        await manager.startAgent({
-          messages: [
-            { id: parentId, role: "system", parts: [] },
-            { id: messageId, role: "user", parts: message.parts },
-          ],
-          threadId: thread.id,
-          branchId,
-        });
-      })();
-      c.executionCtx.waitUntil(promise);
+      await manager.startAgent({
+        messages: [
+          { id: parentId, role: "system", parts: [] },
+          { id: messageId, role: "user", parts: message.parts },
+        ],
+        threadId: thread.id,
+        branchId,
+      });
 
       return c.json({ id: branchId });
     }

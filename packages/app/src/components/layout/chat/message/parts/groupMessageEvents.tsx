@@ -28,6 +28,10 @@ interface GitCommitBlock {
   sha: string;
 }
 
+interface LoadingBlock {
+  type: "loading";
+}
+
 export interface EventBlockItem {
   icon: LucideIcon;
   loading: boolean;
@@ -40,7 +44,12 @@ interface EventBlock {
   streaming: boolean;
 }
 
-type Block = TextBlock | AbortBlock | GitCommitBlock | EventBlock;
+type Block =
+  | TextBlock
+  | AbortBlock
+  | GitCommitBlock
+  | EventBlock
+  | LoadingBlock;
 
 const isToolLoading = (state: `input-${string}` | `output-${string}`) =>
   state.startsWith("input-");
@@ -217,6 +226,15 @@ export function groupMessageEvents(parts: ChatMessage["parts"]): Block[] {
   }
 
   flushEvents(true);
+
+  const lastBlock = blocks[blocks.length - 1];
+  if (
+    !lastBlock ||
+    (lastBlock.type === "events" &&
+      !lastBlock.events.some((event) => event.loading))
+  ) {
+    blocks.push({ type: "loading" });
+  }
 
   return blocks;
 }

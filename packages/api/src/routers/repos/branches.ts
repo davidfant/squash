@@ -167,11 +167,12 @@ export const repoBranchesRouter = new Hono<{
       });
 
       const sandbox = c.env.DAYTONA_SANDBOX_MANAGER.getByName(params.branchId);
-      return sandbox.startAgent({
+      await sandbox.startAgent({
         messages,
         threadId,
         branchId: params.branchId,
       });
+      return sandbox.listenToAgent();
     }
   )
   .get(

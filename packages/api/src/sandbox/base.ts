@@ -205,7 +205,7 @@ export abstract class BaseSandboxManagerDurableObject<
     messages: ChatMessage[];
     threadId: string;
     branchId: string;
-  }): Promise<Response> {
+  }) {
     await this.state.blockConcurrencyWhile(async () => {
       if (!this.handles.agent) {
         logger.debug("Starting new agent run because no run is active");
@@ -229,8 +229,6 @@ export abstract class BaseSandboxManagerDurableObject<
       };
       this.handles.agent = agent;
     });
-
-    return this.listenToAgent();
   }
 
   listenToAgent(): Response {

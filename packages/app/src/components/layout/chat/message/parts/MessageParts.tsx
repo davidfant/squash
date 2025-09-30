@@ -7,17 +7,10 @@ import { EventsCollapsible } from "./EventsCollapsible";
 import { GitCommitAlert } from "./GitCommitAlert";
 import { groupMessageEvents } from "./groupMessageEvents";
 
-export function MessageParts({
-  parts,
-  loading,
-}: {
-  parts: ChatMessage["parts"];
-  loading?: boolean;
-}) {
+export function MessageParts({ parts }: { parts: ChatMessage["parts"] }) {
   const blocks = useMemo(() => groupMessageEvents(parts), [parts]);
   const streaming = useChatContext().status === "streaming";
   if (!blocks.length) {
-    if (loading) return <Skeleton className="h-4 w-48" />;
     return (
       <p className="text-muted-foreground italic">
         Failed to respond. Please try again.
@@ -49,6 +42,8 @@ export function MessageParts({
                 streaming={streaming}
               />
             );
+          case "loading":
+            return <Skeleton className="h-4 w-48" />;
         }
       })}
     </div>

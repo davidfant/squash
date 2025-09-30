@@ -16,6 +16,7 @@ import type { Sandbox } from "./types";
 import {
   checkoutLatestCommit,
   executeTasks,
+  raceWithAbortSignal,
   runCommand,
   storage,
   type Storage,
@@ -222,8 +223,7 @@ export abstract class BaseSandboxManagerDurableObject<
         controller,
         buffer: [],
         listeners: new Map(),
-        done: this.waitUntilStarted()
-          .then(() => this.createAgentStream(req, controller))
+        done: this.createAgentStream(req, controller)
           .then((s) => (s ? this.consumeStream(s, agent) : undefined))
           .finally(() => (this.handles.agent = null)),
       };
@@ -267,10 +267,9 @@ export abstract class BaseSandboxManagerDurableObject<
     },
     controller: AbortController
   ) {
-    if (controller.signal.aborted) return undefined;
-
     const db = createDatabase(env);
     const nextParentId = req.messages.slice(-1)[0]!.id;
+
     logger.info("Creating agent run", {
       messages: req.messages.length,
       threadId: req.threadId,
@@ -318,7 +317,11 @@ export abstract class BaseSandboxManagerDurableObject<
           messageMetadata: messageMetadata({ part: { type: "start" } }),
         });
 
-        await checkoutLatestCommit(req.messages, this, db);
+        await raceWithAbortSignal(this.waitUntilStarted(), controller.signal);
+        await raceWithAbortSignal(
+          checkoutLatestCommit(req.messages, this, db),
+          controller.signal
+        );
         await streamClaudeCodeAgent(writer, req.messages, this, {
           env: this.env,
           threadId: req.threadId,
@@ -339,6 +342,7 @@ export abstract class BaseSandboxManagerDurableObject<
   async stopAgent(): Promise<void> {
     if (!this.handles.agent) return;
 
+    logger.info("Stopping agent");
     this.handles.agent.controller.abort(
       new DOMException("user-abort", "AbortError")
     );

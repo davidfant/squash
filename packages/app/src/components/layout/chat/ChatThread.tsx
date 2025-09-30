@@ -7,17 +7,16 @@ import {
   type ChatInputValue,
 } from "@/components/layout/chat/input/ChatInput";
 import { ChatInputFileUploadsProvider } from "@/components/layout/chat/input/ChatInputFileUploadsContext";
-import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { api, useMutation } from "@/hooks/api";
 import { useBranchContext } from "@/routes/branches/context";
 import type { ChatMessage } from "@squashai/api/agent/types";
 import type { FileUIPart } from "ai";
-import { AlertCircle } from "lucide-react";
 import { useMemo, useState } from "react";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import { v4 as uuid } from "uuid";
+import { ChatErrorAlert } from "./ChatErrorAlert";
 import { useChatContext } from "./context";
 import { AssistantMessage } from "./message/AssistantMessage";
 import { UserMessage } from "./message/UserMessage";
@@ -148,6 +147,7 @@ export function ChatThread({
     [messages.activePath]
   );
 
+  console.log("ChatThread.activePath", messages.activePath);
   return (
     <StickToBottom
       key={String(ready)}
@@ -157,7 +157,7 @@ export function ChatThread({
     >
       <div className="flex-1 w-full overflow-hidden relative">
         <ConversationContent className="pt-0 pl-2 pb-2 pr-4">
-          {messages.activePath.map((m) => {
+          {messages.activePath.map((m, idx) => {
             switch (m.role) {
               case "user":
                 const isEditing = editingMessageId === m.id;
@@ -216,6 +216,7 @@ export function ChatThread({
                     loading={
                       m.id === mostRecentMessageId && status === "streaming"
                     }
+                    isLast={idx === messages.activePath.length - 1}
                     className="mb-4"
                     onRetry={() => handleRetry(m.id)}
                   />
@@ -230,14 +231,13 @@ export function ChatThread({
             />
           )}
 
-          {status === "error" && (
-            <div className="ml-7">
-              <Alert className="text-muted-foreground">
-                <AlertCircle className="w-4 h-4" />
-                <AlertTitle>{error?.message ?? "Unknown error"}</AlertTitle>
-              </Alert>
-            </div>
-          )}
+          {messages.activePath[messages.activePath.length - 1]?.role !==
+            "assistant" &&
+            status === "error" && (
+              <div className="ml-7">
+                <ChatErrorAlert />
+              </div>
+            )}
         </ConversationContent>
         <ConversationScrollButton />
       </div>

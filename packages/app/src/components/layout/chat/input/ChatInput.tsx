@@ -130,6 +130,7 @@ export function ChatInput({
   );
 
   const handleSubmit = async () => {
+    if (disabled) return;
     if (!value.length && !uploads.files.length) return;
     const submittedValue = { text: value, files: uploads.files };
     try {

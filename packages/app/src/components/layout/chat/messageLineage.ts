@@ -19,7 +19,8 @@ export interface VariantOptions {
   activeIndex: number;
 }
 
-const ts = (m: ChatMessage) => new Date(m.metadata!.createdAt).getTime();
+const ts = (m: ChatMessage) =>
+  new Date(m.metadata?.createdAt ?? Date.now()).getTime();
 const getMessageAt = (messages: ChatMessage[]) =>
   new Map(messages.map((m) => [m.id, ts(m)]));
 const isAfter = (a: Leaf, b: Leaf) =>
@@ -38,7 +39,7 @@ function indexThread(messages: ChatMessage[]) {
   const children = new Map<string | null, ChatMessage[]>();
 
   for (const m of messages) {
-    const key = m.metadata!.parentId ?? null;
+    const key = m.metadata?.parentId ?? null;
     if (!children.has(key)) children.set(key, []);
     children.get(key)!.push(m);
   }

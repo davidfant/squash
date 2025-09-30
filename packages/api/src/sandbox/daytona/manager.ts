@@ -331,7 +331,12 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
           error: (error as Error).message,
           timestamp: now(),
         });
-        logger.error("Error executing command", error);
+        logger.error("Error executing command", {
+          stack: (error as Error).stack,
+          name: (error as Error).name,
+          cause: (error as Error).cause,
+          message: (error as Error).message,
+        });
       }
     });
 
@@ -351,7 +356,11 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
   ): Promise<{ sessionId: string; commandId: string }> {
     const sandbox = await this.getSandbox();
     const sessionId = randomUUID();
-    logger.debug("Creating exec session", { sessionId });
+    logger.debug("Creating exec session", {
+      sessionId,
+      command: request.command,
+      args: request.args,
+    });
     await sandbox.process.createSession(sessionId);
 
     if (abortSignal?.aborted) {

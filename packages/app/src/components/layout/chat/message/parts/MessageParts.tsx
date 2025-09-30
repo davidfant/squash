@@ -2,14 +2,24 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { ChatMessage } from "@squashai/api/agent/types";
 import { useMemo } from "react";
 import { Markdown } from "../../../Markdown";
-import { useChatContext } from "../../context";
 import { EventsCollapsible } from "./EventsCollapsible";
 import { GitCommitAlert } from "./GitCommitAlert";
 import { groupMessageEvents } from "./groupMessageEvents";
 
-export function MessageParts({ parts }: { parts: ChatMessage["parts"] }) {
-  const blocks = useMemo(() => groupMessageEvents(parts), [parts]);
-  const streaming = useChatContext().status === "streaming";
+export function MessageParts({
+  id,
+  parts,
+  streaming = false,
+}: {
+  id: string;
+  parts: ChatMessage["parts"];
+  streaming?: boolean;
+}) {
+  const blocks = useMemo(
+    () => groupMessageEvents(parts, streaming),
+    [parts, streaming]
+  );
+  console.log("MessageParts", { id, streaming, blocks });
   if (!blocks.length) {
     return (
       <p className="text-muted-foreground italic">

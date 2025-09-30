@@ -26,7 +26,7 @@ export function UserMessage({
         <div className="flex flex-wrap gap-2 justify-end mt-1">{files}</div>
       )}
       <div className="w-max max-w-[75%] rounded-xl px-4 py-3 bg-muted">
-        <MessageParts parts={message.parts} />
+        <MessageParts id={message.id} parts={message.parts} />
       </div>
 
       <UserMessageActions

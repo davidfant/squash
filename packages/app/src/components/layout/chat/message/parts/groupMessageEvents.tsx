@@ -54,7 +54,10 @@ type Block =
 const isToolLoading = (state: `input-${string}` | `output-${string}`) =>
   state.startsWith("input-");
 
-export function groupMessageEvents(parts: ChatMessage["parts"]): Block[] {
+export function groupMessageEvents(
+  parts: ChatMessage["parts"],
+  streaming: boolean
+): Block[] {
   const blocks: Block[] = [];
   let currentEvents: EventBlockItem[] = [];
   let todos: Todo[] = [];
@@ -227,11 +230,10 @@ export function groupMessageEvents(parts: ChatMessage["parts"]): Block[] {
 
   flushEvents(true);
 
-  const lastBlock = blocks[blocks.length - 1];
+  const last = blocks[blocks.length - 1];
   if (
-    !lastBlock ||
-    (lastBlock.type === "events" &&
-      !lastBlock.events.some((event) => event.loading))
+    (streaming && !last) ||
+    (last?.type === "events" && !last.events.some((ev) => ev.loading))
   ) {
     blocks.push({ type: "loading" });
   }

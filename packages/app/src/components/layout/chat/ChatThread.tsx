@@ -77,7 +77,7 @@ export function ChatThread({
   const messages = useMessageLineage(allMessages, id);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
 
-  const mostRecentMessageId = messages.activePath.slice(-1)[0]?.id;
+  const lastMessageId = messages.activePath.slice(-1)[0]?.id;
 
   const handleRetry = (assistantId: string) => {
     if (status === "submitted" || status === "streaming") return;
@@ -213,10 +213,8 @@ export function ChatThread({
                   <AssistantMessage
                     key={m.id}
                     message={m}
-                    loading={
-                      m.id === mostRecentMessageId && status === "streaming"
-                    }
-                    isLast={idx === messages.activePath.length - 1}
+                    streaming={status === "streaming" && m.id === lastMessageId}
+                    isLast={m.id === lastMessageId}
                     className="mb-4"
                     onRetry={() => handleRetry(m.id)}
                   />
@@ -226,7 +224,8 @@ export function ChatThread({
           {status === "submitted" && (
             <AssistantMessage
               message={{ id: "", role: "assistant", parts: [] }}
-              loading
+              isLast
+              streaming
               className="mb-4"
             />
           )}

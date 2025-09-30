@@ -26,7 +26,7 @@
     "dev:tsc": "tsc --watch --preserveWatchOutput",
     "drizzle:migrate:dev": "drizzle-kit push",
     "drizzle:migrate:prod": "DOTENV_CONFIG_PATH=.prod.vars drizzle-kit migrate",
-    "push": "wrangler deploy --minify --env production",
+    "push": "wrangler deploy --env production",
     "playground": "tsx --env-file .dev.vars playground.ts",
     "build": "tsc -b",
     "typegen": "wrangler types --env-interface CloudflareBindings"

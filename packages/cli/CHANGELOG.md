@@ -1,5 +1,11 @@
 # @squashai/cli
 
+## 0.0.7
+
+### Patch Changes
+
+- don't process.exit the cli
+
 ## 0.0.6
 
 ### Patch Changes

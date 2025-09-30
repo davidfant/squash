@@ -7,23 +7,27 @@ import { MessageParts } from "./parts/MessageParts";
 
 export const AssistantMessage = ({
   message,
-  loading,
   className,
   isLast,
+  streaming,
   onRetry,
 }: {
   message: ChatMessage;
-  loading: boolean;
   className?: string;
   isLast?: boolean;
+  streaming?: boolean;
   onRetry?: () => void;
 }) => (
   <div className={cn("group space-y-3", className)}>
     <MessageHeader author="Squash" />
     <div className="ml-7">
-      <MessageParts parts={message.parts} />
+      <MessageParts
+        id={message.id}
+        parts={message.parts}
+        streaming={streaming}
+      />
       {isLast && <ChatErrorAlert />}
-      {!loading && (
+      {!streaming && (
         <AssistantMessageActions className="-ml-3" onRetry={onRetry} />
       )}
     </div>

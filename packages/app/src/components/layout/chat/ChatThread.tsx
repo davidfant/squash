@@ -243,7 +243,7 @@ export function ChatThread({
       </div>
 
       <div className="p-2 pt-0">
-        {!!todos?.length && (
+        {!!todos && !todos.every((t) => t.status === "completed") && (
           // margin-inline: 12px;
           // margin-bottom: 0;
           // border-bottom-right-radius: 0;

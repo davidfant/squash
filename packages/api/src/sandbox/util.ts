@@ -22,10 +22,14 @@ export async function runCommand(
       stderr += ev.data;
     }
     if (ev.type === "complete") return { stdout, stderr };
-    if (ev.type === "error") new Error(ev.error);
+    if (ev.type === "error") throw new Error(ev.error);
   }
 
-  throw new Error("Command timed out");
+  logger.error("Command ended without error or complete", {
+    stdout: stdout.slice(0, 512),
+    stderr: stderr.slice(0, 512),
+  });
+  throw new Error("Command ended without error or complete");
 }
 
 export interface Storage<T extends Record<string, unknown>> {

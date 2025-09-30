@@ -155,7 +155,10 @@ export abstract class BaseSandboxManagerDurableObject<
             `git add -A`,
             `git config --global user.name 'Squash'`,
             `git config --global user.email 'agent@squash.build'`,
-            `git commit -m ${escape([title])} -m ${escape([body])} --quiet`,
+            `git commit --quiet ${[title, body]
+              .filter((v) => !!v.trim())
+              .map((v) => `-m ${escape([v])}`)
+              .join(" ")}`,
             `git rev-parse HEAD`,
           ].join(" && "),
         ],

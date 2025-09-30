@@ -1,11 +1,13 @@
+import { authClient } from "@/auth";
 import { api, useQuery } from "@/hooks/api";
 import { useMemo } from "react";
 import { useLocalStorage } from "usehooks-ts";
 
 export function useRepos() {
   const repos = useQuery(api.repos.$get, { params: {} });
+  const activeOrg = authClient.useActiveOrganization();
   const [currentRepoId, setCurrentRepoId] = useLocalStorage<string | null>(
-    "lp.currentRepoId",
+    `lp.${activeOrg.data?.id}.currentRepoId`,
     null
   );
 

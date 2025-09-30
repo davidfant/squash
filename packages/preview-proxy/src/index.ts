@@ -13,20 +13,40 @@ export default {
       return new Response("Unknown preview", { status: 404 });
     }
 
-    const upstream = new URL(req.url);
-    upstream.hostname = `${previewId}.proxy.daytona.works`;
+    const upstreamURL = new URL(req.url);
+    upstreamURL.hostname = `${previewId}.proxy.daytona.works`;
     // upstream.hostname = previewId.replaceAll("---", ".");
-    upstream.port = "";
+    upstreamURL.port = "";
 
-    const headers = new Headers(req.headers);
-    headers.set("X-Daytona-Skip-Preview-Warning", "true");
-    headers.set("X-Daytona-Disable-CORS", "true");
+    const upstreamHeaders = new Headers(req.headers);
+    upstreamHeaders.set("X-Daytona-Skip-Preview-Warning", "true");
+    upstreamHeaders.set("X-Daytona-Disable-CORS", "true");
 
-    return fetch(upstream, {
+    if (req.headers.get("Upgrade")?.toLowerCase() === "websocket") {
+      return fetch(upstreamURL, {
+        method: req.method,
+        headers: upstreamHeaders,
+        body: req.body,
+      });
+    }
+
+    const res = await fetch(upstreamURL, {
       method: req.method,
-      headers,
+      headers: upstreamHeaders,
       body: req.body,
       redirect: "follow",
+      cache: "no-store",
+    });
+
+    const resHeaders = new Headers(res.headers);
+    resHeaders.set("Cache-Control", "no-store");
+    resHeaders.set("Pragma", "no-cache");
+    resHeaders.set("Expires", "0");
+
+    return new Response(res.body, {
+      status: res.status,
+      statusText: res.statusText,
+      headers: resHeaders,
     });
   },
 };

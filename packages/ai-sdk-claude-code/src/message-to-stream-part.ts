@@ -359,9 +359,8 @@ export function messageToStreamPart(
             //   return;
             // }
 
-            default: {
-              throw new Error(`Unsupported delta type: ${deltaType}`);
-            }
+            default:
+              console.warn(`Unsupported delta type`, deltaType);
           }
         }
 

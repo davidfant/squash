@@ -50,5 +50,5 @@ export async function main(argv: string[] = process.argv) {
   }
 
   // exit asap even if there are active handles (process._getActiveHandles)
-  process.exit(0);
+  // process.exit(0);
 }

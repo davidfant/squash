@@ -2,11 +2,30 @@ import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useBranchContext } from "@/routes/branches/context";
-import { RotateCw } from "lucide-react";
+import { Loader2, RotateCw } from "lucide-react";
+import { useState } from "react";
 
-export function GitCommitAlert({ title, sha }: { title: string; sha: string }) {
-  const { preview, setPreview } = useBranchContext();
-  const isCurrent = preview?.sha === sha;
+export function GitCommitAlert({
+  title,
+  sha,
+  messageId,
+}: {
+  title: string;
+  sha: string;
+  messageId: string;
+}) {
+  const { previewSha, restoreVersion } = useBranchContext();
+  const isCurrent = previewSha === sha;
+
+  const [restoring, setRestoring] = useState(false);
+  const handleRestore = async () => {
+    try {
+      setRestoring(true);
+      await restoreVersion(messageId);
+    } finally {
+      setRestoring(false);
+    }
+  };
 
   return (
     <Alert className="bg-blue-500/10 border-blue-500 flex items-center gap-1 py-0 min-h-12">
@@ -21,9 +40,9 @@ export function GitCommitAlert({ title, sha }: { title: string; sha: string }) {
           variant="ghost"
           size="sm"
           className="text-muted-foreground -mr-2"
-          onClick={() => setPreview(sha)}
+          onClick={handleRestore}
         >
-          <RotateCw />
+          {restoring ? <Loader2 className="animate-spin" /> : <RotateCw />}
           {/* Restore */}
         </Button>
       )}

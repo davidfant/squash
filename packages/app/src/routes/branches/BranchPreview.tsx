@@ -8,7 +8,7 @@ import { useRef } from "react";
 import { useBranchContext } from "./context";
 
 export function BranchPreview({ className }: { className?: string }) {
-  const { screenSize, previewPath, preview, branch } = useBranchContext();
+  const { screenSize, previewPath, previewUrl, branch } = useBranchContext();
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const stream = useChat<SandboxTaskMessage>({
@@ -23,10 +23,6 @@ export function BranchPreview({ className }: { className?: string }) {
       }),
     }),
   });
-  const tasks = stream.messages
-    .flatMap((m) => m.parts)
-    .filter((p) => p.type === "tool-SandboxTask")
-    .filter((t) => !!t.input?.title);
 
   // useEffect(
   //   () =>
@@ -104,10 +100,10 @@ export function BranchPreview({ className }: { className?: string }) {
   return (
     <div className={cn("relative h-full", className)}>
       <Card className="p-0 h-full overflow-hidden shadow-none bg-muted">
-        {!!preview && (
+        {!!previewUrl && (
           <iframe
             ref={iframeRef}
-            src={`${preview.url}${previewPath}`}
+            src={`${previewUrl}${previewPath}`}
             className={cn(
               "h-full mx-auto transition-all duration-300 z-2",
               getPreviewWidth()

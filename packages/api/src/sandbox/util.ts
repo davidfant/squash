@@ -78,7 +78,13 @@ export async function storeInitialCommitInSystemMessage(
 ) {
   const rootMessage = messages.find((m) => m.role === "system");
   if (!rootMessage) throw new Error("Root message not found");
+  if (rootMessage.parts.some((p) => p.type === "data-GitSha")) return;
+
   const sha = await sandbox.gitCurrentCommit();
+  logger.info("Storing initial commit in system message", {
+    sha,
+    rootMessageId: rootMessage.id,
+  });
 
   const title = "Starting point";
   const description =

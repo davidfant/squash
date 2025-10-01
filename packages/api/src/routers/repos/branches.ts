@@ -231,7 +231,6 @@ export const repoBranchesRouter = new Hono<{
   .get(
     "/:branchId/preview/version",
     zValidator("param", z.object({ branchId: z.uuid() })),
-    zValidator("json", z.object({ messageId: z.string() })),
     requireRepoBranch,
     async (c) => {
       const params = c.req.valid("param");

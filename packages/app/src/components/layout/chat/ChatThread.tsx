@@ -67,7 +67,7 @@ export function ChatThread({
   ready: boolean;
   initialValue?: ChatInputValue;
 }) {
-  const { setPreview } = useBranchContext();
+  const { restoreVersion } = useBranchContext();
   const {
     messages: allMessages,
     status,
@@ -127,10 +127,7 @@ export function ChatThread({
 
   const handleVariantChange = (parentId: string, chosenChildId: string) => {
     const newActivePath = messages.switchVariant(parentId, chosenChildId);
-    const lastSha = newActivePath
-      .flatMap((m) => m.parts)
-      .findLast((p) => p.type === "data-GitSha");
-    if (lastSha) setPreview(lastSha.data.sha);
+    restoreVersion(newActivePath[newActivePath.length - 1]!.id);
   };
 
   const todos = useMemo(

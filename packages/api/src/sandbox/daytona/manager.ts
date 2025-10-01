@@ -397,6 +397,8 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
       .flatMap((m) => m.parts)
       .findLast((p) => p.type === "data-AgentSession")?.data;
 
+    logger.info("Restoring version", { sha: gitSha.data.sha });
+
     // TODO: is it safe to assume that this is not async?
     this.stopAgent();
     await Promise.all([

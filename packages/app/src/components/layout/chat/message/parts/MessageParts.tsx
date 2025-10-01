@@ -42,7 +42,12 @@ export function MessageParts({
           //   );
           case "commit":
             return (
-              <GitCommitAlert key={idx} title={block.title} sha={block.sha} />
+              <GitCommitAlert
+                key={idx}
+                title={block.title}
+                sha={block.sha}
+                messageId={id}
+              />
             );
           case "events":
             return (

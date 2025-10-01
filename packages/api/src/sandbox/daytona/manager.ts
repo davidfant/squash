@@ -1,3 +1,4 @@
+import type { ChatMessage } from "@/agent/types";
 import { createDatabase } from "@/database";
 import * as schema from "@/database/schema";
 import { logger } from "@/lib/logger";
@@ -6,6 +7,7 @@ import { Daytona, Sandbox as DaytonaSandbox } from "@daytonaio/sdk";
 import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
+import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import escape from "shell-escape";
 import { BaseSandboxManagerDurableObject } from "../base";
@@ -385,39 +387,55 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
     return { sessionId, commandId: command.cmdId! };
   }
 
-  // async hydrateAgentSession(session: {
-  //   type: "claude-code";
-  //   id: string;
-  //   data: unknown;
-  // }): Promise<void> {
-  //   logger.debug("Hydrating agent session", {
-  //     type: session.type,
-  //     id: session.id,
-  //   });
+  // TODO: should we have concurrency control here?
+  async restoreVersion(messages: ChatMessage[]): Promise<void> {
+    const gitSha = messages
+      .flatMap((m) => m.parts)
+      .findLast((p) => p.type === "data-GitSha");
+    if (!gitSha) throw new Error("No GitSha found in messages");
+    const agentSession = messages
+      .flatMap((m) => m.parts)
+      .findLast((p) => p.type === "data-AgentSession")?.data;
 
-  //   const [sandbox, options] = await Promise.all([
-  //     this.getSandbox(),
-  //     this.getOptions(),
-  //   ]);
-  //   const homeDir = await sandbox.getUserHomeDir();
-  //   if (!homeDir) throw new Error("Home directory not found");
-  //   const sessionsDir = path.join(
-  //     homeDir,
-  //     ".claude",
-  //     "projects",
-  //     options.config.cwd.replace(/\//g, "-")
-  //   );
-  //   const filePath = path.join(sessionsDir, `${session.id}.jsonl`);
-  //   const sessionData = (session.data as any[])
-  //     .map((l) => JSON.stringify(l))
-  //     .join("\n");
-  //   logger.debug("Uploading agent session file", {
-  //     id: session.id,
-  //     filePath,
-  //     data: sessionData.slice(0, 512),
-  //   });
-  //   await sandbox.fs.uploadFile(Buffer.from(sessionData), filePath);
-  // }
+    // TODO: is it safe to assume that this is not async?
+    this.stopAgent();
+    await Promise.all([
+      this.gitReset(gitSha.data.sha, undefined),
+      (async () => {
+        if (agentSession?.type !== "claude-code") return;
+        const [sandbox, options] = await Promise.all([
+          this.getSandbox(),
+          this.getOptions(),
+        ]);
+        logger.info("Restoring Claude Code agent session", {
+          id: agentSession.id,
+          type: agentSession.type,
+          data: JSON.stringify(agentSession.data).slice(0, 512),
+        });
+
+        const homeDir = await sandbox.getUserHomeDir();
+        logger.info("Home directory", { homeDir });
+        if (!homeDir) throw new Error("Home directory not found");
+
+        const sessionsDir = path.join(
+          homeDir,
+          ".claude",
+          "projects",
+          options.config.cwd.replace(/\//g, "-")
+        );
+        const filePath = path.join(sessionsDir, `${agentSession.id}.jsonl`);
+        const sessionData = (agentSession.data as any[])
+          .map((l) => JSON.stringify(l) + "\n")
+          .join("");
+        logger.debug("Uploading Claude Code agent session file", {
+          id: agentSession.id,
+          filePath,
+          data: sessionData.slice(0, 512),
+        });
+        await sandbox.fs.uploadFile(Buffer.from(sessionData), filePath);
+      })(),
+    ]);
+  }
 
   async getPreviewUrl(): Promise<string> {
     await this.waitUntilStarted();

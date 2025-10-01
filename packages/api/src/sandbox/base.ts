@@ -14,11 +14,11 @@ import { eq } from "drizzle-orm";
 import escape from "shell-escape";
 import type { Sandbox } from "./types";
 import {
-  checkoutLatestCommit,
   executeTasks,
   raceWithAbortSignal,
   runCommand,
   storage,
+  storeInitialCommitInSystemMessage,
   type Storage,
 } from "./util";
 
@@ -69,6 +69,16 @@ export abstract class BaseSandboxManagerDurableObject<
     this.storage = storage<any>(state.storage);
   }
 
+  abstract isStarted(): Promise<boolean>;
+  abstract getPreviewUrl(): Promise<string>;
+  abstract execute(
+    request: Sandbox.Exec.Request,
+    abortSignal: AbortSignal | undefined
+  ): AsyncGenerator<Sandbox.Exec.Event.Any>;
+  abstract destroy(): Promise<void>;
+  abstract getStartTasks(): Promise<Sandbox.Snapshot.Task.Any[]>;
+  abstract restoreVersion(messages: ChatMessage[]): Promise<void>;
+
   async init(options: Sandbox.Options<C>): Promise<void> {
     await this.state.storage.put("options", options);
   }
@@ -103,15 +113,6 @@ export abstract class BaseSandboxManagerDurableObject<
     await this.start();
     await this.handles.start?.done;
   }
-
-  abstract isStarted(): Promise<boolean>;
-  abstract getPreviewUrl(): Promise<string>;
-  abstract execute(
-    request: Sandbox.Exec.Request,
-    abortSignal: AbortSignal | undefined
-  ): AsyncGenerator<Sandbox.Exec.Event.Any>;
-  abstract destroy(): Promise<void>;
-  abstract getStartTasks(): Promise<Sandbox.Snapshot.Task.Any[]>;
 
   async gitPush(abortSignal: AbortSignal | undefined): Promise<void> {
     const options = await this.getOptions();
@@ -321,7 +322,7 @@ export abstract class BaseSandboxManagerDurableObject<
 
         await raceWithAbortSignal(this.waitUntilStarted(), controller.signal);
         await raceWithAbortSignal(
-          checkoutLatestCommit(req.messages, this, db),
+          storeInitialCommitInSystemMessage(req.messages, this, db),
           controller.signal
         );
         await streamClaudeCodeAgent(writer, req.messages, this, {
@@ -342,7 +343,7 @@ export abstract class BaseSandboxManagerDurableObject<
     });
   }
 
-  async stopAgent(): Promise<void> {
+  stopAgent() {
     if (!this.handles.agent) return;
 
     logger.info("Stopping agent");

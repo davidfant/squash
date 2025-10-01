@@ -124,6 +124,7 @@ export namespace Sandbox {
       gitReset(sha: string, abortSignal?: AbortSignal): Promise<void>;
       gitCurrentCommit(abortSignal?: AbortSignal): Promise<string>;
       destroy(): Promise<void>;
+      restoreVersion(messages: ChatMessage[]): Promise<void>;
 
       isAgentRunning(): Promise<boolean>;
       startAgent(req: {
@@ -133,7 +134,7 @@ export namespace Sandbox {
       }): Promise<void>;
       listenToAgent(): Response;
       listenToStart(): Response;
-      stopAgent(): Promise<void>;
+      stopAgent(): void;
     }
   }
 

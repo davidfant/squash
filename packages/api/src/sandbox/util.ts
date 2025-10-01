@@ -71,34 +71,24 @@ const isAsyncGenerator = <T>(obj: any): obj is AsyncGenerator<T> =>
   typeof obj.throw === "function" &&
   typeof obj.return === "function";
 
-export async function checkoutLatestCommit(
+export async function storeInitialCommitInSystemMessage(
   messages: Pick<schema.Message, "id" | "role" | "parts">[],
   sandbox: Sandbox.Manager.Base,
   db: Database
 ) {
-  const latestSha = await messages
-    .flatMap((m) => m.parts)
-    .findLast((p) => p.type === "data-GitSha");
-  if (latestSha) {
-    logger.info("Checking out latest commit", { sha: latestSha.data.sha });
-    await sandbox.gitReset(latestSha.data.sha);
-  } else {
-    const rootMessage = messages.find((m) => m.role === "system");
-    if (!rootMessage) throw new Error("Root message not found");
-    const sha = await sandbox.gitCurrentCommit();
+  const rootMessage = messages.find((m) => m.role === "system");
+  if (!rootMessage) throw new Error("Root message not found");
+  const sha = await sandbox.gitCurrentCommit();
 
-    const title = "Starting point";
-    const description =
-      "This is the starting point before any changes have been made.";
-    const data = { sha, title, description, url: undefined };
-    logger.info("No latest commit found, using current commit", {
-      sha: sha,
-    });
-    await db
-      .update(schema.message)
-      .set({ parts: [{ type: "data-GitSha", data }] })
-      .where(eq(schema.message.id, rootMessage.id));
-  }
+  const title = "Starting point";
+  const description =
+    "This is the starting point before any changes have been made.";
+  const data = { sha, title, description, url: undefined };
+  logger.info("Storing initial commit in system message", { sha });
+  await db
+    .update(schema.message)
+    .set({ parts: [{ type: "data-GitSha", data }] })
+    .where(eq(schema.message.id, rootMessage.id));
 }
 
 export const executeTasks = (

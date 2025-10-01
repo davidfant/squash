@@ -138,28 +138,45 @@ export const repoBranchesRouter = new Hono<{
         threadId,
         count: allMessages.length,
       });
-      const messages = await (async () => {
-        if (allMessages.some((m) => m.id === body.message.id)) {
-          return resolveMessageThreadHistory(allMessages, body.message.id);
-        } else {
-          const { id, parts, parentId } = body.message;
-          const [message] = await db
-            .insert(schema.message)
-            .values({
-              id,
-              role: "user",
-              parts,
-              threadId,
-              parentId,
-              createdBy: user.id,
-            })
-            .returning();
-          return [
-            ...resolveMessageThreadHistory(allMessages, parentId),
-            { ...message!, parentId },
-          ];
-        }
-      })();
+
+      // const messages = await (async () => {
+      //   if (allMessages.some((m) => m.id === body.message.id)) {
+      //     return resolveMessageThreadHistory(allMessages, body.message.id);
+      //   } else {
+      //     const { id, parts, parentId } = body.message;
+      //     const [message] = await db
+      //       .insert(schema.message)
+      //       .values({
+      //         id,
+      //         role: "user",
+      //         parts,
+      //         threadId,
+      //         parentId,
+      //         createdBy: user.id,
+      //       })
+      //       .returning();
+      //     return [
+      //       ...resolveMessageThreadHistory(allMessages, parentId),
+      //       { ...message!, parentId },
+      //     ];
+      //   }
+      // })();
+      const message = await db
+        .insert(schema.message)
+        .values({
+          id: body.message.id,
+          parts: body.message.parts,
+          parentId: body.message.parentId,
+          role: "user",
+          threadId,
+          createdBy: user.id,
+        })
+        .returning()
+        .then(([message]) => message);
+      const messages = [
+        ...resolveMessageThreadHistory(allMessages, body.message.parentId),
+        { ...message!, parentId: body.message.parentId },
+      ];
       logger.debug("Resolved messages", {
         branchId: params.branchId,
         threadId,
@@ -167,6 +184,10 @@ export const repoBranchesRouter = new Hono<{
       });
 
       const sandbox = c.env.DAYTONA_SANDBOX_MANAGER.getByName(params.branchId);
+      if (allMessages.slice(-1)[0]?.id !== body.message.parentId) {
+        await sandbox.restoreVersion(messages);
+      }
+
       await sandbox.startAgent({
         messages,
         threadId,
@@ -186,29 +207,14 @@ export const repoBranchesRouter = new Hono<{
       return sandbox.listenToAgent();
     }
   )
-  .post(
+  .get(
     "/:branchId/preview",
     zValidator("param", z.object({ branchId: z.uuid() })),
-    zValidator("json", z.object({ sha: z.string().optional() })),
     requireRepoBranch,
     async (c) => {
-      const body = c.req.valid("json");
       const params = c.req.valid("param");
       const sandbox = c.env.DAYTONA_SANDBOX_MANAGER.getByName(params.branchId);
-
-      const [sha, url] = await Promise.all([
-        (async () => {
-          if (body.sha && !(await sandbox.isAgentRunning())) {
-            await sandbox.gitReset(body.sha, undefined);
-            return body.sha;
-          } else {
-            return await sandbox.gitCurrentCommit(undefined);
-          }
-        })(),
-        sandbox.getPreviewUrl(),
-      ]);
-
-      return c.json({ sha, url });
+      return c.json({ url: await sandbox.getPreviewUrl() });
     }
   )
   .get(
@@ -220,6 +226,37 @@ export const repoBranchesRouter = new Hono<{
       const sandbox = c.env.DAYTONA_SANDBOX_MANAGER.getByName(params.branchId);
       await sandbox.start();
       return sandbox.listenToStart();
+    }
+  )
+  .get(
+    "/:branchId/preview/version",
+    zValidator("param", z.object({ branchId: z.uuid() })),
+    zValidator("json", z.object({ messageId: z.string() })),
+    requireRepoBranch,
+    async (c) => {
+      const params = c.req.valid("param");
+      const sandbox = c.env.DAYTONA_SANDBOX_MANAGER.getByName(params.branchId);
+      const sha = await sandbox.gitCurrentCommit(undefined);
+      return c.json({ sha });
+    }
+  )
+  .put(
+    "/:branchId/preview/version",
+    zValidator("param", z.object({ branchId: z.uuid() })),
+    zValidator("json", z.object({ messageId: z.string() })),
+    requireRepoBranch,
+    async (c) => {
+      const db = c.get("db");
+      const user = c.get("user");
+      const body = c.req.valid("json");
+      const { branchId } = c.req.valid("param");
+      const sandbox = c.env.DAYTONA_SANDBOX_MANAGER.getByName(branchId);
+
+      const allMessages = await loadBranchMessages(db, branchId, user.id);
+      const messages = resolveMessageThreadHistory(allMessages, body.messageId);
+
+      await sandbox.restoreVersion(messages);
+      return c.json({ success: true });
     }
   )
   .post(

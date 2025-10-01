@@ -16,7 +16,7 @@ export function SandboxTaskStream({
   label,
   stream,
 }: {
-  label: string;
+  label?: string;
   stream: UseChatHelpers<SandboxTaskMessage>;
 }) {
   const [showDetails, setShowDetails] = useState(false);
@@ -87,7 +87,7 @@ export function SandboxTaskStream({
           </motion.div>
         );
       })}
-      {stream.status === "error" && (
+      {/* {stream.status === "error" && (
         <motion.div
           layout
           key="error"
@@ -97,16 +97,12 @@ export function SandboxTaskStream({
           transition={{ duration: 0.18, ease: "easeOut" }}
           className="w-full max-w-sm"
         >
-          <div className="ml-7">
-            <Alert className="text-muted-foreground">
-              <AlertCircle className="w-4 h-4" />
-              <AlertTitle>
-                {stream.error?.message ?? "Unknown error"}
-              </AlertTitle>
-            </Alert>
-          </div>
+          <Alert variant="destructive">
+            <AlertCircle />
+            <AlertTitle>{stream.error?.message ?? "Unknown error"}</AlertTitle>
+          </Alert>
         </motion.div>
-      )}
+      )} */}
     </AnimatePresence>
   );
 }

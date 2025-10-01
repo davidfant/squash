@@ -210,7 +210,6 @@ export const executeTasks = (
               message: (error as Error).message,
             },
           });
-          throw new Error(`Task ${task.id} failed: ${errorText}`);
         } finally {
           running.delete(task.id);
         }

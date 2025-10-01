@@ -276,7 +276,7 @@ export const reposRouter = new Hono<{
         }),
         manager.init({
           config: repo.snapshot,
-          repo: { id: repoId, branch: branchName },
+          branch: { id: branchId, repoId, name: branchName },
         }),
       ]);
 

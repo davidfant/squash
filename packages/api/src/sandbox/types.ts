@@ -35,6 +35,7 @@ export namespace Sandbox {
           dev: Task.Command;
           build: Task.Any[];
         };
+        build: { type: "static"; dir: string };
       }
 
       export interface Docker extends Base {
@@ -99,7 +100,7 @@ export namespace Sandbox {
     C extends Snapshot.Config.Any = Snapshot.Config.Any
   > {
     config: C;
-    repo: { id: string; branch: string };
+    branch: { id: string; repoId: string; name: string };
   }
 
   export namespace Manager {
@@ -110,6 +111,7 @@ export namespace Sandbox {
       isStarted(): Promise<boolean>;
       start(): Promise<void>;
       waitUntilStarted(): Promise<void>;
+      deploy(): Promise<void>;
       getPreviewUrl(): Promise<string>;
       execute(
         request: Exec.Request,
@@ -132,9 +134,10 @@ export namespace Sandbox {
         threadId: string;
         branchId: string;
       }): Promise<void>;
+      stopAgent(): void;
       listenToAgent(): Response;
       listenToStart(): Response;
-      stopAgent(): void;
+      listenToDeploy(): Response;
     }
   }
 

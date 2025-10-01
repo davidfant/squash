@@ -58,7 +58,8 @@ export abstract class BaseSandboxManagerDurableObject<
   private handles: {
     start: Handle | null;
     agent: Handle | null;
-  } = { start: null, agent: null };
+    deploy: Handle | null;
+  } = { start: null, agent: null, deploy: null };
   private encoder = new TextEncoder();
 
   constructor(
@@ -77,6 +78,7 @@ export abstract class BaseSandboxManagerDurableObject<
   ): AsyncGenerator<Sandbox.Exec.Event.Any>;
   abstract destroy(): Promise<void>;
   abstract getStartTasks(): Promise<Sandbox.Snapshot.Task.Any[]>;
+  abstract getDeployTasks(): Promise<Sandbox.Snapshot.Task.Any[]>;
   abstract restoreVersion(messages: ChatMessage[]): Promise<void>;
   protected abstract readClaudeCodeSessionData(
     sessionId: string
@@ -104,7 +106,7 @@ export abstract class BaseSandboxManagerDurableObject<
           buffer: [],
           listeners: new Map(),
           done: Promise.resolve(executeTasks(tasks, this))
-            .then((s) => (s ? this.consumeStream(s, start) : undefined))
+            .then((s) => this.consumeStream(s, start))
             .finally(() => (this.handles.start = null)),
         };
         this.handles.start = start;
@@ -117,6 +119,40 @@ export abstract class BaseSandboxManagerDurableObject<
     await this.handles.start?.done;
   }
 
+  async deploy(): Promise<void> {
+    await this.waitUntilStarted();
+
+    await this.state.blockConcurrencyWhile(async () => {
+      if (this.handles.deploy) return;
+
+      const tasks = await this.getDeployTasks();
+      const controller = new AbortController();
+      const deploy: Handle = {
+        type: "deploy",
+        controller,
+        buffer: [],
+        listeners: new Map(),
+        done: null,
+      };
+
+      this.handles.deploy = deploy;
+      deploy.done = Promise.resolve(executeTasks(tasks, this))
+        .then((s) => this.consumeStream(s, deploy))
+        .finally(() => (this.handles.deploy = null));
+
+      //   const domains = await db
+      //   .select()
+      //   .from(schema.repoBranchDomain)
+      //   .where(eq(schema.repoBranchDomain.branchId, params.branchId));
+      // if (!domains.length) {
+      //   await db.insert(schema.repoBranchDomain).values({
+      //     branchId: params.branchId,
+      //     url: `https://${params.branchId}.hypershape.app`,
+      //   });
+      // }
+    });
+  }
+
   async gitPush(abortSignal: AbortSignal | undefined): Promise<void> {
     const options = await this.getOptions();
 
@@ -124,11 +160,11 @@ export abstract class BaseSandboxManagerDurableObject<
     const repo = await db
       .select()
       .from(schema.repo)
-      .where(eq(schema.repo.id, options.repo.id))
+      .where(eq(schema.repo.id, options.branch.repoId))
       .then(([repo]) => repo);
-    if (!repo) throw new Error(`Repo not found: ${options.repo.id}`);
+    if (!repo) throw new Error(`Repo not found: ${options.branch.repoId}`);
 
-    logger.info("Pushing git", options.repo);
+    logger.info("Pushing git", options.branch);
     await this.execute(
       {
         command: "sh",
@@ -136,7 +172,7 @@ export abstract class BaseSandboxManagerDurableObject<
           "-c",
           [
             `git remote set-url origin ${repo.url}`,
-            `git push origin ${options.repo.branch}`,
+            `git push origin ${options.branch.name}`,
           ].join(" && "),
         ],
         cwd: options.config.cwd,
@@ -236,23 +272,22 @@ export abstract class BaseSandboxManagerDurableObject<
   }
 
   listenToAgent(): Response {
-    if (!this.handles.agent) {
-      logger.debug("No agent handle to listen to");
-      return new Response(null, { status: 204 });
-    }
-    return this.listen(this.handles.agent);
+    return this.listen("agent");
   }
-
   listenToStart(): Response {
-    if (!this.handles.start) {
-      logger.debug("No start handle to listen to");
-      return new Response(null, { status: 204 });
-    }
-    return this.listen(this.handles.start);
+    return this.listen("start");
+  }
+  listenToDeploy(): Response {
+    return this.listen("deploy");
   }
 
-  private listen = (handle: Handle) =>
-    new Response(createReadableStream(handle), {
+  private listen(type: keyof typeof this.handles & string) {
+    const handle = this.handles[type];
+    if (!handle) {
+      logger.debug(`No ${type} handle to listen to`);
+      return new Response(null, { status: 204 });
+    }
+    return new Response(createReadableStream(handle), {
       status: 200,
       headers: {
         "content-type": "text/event-stream",
@@ -260,6 +295,7 @@ export abstract class BaseSandboxManagerDurableObject<
         connection: "keep-alive",
       },
     });
+  }
 
   private async createAgentStream(
     req: {

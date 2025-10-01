@@ -59,5 +59,19 @@ export default {
       },
       refresh: "Refresh",
     },
+    share: {
+      button: "Share",
+      dialog: {
+        title: "Share",
+        description:
+          "Publish this prototype to share it with your team, testers, or others.",
+        publish: "Publish",
+        publishing: "Publishing",
+        outdatedWarning:
+          "The current prototype is showing an older version. Publish to update to the current version.",
+        unpublish: "Unpublish",
+        unpublishing: "Unpublishing",
+      },
+    },
   },
 } as const;

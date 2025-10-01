@@ -57,9 +57,10 @@
     "lodash.camelcase": "^4.3.0",
     "lodash.kebabcase": "^4.1.1",
     "lodash.upperfirst": "^4.3.1",
-    "nanotar": "^0.2.0",
+    "mime": "^4.1.0",
     "openai": "^5.21.0",
     "shell-escape": "^0.2.0",
+    "typescript": "~5.8.3",
     "zod": "^4.0.16"
   },
   "devDependencies": {

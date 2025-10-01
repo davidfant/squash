@@ -18,16 +18,14 @@ function Component({ branchId }: { branchId: string }) {
   const { branch, setPreviewSha } = useBranchContext();
 
   const session = authClient.useSession();
-  const threadMessages = useQuery(
-    api.repos.branches[":branchId"].messages.$get,
-    { params: { branchId }, enabled: !!session.data?.user }
-  );
+  const threadMessages = useQuery(api.branches[":branchId"].messages.$get, {
+    params: { branchId },
+    enabled: !!session.data?.user,
+  });
 
   return (
     <ChatProvider
-      endpoint={`${
-        import.meta.env.VITE_API_URL
-      }/repos/branches/${branchId}/messages`}
+      endpoint={`${import.meta.env.VITE_API_URL}/branches/${branchId}/messages`}
       initialMessages={threadMessages.data as ChatMessage[]}
       onFinish={(step) => {
         const latestSha = step.message.parts.findLast(

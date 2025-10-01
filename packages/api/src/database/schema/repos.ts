@@ -56,6 +56,7 @@ export const repoBranch = pgTable(
       .notNull()
       .default("cloudflare"),
     imageUrl: text("image_url"),
+    deployment: json("deployment").$type<{ url: string; sha: string }>(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
     deletedAt: timestamp("deleted_at"),
@@ -96,6 +97,17 @@ export const repoProviderVerification = pgTable("repo_provider_verification", {
   callbackUrl: text("callback_url"),
 });
 
+// export const repoDomain = pgTable("repo_domain", {
+//   id: uuid().primaryKey().defaultRandom(),
+//   repoId: uuid("repo_id")
+//     .notNull()
+//     .references(() => repo.id),
+//   url: text("url").notNull().unique(),
+//   createdAt: timestamp("created_at").defaultNow().notNull(),
+//   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+//   deletedAt: timestamp("deleted_at"),
+// });
+
 export const repoRelations = relations(repo, ({ one }) => ({
   provider: one(repoProvider, {
     fields: [repo.providerId],
@@ -103,7 +115,7 @@ export const repoRelations = relations(repo, ({ one }) => ({
   }),
 }));
 
-export const branchesRelations = relations(repoBranch, ({ one }) => ({
+export const branchesRelations = relations(repoBranch, ({ one, many }) => ({
   thread: one(messageThread, {
     fields: [repoBranch.threadId],
     references: [messageThread.id],

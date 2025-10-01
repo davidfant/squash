@@ -7,7 +7,7 @@ import { OpenAI } from "openai";
 import z from "zod";
 import { authMiddleware } from "./auth/middleware";
 import { databaseMiddleware } from "./database/middleware";
-import { createSignedUrl } from "./lib/cloudflare";
+import { createSignedAndPublicUrl } from "./lib/cloudflare";
 import { logger } from "./lib/logger";
 import { githubRouter } from "./routers/integrations/github";
 import { invitesRouter } from "./routers/invites";
@@ -23,7 +23,7 @@ const app = new Hono<{ Bindings: CloudflareBindings }>()
   .use(authMiddleware)
   .on(["GET", "POST"], "/auth/*", (c) => c.get("auth").handler(c.req.raw))
   .route("/repos/providers", repoProvidersRouter)
-  .route("/repos/branches", repoBranchesRouter)
+  .route("/branches", repoBranchesRouter)
   .route("/repos", reposRouter)
   .route("/invites", invitesRouter)
   .route("/integrations/github", githubRouter)
@@ -32,7 +32,7 @@ const app = new Hono<{ Bindings: CloudflareBindings }>()
     zValidator("json", z.object({ filename: z.string() })),
     async (c) => {
       const filename = c.req.valid("json").filename;
-      const res = await createSignedUrl(filename, {
+      const res = await createSignedAndPublicUrl(filename, {
         accessKeyId: c.env.R2_UPLOADS_ACCESS_KEY_ID,
         secretAccessKey: c.env.R2_UPLOADS_SECRET_ACCESS_KEY,
         bucketUrl: c.env.R2_UPLOADS_BUCKET_URL,

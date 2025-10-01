@@ -12,64 +12,15 @@ import z from "zod";
 import { zUserMessagePart } from "../zod";
 import { requireRepoBranch } from "./middleware";
 
-export const repoBranchesRouter = new Hono<{
+const repoBranchRouter = new Hono<{
   Bindings: CloudflareBindings;
   Variables: { db: Database };
 }>()
-  .use(requireAuth, requireActiveOrganization)
-  .get("/", requireAuth, requireActiveOrganization, async (c) => {
-    const user = c.get("user");
-    const db = c.get("db");
-    const organizationId = c.get("organizationId");
-
-    const branches = await db
-      .select({
-        id: schema.repoBranch.id,
-        title: schema.repoBranch.title,
-        name: schema.repoBranch.name,
-        imageUrl: schema.repoBranch.imageUrl,
-        createdAt: schema.repoBranch.createdAt,
-        updatedAt: schema.repoBranch.updatedAt,
-        repo: { id: schema.repo.id, name: schema.repo.name },
-        createdBy: {
-          id: schema.user.id,
-          name: schema.user.name,
-          image: schema.user.image,
-        },
-      })
-      .from(schema.repo)
-      .innerJoin(
-        schema.repoBranch,
-        eq(schema.repo.id, schema.repoBranch.repoId)
-      )
-      .innerJoin(schema.user, eq(schema.repoBranch.createdBy, schema.user.id))
-      .innerJoin(
-        schema.member,
-        eq(schema.repo.organizationId, schema.member.organizationId)
-      )
-      .where(
-        and(
-          eq(schema.repo.organizationId, organizationId),
-          isNull(schema.repo.deletedAt),
-          eq(schema.member.userId, user.id),
-          isNull(schema.repoBranch.deletedAt)
-        )
-      )
-      .orderBy(desc(schema.repoBranch.updatedAt));
-
-    return c.json(branches);
-  })
+  .use(zValidator("param", z.object({ branchId: z.uuid() })), requireRepoBranch)
+  .get("/", async (c) => c.json(c.get("branch")))
   .get(
-    "/:branchId",
+    "/messages",
     zValidator("param", z.object({ branchId: z.uuid() })),
-    requireRepoBranch,
-    (c) => c.json(c.get("branch"))
-  )
-  .get(
-    "/:branchId/messages",
-    zValidator("param", z.object({ branchId: z.uuid() })),
-    requireAuth,
-    requireRepoBranch,
     async (c) => {
       const user = c.get("user");
       const { branchId } = c.req.valid("param");
@@ -94,7 +45,7 @@ export const repoBranchesRouter = new Hono<{
     }
   )
   .post(
-    "/:branchId/messages",
+    "/messages",
     zValidator("param", z.object({ branchId: z.uuid() })),
     zValidator(
       "json",
@@ -106,8 +57,6 @@ export const repoBranchesRouter = new Hono<{
         }),
       })
     ),
-    requireAuth,
-    requireRepoBranch,
     async (c) => {
       const body = c.req.valid("json");
       const params = c.req.valid("param");
@@ -197,10 +146,8 @@ export const repoBranchesRouter = new Hono<{
     }
   )
   .get(
-    "/:branchId/messages/stream",
+    "/messages/stream",
     zValidator("param", z.object({ branchId: z.uuid() })),
-    requireAuth,
-    requireRepoBranch,
     async (c) => {
       const params = c.req.valid("param");
       const sandbox = c.env.DAYTONA_SANDBOX_MANAGER.getByName(params.branchId);
@@ -208,7 +155,7 @@ export const repoBranchesRouter = new Hono<{
     }
   )
   .get(
-    "/:branchId/preview",
+    "/preview",
     zValidator("param", z.object({ branchId: z.uuid() })),
     requireRepoBranch,
     async (c) => {
@@ -218,9 +165,8 @@ export const repoBranchesRouter = new Hono<{
     }
   )
   .get(
-    "/:branchId/preview/stream",
+    "/preview/stream",
     zValidator("param", z.object({ branchId: z.uuid() })),
-    requireRepoBranch,
     async (c) => {
       const params = c.req.valid("param");
       const sandbox = c.env.DAYTONA_SANDBOX_MANAGER.getByName(params.branchId);
@@ -229,7 +175,7 @@ export const repoBranchesRouter = new Hono<{
     }
   )
   .get(
-    "/:branchId/preview/version",
+    "/preview/version",
     zValidator("param", z.object({ branchId: z.uuid() })),
     requireRepoBranch,
     async (c) => {
@@ -240,7 +186,7 @@ export const repoBranchesRouter = new Hono<{
     }
   )
   .put(
-    "/:branchId/preview/version",
+    "/preview/version",
     zValidator("param", z.object({ branchId: z.uuid() })),
     zValidator("json", z.object({ messageId: z.string() })),
     requireRepoBranch,
@@ -259,9 +205,36 @@ export const repoBranchesRouter = new Hono<{
     }
   )
   .post(
-    "/:branchId/messages/abort",
+    "/deploy",
     zValidator("param", z.object({ branchId: z.uuid() })),
-    requireAuth,
+    async (c) => {
+      const params = c.req.valid("param");
+      const sandbox = c.env.DAYTONA_SANDBOX_MANAGER.getByName(params.branchId);
+      await sandbox.deploy();
+      return sandbox.listenToDeploy();
+    }
+  )
+  .delete(
+    "/deploy",
+    zValidator("param", z.object({ branchId: z.uuid() })),
+    async (c) => {
+      const db = c.get("db");
+      const branch = c.get("branch");
+      const params = c.req.valid("param");
+      await Promise.all([
+        branch.deployment &&
+          c.env.DOMAIN_MAPPINGS.delete(new URL(branch.deployment.url).host),
+        db
+          .update(schema.repoBranch)
+          .set({ deployment: null })
+          .where(eq(schema.repoBranch.id, params.branchId)),
+      ]);
+      return c.json({ success: true });
+    }
+  )
+  .post(
+    "/messages/abort",
+    zValidator("param", z.object({ branchId: z.uuid() })),
     async (c) => {
       const params = c.req.valid("param");
       const sandbox = c.env.DAYTONA_SANDBOX_MANAGER.getByName(params.branchId);
@@ -270,9 +243,8 @@ export const repoBranchesRouter = new Hono<{
     }
   )
   .delete(
-    "/:branchId",
+    "/",
     zValidator("param", z.object({ branchId: z.uuid() })),
-    requireRepoBranch,
     async (c) => {
       const db = c.get("db");
       const branch = c.get("branch");
@@ -288,3 +260,52 @@ export const repoBranchesRouter = new Hono<{
       return c.json({ success: true });
     }
   );
+
+export const repoBranchesRouter = new Hono<{
+  Bindings: CloudflareBindings;
+  Variables: { db: Database };
+}>()
+  .use(requireAuth, requireActiveOrganization)
+  .get("/", async (c) => {
+    const user = c.get("user");
+    const db = c.get("db");
+    const organizationId = c.get("organizationId");
+
+    const branches = await db
+      .select({
+        id: schema.repoBranch.id,
+        title: schema.repoBranch.title,
+        name: schema.repoBranch.name,
+        imageUrl: schema.repoBranch.imageUrl,
+        createdAt: schema.repoBranch.createdAt,
+        updatedAt: schema.repoBranch.updatedAt,
+        repo: { id: schema.repo.id, name: schema.repo.name },
+        createdBy: {
+          id: schema.user.id,
+          name: schema.user.name,
+          image: schema.user.image,
+        },
+      })
+      .from(schema.repo)
+      .innerJoin(
+        schema.repoBranch,
+        eq(schema.repo.id, schema.repoBranch.repoId)
+      )
+      .innerJoin(schema.user, eq(schema.repoBranch.createdBy, schema.user.id))
+      .innerJoin(
+        schema.member,
+        eq(schema.repo.organizationId, schema.member.organizationId)
+      )
+      .where(
+        and(
+          eq(schema.repo.organizationId, organizationId),
+          isNull(schema.repo.deletedAt),
+          eq(schema.member.userId, user.id),
+          isNull(schema.repoBranch.deletedAt)
+        )
+      )
+      .orderBy(desc(schema.repoBranch.updatedAt));
+
+    return c.json(branches);
+  })
+  .route("/:branchId", repoBranchRouter);

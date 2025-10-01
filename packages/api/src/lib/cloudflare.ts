@@ -1,7 +1,7 @@
 import { AwsClient } from "aws4fetch";
 import { randomUUID } from "crypto";
 
-export async function createSignedUrl(
+export async function createSignedAndPublicUrl(
   filename: string,
   opts: {
     accessKeyId: string;
@@ -12,7 +12,20 @@ export async function createSignedUrl(
 ) {
   const uuid = randomUUID();
   const publicUrl = `${opts.bucketUrl}/${uuid}/${filename}`;
-  const urlToSign = `${opts.endpointUrl}/${uuid}/${filename}`;
+  const uploadUrl = await createSignedUrl(`${uuid}/${filename}`, opts);
+
+  return { uploadUrl: uploadUrl, publicUrl };
+}
+
+export async function createSignedUrl(
+  filePath: string,
+  opts: {
+    accessKeyId: string;
+    secretAccessKey: string;
+    endpointUrl: string;
+  }
+) {
+  const urlToSign = `${opts.endpointUrl}/${filePath}`;
   const url = new URL(urlToSign);
 
   const EXPIRES = 60 * 15; // 15 minutes
@@ -29,5 +42,5 @@ export async function createSignedUrl(
     aws: { signQuery: true },
   });
 
-  return { uploadUrl: signed.url, publicUrl };
+  return signed.url;
 }

@@ -17,7 +17,7 @@ export function BranchPreview({ className }: { className?: string }) {
     transport: new DefaultChatTransport({
       credentials: "include",
       prepareReconnectToStreamRequest: () => ({
-        api: `${import.meta.env.VITE_API_URL}/repos/branches/${
+        api: `${import.meta.env.VITE_API_URL}/branches/${
           branch.id
         }/preview/stream`,
       }),

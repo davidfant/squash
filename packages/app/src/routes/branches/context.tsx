@@ -24,6 +24,7 @@ export interface BranchContextValue {
   previewPath: string;
   setPreviewPath(path: string): void;
   restoreVersion(messageId: string): Promise<void>;
+  refetch(): Promise<unknown>;
 }
 
 const BranchContext = createContext<BranchContextValue>({
@@ -37,6 +38,7 @@ const BranchContext = createContext<BranchContextValue>({
   setPreviewSha: () => {},
   setPreviewPath: () => {},
   restoreVersion: () => Promise.resolve(),
+  refetch: () => Promise.resolve(),
 });
 
 export const getNextScreenSize = (current: ScreenSize): ScreenSize => {
@@ -51,7 +53,7 @@ export const BranchContextProvider = ({
   branchId: string;
   children: ReactNode;
 }) => {
-  const branch = useQuery(api.repos.branches[":branchId"].$get, {
+  const branch = useQuery(api.branches[":branchId"].$get, {
     params: { branchId },
   });
   const [screenSize, setScreenSize] = useState<ScreenSize>("desktop");
@@ -59,14 +61,14 @@ export const BranchContextProvider = ({
   const [previewSha, setPreviewSha] = useState<string | null>(null);
 
   const previewUrl =
-    useQuery(api.repos.branches[":branchId"].preview.$get, {
+    useQuery(api.branches[":branchId"].preview.$get, {
       params: { branchId },
       refetchInterval: 60_000,
       ...({ placeholderData: keepPreviousData } as any),
     }).data?.url ?? null;
 
   const upstreamSha = useQuery(
-    api.repos.branches[":branchId"].preview.version.$get,
+    api.branches[":branchId"].preview.version.$get,
     {
       params: { branchId },
     }
@@ -78,7 +80,7 @@ export const BranchContextProvider = ({
   }, [upstreamSha.data?.sha]);
 
   const restoreVersion = useMutation(
-    api.repos.branches[":branchId"].preview.version.$put
+    api.branches[":branchId"].preview.version.$put
   );
 
   const toggleScreenSize = () => setScreenSize(getNextScreenSize(screenSize));
@@ -103,6 +105,7 @@ export const BranchContextProvider = ({
           });
           await upstreamSha.refetch();
         },
+        refetch: branch.refetch,
       }}
     >
       {children}

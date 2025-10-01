@@ -149,10 +149,12 @@ export const requireRepoBranch = createMiddleware<
       organizationId: string;
       branch: {
         id: string;
+        repoId: string;
         name: string;
         title: string;
         createdAt: Date;
         updatedAt: Date;
+        deployment: { url: string; sha: string } | null;
         createdBy: { id: string; name: string; image: string | null };
       };
     };
@@ -168,8 +170,10 @@ export const requireRepoBranch = createMiddleware<
   const [branch] = await db
     .select({
       id: schema.repoBranch.id,
+      repoId: schema.repoBranch.repoId,
       title: schema.repoBranch.title,
       name: schema.repoBranch.name,
+      deployment: schema.repoBranch.deployment,
       createdAt: schema.repoBranch.createdAt,
       updatedAt: schema.repoBranch.updatedAt,
       createdBy: {

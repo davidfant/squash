@@ -41,7 +41,7 @@ export function createAuth(
     appName: "LP",
     database: drizzleAdapter(db, { provider: "pg" }),
     basePath: "/auth",
-    trustedOrigins: [process.env.APP_URL],
+    trustedOrigins: [env.APP_URL],
     baseURL: process.env.BETTER_AUTH_URL,
     secret: process.env.BETTER_AUTH_SECRET,
     socialProviders: {

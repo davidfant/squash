@@ -84,8 +84,17 @@ export function LandingPage() {
                 command: "pnpm",
                 args: ["dev"],
               },
-              build: [],
+              build: [
+                {
+                  id: "build",
+                  title: "Build",
+                  type: "command",
+                  command: "pnpm",
+                  args: ["build"],
+                },
+              ],
             },
+            build: { type: "static", dir: "dist" },
           },
         },
       });

@@ -2,7 +2,7 @@
 set -e
 
 source ./.env
-fly auth docker
+# fly auth docker
 
 APP_NAME="squash-template"
 SQUASH_CLI_VERSION=$(cat ../packages/cli/package.json | jq -r '.version')

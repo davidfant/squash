@@ -121,9 +121,7 @@ export function ChatThread({
     setEditingMessageId(null);
   };
 
-  const stop = useMutation(
-    api.repos.branches[":branchId"].messages.abort.$post
-  );
+  const stop = useMutation(api.branches[":branchId"].messages.abort.$post);
 
   const handleVariantChange = (parentId: string, chosenChildId: string) => {
     const newActivePath = messages.switchVariant(parentId, chosenChildId);

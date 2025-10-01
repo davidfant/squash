@@ -145,11 +145,10 @@ export function ChatThread({
   );
 
   console.log("ChatThread.activePath", status, messages.activePath);
+  const lastMessage = messages.activePath[messages.activePath.length - 1];
   const showLoading =
     status === "submitted" ||
-    (status === "streaming" &&
-      messages.activePath[messages.activePath.length - 1]?.role !==
-        "assistant");
+    (status === "streaming" && lastMessage?.role === "user");
   return (
     <StickToBottom
       key={String(ready)}
@@ -232,13 +231,11 @@ export function ChatThread({
             />
           )}
 
-          {messages.activePath[messages.activePath.length - 1]?.role !==
-            "assistant" &&
-            status === "error" && (
-              <div className="ml-7">
-                <ChatErrorAlert />
-              </div>
-            )}
+          {lastMessage?.role !== "assistant" && status === "error" && (
+            <div className="ml-7">
+              <ChatErrorAlert />
+            </div>
+          )}
         </ConversationContent>
         <ConversationScrollButton />
       </div>

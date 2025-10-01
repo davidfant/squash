@@ -1,21 +1,11 @@
 import type { ClaudeCodeCLIOptions, ClaudeCodeSession } from "@/schema";
 import { query } from "@anthropic-ai/claude-code";
 import { randomUUID } from "node:crypto";
-import fs from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
 
 export async function runClaudeCode(
   req: ClaudeCodeCLIOptions,
   signal: AbortSignal
 ): Promise<ClaudeCodeSession> {
-  const sessionsDir = path.join(
-    os.homedir(),
-    ".claude",
-    "projects",
-    req.cwd.replace(/\//g, "-")
-  );
-
   const q = query({
     prompt: (async function* () {
       const content: Array<
@@ -64,16 +54,5 @@ export async function runClaudeCode(
   }
 
   if (!sessionId) throw new Error("Session ID not found");
-
-  const sessionJsonl = await fs.readFile(
-    path.join(sessionsDir, `${sessionId}.jsonl`),
-    "utf8"
-  );
-  return {
-    id: sessionId,
-    data: sessionJsonl
-      .split("\n")
-      .filter((l) => !!l.trim())
-      .map((l) => JSON.parse(l)),
-  };
+  return { id: sessionId };
 }

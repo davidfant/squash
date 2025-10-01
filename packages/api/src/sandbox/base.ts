@@ -78,6 +78,9 @@ export abstract class BaseSandboxManagerDurableObject<
   abstract destroy(): Promise<void>;
   abstract getStartTasks(): Promise<Sandbox.Snapshot.Task.Any[]>;
   abstract restoreVersion(messages: ChatMessage[]): Promise<void>;
+  protected abstract readClaudeCodeSessionData(
+    sessionId: string
+  ): Promise<string>;
 
   async init(options: Sandbox.Options<C>): Promise<void> {
     await this.state.storage.put("options", options);
@@ -328,10 +331,11 @@ export abstract class BaseSandboxManagerDurableObject<
         await streamClaudeCodeAgent(writer, req.messages, this, {
           env: this.env,
           threadId: req.threadId,
-          agentSessionId: agentSession?.data.id,
+          sessionId: agentSession?.data.id,
           previewUrl: await this.getPreviewUrl(),
           abortSignal: controller.signal,
           messageMetadata,
+          readSessionData: (id) => this.readClaudeCodeSessionData(id),
           onScreenshot: (imageUrl) =>
             db
               .update(schema.repoBranch)

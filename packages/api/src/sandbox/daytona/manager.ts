@@ -12,6 +12,7 @@ import { setTimeout } from "node:timers/promises";
 import escape from "shell-escape";
 import { BaseSandboxManagerDurableObject } from "../base";
 import type { Sandbox } from "../types";
+import { downloadFileFromSandbox } from "./api";
 
 export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
   Sandbox.Snapshot.Config.Daytona,
@@ -405,38 +406,66 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
       this.gitReset(gitSha.data.sha, undefined),
       (async () => {
         if (agentSession?.type !== "claude-code") return;
-        const [sandbox, options] = await Promise.all([
-          this.getSandbox(),
-          this.getOptions(),
-        ]);
+        const sandbox = await this.getSandbox();
         logger.info("Restoring Claude Code agent session", {
           id: agentSession.id,
           type: agentSession.type,
           data: JSON.stringify(agentSession.data).slice(0, 512),
         });
 
-        const homeDir = await sandbox.getUserHomeDir();
-        logger.info("Home directory", { homeDir });
-        if (!homeDir) throw new Error("Home directory not found");
-
-        const sessionsDir = path.join(
-          homeDir,
-          ".claude",
-          "projects",
-          options.config.cwd.replace(/\//g, "-")
+        const sessionDataPath = await this.getClaudeCodeSessionDataPath(
+          agentSession.id
         );
-        const filePath = path.join(sessionsDir, `${agentSession.id}.jsonl`);
-        const sessionData = (agentSession.data as any[])
-          .map((l) => JSON.stringify(l) + "\n")
-          .join("");
+        const sessionData = agentSession.data as string;
         logger.debug("Uploading Claude Code agent session file", {
           id: agentSession.id,
-          filePath,
+          file: sessionDataPath,
           data: sessionData.slice(0, 512),
         });
-        await sandbox.fs.uploadFile(Buffer.from(sessionData), filePath);
+        await sandbox.fs.uploadFile(Buffer.from(sessionData), sessionDataPath);
       })(),
     ]);
+  }
+
+  protected async readClaudeCodeSessionData(
+    sessionId: string
+  ): Promise<string> {
+    const sandbox = await this.getSandbox();
+    logger.debug("Reading Claude Code agent session data", { sessionId });
+    const sessionDataPath = await this.getClaudeCodeSessionDataPath(sessionId);
+
+    logger.debug("Downloading Claude Code agent session data", {
+      sandboxId: sandbox.id,
+      path: sessionDataPath,
+    });
+    const sessionData = await downloadFileFromSandbox(
+      sandbox.id,
+      sessionDataPath
+    );
+
+    logger.debug("Claude Code agent session data", {
+      data: sessionData.toString("utf-8").slice(0, 512),
+    });
+    return sessionData.toString("utf-8");
+  }
+
+  private async getClaudeCodeSessionDataPath(
+    sessionId: string
+  ): Promise<string> {
+    const [sandbox, options] = await Promise.all([
+      this.getSandbox(),
+      this.getOptions(),
+    ]);
+    const homeDir = await sandbox.getUserHomeDir();
+    logger.info("Home directory", { homeDir });
+    if (!homeDir) throw new Error("Home directory not found");
+    return path.join(
+      homeDir,
+      ".claude",
+      "projects",
+      options.config.cwd.replace(/\//g, "-"),
+      `${sessionId}.jsonl`
+    );
   }
 
   async getPreviewUrl(): Promise<string> {

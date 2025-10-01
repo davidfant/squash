@@ -144,7 +144,12 @@ export function ChatThread({
     [messages.activePath]
   );
 
-  console.log("ChatThread.activePath", messages.activePath);
+  console.log("ChatThread.activePath", status, messages.activePath);
+  const showLoading =
+    status === "submitted" ||
+    (status === "streaming" &&
+      messages.activePath[messages.activePath.length - 1]?.role !==
+        "assistant");
   return (
     <StickToBottom
       key={String(ready)}
@@ -218,7 +223,7 @@ export function ChatThread({
                 );
             }
           })}
-          {status === "submitted" && (
+          {showLoading && (
             <AssistantMessage
               message={{ id: "", role: "assistant", parts: [] }}
               isLast

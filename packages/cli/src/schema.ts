@@ -29,10 +29,7 @@ export const PromptSchema = z.array(
   ])
 );
 
-export const ClaudeCodeSessionSchema = z.object({
-  id: z.string(),
-  data: z.array(z.record(z.string(), z.any())),
-});
+export const ClaudeCodeSessionSchema = z.object({ id: z.string() });
 
 export const ClaudeCodeOptionsSchema = z.object({
   appendSystemPrompt: z.string().optional(),

@@ -32,7 +32,6 @@ dist-ssr
 .turbo
 .mastra
 .vercel
-.claude
 *.tsbuildinfo
 
 worker-configuration.d.ts

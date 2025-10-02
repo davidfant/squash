@@ -1,5 +1,5 @@
 import type { ClaudeCodeCLIOptions, ClaudeCodeSession } from "@/schema";
-import { query } from "@anthropic-ai/claude-code";
+import { query } from "@anthropic-ai/claude-agent-sdk";
 import { randomUUID } from "node:crypto";
 
 export async function runClaudeCode(
@@ -39,7 +39,12 @@ export async function runClaudeCode(
       executable: "node",
       includePartialMessages: true,
       permissionMode: "bypassPermissions",
-      appendSystemPrompt: req.options?.appendSystemPrompt,
+      systemPrompt: {
+        type: "preset",
+        preset: "claude_code",
+        append: req.options?.appendSystemPrompt,
+      },
+      settingSources: ["project"],
     },
   });
 

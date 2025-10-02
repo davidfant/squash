@@ -2,7 +2,7 @@ import type {
   LanguageModelV2,
   LanguageModelV2StreamPart,
 } from "@ai-sdk/provider";
-import * as ClaudeCode from "@anthropic-ai/claude-code";
+import * as ClaudeCode from "@anthropic-ai/claude-agent-sdk";
 import type { ModelMessage } from "ai";
 import { randomUUID } from "crypto";
 import { messageToStreamPart } from "./message-to-stream-part";
@@ -94,7 +94,7 @@ export class ClaudeCodeLanguageModel implements LanguageModelV2 {
               cwd: this.cwd,
               executable: "node",
               includePartialMessages: true,
-              permissionMode: "acceptEdits",
+              permissionMode: "bypassPermissions",
               // TODO: add session id
               resume: undefined,
             },

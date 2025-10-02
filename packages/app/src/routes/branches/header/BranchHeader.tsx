@@ -1,3 +1,4 @@
+import { RequireRole } from "@/auth/RequireRole";
 import { Link } from "react-router";
 import { InviteButton } from "./InviteButton";
 import { ShareButton } from "./ShareButton";
@@ -16,7 +17,9 @@ export const BranchHeader = ({ title }: { title: string }) => (
     </div>
 
     <div className="flex items-center gap-2">
-      <InviteButton />
+      <RequireRole roles={["admin", "owner"]}>
+        <InviteButton />
+      </RequireRole>
       <ShareButton />
     </div>
   </header>

@@ -72,4 +72,5 @@ const app = new Hono<{ Bindings: CloudflareBindings }>()
 export default app;
 export type AppType = typeof app;
 
+export type { MemberRole } from "./database/schema/auth";
 export { DaytonaSandboxManager } from "./sandbox/daytona/manager";

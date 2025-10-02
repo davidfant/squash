@@ -1,4 +1,4 @@
-import { authClient } from "@/auth";
+import { authClient } from "@/auth/client";
 import { api, useQuery } from "@/hooks/api";
 import { useMemo } from "react";
 import { useLocalStorage } from "usehooks-ts";

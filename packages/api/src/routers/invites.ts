@@ -1,4 +1,8 @@
-import { requireAuth } from "@/auth/middleware";
+import {
+  requireActiveOrganization,
+  requireAuth,
+  requireRole,
+} from "@/auth/middleware";
 import type { Database } from "@/database";
 import * as schema from "@/database/schema";
 import { zValidator } from "@hono/zod-validator";
@@ -46,10 +50,12 @@ export const invitesRouter = new Hono<{
   .post(
     "/create",
     requireAuth,
+    requireActiveOrganization,
+    requireRole("owner", "admin"),
     zValidator(
       "json",
       z.object({
-        role: z.enum(["member", "admin", "owner"]).optional().default("member"),
+        role: z.enum(["admin", "editor", "viewer"]).optional(),
         path: z.string().optional(),
         maxUsages: z.number().optional(),
       })
@@ -58,31 +64,11 @@ export const invitesRouter = new Hono<{
       const db = c.get("db");
       try {
         const user = c.get("user");
-        const organizationId = c.get("session").activeOrganizationId;
-        if (!organizationId) {
-          return c.json({ error: "No active organization" }, 400);
-        }
-
+        const organizationId = c.get("organizationId");
         const data = c.req.valid("json");
-
-        const [member] = await db
-          .select()
-          .from(schema.member)
-          .where(
-            and(
-              eq(schema.member.userId, user.id),
-              eq(schema.member.organizationId, organizationId)
-            )
-          )
-          .limit(1);
-
-        if (!["admin", "owner"].includes(member?.role!)) {
-          return c.json({ error: "Insufficient permissions" }, 403);
-        }
 
         // Generate a unique invite token
         const inviteId = randomUUID();
-
         const expiresAt = new Date(Date.now() + 365 * 24 * 7 * 60 * 60 * 1000);
 
         await db.insert(schema.invitation).values({

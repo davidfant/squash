@@ -7,7 +7,7 @@ import {
   Sparkles,
 } from "lucide-react";
 
-import { authClient } from "@/auth";
+import { authClient } from "@/auth/client";
 import { Avatar } from "@/components/ui/avatar";
 import {
   DropdownMenu,

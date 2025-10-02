@@ -1,4 +1,4 @@
-import { authClient } from "@/auth";
+import { authClient } from "@/auth/client";
 import {
   Sidebar,
   SidebarContent,

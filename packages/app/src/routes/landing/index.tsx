@@ -1,4 +1,4 @@
-import { authClient } from "@/auth";
+import { authClient } from "@/auth/client";
 import { Suggestion } from "@/components/ai-elements/suggestion";
 import {
   ChatInput,
@@ -13,7 +13,7 @@ import { memo } from "react";
 import { Link, Navigate, useNavigate } from "react-router";
 import { useLocalStorage } from "usehooks-ts";
 import { CloneScreenshotAction } from "./components/CloneScreenshotAction";
-import { HeaderMenu } from "./components/HeaderMenu";
+import { HeaderMenu } from "./components/header/HeaderMenu";
 import { RecentBranchesGrid } from "./components/RecentBranchesGrid";
 import { RepoSelect } from "./components/RepoSelect";
 import { useChatInputPlaceholder } from "./hooks/useChatInputPlaceholder";
@@ -63,7 +63,7 @@ export function LandingPage() {
           hidden: true,
           snapshot: {
             type: "daytona",
-            snapshot: "base-vite-ts:v0.0.3",
+            snapshot: "base-vite-ts:v0.0.2",
             port: 5173,
             cwd: "/repo",
             env: {},

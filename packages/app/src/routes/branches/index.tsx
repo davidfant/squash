@@ -1,4 +1,4 @@
-import { authClient } from "@/auth";
+import { authClient } from "@/auth/client";
 import { ChatThread } from "@/components/layout/chat/ChatThread";
 import { ChatProvider } from "@/components/layout/chat/context";
 import {

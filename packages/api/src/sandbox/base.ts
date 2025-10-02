@@ -26,9 +26,19 @@ interface Handle {
   type: string;
   buffer: Uint8Array[];
   listeners: Map<string, ReadableStreamDefaultController<Uint8Array>>;
-  done: Promise<unknown> | null;
+  promise: Promise<unknown>;
+  active: boolean;
   controller: AbortController;
 }
+
+const emptyHandle = (type: string): Handle => ({
+  type,
+  buffer: [],
+  listeners: new Map(),
+  promise: Promise.resolve(),
+  active: false,
+  controller: new AbortController(),
+});
 
 function createReadableStream(handle: Handle) {
   const listenerId = randomUUID();
@@ -56,10 +66,14 @@ export abstract class BaseSandboxManagerDurableObject<
 
   protected storage: Storage<S>;
   private handles: {
-    start: Handle | null;
-    agent: Handle | null;
-    deploy: Handle | null;
-  } = { start: null, agent: null, deploy: null };
+    start: Handle;
+    agent: Handle;
+    deploy: Handle;
+  } = {
+    start: emptyHandle("start"),
+    agent: emptyHandle("agent"),
+    deploy: emptyHandle("deploy"),
+  };
   private encoder = new TextEncoder();
 
   constructor(
@@ -96,7 +110,7 @@ export abstract class BaseSandboxManagerDurableObject<
 
   async start(): Promise<void> {
     await this.state.blockConcurrencyWhile(async () => {
-      if (!this.handles.start && !(await this.isStarted())) {
+      if (!this.handles.start.active && !(await this.isStarted())) {
         const tasks = await this.getStartTasks();
         const controller = new AbortController();
 
@@ -104,10 +118,11 @@ export abstract class BaseSandboxManagerDurableObject<
           type: "start",
           controller,
           buffer: [],
+          active: true,
           listeners: new Map(),
-          done: Promise.resolve(executeTasks(tasks, this))
-            .then((s) => this.consumeStream(s, start))
-            .finally(() => (this.handles.start = null)),
+          promise: Promise.resolve(executeTasks(tasks, this)).then((s) =>
+            this.consumeStream(s, start)
+          ),
         };
         this.handles.start = start;
       }
@@ -116,14 +131,14 @@ export abstract class BaseSandboxManagerDurableObject<
 
   async waitUntilStarted(): Promise<void> {
     await this.start();
-    await this.handles.start?.done;
+    await this.handles.start.promise;
   }
 
   async deploy(): Promise<void> {
     await this.waitUntilStarted();
 
     await this.state.blockConcurrencyWhile(async () => {
-      if (this.handles.deploy) return;
+      if (this.handles.deploy.active) return;
 
       const tasks = await this.getDeployTasks();
       const controller = new AbortController();
@@ -131,14 +146,14 @@ export abstract class BaseSandboxManagerDurableObject<
         type: "deploy",
         controller,
         buffer: [],
+        active: true,
         listeners: new Map(),
-        done: null,
+        promise: Promise.resolve(executeTasks(tasks, this)).then((s) =>
+          this.consumeStream(executeTasks(tasks, this), deploy)
+        ),
       };
 
       this.handles.deploy = deploy;
-      deploy.done = Promise.resolve(executeTasks(tasks, this))
-        .then((s) => this.consumeStream(s, deploy))
-        .finally(() => (this.handles.deploy = null));
 
       //   const domains = await db
       //   .select()
@@ -238,7 +253,7 @@ export abstract class BaseSandboxManagerDurableObject<
   }
 
   async isAgentRunning(): Promise<boolean> {
-    return !!this.handles.agent;
+    return this.handles.agent.active;
   }
 
   async startAgent(req: {
@@ -247,14 +262,14 @@ export abstract class BaseSandboxManagerDurableObject<
     branchId: string;
   }) {
     await this.state.blockConcurrencyWhile(async () => {
-      if (!this.handles.agent) {
-        logger.debug("Starting new agent run because no run is active");
-      } else {
+      if (this.handles.agent.active) {
         logger.debug("Stopping existing agent run because new run started");
         this.handles.agent.controller.abort(
           new DOMException("superseded", "AbortError")
         );
-        this.handles.agent = null;
+        this.handles.agent.active = false;
+      } else {
+        logger.debug("Starting new agent run because no run is active");
       }
 
       const controller = new AbortController();
@@ -262,10 +277,11 @@ export abstract class BaseSandboxManagerDurableObject<
         type: "agent",
         controller,
         buffer: [],
+        active: true,
         listeners: new Map(),
-        done: this.createAgentStream(req, controller)
-          .then((s) => (s ? this.consumeStream(s, agent) : undefined))
-          .finally(() => (this.handles.agent = null)),
+        promise: this.createAgentStream(req, controller).then((s) =>
+          s ? this.consumeStream(s, agent) : undefined
+        ),
       };
       this.handles.agent = agent;
     });
@@ -283,8 +299,8 @@ export abstract class BaseSandboxManagerDurableObject<
 
   private listen(type: keyof typeof this.handles & string) {
     const handle = this.handles[type];
-    if (!handle) {
-      logger.debug(`No ${type} handle to listen to`);
+    if (!handle.active) {
+      logger.debug(`No active ${type} handle to listen to`);
       return new Response(null, { status: 204 });
     }
     return new Response(createReadableStream(handle), {
@@ -384,7 +400,10 @@ export abstract class BaseSandboxManagerDurableObject<
   }
 
   stopAgent() {
-    if (!this.handles.agent) return;
+    if (!this.handles.agent.active) {
+      logger.debug("Agent is not active, skipping stop");
+      return;
+    }
 
     logger.info("Stopping agent");
     this.handles.agent.controller.abort(
@@ -395,7 +414,7 @@ export abstract class BaseSandboxManagerDurableObject<
       this.handles.agent
     );
 
-    this.handles.agent = null;
+    this.handles.agent.active = false;
   }
 
   private async consumeStream(
@@ -415,6 +434,7 @@ export abstract class BaseSandboxManagerDurableObject<
         return;
       }
       logger.error("Stream failed", { type: handle.type, error });
+      throw error;
     } finally {
       for (const listener of handle.listeners.values() ?? []) {
         try {
@@ -425,6 +445,7 @@ export abstract class BaseSandboxManagerDurableObject<
       }
       reader.releaseLock();
       logger.debug("Closed listeners and reader", { type: handle.type });
+      handle.active = false;
     }
   }
 

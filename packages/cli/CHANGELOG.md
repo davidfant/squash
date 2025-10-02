@@ -1,5 +1,11 @@
 # @squashai/cli
 
+## 0.0.8
+
+### Patch Changes
+
+- anthropic agent sdk
+
 ## 0.0.7
 
 ### Patch Changes

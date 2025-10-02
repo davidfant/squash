@@ -229,27 +229,26 @@ export const executeTasks = (
       }
 
       if (!!failed.size) {
-        c.enqueue({
-          type: "error",
-          errorText: `Tasks failed: ${[...failed]
-            .map((id) => tasks.find((task) => task.id === id)!)
-            .map((t) => `'${t.title}'`)
-            .join(", ")}`,
-        });
-      }
+        const errorText = `Tasks failed: ${[...failed]
+          .map((id) => tasks.find((task) => task.id === id)!)
+          .map((t) => `'${t.title}'`)
+          .join(", ")}`;
+        c.enqueue({ type: "error", errorText });
 
-      if (completed.size !== tasks.length) {
-        c.enqueue({
-          type: "error",
-          errorText: `Tasks not started: ${tasks
-            .filter((task) => !completed.has(task.id))
-            .map((t) => `'${t.title}'`)
-            .join(", ")}`,
-        });
+        await new Promise((r) => setTimeout(r, 0));
+        c.error(new Error(errorText));
+      } else if (completed.size !== tasks.length) {
+        const errorText = `Tasks not started: ${tasks
+          .filter((task) => !completed.has(task.id))
+          .map((t) => `'${t.title}'`)
+          .join(", ")}`;
+        c.enqueue({ type: "error", errorText });
+        await new Promise((r) => setTimeout(r, 0));
+        c.error(new Error(errorText));
+      } else {
+        c.enqueue({ type: "finish" });
+        // TODO: this causes "Uncaught Error: Network connection lost"
+        c.close();
       }
-
-      c.enqueue({ type: "finish" });
-      // TODO: this causes "Uncaught Error: Network connection lost"
-      c.close();
     },
   });

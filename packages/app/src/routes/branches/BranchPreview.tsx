@@ -1,10 +1,11 @@
 import { SandboxTaskStream } from "@/components/blocks/SandboxTaskStream";
 import { Card } from "@/components/ui/card";
+import { useMounted } from "@/hooks/useMounted";
 import { cn } from "@/lib/utils";
 import { useChat } from "@ai-sdk/react";
 import type { SandboxTaskMessage } from "@squashai/api/agent/types";
 import { DefaultChatTransport } from "ai";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useBranchContext } from "./context";
 
 export function BranchPreview({ className }: { className?: string }) {
@@ -13,16 +14,20 @@ export function BranchPreview({ className }: { className?: string }) {
 
   const stream = useChat<SandboxTaskMessage>({
     messages: [],
-    resume: true,
     transport: new DefaultChatTransport({
+      api: `${import.meta.env.VITE_API_URL}/branches/${
+        branch.id
+      }/preview/stream`,
       credentials: "include",
-      prepareReconnectToStreamRequest: () => ({
-        api: `${import.meta.env.VITE_API_URL}/branches/${
-          branch.id
-        }/preview/stream`,
-      }),
     }),
   });
+
+  const mounted = useMounted();
+  useEffect(() => {
+    if (mounted) {
+      stream.sendMessage();
+    }
+  }, [mounted]);
 
   // useEffect(
   //   () =>

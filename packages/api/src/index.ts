@@ -65,6 +65,7 @@ const app = new Hono<{ Bindings: CloudflareBindings }>()
       cause: err.cause,
       message: err.message,
     });
+    c.executionCtx.waitUntil(Promise.reject(err));
     return c.json({ error: "Internal server error" }, 500);
   });
 

@@ -38,7 +38,7 @@
     { "tag": "v1", "new_sqlite_classes": ["DaytonaSandboxManager"] }
   ],
   "vars": {
-    "SQUASH_CLI_VERSION": "0.0.8-alpha.2",
+    "SQUASH_CLI_VERSION": "0.0.8",
     "APP_URL": "http://localhost:5173",
     "PREVIEW_PROXY_URL": "http://localhost:8788",
     "DEPLOYMENT_PROXY_URL": "http://localhost:8790",
@@ -48,7 +48,7 @@
   "env": {
     "production": {
       "vars": {
-        "SQUASH_CLI_VERSION": "0.0.8-alpha.2",
+        "SQUASH_CLI_VERSION": "0.0.8",
         "APP_URL": "https://app.squash.build",
         "PREVIEW_PROXY_URL": "https://magicsite.app",
         "DEPLOYMENT_PROXY_URL": "https://squashprototype.com",

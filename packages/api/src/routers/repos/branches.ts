@@ -164,7 +164,7 @@ const repoBranchRouter = new Hono<{
       return c.json({ url: await sandbox.getPreviewUrl() });
     }
   )
-  .get(
+  .post(
     "/preview/stream",
     zValidator("param", z.object({ branchId: z.uuid() })),
     async (c) => {

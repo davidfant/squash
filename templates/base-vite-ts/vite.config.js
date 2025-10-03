@@ -2,8 +2,9 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
+import { errorOverlayPlugin } from "./src/vite/plugin";
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), tsconfigPaths()],
-  server: { allowedHosts: [".fly.dev"] },
+  plugins: [react(), tailwindcss(), tsconfigPaths(), errorOverlayPlugin(),],
+  server: { hmr: { overlay: false } },
 });

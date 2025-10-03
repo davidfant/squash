@@ -2,6 +2,7 @@ import { anthropic } from "@ai-sdk/anthropic";
 import { google } from "@ai-sdk/google";
 import { generateText, streamText } from "ai";
 import { RateLimiter } from "limiter";
+import { streamTextWithReasoningSummary } from "./src/lib/ReasoningSummarizerStreamTextResult";
 
 const summarizerLimiter = new RateLimiter({
   tokensPerInterval: 1,
@@ -75,38 +76,46 @@ export async function runReasoning(
   //   }
   // }
 
-  // for await (const token of reasoning.textStream) {
-  //   raw.push(token); // 1️⃣ collect raw trace
+  for await (const token of reasoning.textStream) {
+    raw.push(token); // 1️⃣ collect raw trace
 
-  //   if (summarizerLimiter.tryRemoveTokens(1)) {
-  //     // 2️⃣ throttle
-  //     const currentDelta = raw.splice(-400).join(""); // 3️⃣ last 400 tokens
+    if (summarizerLimiter.tryRemoveTokens(1)) {
+      // 2️⃣ throttle
+      const currentDelta = raw.splice(-400).join(""); // 3️⃣ last 400 tokens
 
-  //     // 4️⃣ Generate summary with full context
-  //     const newSummary = await summarize(
-  //       fullContextBeforePrevSummary,
-  //       prevDelta,
-  //       rollingSummary,
-  //       currentDelta
-  //     );
+      // 4️⃣ Generate summary with full context
+      const newSummary = await summarize(
+        fullContextBeforePrevSummary,
+        prevDelta,
+        rollingSummary,
+        currentDelta
+      );
 
-  //     // Update context for next iteration
-  //     fullContextBeforePrevSummary = fullContextBeforePrevSummary + prevDelta;
-  //     prevDelta = currentDelta;
-  //     rollingSummary = newSummary;
+      // Update context for next iteration
+      fullContextBeforePrevSummary = fullContextBeforePrevSummary + prevDelta;
+      prevDelta = currentDelta;
+      rollingSummary = newSummary;
 
-  //     sendToUser(rollingSummary); // 5️⃣ frontend update
-  //   }
-  // }
-  for await (const token of reasoning.toUIMessageStream()) {
-    console.log(token);
+      sendToUser(rollingSummary); // 5️⃣ frontend update
+    }
   }
+  // for await (const token of reasoning.toUIMessageStream()) {
+  //   console.log(token);
+  // }
 
   sendToUser("✅ Finished – full answer ready!");
 }
 
 (async () => {
-  await runReasoning("Write an essay about the benefits of using AI", (msg) => {
-    console.log(msg, "\n");
+  // await runReasoning("Write an essay about the benefits of using AI", (msg) => {
+  //   console.log(msg, "\n");
+  // });
+  const stream = streamTextWithReasoningSummary({
+    model: anthropic("claude-sonnet-4-5-20250929"),
+    prompt: "Write an essay about the benefits of using AI",
+    summaryModel: google("gemini-flash-latest"),
   });
+  for await (const chunk of stream.fullStream) {
+    console.log(chunk);
+  }
 })();

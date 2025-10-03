@@ -1,26 +1,15 @@
-import { streamClaudeCodeAgent } from "@/agent/claudeCode/streamAgent";
+import { streamAgent } from "@/agent/stream";
 import type { ChatMessage } from "@/agent/types";
 import { createDatabase } from "@/database";
 import * as schema from "@/database/schema";
 import { logger } from "@/lib/logger";
-import {
-  createUIMessageStream,
-  type InferUIMessageChunk,
-  type UIMessageStreamOptions,
-} from "ai";
+import { type InferUIMessageChunk } from "ai";
 import { DurableObject, env } from "cloudflare:workers";
 import { randomUUID } from "crypto";
 import { eq } from "drizzle-orm";
 import escape from "shell-escape";
 import type { Sandbox } from "./types";
-import {
-  executeTasks,
-  raceWithAbortSignal,
-  runCommand,
-  storage,
-  storeInitialCommitInSystemMessage,
-  type Storage,
-} from "./util";
+import { executeTasks, runCommand, storage, type Storage } from "./util";
 
 interface Handle {
   type: string;
@@ -260,6 +249,7 @@ export abstract class BaseSandboxManagerDurableObject<
     messages: ChatMessage[];
     threadId: string;
     branchId: string;
+    restoreVersion: boolean;
   }) {
     await this.state.blockConcurrencyWhile(async () => {
       if (this.handles.agent.active) {
@@ -279,9 +269,14 @@ export abstract class BaseSandboxManagerDurableObject<
         buffer: [],
         active: true,
         listeners: new Map(),
-        promise: this.createAgentStream(req, controller).then((s) =>
-          s ? this.consumeStream(s, agent) : undefined
-        ),
+        promise: Promise.resolve(
+          streamAgent({
+            ...req,
+            controller,
+            sandbox: this,
+            readSessionData: (id) => this.readClaudeCodeSessionData(id),
+          })
+        ).then((s) => (s ? this.consumeStream(s, agent) : undefined)),
       };
       this.handles.agent = agent;
     });
@@ -309,92 +304,6 @@ export abstract class BaseSandboxManagerDurableObject<
         "content-type": "text/event-stream",
         "cache-control": "no-cache",
         connection: "keep-alive",
-      },
-    });
-  }
-
-  private async createAgentStream(
-    req: {
-      messages: ChatMessage[];
-      threadId: string;
-      branchId: string;
-    },
-    controller: AbortController
-  ) {
-    const db = createDatabase(env);
-    const nextParentId = req.messages.slice(-1)[0]!.id;
-
-    logger.info("Creating agent run", {
-      messages: req.messages.length,
-      threadId: req.threadId,
-      branchId: req.branchId,
-      nextParentId,
-    });
-
-    const messageMetadata: UIMessageStreamOptions<ChatMessage>["messageMetadata"] =
-      (opts) => {
-        if (opts.part.type === "start") {
-          const createdAt = new Date().toISOString();
-          return { createdAt, parentId: nextParentId };
-        }
-        // if (opts.part.type === "finish-step") {
-        //   usage.push({
-        //     ...opts.part.usage,
-        //     modelId: opts.part.response.modelId,
-        //   });
-        // }
-        return undefined;
-      };
-
-    return createUIMessageStream<ChatMessage>({
-      originalMessages: req.messages, // just needed for id generation
-      generateId: randomUUID,
-      onFinish: async ({ responseMessage }) => {
-        logger.debug("Finished streaming response message", {
-          threadId: req.threadId,
-          responseMessageId: responseMessage.id,
-          parts: responseMessage.parts.length,
-          // usageCount: usage.length,
-        });
-        await db.insert(schema.message).values({
-          id: responseMessage.id,
-          role: responseMessage.role as "user" | "assistant",
-          parts: responseMessage.parts,
-          // usage,
-          threadId: req.threadId,
-          parentId: nextParentId,
-        });
-      },
-      execute: async ({ writer }) => {
-        writer.write({
-          type: "start",
-          messageMetadata: messageMetadata({ part: { type: "start" } }),
-        });
-
-        const agentSession = req.messages
-          .flatMap((m) => m.parts)
-          .findLast((p) => p.type === "data-AgentSession");
-
-        await raceWithAbortSignal(this.waitUntilStarted(), controller.signal);
-        await raceWithAbortSignal(
-          storeInitialCommitInSystemMessage(req.messages, this, db),
-          controller.signal
-        );
-        await streamClaudeCodeAgent(writer, req.messages, this, {
-          env: this.env,
-          threadId: req.threadId,
-          sessionId: agentSession?.data.id,
-          previewUrl: await this.getPreviewUrl(),
-          abortSignal: controller.signal,
-          messageMetadata,
-          readSessionData: (id) => this.readClaudeCodeSessionData(id),
-          onScreenshot: (imageUrl) =>
-            db
-              .update(schema.repoBranch)
-              .set({ imageUrl, updatedAt: new Date() })
-              .where(eq(schema.repoBranch.id, req.branchId)),
-        });
-        writer.write({ type: "finish" });
       },
     });
   }

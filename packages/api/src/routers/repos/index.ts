@@ -287,6 +287,7 @@ export const reposRouter = new Hono<{
         ],
         threadId: thread.id,
         branchId,
+        restoreVersion: false,
       });
 
       return c.json({ id: branchId });

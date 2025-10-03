@@ -1,10 +1,7 @@
 import type { ChatMessage, SandboxTaskToolInput } from "@/agent/types";
-import { type Database } from "@/database";
-import * as schema from "@/database/schema";
 import { logger } from "@/lib/logger";
 import type { InferUIMessageChunk } from "ai";
 import { randomUUID } from "crypto";
-import { eq } from "drizzle-orm";
 import type { Sandbox } from "./types";
 
 export async function runCommand(
@@ -32,19 +29,6 @@ export async function runCommand(
   throw new Error("Command ended without error or complete");
 }
 
-export const raceWithAbortSignal = <T>(
-  promise: Promise<T>,
-  abortSignal: AbortSignal
-): Promise<T> =>
-  Promise.race<T>([
-    promise,
-    new Promise((_, reject) => {
-      abortSignal.addEventListener("abort", () =>
-        reject(new Error("Cancelled"))
-      );
-    }),
-  ]);
-
 export interface Storage<T extends Record<string, unknown>> {
   get: <K extends keyof T & string, D = T[K]>(
     key: K,
@@ -70,32 +54,6 @@ const isAsyncGenerator = <T>(obj: any): obj is AsyncGenerator<T> =>
   typeof obj.next === "function" &&
   typeof obj.throw === "function" &&
   typeof obj.return === "function";
-
-export async function storeInitialCommitInSystemMessage(
-  messages: Pick<schema.Message, "id" | "role" | "parts">[],
-  sandbox: Sandbox.Manager.Base,
-  db: Database
-) {
-  const rootMessage = messages.find((m) => m.role === "system");
-  if (!rootMessage) throw new Error("Root message not found");
-  if (rootMessage.parts.some((p) => p.type === "data-GitSha")) return;
-
-  const sha = await sandbox.gitCurrentCommit();
-  logger.info("Storing initial commit in system message", {
-    sha,
-    rootMessageId: rootMessage.id,
-  });
-
-  const title = "Starting point";
-  const description =
-    "This is the starting point before any changes have been made.";
-  const data = { sha, title, description, url: undefined };
-  logger.info("Storing initial commit in system message", { sha });
-  await db
-    .update(schema.message)
-    .set({ parts: [{ type: "data-GitSha", data }] })
-    .where(eq(schema.message.id, rootMessage.id));
-}
 
 export const executeTasks = (
   tasks: Sandbox.Snapshot.Task.Any[],

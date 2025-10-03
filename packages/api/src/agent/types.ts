@@ -25,6 +25,7 @@ export type ChatMessageData = {
     url: string | undefined;
   };
   AgentSession: { type: "claude-code"; id: string; data: unknown };
+  AgentState: { type: "discover" } | { type: "implement" };
   AbortRequest: { reason: string };
 };
 export interface ChatMessageMetadata {

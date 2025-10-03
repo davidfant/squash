@@ -133,6 +133,7 @@ export namespace Sandbox {
         messages: ChatMessage[];
         threadId: string;
         branchId: string;
+        restoreVersion: boolean;
       }): Promise<void>;
       stopAgent(): void;
       listenToAgent(): Response;

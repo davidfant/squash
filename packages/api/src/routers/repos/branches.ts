@@ -133,14 +133,12 @@ const repoBranchRouter = new Hono<{
       });
 
       const sandbox = c.env.DAYTONA_SANDBOX_MANAGER.getByName(params.branchId);
-      if (allMessages.slice(-1)[0]?.id !== body.message.parentId) {
-        await sandbox.restoreVersion(messages);
-      }
 
       await sandbox.startAgent({
         messages,
         threadId,
         branchId: params.branchId,
+        restoreVersion: allMessages.slice(-1)[0]?.id !== body.message.parentId,
       });
       return sandbox.listenToAgent();
     }

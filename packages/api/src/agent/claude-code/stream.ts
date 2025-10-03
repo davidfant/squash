@@ -8,35 +8,33 @@ import {
   type UIMessageStreamOptions,
   type UIMessageStreamWriter,
 } from "ai";
+import { env } from "cloudflare:workers";
 import { randomUUID } from "crypto";
 import { GitCommit } from "../git";
 import type { ChatMessage } from "../types";
 import appendSystemPrompt from "./prompt.md";
 
-export async function streamClaudeCodeAgent(
-  writer: UIMessageStreamWriter<ChatMessage>,
-  messages: ChatMessage[],
-  sandbox: Sandbox.Manager.Base,
-  opts: {
-    threadId: string;
-    sessionId: string | undefined;
-    previewUrl: string;
-    env: CloudflareBindings;
-    abortSignal: AbortSignal;
-    messageMetadata: UIMessageStreamOptions<ChatMessage>["messageMetadata"];
-    readSessionData(sessionId: string): Promise<string>;
-    onScreenshot(url: string): void;
-  }
-) {
+export async function streamClaudeCodeAgent(opts: {
+  writer: UIMessageStreamWriter<ChatMessage>;
+  messages: ChatMessage[];
+  sandbox: Sandbox.Manager.Base;
+  threadId: string;
+  sessionId: string | undefined;
+  previewUrl: string;
+  abortSignal: AbortSignal;
+  messageMetadata: UIMessageStreamOptions<ChatMessage>["messageMetadata"];
+  readSessionData(sessionId: string): Promise<string>;
+  onScreenshot(url: string): void;
+}) {
   logger.debug("Starting Claude Code stream", {
-    sandbox: sandbox.name,
+    sandbox: opts.sandbox.name,
     sessionId: opts.sessionId,
   });
 
   let sessionId: string | undefined = undefined;
   const agentStream = streamText({
     model: new ClaudeCodeLanguageModel("", async function* ({ prompt }) {
-      const stream = await sandbox.execute(
+      const stream = await opts.sandbox.execute(
         {
           command: "squash",
           args: [
@@ -45,16 +43,12 @@ export async function streamClaudeCodeAgent(
             "--options",
             JSON.stringify({
               appendSystemPrompt,
-              sessionId: opts.sessionId,
+              sessionId: opts.sessionId ?? undefined,
             }),
             "--model",
             "claude-sonnet-4-5-20250929",
           ],
-          env: {
-            IS_SANDBOX: "1",
-            ANTHROPIC_API_KEY: opts.env.ANTHROPIC_API_KEY,
-            // SHELL: "/bin/sh",
-          },
+          env: { IS_SANDBOX: "1", ANTHROPIC_API_KEY: env.ANTHROPIC_API_KEY },
         },
         opts.abortSignal
       );
@@ -85,15 +79,14 @@ export async function streamClaudeCodeAgent(
         }
       }
     }),
-    messages: convertToModelMessages(messages),
+    messages: convertToModelMessages(opts.messages),
     tools,
     abortSignal: opts.abortSignal,
-    onError: ({ error }) => {
-      logger.error("Error in ClaudeCode agent", { error });
-    },
+    onError: ({ error }) =>
+      logger.error("Error in ClaudeCode agent", { error }),
   });
 
-  writer.merge(
+  opts.writer.merge(
     agentStream.toUIMessageStream({
       sendStart: false,
       sendFinish: false,
@@ -120,12 +113,10 @@ export async function streamClaudeCodeAgent(
   );
   if (shouldCommit) {
     const screenshotPromise = fetch(
-      `${opts.env.SCREENSHOT_API_URL}?url=${encodeURIComponent(
-        opts.previewUrl
-      )}`
+      `${env.SCREENSHOT_API_URL}?url=${encodeURIComponent(opts.previewUrl)}`
     ).then((r) => r.json<{ url: string }>());
 
-    const history = messages
+    const history = opts.messages
       .filter((m) => m.role === "assistant" || m.role === "user")
       .map((m) => ({
         role: m.role,
@@ -180,7 +171,7 @@ export async function streamClaudeCodeAgent(
           ].join("\n"),
         },
       ],
-      tools: { GitCommit: GitCommit(sandbox) },
+      tools: { GitCommit: GitCommit(opts.sandbox) },
       toolChoice: { type: "tool", toolName: "GitCommit" },
       onStepFinish: async (step) => {
         const screenshot = await screenshotPromise.catch((e) => {
@@ -193,7 +184,7 @@ export async function streamClaudeCodeAgent(
 
         step.toolResults.forEach((tc) => {
           if (!tc.dynamic && tc.toolName === "GitCommit") {
-            writer.write({
+            opts.writer.write({
               type: "data-GitSha",
               id: tc.toolCallId,
               data: {
@@ -207,7 +198,7 @@ export async function streamClaudeCodeAgent(
         });
       },
     });
-    writer.merge(
+    opts.writer.merge(
       commitStream.toUIMessageStream({
         sendStart: false,
         sendFinish: false,
@@ -219,7 +210,7 @@ export async function streamClaudeCodeAgent(
   }
 
   const sessionData = await sessionDataPromise;
-  writer.write({
+  opts.writer.write({
     type: "data-AgentSession",
     id: randomUUID(),
     data: { type: "claude-code", id: sessionId, data: sessionData },

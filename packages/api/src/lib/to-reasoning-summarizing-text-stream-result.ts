@@ -60,7 +60,7 @@ Guidelines
 • NEVER reference subjects or objects like "the model," "the AI," "I," "we," "the text," "the input," "the first section," etc.
 • Focus on what is happening in the reasoning, not who/what is doing it.
 • Respond with a **bold title** that names the reasoning step (e.g. **Validating Data**, **Choosing Next Action**).
-• Under each title write 1-2 short sentences using neutral, process-oriented language with gerunds (-ing verbs).
+• Under each title write MAX 1-2 short sentences using neutral, process-oriented language with gerunds (-ing verbs).
 • Examples of preferred phrasing:
   - Instead of "The model analyzes..." → "Analysing..."
   - Instead of "I am considering..." → "Considering..."

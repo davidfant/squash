@@ -28,12 +28,12 @@ export function streamAgent(params: {
   const db = createDatabase(env);
   const nextParentId = params.messages.slice(-1)[0]!.id;
 
-  const state = params.messages
+  let latestState = params.messages
     .flatMap((m) => m.parts)
     .findLast((p) => p.type === "data-AgentState")?.data;
 
   logger.info("Streaming agent", {
-    state,
+    state: latestState,
     messages: params.messages.length,
     threadId: params.threadId,
     branchId: params.branchId,
@@ -59,7 +59,7 @@ export function streamAgent(params: {
     responseMessage,
   }) => {
     logger.debug("Finished streaming response message", {
-      state,
+      state: latestState,
       threadId: params.threadId,
       responseMessageId: responseMessage.id,
       parts: responseMessage.parts.length,
@@ -79,15 +79,18 @@ export function streamAgent(params: {
     generateId: randomUUID,
     onFinish,
     execute: async ({ writer }) => {
+      let stateChange = true;
       writer.write({
         type: "start",
         messageMetadata: messageMetadata({ part: { type: "start" } }),
       });
-      let stateChange = true;
 
       const writerUpdatingStateChange: typeof writer = {
         write: (part) => {
-          if (part.type === "data-AgentState") stateChange = true;
+          if (part.type === "data-AgentState") {
+            latestState = part.data;
+            stateChange = true;
+          }
           return writer.write(part);
         },
         merge: (stream) => writer.merge(stream),
@@ -95,10 +98,25 @@ export function streamAgent(params: {
       };
 
       while (stateChange) {
+        logger.debug("Running agent from state", { state: latestState });
         stateChange = false;
 
-        switch (state?.type) {
+        switch (latestState?.type) {
           case "implement":
+            await raceWithAbortSignal(
+              params.sandbox.waitUntilStarted(),
+              params.controller.signal
+            );
+
+            await raceWithAbortSignal(
+              storeInitialCommitInSystemMessage(
+                params.messages,
+                params.sandbox,
+                db
+              ),
+              params.controller.signal
+            );
+
             if (params.restoreVersion) {
               await raceWithAbortSignal(
                 params.sandbox.restoreVersion(params.messages),
@@ -110,18 +128,6 @@ export function streamAgent(params: {
               .flatMap((m) => m.parts)
               .findLast((p) => p.type === "data-AgentSession");
 
-            await raceWithAbortSignal(
-              params.sandbox.waitUntilStarted(),
-              params.controller.signal
-            );
-            await raceWithAbortSignal(
-              storeInitialCommitInSystemMessage(
-                params.messages,
-                params.sandbox,
-                db
-              ),
-              params.controller.signal
-            );
             await streamClaudeCodeAgent({
               writer: writerUpdatingStateChange,
               messages: params.messages,
@@ -158,9 +164,9 @@ export function streamAgent(params: {
           //   );
           //   break;
         }
-
-        writer.write({ type: "finish" });
       }
+
+      writer.write({ type: "finish" });
     },
   });
 }

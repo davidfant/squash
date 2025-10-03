@@ -22,10 +22,12 @@ export async function storeInitialCommitInSystemMessage(
   const title = "Starting point";
   const description =
     "This is the starting point before any changes have been made.";
-  const data = { sha, title, description, url: undefined };
+  rootMessage.parts = [
+    { type: "data-GitSha", data: { sha, title, description, url: undefined } },
+  ];
   logger.info("Storing initial commit in system message", { sha });
   await db
     .update(schema.message)
-    .set({ parts: [{ type: "data-GitSha", data }] })
+    .set({ parts: rootMessage.parts })
     .where(eq(schema.message.id, rootMessage.id));
 }

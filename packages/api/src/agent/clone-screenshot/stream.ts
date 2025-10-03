@@ -18,10 +18,6 @@ export async function streamCloneScreenshotPlanAgent(
 ) {
   logger.debug("Starting Clone Screenshot stream");
 
-  console.log("XXXX", [
-    { role: "system", content: SystemInstructions },
-    ...convertToModelMessages(messages),
-  ]);
   const stream = toReasoningSummarizingTextStreamResult(
     streamText({
       model: anthropic("claude-sonnet-4-5-20250929"),
@@ -43,5 +39,5 @@ export async function streamCloneScreenshotPlanAgent(
 
   await stream.consumeStream();
 
-  // writer.write({ type: "data-AgentState", data: { type: "implement" } });
+  writer.write({ type: "data-AgentState", data: { type: "implement" } });
 }

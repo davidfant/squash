@@ -43,6 +43,13 @@
       "when": 1759361614315,
       "tag": "0005_giant_deathstrike",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1759448759769,
+      "tag": "0006_low_phalanx",
+      "breakpoints": true
     }
   ]
 }

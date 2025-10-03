@@ -14,7 +14,6 @@ import { env } from "cloudflare:workers";
 import { randomUUID } from "crypto";
 import { eq } from "drizzle-orm";
 import { streamCloneScreenshotPlanAgent } from "./clone-screenshot/stream";
-import { streamDiscoverAgent } from "./discover/stream";
 import { storeInitialCommitInSystemMessage } from "./util";
 
 export function streamAgent(params: {
@@ -141,22 +140,23 @@ export function streamAgent(params: {
             });
             break;
           case "clone-screenshot":
+          default:
             await streamCloneScreenshotPlanAgent(
               writerUpdatingStateChange,
-              params.messages,
+              params.messages.filter((m) => m.role !== "system"),
               params.controller.signal,
               messageMetadata
             );
             break;
-          case "discover":
-          default:
-            await streamDiscoverAgent(
-              writerUpdatingStateChange,
-              params.messages,
-              params.controller.signal,
-              messageMetadata
-            );
-            break;
+          // case "discover":
+          // default:
+          //   await streamDiscoverAgent(
+          //     writerUpdatingStateChange,
+          //     params.messages,
+          //     params.controller.signal,
+          //     messageMetadata
+          //   );
+          //   break;
         }
 
         writer.write({ type: "finish" });

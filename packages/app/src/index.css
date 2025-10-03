@@ -127,20 +127,30 @@
   }
 }
 
+
 @layer utilities {
-  @keyframes gradient {
-    0% {
-      background-position: 0% 50%;
-    }
-    50% {
-      background-position: 100% 50%;
-    }
-    100% {
-      background-position: 0% 50%;
-    }
+  :root {
+    --color-shimmer: var(--color-foreground);
   }
 
-  .animate-gradient {
-    animation: gradient 3s ease infinite;
+  @keyframes text-shimmer {
+    0%   { background-position-x: 100%; }
+    100% { background-position-x:  -100%; }
+  }
+
+  .text-shimmer {
+    background-image: linear-gradient(
+      90deg,
+      var(--color-shimmer) 30%,
+      rgb(from var(--color-shimmer) r g b / .2) 50%,
+      var(--color-shimmer) 70%
+    );
+
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+
+    background-size: 200% 100%;
+    animation: text-shimmer 2s linear infinite;
   }
 }

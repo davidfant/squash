@@ -5,6 +5,7 @@ import { Markdown } from "../../../Markdown";
 import { EventsCollapsible } from "./EventsCollapsible";
 import { GitCommitAlert } from "./GitCommitAlert";
 import { groupMessageEvents } from "./groupMessageEvents";
+import { ReasoningSummaries } from "./ReasoningSummaries";
 
 export function MessageParts({
   id,
@@ -32,7 +33,10 @@ export function MessageParts({
       {blocks.map((block, idx) => {
         switch (block.type) {
           case "text":
+            // return null;
             return <Markdown key={idx}>{block.content}</Markdown>;
+          case "reasoning":
+            return <ReasoningSummaries block={block} />;
           // case "abort":
           //   return (
           //     <Alert className="text-muted-foreground">

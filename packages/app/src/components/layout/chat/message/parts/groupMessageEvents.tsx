@@ -18,6 +18,12 @@ interface TextBlock {
   content: string;
 }
 
+export interface ReasoningBlock {
+  type: "reasoning";
+  summaries: Array<{ title: string; content: string }>;
+  streaming: boolean;
+}
+
 interface AbortBlock {
   type: "abort";
 }
@@ -46,6 +52,7 @@ interface EventBlock {
 
 type Block =
   | TextBlock
+  | ReasoningBlock
   | AbortBlock
   | GitCommitBlock
   | EventBlock
@@ -53,6 +60,32 @@ type Block =
 
 const isToolLoading = (state: `input-${string}` | `output-${string}`) =>
   state.startsWith("input-");
+
+function parseReasoningSummaries(src: string): ReasoningBlock["summaries"] {
+  const headerRE = /\*\*(.*?)\*\*/g;
+  const sections: ReasoningBlock["summaries"] = [];
+
+  let currentTitle: string | null = null;
+  let contentStart = 0;
+  let m: RegExpExecArray | null;
+
+  while ((m = headerRE.exec(src)) !== null) {
+    if (currentTitle !== null) {
+      const content = src.slice(contentStart, m.index).trim();
+      sections.push({ title: currentTitle, content });
+    }
+
+    currentTitle = m[1]!.trim();
+    contentStart = headerRE.lastIndex;
+  }
+
+  if (currentTitle !== null) {
+    const content = src.slice(contentStart).trim();
+    sections.push({ title: currentTitle, content });
+  }
+
+  return sections;
+}
 
 export function groupMessageEvents(
   parts: ChatMessage["parts"],
@@ -78,6 +111,11 @@ export function groupMessageEvents(
       case "text":
         flushEvents();
         blocks.push({ type: "text", content: part.text });
+        break;
+      case "reasoning":
+        flushEvents();
+        const summaries = parseReasoningSummaries(part.text);
+        blocks.push({ type: "reasoning", summaries });
         break;
       case "tool-ClaudeCodeRead": {
         const path = part.input?.file_path;
@@ -236,6 +274,9 @@ export function groupMessageEvents(
     (last?.type === "events" && !last.events.some((ev) => ev.loading))
   ) {
     blocks.push({ type: "loading" });
+  }
+  if (last?.type === "reasoning" && streaming) {
+    last.streaming = true;
   }
 
   return blocks;

@@ -1,6 +1,6 @@
 import { createParser } from "eventsource-parser";
 import { logger } from "../../lib/logger";
-import { toAsyncIterator } from "../../lib/toAsyncIterator";
+import { toAsyncIterator } from "../../lib/to-async-iterator";
 import type { Sandbox } from "../types";
 
 /**

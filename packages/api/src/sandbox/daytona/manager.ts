@@ -2,7 +2,7 @@ import type { ChatMessage } from "@/agent/types";
 import { createDatabase } from "@/database";
 import * as schema from "@/database/schema";
 import { logger } from "@/lib/logger";
-import { toAsyncIterator } from "@/lib/toAsyncIterator";
+import { toAsyncIterator } from "@/lib/to-async-iterator";
 import { Daytona, Sandbox as DaytonaSandbox } from "@daytonaio/sdk";
 import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";

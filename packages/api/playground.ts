@@ -2,7 +2,7 @@ import { anthropic } from "@ai-sdk/anthropic";
 import { google } from "@ai-sdk/google";
 import { generateText, streamText } from "ai";
 import { RateLimiter } from "limiter";
-import { streamTextWithReasoningSummary } from "./src/lib/ReasoningSummarizerStreamTextResult";
+import { toReasoningSummarizingTextStreamResult } from "./src/lib/to-reasoning-summarizing-text-stream-result";
 
 const summarizerLimiter = new RateLimiter({
   tokensPerInterval: 1,
@@ -110,11 +110,13 @@ export async function runReasoning(
   // await runReasoning("Write an essay about the benefits of using AI", (msg) => {
   //   console.log(msg, "\n");
   // });
-  const stream = streamTextWithReasoningSummary({
-    model: anthropic("claude-sonnet-4-5-20250929"),
-    prompt: "Write an essay about the benefits of using AI",
-    summaryModel: google("gemini-flash-latest"),
-  });
+  const stream = toReasoningSummarizingTextStreamResult(
+    streamText({
+      model: anthropic("claude-sonnet-4-5-20250929"),
+      prompt: "Write an essay about the benefits of using AI",
+    })
+  );
+
   for await (const chunk of stream.fullStream) {
     console.log(chunk);
   }

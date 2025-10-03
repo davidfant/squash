@@ -1,5 +1,11 @@
-import type { StreamTextResult, TextStreamPart, ToolSet } from "ai";
-import { generateText, type LanguageModel, streamText } from "ai";
+import { google } from "@ai-sdk/google";
+import type {
+  LanguageModel,
+  StreamTextResult,
+  TextStreamPart,
+  ToolSet,
+} from "ai";
+import { generateText } from "ai";
 import { RateLimiter } from "limiter";
 
 interface SummaryState {
@@ -15,14 +21,14 @@ interface SummaryState {
  * generates reasoning summaries, and emits the full text only at the end.
  */
 function createReasoningSummaryTransform<TOOLS extends ToolSet>({
-  summaryModel,
+  summaryModel = google("gemini-flash-latest"),
   summaryInterval = 3000,
   summaryTokenWindow = 400,
 }: {
-  summaryModel: LanguageModel;
+  summaryModel?: LanguageModel;
   summaryInterval?: number;
   summaryTokenWindow?: number;
-}): TransformStream<TextStreamPart<TOOLS>, TextStreamPart<TOOLS>> {
+} = {}): TransformStream<TextStreamPart<TOOLS>, TextStreamPart<TOOLS>> {
   const state: SummaryState = {
     accumulatedText: "",
     fullContextBeforePrevSummary: "",
@@ -142,63 +148,17 @@ Guidelines
   });
 }
 
-/**
- * Wrapper function that creates a StreamTextResult with reasoning summarization.
- *
- * @example
- * ```typescript
- * const result = await streamTextWithReasoningSummary({
- *   model: anthropic("claude-sonnet-4-5-20250929"),
- *   prompt: "Write an essay about AI",
- *   summaryModel: google("gemini-flash-latest"),
- *   summaryInterval: 3000,
- *   summaryTokenWindow: 400,
- * });
- *
- * // The fullStream will emit reasoning-delta events during generation
- * // and a single text-delta with the complete text at the end
- * for await (const chunk of result.fullStream) {
- *   if (chunk.type === 'reasoning-delta') {
- *     console.log('Summary:', chunk.text);
- *   } else if (chunk.type === 'text-delta') {
- *     console.log('Final text:', chunk.text);
- *   }
- * }
- * ```
- */
-export function streamTextWithReasoningSummary<TOOLS extends ToolSet>({
-  summaryModel,
-  summaryInterval = 3000,
-  summaryTokenWindow = 400,
-  ...streamTextOptions
-}: Parameters<typeof streamText<TOOLS>>[0] & {
-  summaryModel: LanguageModel;
-  summaryInterval?: number;
-  summaryTokenWindow?: number;
-}): StreamTextResult<TOOLS, never> {
-  // Create the base stream result
-  const baseResult = streamText(streamTextOptions);
-
-  // Create a custom result that applies our transformation
-  return new Proxy(baseResult, {
+export const toReasoningSummarizingTextStreamResult = <TOOLS extends ToolSet>(
+  stream: StreamTextResult<TOOLS, never>
+) =>
+  new Proxy(stream, {
     get(target, prop, receiver) {
-      // Intercept fullStream to apply our transformation
       if (prop === "fullStream") {
-        const originalStream = target.fullStream;
-        const transformedStream = originalStream.pipeThrough(
-          createReasoningSummaryTransform<TOOLS>({
-            summaryModel,
-            summaryInterval,
-            summaryTokenWindow,
-          })
+        return target.fullStream.pipeThrough(
+          createReasoningSummaryTransform<TOOLS>()
         );
-
-        // Return async iterable stream
-        return transformedStream;
       }
 
-      // Pass through all other properties
       return Reflect.get(target, prop, receiver);
     },
   });
-}

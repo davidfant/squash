@@ -13,6 +13,7 @@ import {
 import { env } from "cloudflare:workers";
 import { randomUUID } from "crypto";
 import { eq } from "drizzle-orm";
+import { streamCloneScreenshotPlanAgent } from "./clone-screenshot/stream";
 import { streamDiscoverAgent } from "./discover/stream";
 import { storeInitialCommitInSystemMessage } from "./util";
 
@@ -138,6 +139,14 @@ export function streamAgent(params: {
                   .set({ imageUrl, updatedAt: new Date() })
                   .where(eq(schema.repoBranch.id, params.branchId)),
             });
+            break;
+          case "clone-screenshot":
+            await streamCloneScreenshotPlanAgent(
+              writerUpdatingStateChange,
+              params.messages,
+              params.controller.signal,
+              messageMetadata
+            );
             break;
           case "discover":
           default:

@@ -54,6 +54,7 @@
     "jsonlines": "^0.1.1",
     "jsonwebtoken": "^9.0.2",
     "langsmith": "^0.3.53",
+    "limiter": "^3.0.0",
     "lodash.camelcase": "^4.3.0",
     "lodash.kebabcase": "^4.1.1",
     "lodash.upperfirst": "^4.3.1",

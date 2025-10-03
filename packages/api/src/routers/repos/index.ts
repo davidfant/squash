@@ -1,10 +1,9 @@
+import { generateName } from "@/agent/name/generate";
 import { requireActiveOrganization, requireAuth } from "@/auth/middleware";
 import type { Database } from "@/database";
 import * as schema from "@/database/schema";
-import { generateText } from "@/lib/ai";
 import { zUserMessagePart } from "@/routers/zod";
 import { zSandboxSnapshotConfig } from "@/sandbox/zod";
-import { google } from "@ai-sdk/google";
 import { zValidator } from "@hono/zod-validator";
 import { randomUUID } from "crypto";
 import { and, desc, eq, isNull } from "drizzle-orm";
@@ -223,22 +222,15 @@ export const reposRouter = new Hono<{
       const messageId = randomUUID();
       const branchId = randomUUID();
 
-      const [thread, { text: rawTitle }] = await Promise.all([
+      const [thread, title] = await Promise.all([
         db
           .insert(schema.messageThread)
           .values({ ipAddress })
           .returning()
           .then(([thread]) => thread!),
-        generateText({
-          model: google("gemini-2.5-flash"),
-          prompt: `Generate a concise Jira ticket name (title case, max 50 chars) for this feature request: "${textContent}". Only return the branch name, nothing else.`,
-          providerOptions: {
-            google: { thinkingConfig: { thinkingBudget: 0 } },
-          },
-        }),
+        generateName(textContent),
       ]);
 
-      const title = rawTitle.trim();
       const branchName = `${kebabCase(title)}-${branchId.split("-")[0]}`;
 
       const manager = c.env.DAYTONA_SANDBOX_MANAGER.getByName(branchId);

@@ -31,12 +31,16 @@ const Event = ({
 );
 
 export function EventsCollapsible({
-  events,
+  events: _events,
   streaming,
 }: {
   events: EventBlockItem[];
   streaming: boolean;
 }) {
+  const events = _events.map((e) => ({
+    ...e,
+    loading: e.loading && streaming,
+  }));
   const [open, setOpen] = useState(streaming);
   const wasStreaming = usePrevious(streaming);
   useEffect(() => {
@@ -52,9 +56,8 @@ export function EventsCollapsible({
 
   const otherCount = events.length - 1;
   return (
-    <div className="@container">
+    <div className="@container" onClick={() => setOpen(!open)}>
       <Event
-        onClick={() => setOpen(!open)}
         event={
           open
             ? firstEvent

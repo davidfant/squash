@@ -4,6 +4,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import {
   useCallback,
+  useEffect,
   useState,
   type ClipboardEvent,
   type DragEvent,
@@ -51,6 +52,11 @@ export function ChatInput({
   const dictation = useDictation((t) =>
     input.setText((v) => (v ? `${v} ${t}` : t))
   );
+
+  const [value, setValue] = useState(input.text);
+  useEffect(() => {
+    setValue(input.text);
+  }, [input.text]);
 
   const handlePaste = useCallback(
     (event: ClipboardEvent<HTMLTextAreaElement>) => {
@@ -124,14 +130,15 @@ export function ChatInput({
 
   const handleSubmit = async () => {
     if (disabled) return;
-    if (!input.text.length && !input.files.length) return;
+    if (!value.length && !input.files.length) return;
     const submittedValue = {
-      text: input.text,
+      text: value,
       files: input.files,
       state: input.state,
     };
     try {
       if (clearOnSubmit) {
+        setValue("");
         input.setText("");
         input.setFiles([]);
         input.setState(undefined);
@@ -173,7 +180,7 @@ export function ChatInput({
           onClick={dictation.start}
         />
         <ChatInputSubmitButton
-          disabled={submitting || input.isUploading || !input.text || disabled}
+          disabled={submitting || input.isUploading || !value || disabled}
           loading={submitting || input.isUploading}
           onClick={handleSubmit}
         />
@@ -208,12 +215,12 @@ export function ChatInput({
         )}
         <div className="relative">
           <TextareaComponent
-            value={input.text}
+            value={value}
             autoFocus={autoFocus}
             minRows={minRows}
             maxRows={maxRows}
             placeholder={placeholder}
-            onChange={(e) => input.setText(e.target.value)}
+            onChange={(e) => setValue(e.target.value)}
             className="text-lg border-none shadow-none bg-transparent focus:ring-0 focus-visible:ring-0 transition-all"
             onPaste={handlePaste}
             onKeyDown={(e) => {

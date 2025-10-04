@@ -33,7 +33,7 @@ function ChatInputWithScrollToBottom({
   ready: boolean;
   onStop: () => Promise<unknown>;
 }) {
-  const { status, sendMessage, error } = useChatContext();
+  const { status, sendMessage } = useChatContext();
   const { scrollToBottom } = useStickToBottomContext();
   return (
     <ChatInputProvider initialValue={initialValue}>

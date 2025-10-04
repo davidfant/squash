@@ -11,7 +11,6 @@ import { randomUUID } from "crypto";
 import { eq } from "drizzle-orm";
 import { mergeScreenshotAnalysisIntoUserMessages } from "./claude-code/merge-screenshot-analysis-with-prev-user-message";
 import { streamCloneScreenshotPlanAgent } from "./clone-screenshot/stream";
-import { streamDiscoverAgent } from "./discover/stream";
 import { storeInitialCommitInSystemMessage } from "./util";
 
 const getState = (messages: ChatMessage[]) =>
@@ -29,7 +28,7 @@ function streamInner(params: {
   readSessionData(id: string): Promise<string>;
   onFinish(message: ChatMessage): void;
 }) {
-  const state = getState(params.messages);
+  const state = getState(params.messages) ?? { type: "implement" };
   logger.debug("Running agent from state", state);
 
   const db = createDatabase(env);
@@ -91,15 +90,15 @@ function streamInner(params: {
             params.messageMetadata
           );
           break;
-        case "discover":
-        default:
-          await streamDiscoverAgent(
-            writer,
-            params.messages,
-            params.controller.signal,
-            params.messageMetadata
-          );
-          break;
+        // case "discover":
+        // default:
+        //   await streamDiscoverAgent(
+        //     writer,
+        //     params.messages,
+        //     params.controller.signal,
+        //     params.messageMetadata
+        //   );
+        //   break;
       }
     },
   });

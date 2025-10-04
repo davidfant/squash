@@ -5,7 +5,7 @@ import type {
   LanguageModelV2Usage,
   SharedV2ProviderMetadata,
 } from "@ai-sdk/provider";
-import type { SDKMessage } from "@anthropic-ai/claude-code";
+import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import { generateId } from "ai";
 import { mapAnthropicStopReason } from "./map-stop-reason";
 
@@ -359,9 +359,8 @@ export function messageToStreamPart(
             //   return;
             // }
 
-            default: {
-              throw new Error(`Unsupported delta type: ${deltaType}`);
-            }
+            default:
+              console.warn(`Unsupported delta type`, deltaType);
           }
         }
 

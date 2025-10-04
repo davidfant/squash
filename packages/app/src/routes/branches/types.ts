@@ -1,5 +1,3 @@
-import type { api, QueryOutput } from "@/hooks/api";
+import { api, type QueryOutput } from "@/hooks/api";
 
-export type Branch = QueryOutput<
-  (typeof api.repos.branches)[":branchId"]["$get"]
->;
+export type Branch = QueryOutput<(typeof api.branches)[":branchId"]["$get"]>;

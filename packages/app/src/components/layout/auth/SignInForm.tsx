@@ -1,4 +1,4 @@
-import { authClient } from "@/auth";
+import { authClient } from "@/auth/client";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";

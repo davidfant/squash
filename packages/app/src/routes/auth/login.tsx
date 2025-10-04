@@ -1,4 +1,4 @@
-import { authClient } from "@/auth";
+import { authClient } from "@/auth/client";
 import { SignInForm } from "@/components/layout/auth/SignInForm";
 import { Card, CardContent } from "@/components/ui/card";
 import { Navigate } from "react-router";

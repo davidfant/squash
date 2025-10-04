@@ -107,6 +107,7 @@ function NewRepoForm({ provider }: { provider: ProviderData }) {
               },
               build: [],
             },
+            build: { type: "static", dir: "dist" },
           },
         },
       });

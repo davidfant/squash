@@ -1,5 +1,5 @@
-import { authClient } from "@/auth";
-import { CreateOrganizationMenuItem } from "@/components/layout/auth/avatar/CreateOrganizationMenuItem";
+import { authClient } from "@/auth/client";
+import { RequireRole } from "@/auth/RequireRole";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "@/components/ui/sonner";
 import { useTheme } from "@/contexts/ThemeContext";
+import { InviteButton } from "@/routes/branches/header/InviteButton";
+import { CreateOrganizationMenuItem } from "@/routes/landing/components/header/CreateOrganizationMenuItem";
 import { useQueryClient } from "@tanstack/react-query";
 import { Check, LogOut, Moon, Sun } from "lucide-react";
 import { useState } from "react";
@@ -76,6 +78,10 @@ export function HeaderMenu() {
             </div>
           </div>
         </DropdownMenuLabel>
+
+        <RequireRole roles={["admin", "owner"]}>
+          <InviteButton />
+        </RequireRole>
 
         <DropdownMenuSeparator />
 

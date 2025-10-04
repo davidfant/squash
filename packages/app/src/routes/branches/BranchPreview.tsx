@@ -1,32 +1,33 @@
 import { SandboxTaskStream } from "@/components/blocks/SandboxTaskStream";
 import { Card } from "@/components/ui/card";
+import { useMounted } from "@/hooks/useMounted";
 import { cn } from "@/lib/utils";
 import { useChat } from "@ai-sdk/react";
-import type { StartSandboxMessage } from "@squashai/api/agent/types";
+import type { SandboxTaskMessage } from "@squashai/api/agent/types";
 import { DefaultChatTransport } from "ai";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useBranchContext } from "./context";
 
 export function BranchPreview({ className }: { className?: string }) {
-  const { screenSize, previewPath, preview, branch } = useBranchContext();
+  const { screenSize, previewPath, previewUrl, branch } = useBranchContext();
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  const stream = useChat<StartSandboxMessage>({
+  const stream = useChat<SandboxTaskMessage>({
     messages: [],
-    resume: true,
     transport: new DefaultChatTransport({
+      api: `${import.meta.env.VITE_API_URL}/branches/${
+        branch.id
+      }/preview/stream`,
       credentials: "include",
-      prepareReconnectToStreamRequest: () => ({
-        api: `${import.meta.env.VITE_API_URL}/repos/branches/${
-          branch.id
-        }/preview/stream`,
-      }),
     }),
   });
-  const tasks = stream.messages
-    .flatMap((m) => m.parts)
-    .filter((p) => p.type === "tool-SandboxTask")
-    .filter((t) => !!t.input?.title);
+
+  const mounted = useMounted();
+  useEffect(() => {
+    if (mounted) {
+      stream.sendMessage();
+    }
+  }, [mounted]);
 
   // useEffect(
   //   () =>
@@ -96,7 +97,7 @@ export function BranchPreview({ className }: { className?: string }) {
   // }
 
   const placeholder = (
-    <div className="flex flex-col gap-2 h-full items-center justify-center">
+    <div className="flex flex-col gap-2 h-full items-center pt-[30%] p-8 overflow-y-auto">
       <SandboxTaskStream stream={stream} label="Your preview is loading..." />
     </div>
   );
@@ -104,17 +105,19 @@ export function BranchPreview({ className }: { className?: string }) {
   return (
     <div className={cn("relative h-full", className)}>
       <Card className="p-0 h-full overflow-hidden shadow-none bg-muted">
-        {!!preview && (
+        {!!previewUrl && (
           <iframe
             ref={iframeRef}
-            src={`${preview.url}${previewPath}`}
+            src={`${previewUrl}${previewPath}`}
             className={cn(
               "h-full mx-auto transition-all duration-300 z-2",
               getPreviewWidth()
             )}
           />
         )}
-        <div className="absolute inset-0 z-1">{placeholder}</div>
+        <div className="absolute inset-0 z-1 overflow-y-auto">
+          {placeholder}
+        </div>
       </Card>
       {/* <AnimatePresence mode="wait">
         {comment && (

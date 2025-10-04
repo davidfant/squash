@@ -39,6 +39,7 @@ const zSandboxSnapshotBaseConfig = z.object({
       Sandbox.Snapshot.Task.Any[]
     >,
   }),
+  build: z.object({ type: z.literal("static"), dir: z.string() }),
 }) satisfies z.ZodType<Sandbox.Snapshot.Config.Base>;
 
 export const zSandboxSnapshotConfig = z.union([

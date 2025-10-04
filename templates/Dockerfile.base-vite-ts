@@ -1,10 +1,10 @@
 FROM node:20-alpine
 
-RUN apk add --no-cache python3 py3-pip git \
+RUN apk add --no-cache python3 py3-pip git bash \
  && pip3 install --break-system-packages --no-cache-dir git-remote-s3 \
  && corepack enable
 
-ARG SQUASH_CLI_VERSION=0.0.5
+ARG SQUASH_CLI_VERSION=0.0.8
 RUN npm install -g @squashai/cli@$SQUASH_CLI_VERSION
 
 WORKDIR /repo
@@ -14,6 +14,7 @@ COPY pnpm-lock.yaml .
 
 RUN pnpm install
 
+COPY .gitignore .
 COPY vite.config.js .
 COPY tsconfig.json .
 COPY index.html .

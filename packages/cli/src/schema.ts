@@ -29,20 +29,17 @@ export const PromptSchema = z.array(
   ])
 );
 
-export const ClaudeCodeSessionSchema = z.object({
-  id: z.string(),
-  steps: z.array(z.record(z.string(), z.any())),
-});
+export const ClaudeCodeSessionSchema = z.object({ id: z.string() });
 
 export const ClaudeCodeOptionsSchema = z.object({
   appendSystemPrompt: z.string().optional(),
+  sessionId: z.string().optional(),
 });
 
 export const ClaudeCodeCLIOptionsSchema = z.object({
   agent: z.enum(["claude-code"]),
   prompt: z.preprocess(parseJson, PromptSchema),
   model: z.string().optional(),
-  session: z.preprocess(parseJson, ClaudeCodeSessionSchema).optional(),
   options: z.preprocess(parseJson, ClaudeCodeOptionsSchema).optional(),
   cwd: z.string().default(process.cwd()),
 });

@@ -1,32 +1,11 @@
 import type { ClaudeCodeCLIOptions, ClaudeCodeSession } from "@/schema";
-import { query } from "@anthropic-ai/claude-code";
+import { query } from "@anthropic-ai/claude-agent-sdk";
 import { randomUUID } from "node:crypto";
-import fs from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
-
-async function hydrateSession(session: ClaudeCodeSession, dir: string) {
-  const sessionFilePath = path.join(dir, `${session.id}.jsonl`);
-  await fs.mkdir(dir, { recursive: true });
-  await fs.writeFile(
-    sessionFilePath,
-    session.steps.map((step) => JSON.stringify(step)).join("\n")
-  );
-}
 
 export async function runClaudeCode(
   req: ClaudeCodeCLIOptions,
   signal: AbortSignal
 ): Promise<ClaudeCodeSession> {
-  const sessionsDir = path.join(
-    os.homedir(),
-    ".claude",
-    "projects",
-    req.cwd.replace(/\//g, "-")
-  );
-
-  if (req.session) await hydrateSession(req.session, sessionsDir);
-
   const q = query({
     prompt: (async function* () {
       const content: Array<
@@ -55,18 +34,23 @@ export async function runClaudeCode(
     })(),
     options: {
       cwd: req.cwd,
-      resume: req.session?.id,
+      resume: req.options?.sessionId,
       model: req.model,
       executable: "node",
       includePartialMessages: true,
       permissionMode: "bypassPermissions",
-      appendSystemPrompt: req.options?.appendSystemPrompt,
+      systemPrompt: {
+        type: "preset",
+        preset: "claude_code",
+        append: req.options?.appendSystemPrompt,
+      },
+      settingSources: ["project"],
     },
   });
 
   signal.addEventListener("abort", () => q.interrupt());
 
-  let sessionId = req.session?.id;
+  let sessionId = req.options?.sessionId;
   for await (const msg of q) {
     console.log(JSON.stringify(msg));
     if (msg.type === "system" && typeof msg.session_id === "string") {
@@ -75,16 +59,5 @@ export async function runClaudeCode(
   }
 
   if (!sessionId) throw new Error("Session ID not found");
-
-  const sessionJsonl = await fs.readFile(
-    path.join(sessionsDir, `${sessionId}.jsonl`),
-    "utf8"
-  );
-  return {
-    id: sessionId,
-    steps: sessionJsonl
-      .split("\n")
-      .filter((l) => !!l.trim())
-      .map((l) => JSON.parse(l)),
-  };
+  return { id: sessionId };
 }

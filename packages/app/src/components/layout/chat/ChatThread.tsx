@@ -7,17 +7,16 @@ import {
   type ChatInputValue,
 } from "@/components/layout/chat/input/ChatInput";
 import { ChatInputFileUploadsProvider } from "@/components/layout/chat/input/ChatInputFileUploadsContext";
-import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { api, useMutation } from "@/hooks/api";
 import { useBranchContext } from "@/routes/branches/context";
 import type { ChatMessage } from "@squashai/api/agent/types";
 import type { FileUIPart } from "ai";
-import { AlertCircle } from "lucide-react";
 import { useMemo, useState } from "react";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import { v4 as uuid } from "uuid";
+import { ChatErrorAlert } from "./ChatErrorAlert";
 import { useChatContext } from "./context";
 import { AssistantMessage } from "./message/AssistantMessage";
 import { UserMessage } from "./message/UserMessage";
@@ -68,7 +67,7 @@ export function ChatThread({
   ready: boolean;
   initialValue?: ChatInputValue;
 }) {
-  const { setPreview } = useBranchContext();
+  const { restoreVersion } = useBranchContext();
   const {
     messages: allMessages,
     status,
@@ -78,7 +77,7 @@ export function ChatThread({
   const messages = useMessageLineage(allMessages, id);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
 
-  const mostRecentMessageId = messages.activePath.slice(-1)[0]?.id;
+  const lastMessageId = messages.activePath.slice(-1)[0]?.id;
 
   const handleRetry = (assistantId: string) => {
     if (status === "submitted" || status === "streaming") return;
@@ -122,16 +121,11 @@ export function ChatThread({
     setEditingMessageId(null);
   };
 
-  const stop = useMutation(
-    api.repos.branches[":branchId"].messages.abort.$post
-  );
+  const stop = useMutation(api.branches[":branchId"].messages.abort.$post);
 
   const handleVariantChange = (parentId: string, chosenChildId: string) => {
     const newActivePath = messages.switchVariant(parentId, chosenChildId);
-    const lastSha = newActivePath
-      .flatMap((m) => m.parts)
-      .findLast((p) => p.type === "data-GitSha");
-    if (lastSha) setPreview(lastSha.data.sha);
+    restoreVersion(newActivePath[newActivePath.length - 1]!.id);
   };
 
   const todos = useMemo(
@@ -148,6 +142,11 @@ export function ChatThread({
     [messages.activePath]
   );
 
+  console.log("ChatThread.activePath", status, messages.activePath);
+  const lastMessage = messages.activePath[messages.activePath.length - 1];
+  const showLoading =
+    status === "submitted" ||
+    (status === "streaming" && lastMessage?.role === "user");
   return (
     <StickToBottom
       key={String(ready)}
@@ -157,7 +156,7 @@ export function ChatThread({
     >
       <div className="flex-1 w-full overflow-hidden relative">
         <ConversationContent className="pt-0 pl-2 pb-2 pr-4">
-          {messages.activePath.map((m) => {
+          {messages.activePath.map((m, idx) => {
             switch (m.role) {
               case "user":
                 const isEditing = editingMessageId === m.id;
@@ -213,29 +212,26 @@ export function ChatThread({
                   <AssistantMessage
                     key={m.id}
                     message={m}
-                    loading={
-                      m.id === mostRecentMessageId && status === "streaming"
-                    }
+                    streaming={status === "streaming" && m.id === lastMessageId}
+                    isLast={m.id === lastMessageId}
                     className="mb-4"
                     onRetry={() => handleRetry(m.id)}
                   />
                 );
             }
           })}
-          {status === "submitted" && (
+          {showLoading && (
             <AssistantMessage
               message={{ id: "", role: "assistant", parts: [] }}
-              loading
+              isLast
+              streaming
               className="mb-4"
             />
           )}
 
-          {status === "error" && (
+          {lastMessage?.role !== "assistant" && status === "error" && (
             <div className="ml-7">
-              <Alert className="text-muted-foreground">
-                <AlertCircle className="w-4 h-4" />
-                <AlertTitle>{error?.message ?? "Unknown error"}</AlertTitle>
-              </Alert>
+              <ChatErrorAlert />
             </div>
           )}
         </ConversationContent>
@@ -243,7 +239,7 @@ export function ChatThread({
       </div>
 
       <div className="p-2 pt-0">
-        {!!todos?.length && (
+        {!!todos && !todos.every((t) => t.status === "completed") && (
           // margin-inline: 12px;
           // margin-bottom: 0;
           // border-bottom-right-radius: 0;

@@ -243,5 +243,6 @@ export function createSnapshotFromFramework(
       },
       build: [],
     },
+    build: { type: "static", dir: "dist" },
   };
 }

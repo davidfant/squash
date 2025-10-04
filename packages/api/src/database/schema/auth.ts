@@ -1,13 +1,23 @@
-import { relations } from "drizzle-orm";
+import { relations, type InferEnum } from "drizzle-orm";
 import {
   boolean,
   integer,
+  pgEnum,
   pgTable,
   text,
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
 import { repo } from "./repos";
+
+export const memberRole = pgEnum("member_role", [
+  "owner",
+  "admin",
+  "editor",
+  "viewer",
+]);
+
+export type MemberRole = InferEnum<typeof memberRole>;
 
 export const user = pgTable("user", {
   id: uuid("id").primaryKey(),
@@ -79,7 +89,7 @@ export const member = pgTable("member", {
   userId: uuid("user_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
-  role: text("role").default("member").notNull(),
+  role: memberRole("role").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -88,7 +98,7 @@ export const invitation = pgTable("invitation", {
   organizationId: uuid("organization_id")
     .notNull()
     .references(() => organization.id, { onDelete: "cascade" }),
-  role: text("role").notNull().default("member"),
+  role: memberRole("role").notNull().default("editor"),
   expiresAt: timestamp("expires_at").notNull(),
   inviterId: uuid("inviter_id")
     .notNull()

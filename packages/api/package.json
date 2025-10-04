@@ -1,7 +1,7 @@
 {
   "name": "@squashai/api",
   "type": "module",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -14,6 +14,10 @@
     "./agent/types": {
       "types": "./dist/agent/types.d.ts",
       "default": "./dist/agent/types.js"
+    },
+    "./sandbox/types": {
+      "types": "./dist/sandbox/types.d.ts",
+      "default": "./dist/sandbox/types.js"
     }
   },
   "scripts": {
@@ -22,7 +26,7 @@
     "dev:tsc": "tsc --watch --preserveWatchOutput",
     "drizzle:migrate:dev": "drizzle-kit push",
     "drizzle:migrate:prod": "DOTENV_CONFIG_PATH=.prod.vars drizzle-kit migrate",
-    "push": "wrangler deploy --minify --env production",
+    "push": "wrangler deploy --env production",
     "playground": "tsx --env-file .dev.vars playground.ts",
     "build": "tsc -b",
     "typegen": "wrangler types --env-interface CloudflareBindings"
@@ -53,9 +57,10 @@
     "lodash.camelcase": "^4.3.0",
     "lodash.kebabcase": "^4.1.1",
     "lodash.upperfirst": "^4.3.1",
-    "nanotar": "^0.2.0",
+    "mime": "^4.1.0",
     "openai": "^5.21.0",
     "shell-escape": "^0.2.0",
+    "typescript": "~5.8.3",
     "zod": "^4.0.16"
   },
   "devDependencies": {

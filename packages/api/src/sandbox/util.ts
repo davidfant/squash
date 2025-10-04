@@ -1,10 +1,7 @@
 import type { ChatMessage, SandboxTaskToolInput } from "@/agent/types";
-import { type Database } from "@/database";
-import * as schema from "@/database/schema";
 import { logger } from "@/lib/logger";
 import type { InferUIMessageChunk } from "ai";
 import { randomUUID } from "crypto";
-import { eq } from "drizzle-orm";
 import type { Sandbox } from "./types";
 
 export async function runCommand(
@@ -22,10 +19,14 @@ export async function runCommand(
       stderr += ev.data;
     }
     if (ev.type === "complete") return { stdout, stderr };
-    if (ev.type === "error") new Error(ev.error);
+    if (ev.type === "error") throw new Error(ev.error);
   }
 
-  throw new Error("Command timed out");
+  logger.error("Command ended without error or complete", {
+    stdout: stdout.slice(0, 512),
+    stderr: stderr.slice(0, 512),
+  });
+  throw new Error("Command ended without error or complete");
 }
 
 export interface Storage<T extends Record<string, unknown>> {
@@ -53,36 +54,6 @@ const isAsyncGenerator = <T>(obj: any): obj is AsyncGenerator<T> =>
   typeof obj.next === "function" &&
   typeof obj.throw === "function" &&
   typeof obj.return === "function";
-
-export async function checkoutLatestCommit(
-  messages: Pick<schema.Message, "id" | "role" | "parts">[],
-  sandbox: Sandbox.Manager.Base,
-  db: Database
-) {
-  const latestSha = await messages
-    .flatMap((m) => m.parts)
-    .findLast((p) => p.type === "data-GitSha");
-  if (latestSha) {
-    logger.info("Checking out latest commit", { sha: latestSha.data.sha });
-    await sandbox.gitReset(latestSha.data.sha);
-  } else {
-    const rootMessage = messages.find((m) => m.role === "system");
-    if (!rootMessage) throw new Error("Root message not found");
-    const sha = await sandbox.gitCurrentCommit();
-
-    const title = "Starting point";
-    const description =
-      "This is the starting point before any changes have been made.";
-    const data = { sha, title, description, url: undefined };
-    logger.info("No latest commit found, using current commit", {
-      sha: sha,
-    });
-    await db
-      .update(schema.message)
-      .set({ parts: [{ type: "data-GitSha", data }] })
-      .where(eq(schema.message.id, rootMessage.id));
-  }
-}
 
 export const executeTasks = (
   tasks: Sandbox.Snapshot.Task.Any[],
@@ -188,8 +159,15 @@ export const executeTasks = (
             error instanceof Error ? error.message : String(error);
           c.enqueue({ type: "tool-output-error", toolCallId, errorText });
           failed.add(task.id);
-          logger.error("Task failed", { taskId: task.id, error });
-          throw new Error(`Task ${task.id} failed: ${errorText}`);
+          logger.error("Task failed", {
+            taskId: task.id,
+            error: {
+              stack: (error as Error).stack,
+              name: (error as Error).name,
+              cause: (error as Error).cause,
+              message: (error as Error).message,
+            },
+          });
         } finally {
           running.delete(task.id);
         }
@@ -209,27 +187,26 @@ export const executeTasks = (
       }
 
       if (!!failed.size) {
-        c.enqueue({
-          type: "error",
-          errorText: `Tasks failed: ${[...failed]
-            .map((id) => tasks.find((task) => task.id === id)!)
-            .map((t) => `'${t.title}'`)
-            .join(", ")}`,
-        });
-      }
+        const errorText = `Tasks failed: ${[...failed]
+          .map((id) => tasks.find((task) => task.id === id)!)
+          .map((t) => `'${t.title}'`)
+          .join(", ")}`;
+        c.enqueue({ type: "error", errorText });
 
-      if (completed.size !== tasks.length) {
-        c.enqueue({
-          type: "error",
-          errorText: `Tasks not started: ${tasks
-            .filter((task) => !completed.has(task.id))
-            .map((t) => `'${t.title}'`)
-            .join(", ")}`,
-        });
+        await new Promise((r) => setTimeout(r, 0));
+        c.error(new Error(errorText));
+      } else if (completed.size !== tasks.length) {
+        const errorText = `Tasks not started: ${tasks
+          .filter((task) => !completed.has(task.id))
+          .map((t) => `'${t.title}'`)
+          .join(", ")}`;
+        c.enqueue({ type: "error", errorText });
+        await new Promise((r) => setTimeout(r, 0));
+        c.error(new Error(errorText));
+      } else {
+        c.enqueue({ type: "finish" });
+        // TODO: this causes "Uncaught Error: Network connection lost"
+        c.close();
       }
-
-      c.enqueue({ type: "finish" });
-      // TODO: this causes "Uncaught Error: Network connection lost"
-      c.close();
     },
   });

@@ -38,10 +38,13 @@ export function useFileUpload(initialFiles?: ChatInputFile[]) {
         const signed = await getSignedUrl.mutateAsync({
           json: { filename: file.name },
         });
-        await fetch(signed.uploadUrl, {
-          method: "PUT",
-          body: file,
-        });
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            await fetch(signed.uploadUrl, { method: "PUT", body: file });
+          } catch (e) {
+            console.warn("Failed uploading file", e, { file, signed, attempt });
+          }
+        }
         patchUpload(id, { status: "uploaded", url: signed.publicUrl });
       } catch (e) {
         console.error("Failed uploading file", upload, e);

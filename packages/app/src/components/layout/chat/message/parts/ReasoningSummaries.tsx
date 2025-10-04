@@ -91,7 +91,7 @@ export function ReasoningSummaries({ block }: { block: ReasoningBlock }) {
   );
 
   const expandedContent = (
-    <ScrollView className="max-h-[400px]">
+    <ScrollView className="max-h-[256px] scrollbar-hidden">
       <div className="space-y-2">
         {block.summaries.map((summary, index) => (
           <motion.div

@@ -2,7 +2,6 @@ import { FilePreview } from "@/components/layout/file/FilePreview";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import type { FileUIPart } from "ai";
 import {
   useCallback,
   useState,
@@ -18,17 +17,11 @@ import {
   ChatInputStopButton,
   ChatInputSubmitButton,
 } from "./buttons";
-import { useChatInputFileUploads } from "./ChatInputFileUploadsContext";
+import { useChatInputContext, type ChatInputValue } from "./context";
 import { DictationOverlay } from "./DictationOverlay";
 import { useDictation } from "./useDictation";
 
-export interface ChatInputValue {
-  text: string;
-  files: FileUIPart[];
-}
-
 export function ChatInput({
-  initialValue,
   submitting,
   autoFocus,
   minRows,
@@ -41,7 +34,6 @@ export function ChatInput({
   onSubmit,
   clearOnSubmit = true,
 }: {
-  initialValue?: ChatInputValue;
   submitting: boolean;
   autoFocus?: boolean;
   minRows?: number;
@@ -54,10 +46,11 @@ export function ChatInput({
   onSubmit(value: ChatInputValue): unknown;
   clearOnSubmit?: boolean;
 }) {
-  const [value, setValue] = useState(initialValue?.text ?? "");
+  const input = useChatInputContext();
   const [isDragOver, setIsDragOver] = useState(false);
-  const uploads = useChatInputFileUploads();
-  const dictation = useDictation((t) => setValue((v) => (v ? `${v} ${t}` : t)));
+  const dictation = useDictation((t) =>
+    input.setText((v) => (v ? `${v} ${t}` : t))
+  );
 
   const handlePaste = useCallback(
     (event: ClipboardEvent<HTMLTextAreaElement>) => {
@@ -73,9 +66,9 @@ export function ChatInput({
         event.preventDefault();
       }
 
-      uploads.add(clipboardFiles);
+      input.addFile(clipboardFiles);
     },
-    [disabled, uploads]
+    [disabled, input.addFile]
   );
 
   const handleDragEnter = useCallback(
@@ -124,25 +117,31 @@ export function ChatInput({
       if (disabled) return;
       const files = Array.from(event.dataTransfer?.files ?? []);
       if (!files.length) return;
-      uploads.add(files);
+      input.addFile(files);
     },
-    [disabled, uploads.add]
+    [disabled, input.addFile]
   );
 
   const handleSubmit = async () => {
     if (disabled) return;
-    if (!value.length && !uploads.files.length) return;
-    const submittedValue = { text: value, files: uploads.files };
+    if (!input.text.length && !input.files.length) return;
+    const submittedValue = {
+      text: input.text,
+      files: input.files,
+      state: input.state,
+    };
     try {
       if (clearOnSubmit) {
-        setValue("");
-        uploads.set([]);
+        input.setText("");
+        input.setFiles([]);
+        input.setState(undefined);
       }
       await onSubmit(submittedValue);
     } catch {
       if (clearOnSubmit) {
-        setValue(submittedValue.text);
-        uploads.set(submittedValue.files);
+        input.setText(submittedValue.text);
+        input.setFiles(submittedValue.files);
+        input.setState(submittedValue.state);
       }
     }
   };
@@ -174,8 +173,8 @@ export function ChatInput({
           onClick={dictation.start}
         />
         <ChatInputSubmitButton
-          disabled={submitting || uploads.isUploading || !value || disabled}
-          loading={submitting || uploads.isUploading}
+          disabled={submitting || input.isUploading || !input.text || disabled}
+          loading={submitting || input.isUploading}
           onClick={handleSubmit}
         />
       </>
@@ -194,27 +193,27 @@ export function ChatInput({
       onDrop={handleDrop}
     >
       <CardContent className="flex flex-col gap-2 p-0">
-        {uploads.input}
-        {uploads.files.length > 0 && (
+        {input.input}
+        {input.files.length > 0 && (
           <div className="flex flex-wrap gap-2 ml-2">
-            {uploads.files.map((f) => (
+            {input.files.map((f) => (
               <FilePreview
                 key={f.id}
                 loading={f.status === "uploading"}
                 file={f}
-                onRemove={() => uploads.remove(f.id)}
+                onRemove={() => input.removeFile(f.id)}
               />
             ))}
           </div>
         )}
         <div className="relative">
           <TextareaComponent
-            value={value}
+            value={input.text}
             autoFocus={autoFocus}
             minRows={minRows}
             maxRows={maxRows}
             placeholder={placeholder}
-            onChange={(e) => setValue(e.target.value)}
+            onChange={(e) => input.setText(e.target.value)}
             className="text-lg border-none shadow-none bg-transparent focus:ring-0 focus-visible:ring-0 transition-all"
             onPaste={handlePaste}
             onKeyDown={(e) => {
@@ -239,7 +238,7 @@ export function ChatInput({
         <div className="flex gap-2">
           <ChatInputAttachButton
             disabled={submitting || disabled}
-            onClick={uploads.select}
+            onClick={input.selectFile}
           />
           {extra}
           <div className="flex-1" />

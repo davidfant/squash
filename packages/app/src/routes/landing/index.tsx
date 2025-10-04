@@ -1,10 +1,10 @@
 import { authClient } from "@/auth/client";
 import { Suggestion } from "@/components/ai-elements/suggestion";
+import { ChatInput } from "@/components/layout/chat/input/ChatInput";
 import {
-  ChatInput,
+  ChatInputProvider,
   type ChatInputValue,
-} from "@/components/layout/chat/input/ChatInput";
-import { ChatInputFileUploadsProvider } from "@/components/layout/chat/input/ChatInputFileUploadsContext";
+} from "@/components/layout/chat/input/context";
 import { toast } from "@/components/ui/sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { api, useMutation } from "@/hooks/api";
@@ -106,7 +106,13 @@ export function LandingPage() {
       param: { repoId },
       json: {
         message: {
-          parts: [{ type: "text", text: content.text }, ...content.files],
+          parts: [
+            { type: "text", text: content.text },
+            ...content.files,
+            ...(content.state
+              ? [{ type: "data-AgentState" as const, data: content.state }]
+              : []),
+          ],
         },
       },
     });
@@ -119,7 +125,7 @@ export function LandingPage() {
   }
 
   return (
-    <>
+    <ChatInputProvider initialValue={chatInitialValue}>
       <header className="mx-auto flex max-w-7xl items-center justify-between px-6 h-14">
         <Link to="/" className="flex items-center gap-2">
           <img
@@ -145,38 +151,35 @@ export function LandingPage() {
             spin up a branch, preview, and deployment-ready project for you.
           </p> */}
 
-          <ChatInputFileUploadsProvider initialValue={chatInitialValue.files}>
-            <div className="w-full max-w-2xl">
-              <ChatInput
-                initialValue={chatInitialValue}
-                clearOnSubmit={false}
-                onSubmit={handleSubmit}
-                submitting={createRepo.isPending || createBranch.isPending}
-                minRows={3}
-                maxRows={10}
-                Textarea={TextareaWithPlaceholder as any}
-                disabled={createRepo.isPending || createBranch.isPending}
-                extra={
-                  <RepoSelect
-                    disabled={createRepo.isPending || createBranch.isPending}
-                  />
-                }
-              />
+          <div className="w-full max-w-2xl">
+            <ChatInput
+              clearOnSubmit={false}
+              onSubmit={handleSubmit}
+              submitting={createRepo.isPending || createBranch.isPending}
+              minRows={3}
+              maxRows={10}
+              Textarea={TextareaWithPlaceholder as any}
+              disabled={createRepo.isPending || createBranch.isPending}
+              extra={
+                <RepoSelect
+                  disabled={createRepo.isPending || createBranch.isPending}
+                />
+              }
+            />
 
-              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-                <CloneScreenshotAction />
-                <Link to="/new/repo">
-                  <Suggestion suggestion="Import from Github" size="default">
-                    <SiGithub />
-                    Import from Github
-                  </Suggestion>
-                </Link>
-              </div>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+              <CloneScreenshotAction />
+              <Link to="/new/repo">
+                <Suggestion suggestion="Import from Github" size="default">
+                  <SiGithub />
+                  Import from Github
+                </Suggestion>
+              </Link>
             </div>
-          </ChatInputFileUploadsProvider>
+          </div>
         </section>
         <RecentBranchesGrid />
       </main>
-    </>
+    </ChatInputProvider>
   );
 }

@@ -2,17 +2,16 @@ import {
   ConversationContent,
   ConversationScrollButton,
 } from "@/components/ai-elements/conversation";
+import { ChatInput } from "@/components/layout/chat/input/ChatInput";
 import {
-  ChatInput,
   type ChatInputValue,
-} from "@/components/layout/chat/input/ChatInput";
-import { ChatInputFileUploadsProvider } from "@/components/layout/chat/input/ChatInputFileUploadsContext";
+  ChatInputProvider,
+} from "@/components/layout/chat/input/context";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { api, useMutation } from "@/hooks/api";
 import { useBranchContext } from "@/routes/branches/context";
 import type { ChatMessage } from "@squashai/api/agent/types";
-import type { FileUIPart } from "ai";
 import { useMemo, useState } from "react";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import { v4 as uuid } from "uuid";
@@ -37,10 +36,9 @@ function ChatInputWithScrollToBottom({
   const { status, sendMessage, error } = useChatContext();
   const { scrollToBottom } = useStickToBottomContext();
   return (
-    <ChatInputFileUploadsProvider initialValue={initialValue?.files}>
+    <ChatInputProvider initialValue={initialValue}>
       <ChatInput
         disabled={!ready}
-        initialValue={initialValue}
         autoFocus
         placeholder="Type a message..."
         submitting={status === "submitted" || status === "streaming"}
@@ -54,7 +52,7 @@ function ChatInputWithScrollToBottom({
           scrollToBottom();
         }}
       />
-    </ChatInputFileUploadsProvider>
+    </ChatInputProvider>
   );
 }
 
@@ -168,16 +166,16 @@ export function ChatThread({
                 if (isEditing) {
                   return (
                     <div className="w-full" key={m.id}>
-                      <ChatInputFileUploadsProvider
-                        initialValue={m.parts.filter((p) => p.type === "file")}
+                      <ChatInputProvider
+                        initialValue={{
+                          text: textContent,
+                          files: m.parts.filter((p) => p.type === "file"),
+                          state: m.parts.find(
+                            (p) => p.type === "data-AgentState"
+                          )?.data,
+                        }}
                       >
                         <ChatInput
-                          initialValue={{
-                            text: textContent,
-                            files: m.parts.filter(
-                              (p) => p.type === "file"
-                            ) as FileUIPart[],
-                          }}
                           submitting={false}
                           autoFocus
                           placeholder="Edit your message..."
@@ -193,7 +191,7 @@ export function ChatThread({
                             Cancel
                           </Button>
                         </div>
-                      </ChatInputFileUploadsProvider>
+                      </ChatInputProvider>
                     </div>
                   );
                 }

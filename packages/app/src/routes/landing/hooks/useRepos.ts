@@ -1,10 +1,12 @@
 import { authClient } from "@/auth/client";
+import { useChatInputContext } from "@/components/layout/chat/input/context";
 import { api, useQuery } from "@/hooks/api";
 import { useMemo } from "react";
 import { useLocalStorage } from "usehooks-ts";
 
 export function useRepos() {
   const repos = useQuery(api.repos.$get, { params: {} });
+  const input = useChatInputContext();
   const activeOrg = authClient.useActiveOrganization();
   const [currentRepoId, setCurrentRepoId] = useLocalStorage<string | null>(
     `lp.${activeOrg.data?.id}.currentRepoId`,
@@ -26,7 +28,10 @@ export function useRepos() {
     all: repos.data,
     current,
     currentId: currentRepoId,
-    setCurrent: setCurrentRepoId,
+    setCurrent: (id: string | null) => {
+      setCurrentRepoId(id);
+      if (id) input.setState(undefined);
+    },
     isLoading: repos.isPending,
   };
 }

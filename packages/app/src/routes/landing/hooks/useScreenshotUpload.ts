@@ -1,17 +1,17 @@
-import { useChatInputFileUploads } from "@/components/layout/chat/input/ChatInputFileUploadsContext";
+import { useChatInputContext } from "@/components/layout/chat/input/context";
 import { toast } from "@/components/ui/sonner";
 import { useCallback } from "react";
 
 export function useScreenshotUpload() {
-  const fileUpload = useChatInputFileUploads();
+  const input = useChatInputContext();
   return useCallback(() => {
     // Create a temporary file input specifically for images
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*";
-    input.multiple = false;
+    const inputEl = document.createElement("input");
+    inputEl.type = "file";
+    inputEl.accept = "image/*";
+    inputEl.multiple = false;
 
-    input.onchange = async (e) => {
+    inputEl.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
 
@@ -20,9 +20,13 @@ export function useScreenshotUpload() {
         return;
       }
 
-      await fileUpload.add([file]);
+      await input.addFile([file]);
+      // input.setState({ type: "clone-screenshot" });
+      if (!input.text) {
+        input.setText("Clone this screenshot");
+      }
     };
 
-    input.click();
-  }, [fileUpload]);
+    inputEl.click();
+  }, [input]);
 }

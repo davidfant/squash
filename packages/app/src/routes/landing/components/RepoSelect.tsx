@@ -1,3 +1,4 @@
+import { useChatInputContext } from "@/components/layout/chat/input/context";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -14,6 +15,7 @@ import { useRepos } from "../hooks/useRepos";
 import { useScreenshotUpload } from "../hooks/useScreenshotUpload";
 
 export function RepoSelect({ disabled = false }: { disabled?: boolean }) {
+  const input = useChatInputContext();
   const repos = useRepos();
   const uploadScreenshot = useScreenshotUpload();
 
@@ -51,6 +53,7 @@ export function RepoSelect({ disabled = false }: { disabled?: boolean }) {
         <DropdownMenuItem
           onClick={() => {
             uploadScreenshot();
+            input.setState({ type: "clone-screenshot" });
             repos.setCurrent(null);
           }}
         >

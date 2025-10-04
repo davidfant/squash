@@ -54,7 +54,13 @@ openssl rsa -in private.dev.pem -pubout -out public.dev.pem
 - [ ] daytona preview warning
 - [x] flickers between previews when e.g. resetting to an older one
 
-- [ ] from UI set agent state to clone screenshot
-- [ ] only run clone screenshot based on state
+For oct 7
+
+- [x] from UI set agent state to clone screenshot
+- [x] only run clone screenshot based on state
 - [ ] color thief
 - [ ] make sure stopping agent works
+- [ ] claude msgs not getting saved
+- [ ] screenshots?
+- [x] hide scrollbar in reasoning trace
+- [ ] claude code not cancelled when aborting

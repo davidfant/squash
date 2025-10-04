@@ -8,23 +8,13 @@ export function mergeScreenshotAnalysisIntoUserMessages(
     msg.parts
       .filter((p) => p.type === "tool-AnalyzeScreenshot")
       .forEach((part) => {
-        // Determine which user message gets the output
-        let target: ChatMessage | undefined;
-        for (let j = idx; j >= 0; j--) {
-          const prev = messages[j]!;
-          if (prev.role === "user") {
-            target = prev;
-            break;
-          }
-        }
+        const target = messages
+          .slice(0, idx)
+          .findLast((m) => m.role === "user");
 
-        if (target) {
+        if (target && part.output) {
           const arr = additions[target.id as string] ?? [];
-          arr.push(
-            typeof part.output === "string"
-              ? part.output
-              : JSON.stringify(part.output)
-          );
+          arr.push(part.output);
           additions[target.id as string] = arr;
         }
       });

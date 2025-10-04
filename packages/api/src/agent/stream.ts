@@ -38,11 +38,6 @@ function streamInner(params: {
     generateId: randomUUID,
     onFinish: ({ responseMessage }) => params.onFinish(responseMessage),
     execute: async ({ writer }) => {
-      // writer.write({
-      //   type: "start",
-      //   messageMetadata: messageMetadata({ part: { type: "start" } }),
-      // });
-
       switch (state?.type) {
         case "implement":
           await raceWithAbortSignal(
@@ -106,8 +101,6 @@ function streamInner(params: {
         //   );
         //   break;
       }
-
-      // writer.write({ type: "finish" });
     },
   });
 }

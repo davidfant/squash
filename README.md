@@ -53,3 +53,8 @@ openssl rsa -in private.dev.pem -pubout -out public.dev.pem
 - [x] abort returns 500
 - [ ] daytona preview warning
 - [x] flickers between previews when e.g. resetting to an older one
+
+- [ ] from UI set agent state to clone screenshot
+- [ ] only run clone screenshot based on state
+- [ ] color thief
+- [ ] make sure stopping agent works

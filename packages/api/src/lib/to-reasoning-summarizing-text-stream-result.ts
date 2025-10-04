@@ -148,17 +148,40 @@ Guidelines
   });
 }
 
-export const toReasoningSummarizingTextStreamResult = <TOOLS extends ToolSet>(
+export function toReasoningSummarizingTextStreamResult<TOOLS extends ToolSet>(
   stream: StreamTextResult<TOOLS, never>
-) =>
-  new Proxy(stream, {
+) {
+  let streams:
+    | Record<"full" | "consume", ReadableStream<TextStreamPart<TOOLS>>>
+    | undefined = undefined;
+
+  const loadStreams = (result: StreamTextResult<TOOLS, never>) => {
+    if (!streams) {
+      const [full, consume] = result.fullStream
+        .pipeThrough(createReasoningSummaryTransform<TOOLS>())
+        .tee();
+      streams = { full, consume };
+    }
+  };
+
+  return new Proxy(stream, {
     get(target, prop, receiver) {
       if (prop === "fullStream") {
-        return target.fullStream.pipeThrough(
-          createReasoningSummaryTransform<TOOLS>()
-        );
+        loadStreams(target);
+        return streams!.full;
       }
+      if (prop === "consumeStream") {
+        return async () => {
+          loadStreams(target);
 
+          const reader = streams!.consume.getReader();
+          while (true) {
+            const { done } = await reader.read();
+            if (done) break;
+          }
+        };
+      }
       return Reflect.get(target, prop, receiver);
     },
   });
+}

@@ -15,6 +15,7 @@ export type SandboxTaskTool = Tool<SandboxTaskToolInput, SandboxTaskToolOutput>;
 
 export type AllTools = ClaudeCodeTools & {
   GitCommit: ReturnType<typeof GitCommit>;
+  AnalyzeScreenshot: Tool<undefined, string>;
 };
 
 export type AgentState =

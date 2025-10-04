@@ -198,6 +198,7 @@ const repoBranchRouter = new Hono<{
       const allMessages = await loadBranchMessages(db, branchId, user.id);
       const messages = resolveMessageThreadHistory(allMessages, body.messageId);
 
+      sandbox.stopAgent();
       await sandbox.restoreVersion(messages);
       return c.json({ success: true });
     }

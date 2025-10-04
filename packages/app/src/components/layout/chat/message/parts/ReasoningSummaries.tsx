@@ -78,46 +78,53 @@ const ScrollView = ({
 export function ReasoningSummaries({ block }: { block: ReasoningBlock }) {
   const [expanded, setExpanded] = useState(false);
 
-  const content = (() => {
-    if (!expanded) {
-      const lastTitle = block.summaries.slice(-1)[0]?.title ?? "Thinking...";
-      const text = block.streaming ? (
+  const lastTitle = block.summaries.slice(-1)[0]?.title ?? "Thinking...";
+
+  const collapsedContent = (
+    <p className="font-medium text-sm opacity-50 hover:opacity-100 transition-opacity">
+      {block.streaming ? (
         <span className="text-shimmer">{lastTitle}</span>
       ) : (
         <span>Thought for {block.summaries.length} steps...</span>
-      );
-      return (
-        <p className="font-medium text-sm opacity-50 hover:opacity-100 transition-opacity">
-          {text}
-        </p>
-      );
-    }
+      )}
+    </p>
+  );
 
-    return (
-      <ScrollView className="max-h-[400px]">
-        <div className="space-y-2">
-          {block.summaries.map((summary, index) => (
-            <motion.div
-              key={index}
-              className="space-y-1 text-muted-foreground overflow-hidden"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-            >
-              <p className="font-medium text-xs">{summary.title}</p>
-              <p className="text-xs opacity-70">{summary.content}</p>
-            </motion.div>
-          ))}
-        </div>
-      </ScrollView>
-    );
-  })();
+  const expandedContent = (
+    <ScrollView className="max-h-[400px]">
+      <div className="space-y-2">
+        {block.summaries.map((summary, index) => (
+          <motion.div
+            key={index}
+            className="space-y-1 text-muted-foreground overflow-hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            <p className="font-medium text-xs">{summary.title}</p>
+            <p className="text-xs opacity-70">{summary.content}</p>
+          </motion.div>
+        ))}
+      </div>
+    </ScrollView>
+  );
 
   return (
     <div
       className="cursor-pointer overflow-hidden"
       onClick={() => setExpanded(!expanded)}
     >
-      {content}
+      <motion.div
+        initial={false}
+        animate={{ height: expanded ? 0 : "auto", opacity: expanded ? 0 : 1 }}
+      >
+        {collapsedContent}
+      </motion.div>
+      <motion.div
+        initial={false}
+        animate={{ height: expanded ? "auto" : 0, opacity: expanded ? 1 : 0 }}
+      >
+        {expandedContent}
+      </motion.div>
     </div>
   );
 }

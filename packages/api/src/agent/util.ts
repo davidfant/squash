@@ -2,6 +2,12 @@ import type { Database } from "@/database";
 import * as schema from "@/database/schema";
 import { logger } from "@/lib/logger";
 import type { Sandbox } from "@/sandbox/types";
+import {
+  readUIMessageStream,
+  type UIMessage,
+  type UIMessageChunk,
+  type UIMessageStreamWriter,
+} from "ai";
 import { eq } from "drizzle-orm";
 
 export async function storeInitialCommitInSystemMessage(
@@ -30,4 +36,33 @@ export async function storeInitialCommitInSystemMessage(
     .update(schema.message)
     .set({ parts: rootMessage.parts })
     .where(eq(schema.message.id, rootMessage.id));
+}
+
+export function writerWithOnMessage(
+  baseWriter: UIMessageStreamWriter,
+  onMessage: (msg: UIMessage) => void
+): UIMessageStreamWriter {
+  const tracker = new TransformStream<UIMessageChunk, UIMessageChunk>();
+
+  (async () => {
+    for await (const message of readUIMessageStream({
+      stream: tracker.readable,
+    })) {
+      onMessage(message);
+    }
+  })();
+
+  return {
+    write(chunk) {
+      tracker.writable.getWriter().write(chunk);
+      baseWriter.write(chunk);
+    },
+    merge(stream) {
+      baseWriter.merge(stream);
+      stream.pipeTo(tracker.writable, { preventClose: true });
+    },
+    onError(err) {
+      baseWriter.onError?.(err);
+    },
+  };
 }

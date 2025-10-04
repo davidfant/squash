@@ -108,15 +108,29 @@ export function groupMessageEvents(
 
   for (const part of parts) {
     switch (part.type) {
-      case "text":
-        flushEvents();
-        blocks.push({ type: "text", content: part.text });
-        break;
       case "reasoning":
         flushEvents();
         const summaries = parseReasoningSummaries(part.text);
-        blocks.push({ type: "reasoning", summaries });
+        blocks.push({
+          type: "reasoning",
+          summaries,
+          streaming: parts.indexOf(part) === parts.length - 1,
+        });
         break;
+      case "text":
+        if (part.text.trim()) {
+          flushEvents();
+          blocks.push({ type: "text", content: part.text });
+        }
+        break;
+      case "tool-AnalyzeScreenshot": {
+        flushEvents();
+        blocks.push({
+          type: "text",
+          content: "Finished analyzing the screenshot...",
+        });
+        break;
+      }
       case "tool-ClaudeCodeRead": {
         const path = part.input?.file_path;
         currentEvents.push({
@@ -274,9 +288,6 @@ export function groupMessageEvents(
     (last?.type === "events" && !last.events.some((ev) => ev.loading))
   ) {
     blocks.push({ type: "loading" });
-  }
-  if (last?.type === "reasoning" && streaming) {
-    last.streaming = true;
   }
 
   return blocks;

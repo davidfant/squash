@@ -479,8 +479,6 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
 
     logger.info("Restoring version", { sha: gitSha.data.sha });
 
-    // TODO: is it safe to assume that this is not async?
-    this.stopAgent();
     await Promise.all([
       this.gitReset(gitSha.data.sha, undefined),
       (async () => {

@@ -335,11 +335,12 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
     if (abortSignal?.aborted) return;
 
     const now = () => new Date().toISOString();
+    const sandbox = await this.getSandbox();
+
     const gen = await toAsyncIterator<[Sandbox.Exec.Event.Any]>(async (add) => {
       try {
         const exec = await this.startCommand(request, abortSignal);
         add({ type: "start", timestamp: now() });
-        const sandbox = await this.getSandbox();
 
         const streamed = { stdout: "", stderr: "" };
         await sandbox.process.getSessionCommandLogs(
@@ -355,7 +356,6 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
           }
         );
 
-        // Note(fant): this throws 'session not found' error if the session is deleted while aborting
         const result = await sandbox.process.getSessionCommand(
           exec.sessionId,
           exec.commandId
@@ -443,6 +443,8 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
 
     logger.info("Restoring version", { sha: gitSha.data.sha });
 
+    // TODO: is it safe to assume that this is not async?
+    this.stopAgent();
     await Promise.all([
       this.gitReset(gitSha.data.sha, undefined),
       (async () => {

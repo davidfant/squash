@@ -63,4 +63,5 @@ For oct 7
 - [ ] claude msgs not getting saved
 - [ ] screenshots?
 - [x] hide scrollbar in reasoning trace
-- [ ] claude code not cancelled when aborting
+- [ ] redesign everything
+- [ ] make invite links make sense

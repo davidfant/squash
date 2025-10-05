@@ -332,7 +332,8 @@ export abstract class BaseSandboxManagerDurableObject<
   ): Promise<void> {
     const reader = stream.getReader();
     try {
-      while (handle.controller.signal.aborted !== true) {
+      // while (handle.controller.signal.aborted !== true) {
+      while (true) {
         const { value, done } = await reader.read();
         if (done) break;
         if (value) this.broadcast(value, handle);

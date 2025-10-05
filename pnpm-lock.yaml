@@ -6,7 +6,7 @@ settings:
 
 patchedDependencies:
   '@daytonaio/sdk':
-    hash: adf28c8a792e6fcc38701db01e6039b44f20bbd7e411761e76bb6f22e5a654fa
+    hash: 6498011b9f9990a58daa29ffc1a281a17132674e23746a7aa82d71cc6b0d4d0f
     path: patches/@daytonaio__sdk.patch
 
 importers:
@@ -74,7 +74,7 @@ importers:
         version: 2.0.0
       '@daytonaio/sdk':
         specifier: ^0.108.0
-        version: 0.108.0(patch_hash=adf28c8a792e6fcc38701db01e6039b44f20bbd7e411761e76bb6f22e5a654fa)(ws@8.18.3)
+        version: 0.108.0(patch_hash=6498011b9f9990a58daa29ffc1a281a17132674e23746a7aa82d71cc6b0d4d0f)(ws@8.18.3)
       '@hono/zod-validator':
         specifier: ^0.7.1
         version: 0.7.3(hono@4.9.8)(zod@4.1.11)
@@ -6095,7 +6095,7 @@ snapshots:
     transitivePeerDependencies:
       - debug
 
-  '@daytonaio/sdk@0.108.0(patch_hash=adf28c8a792e6fcc38701db01e6039b44f20bbd7e411761e76bb6f22e5a654fa)(ws@8.18.3)':
+  '@daytonaio/sdk@0.108.0(patch_hash=6498011b9f9990a58daa29ffc1a281a17132674e23746a7aa82d71cc6b0d4d0f)(ws@8.18.3)':
     dependencies:
       '@aws-sdk/client-s3': 3.896.0
       '@aws-sdk/lib-storage': 3.896.0(@aws-sdk/client-s3@3.896.0)

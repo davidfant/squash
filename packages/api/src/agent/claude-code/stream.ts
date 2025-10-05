@@ -95,6 +95,9 @@ export async function streamClaudeCodeAgent(opts: {
   );
 
   await agentStream.consumeStream();
+  if (opts.abortSignal.aborted) {
+    throw new Error("Cancelled");
+  }
 
   if (!sessionId) {
     throw new Error("Claude Code session not detected");

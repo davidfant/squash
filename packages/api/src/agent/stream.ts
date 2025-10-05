@@ -28,10 +28,9 @@ function streamInner(params: {
   readSessionData(id: string): Promise<string>;
   onFinish(message: ChatMessage): void;
 }) {
+  const db = createDatabase(env);
   const state = getState(params.messages) ?? { type: "implement" };
   logger.debug("Running agent from state", state);
-
-  const db = createDatabase(env);
 
   return createUIMessageStream<ChatMessage>({
     originalMessages: params.messages, // needed for generateId to be called

@@ -356,6 +356,11 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
           }
         );
 
+        if (abortSignal?.aborted) {
+          add({ type: "error", error: "Aborted", timestamp: now() });
+          return;
+        }
+
         const result = await sandbox.process.getSessionCommand(
           exec.sessionId,
           exec.commandId

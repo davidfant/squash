@@ -1,7 +1,5 @@
-import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ChatMessage } from "@squashai/api/agent/types";
-import { CircleSlash } from "lucide-react";
 import { useMemo } from "react";
 import { Markdown } from "../../../Markdown";
 import { EventsCollapsible } from "./EventsCollapsible";
@@ -39,13 +37,13 @@ export function MessageParts({
             return <Markdown key={idx}>{block.content}</Markdown>;
           case "reasoning":
             return <ReasoningSummaries block={block} />;
-          case "abort":
-            return (
-              <Alert className="text-muted-foreground">
-                <CircleSlash />
-                <AlertTitle>Cancelled</AlertTitle>
-              </Alert>
-            );
+          // case "abort":
+          //   return (
+          //     <Alert className="text-muted-foreground">
+          //       <CircleSlash />
+          //       <AlertTitle>Cancelled</AlertTitle>
+          //     </Alert>
+          //   );
           case "commit":
             return (
               <GitCommitAlert

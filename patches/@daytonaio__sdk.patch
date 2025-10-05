@@ -1,13 +1,13 @@
 diff --git a/src/Process.js b/src/Process.js
-index a5c3ea8dcaaea7e0ebd35f0a2ee6081a0a539f1a..7b6338799819fb05292247f17c20b07bfd56be5e 100644
+index a5c3ea8dcaaea7e0ebd35f0a2ee6081a0a539f1a..781ff761200fd10f1cb4a8b517821ca55ac34bfa 100644
 --- a/src/Process.js
 +++ b/src/Process.js
-@@ -625,16 +625,16 @@ function findSubarray(haystack, needle) {
+@@ -625,16 +625,6 @@ function findSubarray(haystack, needle) {
      return -1;
  }
  function createWebSocket(url, token, headers) {
 -    if (Runtime_1.RUNTIME === Runtime_1.Runtime.BROWSER) {
-         return new isomorphic_ws_1.default(url + '&DAYTONA_SANDBOX_AUTH_KEY=' + token, `X-Daytona-SDK-Version~${headers['X-Daytona-SDK-Version']}`);
+-        return new isomorphic_ws_1.default(url + '&DAYTONA_SANDBOX_AUTH_KEY=' + token, `X-Daytona-SDK-Version~${headers['X-Daytona-SDK-Version']}`);
 -    }
 -    else {
 -        return new isomorphic_ws_1.default(url, {
@@ -17,5 +17,6 @@ index a5c3ea8dcaaea7e0ebd35f0a2ee6081a0a539f1a..7b6338799819fb05292247f17c20b07b
 -            },
 -        });
 -    }
++    return new isomorphic_ws_1.default(url + '&DAYTONA_SANDBOX_AUTH_KEY=' + token, `X-Daytona-SDK-Version~${headers['X-Daytona-SDK-Version']}`);
  }
  //# sourceMappingURL=Process.js.map

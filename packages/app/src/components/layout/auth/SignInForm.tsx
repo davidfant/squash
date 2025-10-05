@@ -10,7 +10,7 @@ export function SignInForm({
   showHeader?: boolean;
   callbackURL?: string;
 }) {
-  const [mode, setMode] = useState<"signUp" | "signIn">("signIn");
+  const [mode, setMode] = useState<"signUp" | "signIn">("signUp");
   const { t } = useTranslation("auth");
 
   return (

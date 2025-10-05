@@ -165,3 +165,36 @@
     display: none;
   }
 }
+
+/* .btn-glass {
+  backdrop-filter: blur(16px);
+  background: #fff;
+  transition: background 200ms;
+
+  --ring-color: color-mix(in srgb, var(--color-slate-900) 12%, transparent);
+  --outer-shadow-color: color-mix(
+    in srgb,
+    var(--color-slate-900) 6%,
+    transparent
+  );
+  --inner-highlight-color: color-mix(
+    in srgb,
+    var(--color-white) 90%,
+    transparent
+  );
+  box-shadow: 0 0 0 0.5px var(--ring-color),
+    0 1px 1px -0.5px var(--outer-shadow-color),
+    0 2px 2px -1px var(--outer-shadow-color),
+    0 4px 4px -2px var(--outer-shadow-color),
+    0 8px 8px -4px var(--outer-shadow-color),
+    inset 0 1.5px 1px var(--inner-highlight-color),
+    inset 0 -1.5px 1px var(--inner-highlight-color),
+    inset 0 6px 6px -3px color-mix(in srgb, var(--color-slate-900) 8%, transparent),
+    inset 0 -4px 4px -2px
+      color-mix(in srgb, var(--color-slate-900) 10%, transparent);
+
+  
+    }
+    .btn-glass:hover {
+        background: #f8f8f8;
+      } */

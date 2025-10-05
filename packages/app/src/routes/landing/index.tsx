@@ -5,6 +5,7 @@ import {
   ChatInputProvider,
   type ChatInputValue,
 } from "@/components/layout/chat/input/context";
+import { Logo } from "@/components/Logo";
 import { toast } from "@/components/ui/sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { api, useMutation } from "@/hooks/api";
@@ -127,13 +128,8 @@ export function LandingPage() {
   return (
     <ChatInputProvider initialValue={chatInitialValue}>
       <header className="mx-auto flex max-w-7xl items-center justify-between px-6 h-14">
-        <Link to="/" className="flex items-center gap-2">
-          <img
-            src="/preview/gradients/0.jpg"
-            alt="Squash"
-            className="size-6 rounded-full"
-          />{" "}
-          Squash
+        <Link to="/">
+          <Logo />
         </Link>
         <HeaderMenu />
       </header>

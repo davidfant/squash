@@ -29,6 +29,7 @@ export const ChatInputSubmitButton = ({
     <TooltipTrigger asChild>
       <Button
         size="icon"
+        // variant="glass"
         disabled={disabled}
         className="rounded-full"
         onClick={onClick}

@@ -18,7 +18,7 @@ export default {
         },
       },
       signUp: {
-        title: "Create an account",
+        title: "Start Prototyping",
         description:
           "To start prototyping with Squash, sign in with your Google account.",
         buttonText: "Continue with Google",

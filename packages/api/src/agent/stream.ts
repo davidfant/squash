@@ -33,7 +33,7 @@ function streamInner(params: {
   logger.debug("Running agent from state", state);
 
   return createUIMessageStream<ChatMessage>({
-    originalMessages: params.messages, // needed for generateId to be called
+    // originalMessages: params.messages, // needed for generateId to be called
     generateId: randomUUID,
     onFinish: ({ responseMessage }) => params.onFinish(responseMessage),
     execute: async ({ writer }) => {
@@ -159,9 +159,7 @@ export function streamAgent(params: {
     execute: async ({ writer }) => {
       writer.write({
         type: "start",
-        messageMetadata: messageMetadata({
-          part: { type: "start" },
-        }),
+        messageMetadata: messageMetadata({ part: { type: "start" } }),
       });
 
       while (!params.controller.signal.aborted) {

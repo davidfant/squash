@@ -60,8 +60,10 @@ For oct 7
 - [x] only run clone screenshot based on state
 - [ ] color thief
 - [ ] make sure stopping agent works
-- [ ] claude msgs not getting saved
+- [x] claude msgs not getting saved
 - [ ] screenshots?
 - [x] hide scrollbar in reasoning trace
 - [ ] redesign everything
-- [ ] make invite links make sense
+- [x] make invite links make sense
+- [ ] figure out what to do about CC tsc
+- [ ] look into daytona pty

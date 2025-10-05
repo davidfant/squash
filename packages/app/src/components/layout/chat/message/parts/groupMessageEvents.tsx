@@ -283,11 +283,15 @@ export function groupMessageEvents(
   flushEvents(true);
 
   const last = blocks[blocks.length - 1];
-  if (
-    (streaming && !last) ||
-    (last?.type === "events" && !last.events.some((ev) => ev.loading))
-  ) {
-    blocks.push({ type: "loading" });
+  if (streaming) {
+    if (!last) {
+      blocks.push({ type: "loading" });
+    } else if (
+      last?.type === "events" &&
+      !last.events.some((ev) => ev.loading)
+    ) {
+      blocks.push({ type: "loading" });
+    }
   }
 
   return blocks;

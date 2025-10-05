@@ -13,6 +13,16 @@ quiet() {
     | sed -u '/^ =>/d'
 }
 
+daytona_() {
+  # echo "Daytona dev: $@"
+  # daytona login --api-key $DAYTONA_API_KEY_DEV
+  # daytona "$@"
+
+  echo "Daytona prod: $@"
+  daytona login --api-key $DAYTONA_API_KEY_PROD
+  daytona "$@"
+}
+
 function build_repo() {
   TEMPLATE_NAME=$1
   echo "Building template: $TEMPLATE_NAME"
@@ -44,7 +54,7 @@ function build_repo() {
     # FLY_DOCKER_TAG="registry.fly.io/$APP_NAME:$DOCKER_TAG"
     # docker tag $DOCKER_TAG $FLY_DOCKER_TAG
     # docker push $DOCKER_TAG
-    daytona snapshot push "$DOCKER_TAG" --name "$DOCKER_TAG" --entrypoint "sleep infinity" --disk 1 || echo "Did not push snapshot"
+    daytona_ snapshot push "$DOCKER_TAG" --name "$DOCKER_TAG" --entrypoint "sleep infinity" --disk 1 || echo "Did not push snapshot"
   popd
 }
 

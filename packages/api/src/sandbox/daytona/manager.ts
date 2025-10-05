@@ -337,9 +337,9 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
     const now = () => new Date().toISOString();
     const sandbox = await this.getSandbox();
 
+    const exec = await this.startCommand(request, abortSignal);
     const gen = await toAsyncIterator<[Sandbox.Exec.Event.Any]>(async (add) => {
       try {
-        const exec = await this.startCommand(request, abortSignal);
         add({ type: "start", timestamp: now() });
 
         const streamed = { stdout: "", stderr: "" };
@@ -393,9 +393,12 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
 
     for await (const [event] of gen) {
       if (event.type === "stdout") {
-        logger.debug("Exec stdout", event.data.slice(0, 512));
+        logger.debug("Exec stdout", {
+          data: event.data.slice(0, 512),
+          ...exec,
+        });
       } else {
-        logger.debug(`Exec ${event.type}`, event);
+        logger.debug(`Exec ${event.type}`, { ...event, ...exec });
       }
       yield event;
     }

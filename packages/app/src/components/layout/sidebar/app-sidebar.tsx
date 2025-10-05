@@ -1,4 +1,3 @@
-import { authClient } from "@/auth/client";
 import {
   Sidebar,
   SidebarContent,
@@ -13,26 +12,19 @@ import {
 } from "@/components/ui/sidebar";
 import { useTheme } from "@/contexts/ThemeContext";
 import { api, useQuery } from "@/hooks/api";
-import { GitBranch, Home, Moon, Settings, Sun } from "lucide-react";
+import { Home, Moon, Settings, Sun } from "lucide-react";
 import * as React from "react";
-import { Link } from "react-router";
 import { NavMain } from "./nav-main";
 import { NavUser } from "./nav-user";
-import { RepoSwitcher } from "./repo-switcher";
 
 // Move navMainItems inside the component so it can access selectedRepoId
 
-export function AppSidebar({
-  selectedRepoId,
-  ...props
-}: { selectedRepoId: string } & React.ComponentProps<typeof Sidebar>) {
-  const session = authClient.useSession();
-
+export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const repos = useQuery(api.repos.$get, { params: {} });
   const navMainItems = [
     {
       title: "Home",
-      url: selectedRepoId ? `/repos/${selectedRepoId}` : "/",
+      url: "/",
       icon: Home,
       isActive: true,
     },
@@ -48,25 +40,18 @@ export function AppSidebar({
   ];
 
   // Get branches for the selected repo
-  const branches = useQuery(api.repos[":repoId"].branches.$get, {
-    params: { repoId: selectedRepoId || "" },
-    enabled: !!selectedRepoId,
-  });
-
-  const userData = session.data?.user
-    ? {
-        name: session.data.user.name || "User",
-        email: session.data.user.email || "",
-        avatar: session.data.user.image || "",
-      }
-    : null;
+  // const branches = useQuery(api.repos[":repoId"].branches.$get, {
+  //   params: { repoId: selectedRepoId || "" },
+  //   enabled: !!selectedRepoId,
+  // });
 
   const { theme, toggleTheme } = useTheme();
 
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        {repos.data && (
+        header
+        {/* {repos.data && (
           <RepoSwitcher
             selectedId={selectedRepoId}
             repos={repos.data.map((repo) => ({
@@ -74,16 +59,16 @@ export function AppSidebar({
               name: repo.name,
             }))}
           />
-        )}
+        )} */}
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={navMainItems} />
 
         {/* Branches Section */}
         <SidebarGroup>
-          <SidebarGroupLabel>Branches</SidebarGroupLabel>
+          <SidebarGroupLabel>Your recent prototypes</SidebarGroupLabel>
 
-          {selectedRepoId && branches.data ? (
+          {/* {selectedRepoId && branches.data ? (
             <SidebarMenu>
               {branches.data.length > 0 ? (
                 branches.data
@@ -107,15 +92,11 @@ export function AppSidebar({
                 </div>
               )}
             </SidebarMenu>
-          ) : !selectedRepoId ? (
-            <div className="px-3 py-2 text-sm text-muted-foreground">
-              Select a repository to view branches
-            </div>
           ) : (
             <div className="px-3 py-2 text-sm text-muted-foreground">
               Loading branches...
             </div>
-          )}
+          )} */}
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
@@ -127,7 +108,7 @@ export function AppSidebar({
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
-        {userData && <NavUser user={userData} />}
+        <NavUser />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

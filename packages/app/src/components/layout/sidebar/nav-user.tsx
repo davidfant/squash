@@ -25,15 +25,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-export function NavUser({
-  user,
-}: {
-  user: {
-    name: string;
-    email: string;
-    avatar: string;
-  };
-}) {
+export function NavUser() {
+  const session = authClient.useSession();
   const { isMobile } = useSidebar();
 
   return (
@@ -47,12 +40,16 @@ export function NavUser({
             >
               <Avatar
                 className="h-8 w-8 rounded-lg"
-                image={user.avatar}
-                name={user.name}
+                image={session.data?.user?.image ?? undefined}
+                name={session.data?.user?.name ?? ""}
               />
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{user.name}</span>
-                <span className="truncate text-xs">{user.email}</span>
+                <span className="truncate font-medium">
+                  {session.data?.user?.name ?? ""}
+                </span>
+                <span className="truncate text-xs">
+                  {session.data?.user?.email ?? ""}
+                </span>
               </div>
               <ChevronsUpDown className="ml-auto size-4" />
             </SidebarMenuButton>
@@ -67,12 +64,16 @@ export function NavUser({
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar
                   className="h-8 w-8 rounded-lg"
-                  image={user.avatar}
-                  name={user.name}
+                  image={session.data?.user?.image ?? undefined}
+                  name={session.data?.user?.name ?? ""}
                 />
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">{user.name}</span>
-                  <span className="truncate text-xs">{user.email}</span>
+                  <span className="truncate font-medium">
+                    {session.data?.user?.name ?? ""}
+                  </span>
+                  <span className="truncate text-xs">
+                    {session.data?.user?.email ?? ""}
+                  </span>
                 </div>
               </div>
             </DropdownMenuLabel>

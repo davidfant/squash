@@ -8,9 +8,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { api, useMutation, useQuery } from "@/hooks/api";
 import { Check, ChevronDown } from "lucide-react";
+import { FeatureCard } from "../../../components/blocks/feature/card";
+import { FeatureCardSkeleton } from "../../../components/blocks/feature/card-skeleton";
 import { useRepos } from "../hooks/useRepos";
-import { BranchCard } from "./BranchCard";
-import { BranchCardSkeleton } from "./BranchCardSkeleton";
 
 export function RecentBranchesGrid() {
   const repos = useRepos();
@@ -72,11 +72,11 @@ export function RecentBranchesGrid() {
       <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
         {branches.isPending ? (
           Array.from({ length: 6 }).map((_, index) => (
-            <BranchCardSkeleton key={index} index={index} />
+            <FeatureCardSkeleton key={index} index={index} />
           ))
         ) : branches.data?.length ? (
           branches.data?.map((branch, index) => (
-            <BranchCard
+            <FeatureCard
               key={branch.id}
               branch={branch}
               index={index}

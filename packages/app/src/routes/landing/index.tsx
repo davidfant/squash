@@ -166,7 +166,7 @@ export function LandingPage() {
             <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
               <CloneScreenshotAction />
               <Link to="/new/repo">
-                <Suggestion suggestion="Import from Github" size="default">
+                <Suggestion suggestion="Import from Github">
                   <SiGithub />
                   Import from Github
                 </Suggestion>

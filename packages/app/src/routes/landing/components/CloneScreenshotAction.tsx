@@ -11,7 +11,6 @@ export function CloneScreenshotAction() {
 
   return (
     <Suggestion
-      size="default"
       suggestion="Clone a screenshot"
       onClick={() => {
         uploadScreenshot();

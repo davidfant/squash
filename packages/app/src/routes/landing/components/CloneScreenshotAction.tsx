@@ -5,9 +5,13 @@ import { useRepos } from "../hooks/useRepos";
 import { useScreenshotUpload } from "../hooks/useScreenshotUpload";
 
 export function CloneScreenshotAction() {
-  const uploadScreenshot = useScreenshotUpload();
   const repos = useRepos();
   const input = useChatInputContext();
+  const uploadScreenshot = useScreenshotUpload(() => {
+    if (!input.text) {
+      input.setText("Clone this screenshot");
+    }
+  });
 
   return (
     <Suggestion

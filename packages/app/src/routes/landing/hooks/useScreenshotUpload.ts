@@ -2,7 +2,7 @@ import { useChatInputContext } from "@/components/layout/chat/input/context";
 import { toast } from "@/components/ui/sonner";
 import { useCallback } from "react";
 
-export function useScreenshotUpload() {
+export function useScreenshotUpload(onSuccess?: () => void) {
   const input = useChatInputContext();
   return useCallback(() => {
     // Create a temporary file input specifically for images
@@ -21,10 +21,7 @@ export function useScreenshotUpload() {
       }
 
       await input.addFile([file]);
-      // input.setState({ type: "clone-screenshot" });
-      if (!input.text) {
-        input.setText("Clone this screenshot");
-      }
+      onSuccess?.();
     };
 
     inputEl.click();

@@ -2,59 +2,49 @@ import { Suggestion } from "@/components/ai-elements/suggestion";
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useScreenshotUpload } from "@/routes/landing/hooks/useScreenshotUpload";
 import { FileText, Image } from "lucide-react";
 
-interface ChatEmptyStateProps {
-  onSuggestionClick: (suggestion: string) => void;
-}
-
-export function ChatEmptyState({ onSuggestionClick }: ChatEmptyStateProps) {
+export function ChatEmptyState() {
+  const uploadScreenshot = useScreenshotUpload();
   return (
-    <div className="flex flex-col items-center justify-center h-full px-4 py-8">
+    <div className="w-full flex flex-col justify-end p-8">
       <div className="text-center space-y-6">
         <p className="text-muted-foreground text-sm">
-          You can start chatting with Squash to tell it what you want.
+          Prototype your next feature by chatting with Squash
         </p>
 
-        <TooltipProvider>
-          <div className="flex justify-center">
-            <div className="flex gap-3">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Suggestion
-                    suggestion="Start from PRD"
-                    onClick={onSuggestionClick}
-                  >
-                    <FileText className="h-4 w-4 text-amber-500" />
-                    Start from PRD
-                  </Suggestion>
-                </TooltipTrigger>
-                <TooltipContent side="bottom">
-                  Paste your PRD in the chat and Squash will help you build it
-                </TooltipContent>
-              </Tooltip>
+        <div className="flex gap-3 justify-center flex-wrap">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Suggestion suggestion="Start from PRD">
+                <FileText className="h-4 w-4 text-amber-500" />
+                Start from PRD
+              </Suggestion>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              Paste your PRD in the chat and Squash will help you build it
+            </TooltipContent>
+          </Tooltip>
 
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Suggestion
-                    suggestion="Start from screenshot"
-                    onClick={onSuggestionClick}
-                  >
-                    <Image className="h-4 w-4 text-green-500" />
-                    Start from screenshot
-                  </Suggestion>
-                </TooltipTrigger>
-                <TooltipContent>
-                  Paste a screenshot of your design in the chat and Squash will
-                  help you build it
-                </TooltipContent>
-              </Tooltip>
-            </div>
-          </div>
-        </TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Suggestion
+                suggestion="Start from screenshot"
+                onClick={uploadScreenshot}
+              >
+                <Image className="h-4 w-4 text-green-500" />
+                Start from screenshot
+              </Suggestion>
+            </TooltipTrigger>
+            <TooltipContent>
+              Paste a screenshot of your design in the chat and Squash will help
+              you build it
+            </TooltipContent>
+          </Tooltip>
+        </div>
       </div>
     </div>
   );

@@ -197,7 +197,9 @@ export const reposRouter = new Hono<{
     zValidator(
       "json",
       z.object({
-        message: z.object({ parts: zUserMessagePart.array().min(1) }),
+        message: z
+          .object({ parts: zUserMessagePart.array().min(1) })
+          .optional(),
       })
     ),
     requireRepo,
@@ -213,11 +215,6 @@ export const reposRouter = new Hono<{
         c.req.header("x-forwarded-for") ??
         c.req.raw.headers.get("x-forwarded-for");
 
-      const textContent = message.parts
-        .filter((p) => p.type === "text")
-        .map((p) => p.text)
-        .join(" ");
-
       const parentId = randomUUID();
       const messageId = randomUUID();
       const branchId = randomUUID();
@@ -228,7 +225,14 @@ export const reposRouter = new Hono<{
           .values({ ipAddress })
           .returning()
           .then(([thread]) => thread!),
-        generateName(textContent),
+        message
+          ? generateName(
+              message.parts
+                .filter((p) => p.type === "text")
+                .map((p) => p.text)
+                .join(" ")
+            )
+          : "New Prototype",
       ]);
 
       const branchName = `${kebabCase(title)}-${branchId.split("-")[0]}`;
@@ -248,14 +252,18 @@ export const reposRouter = new Hono<{
             parts: [],
             createdAt: new Date(),
           },
-          {
-            id: messageId,
-            role: "user",
-            threadId: thread.id,
-            parts: message.parts,
-            parentId,
-            createdAt: new Date(Date.now() + 1),
-          },
+          ...(message
+            ? [
+                {
+                  id: messageId,
+                  role: "user" as const,
+                  threadId: thread.id,
+                  parts: message.parts,
+                  parentId,
+                  createdAt: new Date(Date.now() + 1),
+                },
+              ]
+            : []),
         ]),
         db.insert(schema.repoBranch).values({
           id: branchId,
@@ -272,15 +280,17 @@ export const reposRouter = new Hono<{
         }),
       ]);
 
-      await manager.startAgent({
-        messages: [
-          { id: parentId, role: "system", parts: [] },
-          { id: messageId, role: "user", parts: message.parts },
-        ],
-        threadId: thread.id,
-        branchId,
-        restoreVersion: false,
-      });
+      if (message) {
+        await manager.startAgent({
+          messages: [
+            { id: parentId, role: "system", parts: [] },
+            { id: messageId, role: "user", parts: message.parts },
+          ],
+          threadId: thread.id,
+          branchId,
+          restoreVersion: false,
+        });
+      }
 
       return c.json({ id: branchId });
     }

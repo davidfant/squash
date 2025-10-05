@@ -29,23 +29,21 @@ function ChatInputWithScrollToBottom({
   const { status, sendMessage } = useChatContext();
   const { scrollToBottom } = useStickToBottomContext();
   return (
-    <ChatInputProvider>
-      <ChatInput
-        disabled={disabled}
-        autoFocus
-        placeholder="Type a message..."
-        submitting={status === "submitted" || status === "streaming"}
-        maxRows={10}
-        onStop={onStop}
-        onSubmit={(value) => {
-          sendMessage({
-            ...value,
-            metadata: { createdAt: new Date().toISOString(), parentId },
-          });
-          scrollToBottom();
-        }}
-      />
-    </ChatInputProvider>
+    <ChatInput
+      disabled={disabled}
+      autoFocus
+      placeholder="Type a message..."
+      submitting={status === "submitted" || status === "streaming"}
+      maxRows={10}
+      onStop={onStop}
+      onSubmit={(value) => {
+        sendMessage({
+          ...value,
+          metadata: { createdAt: new Date().toISOString(), parentId },
+        });
+        scrollToBottom();
+      }}
+    />
   );
 }
 
@@ -106,10 +104,10 @@ export function ChatThread({
       );
     }
 
-    if (messages.activePath.length === 0 || true) {
+    if (messages.activePath.length === 0) {
       return (
         <div className="h-full w-full flex">
-          <ChatEmptyState onSuggestionClick={handleSuggestionClick} />
+          <ChatEmptyState />
         </div>
       );
     }
@@ -118,35 +116,37 @@ export function ChatThread({
   })();
 
   return (
-    <StickToBottom
-      key={String(loading)}
-      className="h-full w-full flex flex-col"
-      initial="instant"
-      resize="smooth"
-    >
-      {content}
+    <ChatInputProvider>
+      <StickToBottom
+        key={String(loading)}
+        className="h-full w-full flex flex-col"
+        initial="instant"
+        resize="smooth"
+      >
+        {content}
 
-      <div className="p-2 pt-0">
-        <AnimatePresence>
-          {!!todos && !todos.every((t) => t.status === "completed") && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden"
-            >
-              <Card className="mb-2 p-2 shadow-none">
-                <TodoList todos={todos} />
-              </Card>
-            </motion.div>
-          )}
-        </AnimatePresence>
-        <ChatInputWithScrollToBottom
-          parentId={messages.activePath[messages.activePath.length - 1]?.id!}
-          disabled={loading}
-          onStop={() => stop.mutateAsync({ param: { branchId: id } })}
-        />
-      </div>
-    </StickToBottom>
+        <div className="p-2 pt-0">
+          <AnimatePresence>
+            {!!todos && !todos.every((t) => t.status === "completed") && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden"
+              >
+                <Card className="mb-2 p-2 shadow-none">
+                  <TodoList todos={todos} />
+                </Card>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          <ChatInputWithScrollToBottom
+            parentId={messages.activePath[messages.activePath.length - 1]?.id!}
+            disabled={loading}
+            onStop={() => stop.mutateAsync({ param: { branchId: id } })}
+          />
+        </div>
+      </StickToBottom>
+    </ChatInputProvider>
   );
 }

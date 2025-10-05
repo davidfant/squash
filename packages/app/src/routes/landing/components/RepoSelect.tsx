@@ -17,7 +17,11 @@ import { useScreenshotUpload } from "../hooks/useScreenshotUpload";
 export function RepoSelect({ disabled = false }: { disabled?: boolean }) {
   const input = useChatInputContext();
   const repos = useRepos();
-  const uploadScreenshot = useScreenshotUpload();
+  const uploadScreenshot = useScreenshotUpload(() => {
+    if (!input.text) {
+      input.setText("Clone this screenshot");
+    }
+  });
 
   if (!repos.all?.length) return null;
   return (

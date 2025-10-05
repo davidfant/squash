@@ -78,6 +78,11 @@ export function ChatThreadContent({ id }: { id: string }) {
     restoreVersion(newActivePath[newActivePath.length - 1]!.id);
   };
 
+  const lastMessage = messages.activePath.slice(-1)[0];
+  const showLoading =
+    status === "submitted" ||
+    (status === "streaming" && lastMessage?.role === "user");
+
   return (
     <div className="flex-1 w-full overflow-hidden relative">
       <ConversationContent className="pt-0 pl-2 pb-2 pr-4">

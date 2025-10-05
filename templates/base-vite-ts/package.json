@@ -1,7 +1,7 @@
 {
   "name": "base-vite-ts",
   "private": true,
-  "version": "0.0.3",
+  "version": "0.0.4",
   "type": "module",
   "scripts": {
     "dev": "concurrently \"vite --host 0.0.0.0\" \"sh .claude/tsc/watch.sh\"",

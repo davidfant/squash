@@ -12,6 +12,7 @@ import { Card } from "@/components/ui/card";
 import { api, useMutation } from "@/hooks/api";
 import { useBranchContext } from "@/routes/branches/context";
 import type { ChatMessage } from "@squashai/api/agent/types";
+import { AnimatePresence, motion } from "framer-motion";
 import { useMemo, useState } from "react";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import { v4 as uuid } from "uuid";
@@ -132,8 +133,8 @@ export function ChatThread({
         .flatMap((p) => p.parts)
         .filter((p) => p.type === "tool-ClaudeCodeTodoWrite")
         .findLast((p) => p.state === "output-available")
-        ?.input.todos.map((t, index) => ({
-          id: index.toString(),
+        ?.input.todos.map((t) => ({
+          id: t.content,
           content: t.status === "in_progress" ? t.activeForm : t.content,
           status: t.status,
         })),
@@ -237,17 +238,20 @@ export function ChatThread({
       </div>
 
       <div className="p-2 pt-0">
-        {!!todos && !todos.every((t) => t.status === "completed") && (
-          // margin-inline: 12px;
-          // margin-bottom: 0;
-          // border-bottom-right-radius: 0;
-          // border-bottom-left-radius: 0;
-          // border-bottom: none;
-          // background: unset;
-          <Card className="mb-2 p-2 shadow-none">
-            <TodoList todos={todos} />
-          </Card>
-        )}
+        <AnimatePresence>
+          {!!todos && !todos.every((t) => t.status === "completed") && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden"
+            >
+              <Card className="mb-2 p-2 shadow-none">
+                <TodoList todos={todos} />
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
         <ChatInputWithScrollToBottom
           parentId={messages.activePath[messages.activePath.length - 1]?.id!}
           initialValue={initialValue}

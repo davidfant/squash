@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, Circle, CircleDot, CircleX } from "lucide-react";
 
 export interface Todo {
@@ -12,34 +13,40 @@ interface TodoListProps {
 }
 
 export const TodoList = ({ todos }: TodoListProps) => (
-  <div className="space-y-1">
-    {todos.map((todo, index) => {
-      const Icon = {
-        completed: CheckCircle2,
-        in_progress: CircleDot,
-        pending: Circle,
-        cancelled: CircleX,
-      }[todo.status];
-      return (
-        <div
-          key={index}
-          className={cn(
-            "flex items-start gap-2 text-sm",
-            todo.status === "completed" && "opacity-50"
-          )}
-        >
-          <Icon
+  <AnimatePresence mode="popLayout">
+    <div className="space-y-1 py-1">
+      {todos.map((todo, index) => {
+        const Icon = {
+          completed: CheckCircle2,
+          in_progress: CircleDot,
+          pending: Circle,
+          cancelled: CircleX,
+        }[todo.status];
+        return (
+          <motion.div
+            key={todo.id}
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            layout
             className={cn(
-              "size-4 text-muted-foreground flex-shrink-0 mt-0.25",
-              todo.status === "completed" && "text-green-600",
-              todo.status === "in_progress" && "animate-spin"
+              "flex items-start gap-2 text-sm overflow-hidden",
+              todo.status === "completed" && "opacity-50"
             )}
-          />
-          <span className={cn(todo.status === "completed" && "line-through")}>
-            {todo.content}
-          </span>
-        </div>
-      );
-    })}
-  </div>
+          >
+            <Icon
+              className={cn(
+                "size-4 text-muted-foreground flex-shrink-0 mt-0.25",
+                todo.status === "completed" && "text-green-600",
+                todo.status === "in_progress" && "animate-spin"
+              )}
+            />
+            <span className={cn(todo.status === "completed" && "line-through")}>
+              {todo.content}
+            </span>
+          </motion.div>
+        );
+      })}
+    </div>
+  </AnimatePresence>
 );

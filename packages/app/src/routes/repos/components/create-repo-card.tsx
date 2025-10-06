@@ -8,7 +8,7 @@ export const CreateRepoCard = () => {
   return (
     <>
       <div
-        className="aspect-[5/4] rounded-xl group border-2 border-dashed border-border grid place-items-center cursor-pointer hover:border-muted-foreground transition-colors"
+        className="aspect-[268/226] rounded-xl group border-2 border-dashed border-border grid place-items-center cursor-pointer hover:border-muted-foreground transition-colors"
         onClick={() => setOpen(true)}
       >
         <Plus className="size-8 text-border group-hover:text-muted-foreground transition-colors" />

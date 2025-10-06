@@ -51,6 +51,7 @@
       "vars": {
         "SQUASH_CLI_VERSION": "0.0.8",
         "APP_URL": "https://app.squash.build",
+        // "TRUSTED_HOSTS": "app.squash.build,*.app-7j7.pages.dev",
         "TRUSTED_ORIGINS": "https://app.squash.build,https://*.app-7j7.pages.dev",
         "PREVIEW_PROXY_URL": "https://magicsite.app",
         "DEPLOYMENT_PROXY_URL": "https://squashprototype.com",

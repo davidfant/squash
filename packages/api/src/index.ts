@@ -16,26 +16,7 @@ import { repoBranchesRouter } from "./routers/repos/branches";
 import { repoProvidersRouter } from "./routers/repos/providers";
 
 const app = new Hono<{ Bindings: CloudflareBindings }>()
-  .use("*", (c, next) => {
-    const origin = c.req.header("origin");
-
-    const isTrusted = (() => {
-      try {
-        const { host } = new URL(origin!);
-        return c.env.TRUSTED_ORIGINS.split(",").some((o) =>
-          host.endsWith(new URL(o).host.replace(/^\*\./, ""))
-        );
-      } catch {
-        return false;
-      }
-    })();
-
-    const handler = cors({
-      origin: isTrusted ? origin! : "*",
-      credentials: isTrusted,
-    });
-    return handler(c, next);
-  })
+  .use("*", cors({ origin: process.env.APP_URL, credentials: true }))
   .use(requestId())
   .use(honoLogger())
   .use(databaseMiddleware)

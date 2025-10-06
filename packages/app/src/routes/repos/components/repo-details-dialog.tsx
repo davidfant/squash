@@ -48,7 +48,7 @@ export function RepoDetailsDialog({
         closeButton={false}
       >
         <DialogHeader className="p-4 pb-0 flex-row items-center justify-between">
-          <DialogTitle>{repo.name}</DialogTitle>
+          <DialogTitle className="pl-1">{repo.name}</DialogTitle>
           <Link to={`/playgrounds/${repo.id}/new`}>
             <Button
               loading={createBranch.isPending}
@@ -67,7 +67,7 @@ export function RepoDetailsDialog({
           />
 
           {/* Recent prototypes (branches) */}
-          <h3 className="mt-4 mb-2">Recent prototypes</h3>
+          <h3 className="mt-12 mb-2 ml-1">Recent Prototypes</h3>
           <FeatureCardGrid
             empty="No prototypes yet. Create the first one by clicking the button in
               the top right corner!"

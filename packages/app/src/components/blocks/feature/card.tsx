@@ -1,5 +1,6 @@
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,77 +29,90 @@ export const FeatureCard = ({
   onDelete?(): void;
   onClick?(): void;
 }) => (
-  <div
+  <Card
     className={cn(
-      "aspect-[5/4] w-full relative rounded-xl flex flex-col overflow-hidden shadow-md group py-2",
+      "p-1 shadow-none gap-1 group border-muted transition-colors hover:border-border",
       className
     )}
-    style={{
-      backgroundImage: `url(/preview/abstract/${index % 4}.jpg)`,
-      backgroundSize: "cover",
-      backgroundPosition: "center",
-    }}
     onClick={onClick}
   >
-    <div className="flex-1 min-h-0 flex items-center justify-center p-[3%]">
-      {imageUrl ? (
-        <img
-          src={imageUrl}
-          alt={title}
-          className="h-full aspect-[4/3] object-cover rounded-lg border-3 border-primary-foreground/30 shadow-lg"
-        />
-      ) : (
-        <div className="h-full aspect-[4/3] bg-muted rounded-lg border-3 border-primary-foreground/30 shadow-lg flex items-center justify-center text-muted-foreground text-xs">
-          No preview
-        </div>
-      )}
+    <div className="relative aspect-[3/2] rounded-lg overflow-hidden border-b border-b-muted">
+      <div
+        className="absolute inset-0 opacity-40 group-hover:opacity-50 transition-opacity"
+        style={{
+          backgroundImage: `url(/preview/abstract/${index % 4}.jpg)`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+      />
+      <div className="w-full h-full p-[5%] pb-0 relative group-hover:scale-105 transition-transform">
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={title}
+            className="h-full w-full object-cover rounded-lg rounded-b-none border-b-0 border-3 border-primary-foreground/30 shadow-lg"
+          />
+        ) : (
+          <div className="h-full rounded-lg border-3 border-primary-foreground/30 rounded-b-none border-b-0 overflow-hidden">
+            <div className="h-full bg-muted shadow-lg flex items-center justify-center text-muted-foreground text-xs">
+              No preview
+            </div>
+          </div>
+        )}
+      </div>
     </div>
-    <div className="flex gap-2 px-3 items-center">
+    <div className="flex gap-2 px-3 items-center h-10 relative">
       {!!avatar && (
         <Avatar
           name={avatar?.name}
           image={avatar?.image ?? undefined}
-          className="size-6 shadow-md"
+          className="size-6"
         />
       )}
-      <div>
-        <p className="text-sm text-primary-foreground flex-1 truncate text-shadow-md dark:text-shadow-none">
-          {title}
-        </p>
-        {!!subtitle && (
-          <p className="text-sm text-primary-foreground/70 text-shadow-md dark:text-shadow-none">
+      <p className="text-sm text-foreground flex-1 truncate">{title}</p>
+      {!!subtitle && (
+        <>
+          <p
+            className={cn(
+              "text-sm text-muted-foreground",
+              onDelete && "group-hover:opacity-0 transition-opacity"
+            )}
+          >
             {subtitle}
           </p>
-        )}
-      </div>
+        </>
+      )}
+      {onDelete && (
+        <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute right-0">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="size-8"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+              >
+                <MoreHorizontal />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete();
+                }}
+                variant="destructive"
+              >
+                <Trash2 />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )}
     </div>
-    {onDelete && (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            size="icon"
-            className="opacity-0 group-hover:opacity-100 transition-opacity absolute top-0 right-0 bg-transparent shadow-none hover:bg-primary-foreground/10"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-          >
-            <MoreHorizontal />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete();
-            }}
-            variant="destructive"
-          >
-            <Trash2 />
-            Delete
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    )}
-  </div>
+  </Card>
 );

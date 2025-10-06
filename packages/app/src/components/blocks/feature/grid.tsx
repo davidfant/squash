@@ -13,9 +13,7 @@ export const FeatureCardGrid = ({
     <div className="@container">
       <div className="grid grid-cols-1 @md:grid-cols-2 @3xl:grid-cols-3 @6xl:grid-cols-4 gap-4">
         {children ??
-          [...Array(6)].map((_, i) => (
-            <FeatureCardSkeleton key={i} index={i} />
-          ))}
+          [...Array(6)].map((_, i) => <FeatureCardSkeleton key={i} />)}
       </div>
     </div>
   );

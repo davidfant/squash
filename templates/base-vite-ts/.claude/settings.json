@@ -1,5 +1,5 @@
 {
-  "hooks": {
+  "_hooks": {
     "PreToolUse": [
       {
         "matcher": "Write|Edit|MultiEdit|NotebookEdit",

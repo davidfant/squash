@@ -100,8 +100,8 @@ export function ReasoningSummaries({ block }: { block: ReasoningBlock }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
           >
-            <p className="font-medium text-xs">{summary.title}</p>
-            <p className="text-xs opacity-70">{summary.content}</p>
+            <p className="font-medium text-sm">{summary.title}</p>
+            <p className="text-sm opacity-70">{summary.content}</p>
           </motion.div>
         ))}
       </div>

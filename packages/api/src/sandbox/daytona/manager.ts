@@ -236,7 +236,7 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
                   data: "Dev server started\n",
                   timestamp: new Date().toISOString(),
                 };
-                break;
+                return;
               }
             }
             logger.debug("Waiting for dev server", { url: preview.url });

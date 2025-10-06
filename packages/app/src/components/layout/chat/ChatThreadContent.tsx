@@ -20,12 +20,7 @@ import { useMessageLineage } from "./messageLineage";
 
 export function ChatThreadContent({ id }: { id: string }) {
   const { restoreVersion } = useBranchContext();
-  const {
-    messages: allMessages,
-    status,
-    sendMessage,
-    error,
-  } = useChatContext();
+  const { messages: allMessages, status, sendMessage } = useChatContext();
   const messages = useMessageLineage(allMessages, id);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
 

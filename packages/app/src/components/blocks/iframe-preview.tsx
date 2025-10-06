@@ -9,7 +9,7 @@ export function IframePreview({
   className,
 }: {
   url: string | null;
-  imageUrl: string | null;
+  imageUrl?: string | null;
   loading?: boolean;
   className?: string;
 }) {

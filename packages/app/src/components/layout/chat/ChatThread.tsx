@@ -78,7 +78,7 @@ export function ChatThread({
   const content = (() => {
     if (loading) {
       return (
-        <div className="h-full w-full grid place-items-center">
+        <div className="flex-1 w-full grid place-items-center">
           <Loader2 className="size-6 animate-spin opacity-20" />
         </div>
       );
@@ -86,7 +86,7 @@ export function ChatThread({
 
     if (messages.activePath.length === 0) {
       return (
-        <div className="h-full w-full flex">
+        <div className="flex-1 w-full flex">
           <ChatEmptyState />
         </div>
       );
@@ -98,7 +98,7 @@ export function ChatThread({
   return (
     <ChatInputProvider>
       <StickToBottom
-        key={String(loading)}
+        key={`${loading}-${!!messages.activePath.length}`}
         className="h-full w-full flex flex-col"
         initial="instant"
         resize="smooth"

@@ -62,10 +62,9 @@ export function FeatureCard({
         <p className="text-sm text-primary-foreground flex-1 truncate text-shadow-md dark:text-shadow-none">
           {title}
         </p>
-        <p className="text-sm text-primary-foreground/70 text-shadow-md dark:text-shadow-none">
-          {/* {formattedDate} */}
-          date goes here
-        </p>
+        {/* <p className="text-sm text-primary-foreground/70 text-shadow-md dark:text-shadow-none">
+          {formattedDate}
+        </p> */}
       </div>
       {onDelete && (
         <DropdownMenu>

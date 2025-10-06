@@ -38,6 +38,7 @@ createRoot(document.getElementById("root")!).render(
             <Route path="/invite/:inviteId" element={<InvitePage />} />
             <Route path="/extension-auth" element={<ExtensionAuthPage />} />
             <Route path="/playgrounds" element={<PlaygroundsPage />} />
+            <Route path="/playgrounds/:repoId" element={<PlaygroundsPage />} />
             <Route
               path="/playgrounds/:repoId/new"
               element={<NewBranchFromRepoPage />}

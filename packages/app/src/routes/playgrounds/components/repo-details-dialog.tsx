@@ -15,19 +15,17 @@ import { Link, useNavigate } from "react-router";
 export function RepoDetailsDialog({
   repo,
   open,
-  onOpenChange,
 }: {
   repo: {
     id: string;
     name: string;
   };
   open: boolean;
-  onOpenChange: (open: boolean) => void;
 }) {
   const navigate = useNavigate();
   const branches = useQuery(api.repos[":repoId"].branches.$get, {
-    params: { repoId: repo?.id || "" },
-    enabled: open && !!repo,
+    params: { repoId: repo.id },
+    enabled: open,
   });
 
   const createBranch = useMutation(api.repos[":repoId"].branches.$post, {
@@ -39,8 +37,14 @@ export function RepoDetailsDialog({
     onSuccess: () => branches.refetch(),
   });
 
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      navigate("/playgrounds");
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
         className="sm:max-w-5xl @container p-0 gap-2 top-[10%] max-h-[80vh] translate-y-0 overflow-hidden flex flex-col"
         closeButton={false}

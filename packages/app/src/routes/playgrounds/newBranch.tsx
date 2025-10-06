@@ -31,7 +31,7 @@ export function NewBranchFromRepoPage() {
       <div className="h-screen flex">
         <div className="flex flex-col w-1/3">
           <div className="flex items-center text-sm">
-            <Link to="/playgrounds">
+            <Link to={`/playgrounds/${repoId}`}>
               <Button size="icon" variant="ghost">
                 <ArrowLeft className="size-4" />
               </Button>

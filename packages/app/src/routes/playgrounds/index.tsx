@@ -5,44 +5,45 @@ import { AppSidebar } from "@/components/layout/sidebar/app-sidebar";
 import { SiteHeader } from "@/components/layout/sidebar/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { api, type QueryOutput, useQuery } from "@/hooks/api";
-import { useState } from "react";
-import { Navigate } from "react-router";
+import { useEffect, useState } from "react";
+import { Link, Navigate, useParams } from "react-router";
 import { RepoDetailsDialog } from "./components/repo-details-dialog";
 
 type Repo = QueryOutput<typeof api.repos.$get>[number];
 
 function PlaygroundCard({ repo, index }: { repo: Repo; index: number }) {
-  const [open, setOpen] = useState(false);
   return (
-    <>
+    <Link to={`/playgrounds/${repo.id}`}>
       <FeatureCard
         title={repo.name}
         imageUrl={null}
         // imageUrl={repo.imageUrl}
         index={index}
         className="cursor-pointer"
-        onClick={() => setOpen(true)}
       />
-      <RepoDetailsDialog repo={repo} open={open} onOpenChange={setOpen} />
-    </>
+    </Link>
   );
 }
 
 export function PlaygroundsPage() {
   const session = authClient.useSession();
   const repos = useQuery(api.repos.$get, { params: {} });
-  const [selectedRepo, setSelectedRepo] = useState<Repo | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const { repoId } = useParams();
+
+  // Keep the last selected repo in a ref so it persists during close animation
 
   // If not authenticated, redirect to login page
   if (!session.isPending && !session.data?.user) {
     return <Navigate to="/login" replace />;
   }
 
-  const handleOpenModal = (repo: Repo) => {
-    setSelectedRepo(repo);
-    setIsModalOpen(true);
-  };
+  // Find the selected repo based on URL param
+  const [currentRepo, setCurrentRepo] = useState<Repo>();
+  useEffect(() => {
+    const repo = repos.data?.find((repo) => repo.id === repoId);
+    if (repo) setCurrentRepo(repo);
+  }, [repoId, repos.data]);
+
   return (
     <SidebarProvider>
       <AppSidebar variant="inset" />
@@ -63,6 +64,9 @@ export function PlaygroundsPage() {
           />
         </main>
       </SidebarInset>
+
+      {/* Dialog is always rendered once we have repo data, but open state is controlled by URL */}
+      {currentRepo && <RepoDetailsDialog repo={currentRepo} open={!!repoId} />}
     </SidebarProvider>
   );
 }

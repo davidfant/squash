@@ -40,6 +40,7 @@
   "vars": {
     "SQUASH_CLI_VERSION": "0.0.8",
     "APP_URL": "http://localhost:5173",
+    "BETTER_AUTH_TRUSTED_ORIGINS": "localhost:5173",
     "PREVIEW_PROXY_URL": "http://localhost:8788",
     "DEPLOYMENT_PROXY_URL": "http://localhost:8790",
     "SCREENSHOT_API_URL": "http://localhost:8789",
@@ -50,6 +51,7 @@
       "vars": {
         "SQUASH_CLI_VERSION": "0.0.8",
         "APP_URL": "https://app.squash.build",
+        "BETTER_AUTH_TRUSTED_ORIGINS": "app.squash.build,*.app-7j7.pages.dev",
         "PREVIEW_PROXY_URL": "https://magicsite.app",
         "DEPLOYMENT_PROXY_URL": "https://squashprototype.com",
         "SCREENSHOT_API_URL": "https://screenshot-api-production.squash.workers.dev",

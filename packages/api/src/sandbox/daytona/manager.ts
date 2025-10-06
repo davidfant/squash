@@ -222,10 +222,11 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
             await that.storage.set("devServer", devServer);
           }
 
-          while (true) {
+          for (let attempt = 0; attempt < 100; attempt++) {
             const preview = await that.sandbox!.getPreviewLink(
               options.config.port
             );
+            logger.debug("Fetching preview", { url: preview.url, attempt });
             const response = await fetch(preview.url, { method: "GET" });
             if (response.ok) {
               const text = await response.text();
@@ -246,6 +247,8 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
             };
             await setTimeout(200);
           }
+
+          throw new Error("Dev server not started");
         },
       },
     ];

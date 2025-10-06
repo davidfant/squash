@@ -1,4 +1,4 @@
-import { FeatureCard } from "@/components/blocks/feature/card";
+import { BranchFeatureCard } from "@/components/blocks/feature/branch-card";
 import { FeatureCardGrid } from "@/components/blocks/feature/grid";
 import { IframePreview } from "@/components/blocks/iframe-preview";
 import { Button } from "@/components/ui/button";
@@ -31,12 +31,8 @@ export function RepoDetailsDialog({
   });
 
   const createBranch = useMutation(api.repos[":repoId"].branches.$post, {
-    onSuccess: (data) => navigate(`/branches/${data.id}`),
+    onSuccess: (data) => navigate(`/prototypes/${data.id}`),
     onError: () => toast.error("Failed to create prototype"),
-  });
-
-  const deleteBranch = useMutation(api.branches[":branchId"].$delete, {
-    onSuccess: () => branches.refetch(),
   });
 
   const handleOpenChange = (open: boolean) => {
@@ -77,16 +73,11 @@ export function RepoDetailsDialog({
               the top right corner!"
           >
             {branches.data?.map((b, index) => (
-              <FeatureCard
+              <BranchFeatureCard
                 key={b.id}
-                title={b.name}
-                imageUrl={b.imageUrl}
-                date={b.createdAt}
-                user={b.createdBy}
+                branch={b}
                 index={index}
-                onDelete={() =>
-                  deleteBranch.mutate({ param: { branchId: b.id } })
-                }
+                onDeleted={() => branches.refetch()}
               />
             ))}
           </FeatureCardGrid>

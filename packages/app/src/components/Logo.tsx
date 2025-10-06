@@ -10,3 +10,4 @@ export const Logo = ({ className = "" }: { className?: string }) => (
     <span className="text-xl">Squash</span>
   </div>
 );
+

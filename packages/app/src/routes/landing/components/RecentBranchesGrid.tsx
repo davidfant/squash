@@ -1,3 +1,4 @@
+import { authClient } from "@/auth/client";
 import { FeatureCardGrid } from "@/components/blocks/feature/grid";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,22 +9,29 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { api, useMutation, useQuery } from "@/hooks/api";
+import { formatDate } from "@/lib/date";
 import { Check, ChevronDown } from "lucide-react";
+import { useLocalStorage } from "usehooks-ts";
 import { FeatureCard } from "../../../components/blocks/feature/card";
 import { useRepos } from "../hooks/useRepos";
 
 export function RecentBranchesGrid() {
   const repos = useRepos();
+  const activeOrg = authClient.useActiveOrganization();
+  const [currentRepoId, setCurrentRepoId] = useLocalStorage<string | null>(
+    `lp.${activeOrg.data?.id}.currentRepoId`,
+    null
+  );
 
   const allBranches = useQuery(api.branches.$get, {
-    enabled: !repos.currentId,
+    enabled: !currentRepoId,
     params: {},
   });
   const currentBranches = useQuery(api.repos[":repoId"].branches.$get, {
-    enabled: !!repos.currentId,
-    params: { repoId: repos.currentId },
+    enabled: !!currentRepoId,
+    params: { repoId: currentRepoId },
   });
-  const branches = repos.currentId ? currentBranches : allBranches;
+  const branches = currentRepoId ? currentBranches : allBranches;
 
   const deleteBranch = useMutation(api.branches[":branchId"].$delete, {
     onSuccess: () => {
@@ -75,8 +83,8 @@ export function RecentBranchesGrid() {
             key={branch.id}
             title={branch.name}
             imageUrl={branch.imageUrl}
-            date={branch.createdAt}
-            user={branch.createdBy}
+            subtitle={formatDate(branch.createdAt)}
+            avatar={branch.createdBy}
             index={index}
             onDelete={() =>
               deleteBranch.mutate({ param: { branchId: branch.id } })

@@ -6,6 +6,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { api, type QueryOutput, useQuery } from "@/hooks/api";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router";
+import { CreateRepoCard } from "./components/create-repo-card";
 import { RepoDetailsDialog } from "./components/repo-details-dialog";
 
 type Repo = QueryOutput<typeof api.repos.$get>[number];
@@ -38,7 +39,7 @@ export function ReposPage() {
       <AppSidebar variant="inset" />
       <SidebarInset>
         <SiteHeader title="Playgrounds" />
-        <main className="p-3 pt-0">
+        <main className="p-3">
           <FeatureCardGrid
             children={
               repos.data
@@ -46,7 +47,7 @@ export function ReposPage() {
                     ...repos.data.map((repo, index) => (
                       <RepoCard key={repo.id} repo={repo} index={index} />
                     )),
-                    // <CreateRepoCard key="create" />,
+                    <CreateRepoCard key="create" />,
                   ]
                 : undefined
             }

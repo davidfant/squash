@@ -47,7 +47,7 @@ export function LandingPage() {
   });
 
   const createBranch = useMutation(api.repos[":repoId"].branches.$post, {
-    onSuccess: (data) => navigate(`/branches/${data.id}`),
+    onSuccess: (data) => navigate(`/prototypes/${data.id}`),
   });
 
   const handleSubmit = async (content: ChatInputValue) => {
@@ -57,7 +57,7 @@ export function LandingPage() {
       const newRepo = await createRepo.mutateAsync({
         json: {
           name: `base-${Date.now()}`,
-          url: "s3://repos/templates/base-vite-ts",
+          gitUrl: "s3://repos/templates/base-vite-ts",
           defaultBranch: "master",
           hidden: true,
           snapshot: {

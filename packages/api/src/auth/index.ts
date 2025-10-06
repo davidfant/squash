@@ -38,10 +38,10 @@ export function createAuth(
 ): ReturnType<typeof betterAuth> {
   const db = createDatabase(env);
   return betterAuth({
-    appName: "LP",
+    appName: "Squash",
     database: drizzleAdapter(db, { provider: "pg" }),
     basePath: "/auth",
-    trustedOrigins: [env.APP_URL],
+    trustedOrigins: process.env.BETTER_AUTH_TRUSTED_ORIGINS!.split(","),
     baseURL: process.env.BETTER_AUTH_URL,
     secret: process.env.BETTER_AUTH_SECRET,
     socialProviders: {

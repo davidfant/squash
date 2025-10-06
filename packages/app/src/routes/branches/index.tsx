@@ -1,4 +1,4 @@
-import { FeatureCard } from "@/components/blocks/feature/card";
+import { BranchFeatureCard } from "@/components/blocks/feature/branch-card";
 import { FeatureCardGrid } from "@/components/blocks/feature/grid";
 import { AppSidebar } from "@/components/layout/sidebar/app-sidebar";
 import { SiteHeader } from "@/components/layout/sidebar/site-header";
@@ -11,25 +11,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { api, type QueryOutput, useQuery } from "@/hooks/api";
+import { api, useQuery } from "@/hooks/api";
 import { Check, ChevronDown } from "lucide-react";
-import { Link } from "react-router";
 import { useRepos } from "../landing/hooks/useRepos";
-
-type Branch = QueryOutput<typeof api.branches.$get>[number];
-
-function BranchCard({ branch, index }: { branch: Branch; index: number }) {
-  return (
-    <Link to={`/prototypes/${branch.id}`}>
-      <FeatureCard
-        title={branch.name}
-        imageUrl={branch.imageUrl}
-        index={index}
-        className="cursor-pointer"
-      />
-    </Link>
-  );
-}
 
 export function BranchesPage() {
   const repos = useRepos();
@@ -78,12 +62,17 @@ export function BranchesPage() {
             </DropdownMenu>
           }
         />
-        <main className="p-3 pt-0">
+        <main className="p-3">
           <FeatureCardGrid
             children={
               branches.data
                 ? branches.data.map((b, index) => (
-                    <BranchCard key={b.id} branch={b} index={index} />
+                    <BranchFeatureCard
+                      key={b.id}
+                      branch={b}
+                      index={index}
+                      onDeleted={() => branches.refetch()}
+                    />
                   ))
                 : undefined
             }

@@ -39,7 +39,7 @@ export function ChatEmptyState() {
                 Start from screenshot
               </Suggestion>
             </TooltipTrigger>
-            <TooltipContent>
+            <TooltipContent side="bottom">
               Paste a screenshot of your design in the chat and Squash will help
               you build it
             </TooltipContent>

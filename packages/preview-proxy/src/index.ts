@@ -3,6 +3,8 @@ export default {
     const root = env.PREVIEW_ROOT;
     const { host } = new URL(req.url);
 
+    // console.log(`[${req.method}] ${req.url}`, req.headers);
+
     if (!host.endsWith(root)) {
       return new Response("Bad host", { status: 400 });
     }

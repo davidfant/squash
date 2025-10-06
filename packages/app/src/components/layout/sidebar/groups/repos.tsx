@@ -32,19 +32,21 @@ export function ReposSidebarGroup() {
         {!!repos.data.length ? (
           <>
             {repos.data.slice(0, 5).map((r) => (
-              <SidebarMenuItem key={r.id}>
-                <SidebarMenuButton>
-                  <Link to={`/playgrounds/${r.id}`} className="truncate">
+              <Link key={r.id} to={`/playgrounds/${r.id}`} className="truncate">
+                <SidebarMenuItem>
+                  <SidebarMenuButton className="cursor-pointer">
                     {r.name}
-                  </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </Link>
+            ))}
+            <Link to="/playgrounds" className="truncate">
+              <SidebarMenuItem>
+                <SidebarMenuButton className="cursor-pointer">
+                  See All
                 </SidebarMenuButton>
               </SidebarMenuItem>
-            ))}
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <Link to={`/playgrounds`}>See All</Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+            </Link>
           </>
         ) : (
           <div className="px-2 text-sm text-muted-foreground italic">

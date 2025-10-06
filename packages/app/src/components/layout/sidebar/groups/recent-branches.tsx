@@ -32,19 +32,21 @@ export function RecentBranchesSidebarGroup() {
         {!!branches.data.length ? (
           <>
             {branches.data.slice(0, 5).map((b) => (
-              <SidebarMenuItem key={b.id}>
-                <SidebarMenuButton>
-                  <Link to={`/branches/${b.id}`} className="truncate">
+              <Link key={b.id} to={`/prototypes/${b.id}`} className="truncate">
+                <SidebarMenuItem>
+                  <SidebarMenuButton className="cursor-pointer">
                     {b.title}
-                  </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </Link>
+            ))}
+            <Link to="/prototypes" className="truncate">
+              <SidebarMenuItem>
+                <SidebarMenuButton className="cursor-pointer">
+                  See All
                 </SidebarMenuButton>
               </SidebarMenuItem>
-            ))}
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <Link to={`/prototypes`}>See All</Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+            </Link>
           </>
         ) : (
           <div className="px-2 text-sm text-muted-foreground italic">

@@ -214,7 +214,7 @@ export const repoProvidersRouter = new Hono<{
           .insert(schema.repo)
           .values({
             name: targetRepo.name,
-            url: targetRepo.clone_url,
+            gitUrl: targetRepo.clone_url,
             defaultBranch: targetRepo.default_branch,
             private: targetRepo.private,
             providerId: providerId,

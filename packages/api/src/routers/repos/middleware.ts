@@ -81,7 +81,9 @@ export const requireRepo = createMiddleware<
       repo: {
         id: string;
         name: string;
-        url: string;
+        gitUrl: string;
+        imageUrl: string | null;
+        previewUrl: string | null;
         defaultBranch: string;
         snapshot: Sandbox.Snapshot.Config.Any;
         provider: {
@@ -104,7 +106,9 @@ export const requireRepo = createMiddleware<
     .select({
       id: schema.repo.id,
       name: schema.repo.name,
-      url: schema.repo.url,
+      gitUrl: schema.repo.gitUrl,
+      imageUrl: schema.repo.imageUrl,
+      previewUrl: schema.repo.previewUrl,
       defaultBranch: schema.repo.defaultBranch,
       snapshot: schema.repo.snapshot,
       provider: {

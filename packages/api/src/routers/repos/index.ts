@@ -26,6 +26,8 @@ export const reposRouter = new Hono<{
       .select({
         id: schema.repo.id,
         name: schema.repo.name,
+        previewUrl: schema.repo.previewUrl,
+        imageUrl: schema.repo.imageUrl,
         createdAt: schema.repo.createdAt,
         updatedAt: schema.repo.updatedAt,
       })
@@ -111,7 +113,7 @@ export const reposRouter = new Hono<{
       "json",
       z.object({
         name: z.string(),
-        url: z.string().url(),
+        gitUrl: z.string().url(),
         defaultBranch: z.string(),
         hidden: z.boolean().optional(),
         snapshot: zSandboxSnapshotConfig,

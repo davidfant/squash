@@ -4,10 +4,12 @@ import { Loader2 } from "lucide-react";
 
 export function IframePreview({
   url,
+  imageUrl,
   loading,
   className,
 }: {
   url: string | null;
+  imageUrl: string | null;
   loading?: boolean;
   className?: string;
 }) {
@@ -20,6 +22,12 @@ export function IframePreview({
     >
       {url ? (
         <iframe src={url} className="w-full h-full" />
+      ) : imageUrl ? (
+        <img
+          src={imageUrl}
+          alt="Preview"
+          className="w-full h-full object-cover"
+        />
       ) : (
         <div className="h-full grid place-items-center text-muted-foreground text-sm">
           {loading ? (

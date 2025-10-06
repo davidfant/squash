@@ -10,13 +10,12 @@ import { RepoDetailsDialog } from "./components/repo-details-dialog";
 
 type Repo = QueryOutput<typeof api.repos.$get>[number];
 
-function PlaygroundCard({ repo, index }: { repo: Repo; index: number }) {
+function RepoCard({ repo, index }: { repo: Repo; index: number }) {
   return (
     <Link to={`/playgrounds/${repo.id}`}>
       <FeatureCard
         title={repo.name}
-        imageUrl={null}
-        // imageUrl={repo.imageUrl}
+        imageUrl={repo.imageUrl}
         index={index}
         className="cursor-pointer"
       />
@@ -45,7 +44,7 @@ export function ReposPage() {
               repos.data
                 ? [
                     ...repos.data.map((repo, index) => (
-                      <PlaygroundCard key={repo.id} repo={repo} index={index} />
+                      <RepoCard key={repo.id} repo={repo} index={index} />
                     )),
                     // <CreateRepoCard key="create" />,
                   ]

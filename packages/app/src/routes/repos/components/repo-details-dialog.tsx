@@ -19,6 +19,8 @@ export function RepoDetailsDialog({
   repo: {
     id: string;
     name: string;
+    imageUrl: string | null;
+    previewUrl: string | null;
   };
   open: boolean;
 }) {
@@ -63,7 +65,8 @@ export function RepoDetailsDialog({
 
         <div className="p-4 pt-0 flex-1 overflow-y-auto">
           <IframePreview
-            url="https://feat-build-core-layout-shadcn-themes-fba9a22a.squashprototype.com/"
+            url={repo.previewUrl}
+            imageUrl={repo.imageUrl}
             className="aspect-video"
           />
 

@@ -175,7 +175,7 @@ export abstract class BaseSandboxManagerDurableObject<
         args: [
           "-c",
           [
-            `git remote set-url origin ${repo.url}`,
+            `git remote set-url origin ${repo.gitUrl}`,
             `git push origin ${options.branch.name}`,
           ].join(" && "),
         ],

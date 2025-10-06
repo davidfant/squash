@@ -30,7 +30,9 @@ export interface RepoProviderData {
 
 export const repo = pgTable("repo", {
   id: uuid().primaryKey().defaultRandom(),
-  url: text().notNull(),
+  previewUrl: text(),
+  imageUrl: text(),
+  gitUrl: text().notNull(),
   name: text().notNull(),
   snapshot: json("snapshot").$type<Sandbox.Snapshot.Config.Any>().notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),

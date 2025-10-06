@@ -1,6 +1,7 @@
 import { ChevronsUpDown } from "lucide-react";
 
 import { authClient } from "@/auth/client";
+import { CreateInviteLinkDropdownMenuItem } from "@/components/blocks/CreateInviteLinkDropdownMenuItem";
 import { Avatar } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -14,13 +15,11 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  useSidebar,
 } from "@/components/ui/sidebar";
 import { useSwitchOrganization } from "@/hooks/use-switch-organization";
 import { CreateOrganizationMenuItem } from "@/routes/landing/components/header/CreateOrganizationMenuItem";
 
 export function OrganizationSwitcher() {
-  const { isMobile } = useSidebar();
   const orgs = authClient.useListOrganizations();
   const active = authClient.useActiveOrganization();
   const [isSwitching, switchOrganization] = useSwitchOrganization();
@@ -46,11 +45,10 @@ export function OrganizationSwitcher() {
               <ChevronsUpDown className="ml-auto" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="start"
-            side={isMobile ? "bottom" : "right"}
-            sideOffset={4}
-          >
+          <DropdownMenuContent side="top" align="end" sideOffset={4}>
+            <CreateInviteLinkDropdownMenuItem />
+
+            <DropdownMenuSeparator />
             <DropdownMenuLabel className="text-muted-foreground text-xs">
               Organizations
             </DropdownMenuLabel>
@@ -69,7 +67,7 @@ export function OrganizationSwitcher() {
                 {org.name}
               </DropdownMenuItem>
             ))}
-            <DropdownMenuSeparator />
+            {/* <DropdownMenuSeparator /> */}
             <CreateOrganizationMenuItem
               onSuccess={async (organizationId) => {
                 await orgs.refetch();

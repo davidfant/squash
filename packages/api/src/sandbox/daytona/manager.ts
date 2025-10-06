@@ -153,7 +153,7 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
                 set -e;
 
                 if ! git remote get-url origin > /dev/null 2>&1; then
-                  git remote add origin ${repo.url}
+                  git remote add origin ${repo.gitUrl}
                   git fetch --depth 1 origin ${repo.defaultBranch}
                   git checkout --force origin/${repo.defaultBranch}
                   git checkout -b ${options.branch.name}

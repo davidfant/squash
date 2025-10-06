@@ -59,7 +59,7 @@ export function CreateOrganizationMenuItem({
           onSelect={(e) => e.preventDefault()}
           className="cursor-pointer"
         >
-          <Plus className="size-4" />
+          <Plus className="size-4 mx-1" />
           {t("avatar.createOrganization.title")}
         </DropdownMenuItem>
       </DialogTrigger>

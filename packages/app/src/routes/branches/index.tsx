@@ -64,18 +64,14 @@ export function BranchesPage() {
         />
         <main className="p-3">
           <FeatureCardGrid
-            children={
-              branches.data
-                ? branches.data.map((b, index) => (
-                    <BranchFeatureCard
-                      key={b.id}
-                      branch={b}
-                      index={index}
-                      onDeleted={() => branches.refetch()}
-                    />
-                  ))
-                : undefined
-            }
+            children={branches.data?.map((b, index) => (
+              <BranchFeatureCard
+                key={b.id}
+                branch={b}
+                index={index}
+                onDeleted={() => branches.refetch()}
+              />
+            ))}
           />
         </main>
       </SidebarInset>

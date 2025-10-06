@@ -1,13 +1,12 @@
 import { authClient } from "@/auth/client";
 import { FeatureCard } from "@/components/blocks/feature/card";
-import { FeatureCardSkeleton } from "@/components/blocks/feature/card-skeleton";
+import { FeatureCardGrid } from "@/components/blocks/feature/grid";
 import { AppSidebar } from "@/components/layout/sidebar/app-sidebar";
 import { SiteHeader } from "@/components/layout/sidebar/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { api, type QueryOutput, useQuery } from "@/hooks/api";
 import { useState } from "react";
 import { Navigate } from "react-router";
-import { CreateRepoCard } from "./components/create-repo-card";
 import { RepoDetailsDialog } from "./components/repo-details-dialog";
 
 type Repo = QueryOutput<typeof api.repos.$get>[number];
@@ -50,67 +49,20 @@ export function PlaygroundsPage() {
       <SidebarInset>
         <SiteHeader title="Playgrounds" />
         <main className="p-3 pt-0">
-          <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            {repos.isPending ? (
-              [...Array(6)].map((_, i) => (
-                <FeatureCardSkeleton key={i} index={i} />
-              ))
-            ) : (
-              <>
-                {repos.data?.map((repo, index) => (
-                  <PlaygroundCard key={repo.id} repo={repo} index={index} />
-                ))}
-                <CreateRepoCard />
-              </>
-            )}
-          </div>
+          <FeatureCardGrid
+            children={
+              repos.data
+                ? [
+                    ...repos.data.map((repo, index) => (
+                      <PlaygroundCard key={repo.id} repo={repo} index={index} />
+                    )),
+                    // <CreateRepoCard key="create" />,
+                  ]
+                : undefined
+            }
+          />
         </main>
       </SidebarInset>
     </SidebarProvider>
   );
-
-  // return (
-  //   <div className="flex min-h-screen bg-background">
-  //     <AppSidebar />
-  //     <div className="flex-1">
-  //       <div className="container mx-auto px-8 py-12">
-  //         <div className="mb-8">
-  //           <h1 className="text-3xl font-bold mb-2">Playgrounds</h1>
-  //           <p className="text-muted-foreground">
-  //             Manage and explore your playgrounds
-  //           </p>
-  //         </div>
-
-  //         {repos.isPending ? (
-  //           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-  //             {[...Array(8)].map((_, i) => (
-  //               <div
-  //                 key={i}
-  //                 className="aspect-[3/4] bg-muted rounded-xl animate-pulse"
-  //               />
-  //             ))}
-  //           </div>
-  //         ) : (
-  //           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-  //             {repos.data?.map((repo, index) => (
-  //               <PlaygroundCard
-  //                 key={repo.id}
-  //                 repo={repo}
-  //                 index={index}
-  //                 onClick={() => handleOpenModal(repo)}
-  //               />
-  //             ))}
-  //             <CreatePlaygroundCard />
-  //           </div>
-  //         )}
-
-  //         <PlaygroundModal
-  //           repo={selectedRepo}
-  //           open={isModalOpen}
-  //           onOpenChange={handleCloseModal}
-  //         />
-  //       </div>
-  //     </div>
-  //   </div>
-  // );
 }

@@ -1,4 +1,5 @@
 import { authClient } from "@/auth/client";
+import { RequireRole } from "@/auth/RequireRole";
 import { ChatThread } from "@/components/layout/chat/ChatThread";
 import { ChatProvider } from "@/components/layout/chat/context";
 import {
@@ -10,9 +11,11 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { api, useQuery } from "@/hooks/api";
 import type { ChatMessage } from "@squashai/api/agent/types";
 import { useParams } from "react-router";
+import { BranchHeader } from "../../components/blocks/branch/header";
 import { BranchPreview } from "./BranchPreview";
 import { BranchContextProvider, useBranchContext } from "./context";
-import { BranchHeader } from "./header/BranchHeader";
+import { InviteButton } from "./header/InviteButton";
+import { ShareButton } from "./header/ShareButton";
 
 function Component({ branchId }: { branchId: string }) {
   const { branch, setPreviewSha } = useBranchContext();
@@ -35,7 +38,17 @@ function Component({ branchId }: { branchId: string }) {
       }}
     >
       <SidebarProvider className="flex flex-col h-screen">
-        <BranchHeader title={branch.title} />
+        <BranchHeader
+          title={branch.title}
+          extra={
+            <div className="flex items-center gap-2">
+              <RequireRole roles={["admin", "owner"]}>
+                <InviteButton />
+              </RequireRole>
+              <ShareButton />
+            </div>
+          }
+        />
         <ResizablePanelGroup
           direction="horizontal"
           className="flex-1 overflow-hidden"

@@ -11,40 +11,21 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { toast } from "@/components/ui/sonner";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useSwitchOrganization } from "@/hooks/use-switch-organization";
 import { CreateOrganizationMenuItem } from "@/routes/landing/components/header/CreateOrganizationMenuItem";
-import { useQueryClient } from "@tanstack/react-query";
 import { Check, LogOut, Moon, Sun } from "lucide-react";
-import { useState } from "react";
 
 export function HeaderMenu() {
   const orgs = authClient.useListOrganizations();
   const activeOrg = authClient.useActiveOrganization();
   const session = authClient.useSession();
   const { theme, toggleTheme } = useTheme();
-  const queryClient = useQueryClient();
-
-  const [isSwitching, setIsSwitching] = useState(false);
 
   const organizations = orgs.data ?? [];
   const active = activeOrg.data;
 
-  const handleSelect = async (organizationId: string) => {
-    if (organizationId === active?.id) return;
-    try {
-      setIsSwitching(true);
-      await authClient.organization.setActive({ organizationId });
-      queryClient.cancelQueries();
-      queryClient.invalidateQueries();
-      await Promise.all([orgs.refetch(), activeOrg.refetch()]);
-    } catch (error) {
-      console.error("Failed to switch organization", error);
-      toast.error("Unable to switch organization");
-    } finally {
-      setIsSwitching(false);
-    }
-  };
+  const [isSwitching, switchOrganization] = useSwitchOrganization();
 
   if (!session.data?.user) return null;
   return (
@@ -90,7 +71,7 @@ export function HeaderMenu() {
         {organizations.map((org) => (
           <DropdownMenuItem
             key={org.id}
-            onClick={() => handleSelect(org.id)}
+            onClick={() => switchOrganization(org.id)}
             className="flex items-center gap-3"
           >
             <Avatar image={org.logo ?? ""} name={org.name} className="size-6" />
@@ -101,7 +82,7 @@ export function HeaderMenu() {
         <CreateOrganizationMenuItem
           onSuccess={async (organizationId) => {
             await orgs.refetch();
-            await handleSelect(organizationId);
+            await switchOrganization(organizationId);
           }}
         />
 

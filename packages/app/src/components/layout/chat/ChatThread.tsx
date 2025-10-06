@@ -1,16 +1,11 @@
 import { ChatInput } from "@/components/layout/chat/input/ChatInput";
-import {
-  type ChatInputValue,
-  ChatInputProvider,
-} from "@/components/layout/chat/input/context";
+import { ChatInputProvider } from "@/components/layout/chat/input/context";
 import { Card } from "@/components/ui/card";
 import { api, useMutation } from "@/hooks/api";
-import type { ChatMessage } from "@squashai/api/agent/types";
 import { AnimatePresence, motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 import { useMemo } from "react";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
-import { v4 as uuid } from "uuid";
 import { ChatEmptyState } from "./ChatEmptyState";
 import { ChatThreadContent } from "./ChatThreadContent";
 import { useChatContext } from "./context";
@@ -20,10 +15,12 @@ import { TodoList } from "./TodoList";
 function ChatInputWithScrollToBottom({
   parentId,
   disabled,
+  clearOnSubmit,
   onStop,
 }: {
   parentId: string;
-  disabled: boolean;
+  disabled?: boolean;
+  clearOnSubmit?: boolean;
   onStop: () => Promise<unknown>;
 }) {
   const { status, sendMessage } = useChatContext();
@@ -34,6 +31,7 @@ function ChatInputWithScrollToBottom({
       autoFocus
       placeholder="Type a message..."
       submitting={status === "submitted" || status === "streaming"}
+      clearOnSubmit={clearOnSubmit}
       maxRows={10}
       onStop={onStop}
       onSubmit={(value) => {
@@ -49,19 +47,14 @@ function ChatInputWithScrollToBottom({
 
 export function ChatThread({
   id,
-  initialValue,
   loading,
+  clearInputOnSubmit,
 }: {
   id: string;
-  loading: boolean;
-  initialValue?: ChatInputValue;
+  loading?: boolean;
+  clearInputOnSubmit?: boolean;
 }) {
-  const {
-    messages: allMessages,
-    status,
-    sendMessage,
-    error,
-  } = useChatContext();
+  const { messages: allMessages, status } = useChatContext();
   const messages = useMessageLineage(allMessages, id);
 
   const stop = useMutation(api.branches[":branchId"].messages.abort.$post);
@@ -81,20 +74,7 @@ export function ChatThread({
   );
 
   console.log("ChatThread.activePath", status, messages.activePath);
-  const lastMessage = messages.activePath[messages.activePath.length - 1];
 
-  const handleSuggestionClick = (suggestion: string) => {
-    const suggestionMessage: ChatMessage = {
-      id: uuid(),
-      role: "user",
-      parts: [{ type: "text", text: suggestion }],
-      metadata: {
-        parentId: id,
-        createdAt: new Date().toISOString(),
-      },
-    };
-    sendMessage(suggestionMessage);
-  };
   const content = (() => {
     if (loading) {
       return (
@@ -143,6 +123,7 @@ export function ChatThread({
           <ChatInputWithScrollToBottom
             parentId={messages.activePath[messages.activePath.length - 1]?.id!}
             disabled={loading}
+            clearOnSubmit={clearInputOnSubmit}
             onStop={() => stop.mutateAsync({ param: { branchId: id } })}
           />
         </div>

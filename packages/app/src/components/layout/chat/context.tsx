@@ -5,11 +5,19 @@ import {
   type UseChatOptions,
 } from "@ai-sdk/react";
 import type { ChatMessage } from "@squashai/api/agent/types";
-import { DefaultChatTransport } from "ai";
-import { createContext, useContext, useEffect, type ReactNode } from "react";
+import { DefaultChatTransport, type ChatStatus, type FileUIPart } from "ai";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
 import { v4 as uuid } from "uuid";
 
-const ChatContext = createContext<UseChatHelpers<ChatMessage>>(null as any);
+export const ChatContext = createContext<UseChatHelpers<ChatMessage>>(
+  null as any
+);
 
 export const ChatProvider = ({
   children,
@@ -48,6 +56,47 @@ export const ChatProvider = ({
   }, [!!initialMessages]);
 
   return <ChatContext.Provider value={chat}>{children}</ChatContext.Provider>;
+};
+
+export const EmptyChatProvider = ({
+  children,
+  onSendMessage,
+}: {
+  children: ReactNode;
+  onSendMessage: (message: {
+    text?: string;
+    files?: FileUIPart[];
+  }) => Promise<void>;
+}) => {
+  const chat = useChat<ChatMessage>();
+  const [status, setStatus] = useState<ChatStatus>("ready");
+  const sendMessage: UseChatHelpers<ChatMessage>["sendMessage"] = async (
+    message
+  ) => {
+    try {
+      setStatus("submitted");
+      if (message && "text" in message) {
+        await onSendMessage({
+          text: message.text,
+          files: message.files as FileUIPart[],
+        });
+      } else {
+        console.warn(
+          "Unknown message type submitted in EmptyChatProvider",
+          message
+        );
+      }
+      setStatus("ready");
+    } catch (error) {
+      setStatus("error");
+      throw error;
+    }
+  };
+  return (
+    <ChatContext.Provider value={{ ...chat, sendMessage, status }}>
+      {children}
+    </ChatContext.Provider>
+  );
 };
 
 export const useChatContext = () => useContext(ChatContext);

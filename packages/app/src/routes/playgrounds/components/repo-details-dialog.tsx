@@ -1,5 +1,6 @@
 import { FeatureCard } from "@/components/blocks/feature/card";
-import { FeatureCardSkeleton } from "@/components/blocks/feature/card-skeleton";
+import { FeatureCardGrid } from "@/components/blocks/feature/grid";
+import { IframePreview } from "@/components/blocks/iframe-preview";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/components/ui/sonner";
 import { api, useMutation, useQuery } from "@/hooks/api";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 
 export function RepoDetailsDialog({
   repo,
@@ -38,14 +39,6 @@ export function RepoDetailsDialog({
     onSuccess: () => branches.refetch(),
   });
 
-  const handleCreatePrototype = async () => {
-    if (!repo) return;
-    await createBranch.mutateAsync({
-      param: { repoId: repo.id },
-      json: {},
-    });
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -54,51 +47,42 @@ export function RepoDetailsDialog({
       >
         <DialogHeader className="p-4 pb-0 flex-row items-center justify-between">
           <DialogTitle>{repo.name}</DialogTitle>
-          <Button
-            onClick={handleCreatePrototype}
-            loading={createBranch.isPending}
-            disabled={createBranch.isPending}
-          >
-            Create prototype
-          </Button>
+          <Link to={`/playgrounds/${repo.id}/new`}>
+            <Button
+              loading={createBranch.isPending}
+              disabled={createBranch.isPending}
+            >
+              Create prototype
+            </Button>
+          </Link>
         </DialogHeader>
 
         <div className="p-4 pt-0 flex-1 overflow-y-auto">
-          {/* Preview placeholder */}
-          <div className="aspect-video w-full bg-muted rounded-lg flex items-center justify-center">
-            <p className="text-muted-foreground text-sm">
-              No preview available
-            </p>
-          </div>
+          <IframePreview
+            url="https://feat-build-core-layout-shadcn-themes-fba9a22a.squashprototype.com/"
+            className="aspect-video"
+          />
 
           {/* Recent prototypes (branches) */}
           <h3 className="mt-4 mb-2">Recent prototypes</h3>
-          {branches.data?.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No prototypes yet. Create the first one by clicking the button in
-              the top right corner!
-            </p>
-          ) : (
-            <div className="grid grid-cols-1 @md:grid-cols-2 @lg:grid-cols-3 @xl:grid-cols-4 gap-4">
-              {branches.isPending
-                ? [...Array(12)].map((_, i) => (
-                    <FeatureCardSkeleton key={i} index={i} />
-                  ))
-                : branches.data?.map((b, index) => (
-                    <FeatureCard
-                      key={b.id}
-                      title={b.name}
-                      imageUrl={b.imageUrl}
-                      date={b.createdAt}
-                      user={b.createdBy}
-                      index={index}
-                      onDelete={() =>
-                        deleteBranch.mutate({ param: { branchId: b.id } })
-                      }
-                    />
-                  ))}
-            </div>
-          )}
+          <FeatureCardGrid
+            empty="No prototypes yet. Create the first one by clicking the button in
+              the top right corner!"
+          >
+            {branches.data?.map((b, index) => (
+              <FeatureCard
+                key={b.id}
+                title={b.name}
+                imageUrl={b.imageUrl}
+                date={b.createdAt}
+                user={b.createdBy}
+                index={index}
+                onDelete={() =>
+                  deleteBranch.mutate({ param: { branchId: b.id } })
+                }
+              />
+            ))}
+          </FeatureCardGrid>
         </div>
       </DialogContent>
     </Dialog>

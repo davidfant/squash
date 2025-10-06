@@ -1,3 +1,4 @@
+import { FeatureCardGrid } from "@/components/blocks/feature/grid";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -9,7 +10,6 @@ import {
 import { api, useMutation, useQuery } from "@/hooks/api";
 import { Check, ChevronDown } from "lucide-react";
 import { FeatureCard } from "../../../components/blocks/feature/card";
-import { FeatureCardSkeleton } from "../../../components/blocks/feature/card-skeleton";
 import { useRepos } from "../hooks/useRepos";
 
 export function RecentBranchesGrid() {
@@ -69,26 +69,21 @@ export function RecentBranchesGrid() {
         </DropdownMenu>
       </div>
 
-      <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
-        {branches.isPending ? (
-          Array.from({ length: 6 }).map((_, index) => (
-            <FeatureCardSkeleton key={index} index={index} />
-          ))
-        ) : branches.data?.length ? (
-          branches.data?.map((branch, index) => (
-            <FeatureCard
-              key={branch.id}
-              branch={branch}
-              index={index}
-              onDelete={() =>
-                deleteBranch.mutate({ param: { branchId: branch.id } })
-              }
-            />
-          ))
-        ) : (
-          <p className="text-sm text-muted-foreground">No prototypes yet</p>
-        )}
-      </div>
+      <FeatureCardGrid empty="No prototypes yet">
+        {branches.data?.map((branch, index) => (
+          <FeatureCard
+            key={branch.id}
+            title={branch.name}
+            imageUrl={branch.imageUrl}
+            date={branch.createdAt}
+            user={branch.createdBy}
+            index={index}
+            onDelete={() =>
+              deleteBranch.mutate({ param: { branchId: branch.id } })
+            }
+          />
+        ))}
+      </FeatureCardGrid>
     </section>
   );
 }

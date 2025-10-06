@@ -144,6 +144,12 @@ export const reposRouter = new Hono<{
     }
   )
   .get(
+    "/:repoId",
+    zValidator("param", z.object({ repoId: z.uuid() })),
+    requireRepo,
+    (c) => c.json(c.get("repo"))
+  )
+  .get(
     "/:repoId/branches",
     zValidator("param", z.object({ repoId: z.uuid() })),
     async (c) => {
@@ -197,9 +203,7 @@ export const reposRouter = new Hono<{
     zValidator(
       "json",
       z.object({
-        message: z
-          .object({ parts: zUserMessagePart.array().min(1) })
-          .optional(),
+        message: z.object({ parts: zUserMessagePart.array().min(1) }),
       })
     ),
     requireRepo,
@@ -225,18 +229,15 @@ export const reposRouter = new Hono<{
           .values({ ipAddress })
           .returning()
           .then(([thread]) => thread!),
-        message
-          ? generateName(
-              message.parts
-                .filter((p) => p.type === "text")
-                .map((p) => p.text)
-                .join(" ")
-            )
-          : "New Prototype",
+        generateName(
+          message.parts
+            .filter((p) => p.type === "text")
+            .map((p) => p.text)
+            .join(" ")
+        ),
       ]);
 
       const branchName = `${kebabCase(title)}-${branchId.split("-")[0]}`;
-
       const manager = c.env.DAYTONA_SANDBOX_MANAGER.getByName(branchId);
 
       if (repo.snapshot.type !== "daytona") {
@@ -252,18 +253,14 @@ export const reposRouter = new Hono<{
             parts: [],
             createdAt: new Date(),
           },
-          ...(message
-            ? [
-                {
-                  id: messageId,
-                  role: "user" as const,
-                  threadId: thread.id,
-                  parts: message.parts,
-                  parentId,
-                  createdAt: new Date(Date.now() + 1),
-                },
-              ]
-            : []),
+          {
+            id: messageId,
+            role: "user" as const,
+            threadId: thread.id,
+            parts: message.parts,
+            parentId,
+            createdAt: new Date(Date.now() + 1),
+          },
         ]),
         db.insert(schema.repoBranch).values({
           id: branchId,
@@ -280,17 +277,15 @@ export const reposRouter = new Hono<{
         }),
       ]);
 
-      if (message) {
-        await manager.startAgent({
-          messages: [
-            { id: parentId, role: "system", parts: [] },
-            { id: messageId, role: "user", parts: message.parts },
-          ],
-          threadId: thread.id,
-          branchId,
-          restoreVersion: false,
-        });
-      }
+      await manager.startAgent({
+        messages: [
+          { id: parentId, role: "system", parts: [] },
+          { id: messageId, role: "user", parts: message.parts },
+        ],
+        threadId: thread.id,
+        branchId,
+        restoreVersion: false,
+      });
 
       return c.json({ id: branchId });
     }

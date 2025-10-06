@@ -1,9 +1,12 @@
-import { RequireRole } from "@/auth/RequireRole";
 import { Link } from "react-router";
-import { InviteButton } from "./InviteButton";
-import { ShareButton } from "./ShareButton";
 
-export const BranchHeader = ({ title }: { title: string }) => (
+export const BranchHeader = ({
+  title,
+  extra,
+}: {
+  title: string;
+  extra?: React.ReactNode;
+}) => (
   <header className="flex items-center justify-between p-2">
     <div className="flex items-center gap-2">
       <Link to="/" className="flex items-center">
@@ -16,11 +19,6 @@ export const BranchHeader = ({ title }: { title: string }) => (
       <span className="font-medium text-sm">{title}</span>
     </div>
 
-    <div className="flex items-center gap-2">
-      <RequireRole roles={["admin", "owner"]}>
-        <InviteButton />
-      </RequireRole>
-      <ShareButton />
-    </div>
+    {extra}
   </header>
 );

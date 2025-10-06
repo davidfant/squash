@@ -2,42 +2,20 @@ import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
-  SidebarGroup,
-  SidebarGroupLabel,
   SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarRail,
 } from "@/components/ui/sidebar";
-import { useTheme } from "@/contexts/ThemeContext";
 import { api, useQuery } from "@/hooks/api";
-import { Home, Moon, Settings, Sun } from "lucide-react";
 import * as React from "react";
-import { NavMain } from "./nav-main";
+import { RecentBranchesSidebarGroup } from "./groups/recent-branches";
+import { ReposSidebarGroup } from "./groups/repos";
 import { NavUser } from "./nav-user";
+import { OrganizationSwitcher } from "./organization-switcher";
 
 // Move navMainItems inside the component so it can access selectedRepoId
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const repos = useQuery(api.repos.$get, { params: {} });
-  const navMainItems = [
-    {
-      title: "Home",
-      url: "/",
-      icon: Home,
-      isActive: true,
-    },
-    {
-      title: "Settings",
-      url: "#",
-      icon: Settings,
-      items: [
-        { title: "General", url: "#" },
-        { title: "Integrations", url: "#" },
-      ],
-    },
-  ];
+  const branches = useQuery(api.branches.$get, { params: {} });
 
   // Get branches for the selected repo
   // const branches = useQuery(api.repos[":repoId"].branches.$get, {
@@ -45,72 +23,27 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   //   enabled: !!selectedRepoId,
   // });
 
-  const { theme, toggleTheme } = useTheme();
-
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        header
-        {/* {repos.data && (
-          <RepoSwitcher
-            selectedId={selectedRepoId}
-            repos={repos.data.map((repo) => ({
-              id: repo.id,
-              name: repo.name,
-            }))}
-          />
-        )} */}
+        <OrganizationSwitcher />
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={navMainItems} />
-
-        {/* Branches Section */}
-        <SidebarGroup>
-          <SidebarGroupLabel>Your recent prototypes</SidebarGroupLabel>
-
-          {/* {selectedRepoId && branches.data ? (
-            <SidebarMenu>
-              {branches.data.length > 0 ? (
-                branches.data
-                  .filter(
-                    (branch): branch is NonNullable<typeof branch> =>
-                      branch != null && branch.id != null && branch.name != null
-                  )
-                  .map((branch) => (
-                    <SidebarMenuItem key={branch.id}>
-                      <SidebarMenuButton asChild>
-                        <Link to={`/branches/${branch.id}`}>
-                          <GitBranch className="h-4 w-4" />
-                          <span>{branch.name}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))
-              ) : (
-                <div className="px-3 py-2 text-sm text-muted-foreground">
-                  No branches yet
-                </div>
-              )}
-            </SidebarMenu>
-          ) : (
-            <div className="px-3 py-2 text-sm text-muted-foreground">
-              Loading branches...
-            </div>
-          )} */}
-        </SidebarGroup>
+        <ReposSidebarGroup />
+        <RecentBranchesSidebarGroup />
       </SidebarContent>
+
       <SidebarFooter>
-        <SidebarMenu>
+        {/* <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton tooltip="Toggle theme" onClick={toggleTheme}>
               {theme === "light" ? <Sun /> : <Moon />}
               <span>Appearance</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
-        </SidebarMenu>
+        </SidebarMenu> */}
         <NavUser />
       </SidebarFooter>
-      <SidebarRail />
     </Sidebar>
   );
 }

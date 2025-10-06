@@ -16,6 +16,7 @@ import { LandingPage } from "./routes/landing";
 import { NewRepoFromProvider, NewRepoPage } from "./routes/new/repo";
 import { NewRepoManualPage } from "./routes/new/repo/manual";
 import { PlaygroundsPage } from "./routes/playgrounds";
+import { NewBranchFromRepoPage } from "./routes/playgrounds/newBranch";
 
 i18n.use(initReactI18next).init({
   lng: "default",
@@ -37,6 +38,10 @@ createRoot(document.getElementById("root")!).render(
             <Route path="/invite/:inviteId" element={<InvitePage />} />
             <Route path="/extension-auth" element={<ExtensionAuthPage />} />
             <Route path="/playgrounds" element={<PlaygroundsPage />} />
+            <Route
+              path="/playgrounds/:repoId/new"
+              element={<NewBranchFromRepoPage />}
+            />
             <Route path="/branches/:branchId" element={<BranchPage />} />
             <Route path="/new/repo" element={<NewRepoPage />} />
             <Route path="/new/repo/manual" element={<NewRepoManualPage />} />

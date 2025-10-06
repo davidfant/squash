@@ -8,15 +8,17 @@ import { BrowserRouter, Route, Routes } from "react-router";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import "./index.css";
 import resources from "./locales/default";
+import { RequireAuthGuard } from "./routes/auth/guard";
 import { InvitePage } from "./routes/auth/invite";
 import { LoginPage } from "./routes/auth/login";
-import { BranchPage } from "./routes/branches";
+import { BranchesPage } from "./routes/branches";
+import { BranchPage } from "./routes/branches/details";
+import { NewBranchFromRepoPage } from "./routes/branches/new";
 import { ExtensionAuthPage } from "./routes/extension-auth";
 import { LandingPage } from "./routes/landing";
 import { NewRepoFromProvider, NewRepoPage } from "./routes/new/repo";
 import { NewRepoManualPage } from "./routes/new/repo/manual";
-import { PlaygroundsPage } from "./routes/playgrounds";
-import { NewBranchFromRepoPage } from "./routes/playgrounds/newBranch";
+import { ReposPage } from "./routes/repos";
 
 i18n.use(initReactI18next).init({
   lng: "default",
@@ -33,38 +35,36 @@ createRoot(document.getElementById("root")!).render(
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/invite/:inviteId" element={<InvitePage />} />
-            <Route path="/extension-auth" element={<ExtensionAuthPage />} />
-            <Route path="/playgrounds" element={<PlaygroundsPage />} />
-            <Route path="/playgrounds/:repoId" element={<PlaygroundsPage />} />
+            <Route element={<RequireAuthGuard />}>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/extension-auth" element={<ExtensionAuthPage />} />
+              <Route path="/playgrounds" element={<ReposPage />} />
+              <Route path="/playgrounds/:repoId" element={<ReposPage />} />
+              <Route
+                path="/playgrounds/:repoId/new"
+                element={<NewBranchFromRepoPage />}
+              />
+              <Route path="/prototypes" element={<BranchesPage />} />
+              <Route path="/prototypes/:branchId" element={<BranchPage />} />
+              <Route path="/new/repo" element={<NewRepoPage />} />
+              <Route path="/new/repo/manual" element={<NewRepoManualPage />} />
+              <Route
+                path="/new/repo/:providerId"
+                element={<NewRepoFromProvider />}
+              />
+            </Route>
+
             <Route
-              path="/playgrounds/:repoId/new"
-              element={<NewBranchFromRepoPage />}
+              path="*"
+              element={
+                <div className="flex flex-col items-center justify-center h-screen">
+                  <h1>404 – Page Not Found</h1>
+                  <p>The page you are looking for doesn’t exist.</p>
+                </div>
+              }
             />
-            <Route path="/branches/:branchId" element={<BranchPage />} />
-            <Route path="/new/repo" element={<NewRepoPage />} />
-            <Route path="/new/repo/manual" element={<NewRepoManualPage />} />
-            <Route
-              path="/new/repo/:providerId"
-              element={<NewRepoFromProvider />}
-            />
-            {/* <Route path="/project/page/:pageId" element={<ProjectPage />} />
-          <Route path="/project/x" element={<ProjectCanvas />} /> */}
-            {/* <Route path="/new/:threadId" element={<ThreadPage />} />
-          <Route path="/workflows/:workflowId" element={<WorkflowPage />} />
-          <Route path="/invite/:inviteId" element={<InvitePage />} />
-          <Route
-          path="*"
-          element={
-            <div style={{ textAlign: "center", padding: "2rem" }}>
-            <h1>404 - Page Not Found</h1>
-            <p>The page you are looking for doesn't exist.</p>
-            <Link to="/">Go back to home</Link>
-            </div>
-            }
-            /> */}
           </Routes>
           <Toaster />
         </BrowserRouter>

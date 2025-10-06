@@ -2,13 +2,13 @@ import {
   ConversationContent,
   ConversationScrollButton,
 } from "@/components/ai-elements/conversation";
+import { useBranchContext } from "@/components/layout/branch/context";
 import { ChatInput } from "@/components/layout/chat/input/ChatInput";
 import {
   type ChatInputValue,
   ChatInputProvider,
 } from "@/components/layout/chat/input/context";
 import { Button } from "@/components/ui/button";
-import { useBranchContext } from "@/routes/branches/context";
 import type { ChatMessage } from "@squashai/api/agent/types";
 import { useState } from "react";
 import { v4 as uuid } from "uuid";

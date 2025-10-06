@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { BranchLayoutSkeleton } from "./BranchLayoutSkeleton";
+import { BranchLayoutSkeleton } from "./preview-skeleton";
 import type { Branch } from "./types";
 
 export type ScreenSize = "desktop" | "tablet" | "mobile";
@@ -67,12 +67,9 @@ export const BranchContextProvider = ({
       ...({ placeholderData: keepPreviousData } as any),
     }).data?.url ?? null;
 
-  const upstreamSha = useQuery(
-    api.branches[":branchId"].preview.version.$get,
-    {
-      params: { branchId },
-    }
-  );
+  const upstreamSha = useQuery(api.branches[":branchId"].preview.version.$get, {
+    params: { branchId },
+  });
   useEffect(() => {
     if (upstreamSha.data?.sha) {
       setPreviewSha(upstreamSha.data.sha);

@@ -1,4 +1,3 @@
-import { authClient } from "@/auth/client";
 import { FeatureCard } from "@/components/blocks/feature/card";
 import { FeatureCardGrid } from "@/components/blocks/feature/grid";
 import { AppSidebar } from "@/components/layout/sidebar/app-sidebar";
@@ -6,7 +5,7 @@ import { SiteHeader } from "@/components/layout/sidebar/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { api, type QueryOutput, useQuery } from "@/hooks/api";
 import { useEffect, useState } from "react";
-import { Link, Navigate, useParams } from "react-router";
+import { Link, useParams } from "react-router";
 import { RepoDetailsDialog } from "./components/repo-details-dialog";
 
 type Repo = QueryOutput<typeof api.repos.$get>[number];
@@ -25,19 +24,10 @@ function PlaygroundCard({ repo, index }: { repo: Repo; index: number }) {
   );
 }
 
-export function PlaygroundsPage() {
-  const session = authClient.useSession();
+export function ReposPage() {
   const repos = useQuery(api.repos.$get, { params: {} });
   const { repoId } = useParams();
 
-  // Keep the last selected repo in a ref so it persists during close animation
-
-  // If not authenticated, redirect to login page
-  if (!session.isPending && !session.data?.user) {
-    return <Navigate to="/login" replace />;
-  }
-
-  // Find the selected repo based on URL param
   const [currentRepo, setCurrentRepo] = useState<Repo>();
   useEffect(() => {
     const repo = repos.data?.find((repo) => repo.id === repoId);

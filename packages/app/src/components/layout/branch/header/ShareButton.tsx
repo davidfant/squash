@@ -7,12 +7,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
-import { api, useMutation, useQuery } from "@/hooks/api";
+import { api, useMutation } from "@/hooks/api";
 import { useChat } from "@ai-sdk/react";
 import type { SandboxTaskMessage } from "@squashai/api/agent/types";
 import { DefaultChatTransport } from "ai";
 import { ExternalLink, Share } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useBranchContext } from "../context";
 

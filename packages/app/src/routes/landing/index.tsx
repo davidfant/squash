@@ -1,4 +1,3 @@
-import { authClient } from "@/auth/client";
 import { Suggestion } from "@/components/ai-elements/suggestion";
 import { ChatInput } from "@/components/layout/chat/input/ChatInput";
 import {
@@ -11,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { api, useMutation } from "@/hooks/api";
 import { SiGithub } from "@icons-pack/react-simple-icons";
 import { memo } from "react";
-import { Link, Navigate, useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { useLocalStorage } from "usehooks-ts";
 import { CloneScreenshotAction } from "./components/CloneScreenshotAction";
 import { HeaderMenu } from "./components/header/HeaderMenu";
@@ -34,7 +33,6 @@ const TextareaWithPlaceholder = memo(
 );
 
 export function LandingPage() {
-  const session = authClient.useSession();
   const navigate = useNavigate();
   const repos = useRepos();
 
@@ -120,10 +118,6 @@ export function LandingPage() {
 
     setChatInitialValue({ text: "", files: [] });
   };
-
-  if (!session.isPending && !session.data?.user) {
-    return <Navigate to="/login" replace />;
-  }
 
   return (
     <ChatInputProvider initialValue={chatInitialValue}>

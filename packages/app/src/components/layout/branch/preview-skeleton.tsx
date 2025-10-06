@@ -1,10 +1,9 @@
 import { ChatInput } from "@/components/layout/chat/input/ChatInput";
 import { Card } from "@/components/ui/card";
-import { SidebarProvider } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const BranchLayoutSkeleton = () => (
-  <SidebarProvider className="flex h-screen flex-col">
+  <div className="flex h-screen flex-col">
     <header className="flex items-center justify-between pr-2 py-2">
       <div className="w-[30%] flex min-w-0 items-center gap-2 pl-2">
         <Skeleton className="size-6 rounded-full" />
@@ -28,5 +27,5 @@ export const BranchLayoutSkeleton = () => (
         <Card className="h-full shadow-none bg-muted"></Card>
       </div>
     </div>
-  </SidebarProvider>
+  </div>
 );

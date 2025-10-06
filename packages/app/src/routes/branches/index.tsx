@@ -1,81 +1,95 @@
-import { authClient } from "@/auth/client";
-import { RequireRole } from "@/auth/RequireRole";
-import { ChatThread } from "@/components/layout/chat/ChatThread";
-import { ChatProvider } from "@/components/layout/chat/context";
+import { FeatureCard } from "@/components/blocks/feature/card";
+import { FeatureCardGrid } from "@/components/blocks/feature/grid";
+import { AppSidebar } from "@/components/layout/sidebar/app-sidebar";
+import { SiteHeader } from "@/components/layout/sidebar/site-header";
+import { Button } from "@/components/ui/button";
 import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable";
-import { SidebarProvider } from "@/components/ui/sidebar";
-import { api, useQuery } from "@/hooks/api";
-import type { ChatMessage } from "@squashai/api/agent/types";
-import { useParams } from "react-router";
-import { BranchHeader } from "../../components/blocks/branch/header";
-import { BranchPreview } from "./BranchPreview";
-import { BranchContextProvider, useBranchContext } from "./context";
-import { InviteButton } from "./header/InviteButton";
-import { ShareButton } from "./header/ShareButton";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { api, type QueryOutput, useQuery } from "@/hooks/api";
+import { Check, ChevronDown } from "lucide-react";
+import { Link } from "react-router";
+import { useRepos } from "../landing/hooks/useRepos";
 
-function Component({ branchId }: { branchId: string }) {
-  const { branch, setPreviewSha } = useBranchContext();
+type Branch = QueryOutput<typeof api.branches.$get>[number];
 
-  const session = authClient.useSession();
-  const threadMessages = useQuery(api.branches[":branchId"].messages.$get, {
-    params: { branchId },
-    enabled: !!session.data?.user,
-  });
-
+function BranchCard({ branch, index }: { branch: Branch; index: number }) {
   return (
-    <ChatProvider
-      endpoint={`${import.meta.env.VITE_API_URL}/branches/${branchId}/messages`}
-      initialMessages={threadMessages.data as ChatMessage[]}
-      onFinish={(step) => {
-        const latestSha = step.message.parts.findLast(
-          (part) => part.type === "tool-GitCommit"
-        )?.output?.sha;
-        if (latestSha) setPreviewSha(latestSha);
-      }}
-    >
-      <SidebarProvider className="flex flex-col h-screen">
-        <BranchHeader
-          title={branch.title}
-          extra={
-            <div className="flex items-center gap-2">
-              <RequireRole roles={["admin", "owner"]}>
-                <InviteButton />
-              </RequireRole>
-              <ShareButton />
-            </div>
-          }
-        />
-        <ResizablePanelGroup
-          direction="horizontal"
-          className="flex-1 overflow-hidden"
-        >
-          <ResizablePanel
-            defaultSize={30}
-            minSize={25}
-            maxSize={35}
-            className="flex"
-          >
-            <ChatThread loading={threadMessages.isPending} id={branchId} />
-          </ResizablePanel>
-          <ResizableHandle className="bg-transparent w-[3px] data-[resize-handle-state=hover]:bg-primary/20 data-[resize-handle-state=drag]:bg-primary/20 transition-colors" />
-          <ResizablePanel defaultSize={75} className="pr-2 pb-2">
-            <BranchPreview />
-          </ResizablePanel>
-        </ResizablePanelGroup>
-      </SidebarProvider>
-    </ChatProvider>
+    <Link to={`/prototypes/${branch.id}`}>
+      <FeatureCard
+        title={branch.name}
+        imageUrl={branch.imageUrl}
+        index={index}
+        className="cursor-pointer"
+      />
+    </Link>
   );
 }
 
-export function BranchPage() {
-  const { branchId } = useParams();
+export function BranchesPage() {
+  const repos = useRepos();
+  const allBranches = useQuery(api.branches.$get, {
+    enabled: !repos.currentId,
+    params: {},
+  });
+  const currentBranches = useQuery(api.repos[":repoId"].branches.$get, {
+    enabled: !!repos.currentId,
+    params: { repoId: repos.currentId },
+  });
+  const branches = repos.currentId ? currentBranches : allBranches;
+
   return (
-    <BranchContextProvider branchId={branchId!}>
-      <Component branchId={branchId!} />
-    </BranchContextProvider>
+    <SidebarProvider>
+      <AppSidebar variant="inset" />
+      <SidebarInset>
+        <SiteHeader
+          title="Prototypes"
+          extra={
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  {!repos.current ? "All playgrounds" : repos.current.name}
+                  <ChevronDown />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => repos.setCurrent(null)}>
+                  All playgrounds
+                  {!repos.current && <Check className="ml-auto size-4" />}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {repos.all?.map((repo) => (
+                  <DropdownMenuItem
+                    key={repo.id}
+                    onClick={() => repos.setCurrent(repo.id)}
+                  >
+                    {repo.name}
+                    {repo.id === repos.current?.id && (
+                      <Check className="ml-auto size-4" />
+                    )}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          }
+        />
+        <main className="p-3 pt-0">
+          <FeatureCardGrid
+            children={
+              branches.data
+                ? branches.data.map((b, index) => (
+                    <BranchCard key={b.id} branch={b} index={index} />
+                  ))
+                : undefined
+            }
+          />
+        </main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

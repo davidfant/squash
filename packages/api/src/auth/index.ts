@@ -41,13 +41,13 @@ export function createAuth(
     appName: "Squash",
     database: drizzleAdapter(db, { provider: "pg" }),
     basePath: "/auth",
-    trustedOrigins: process.env.BETTER_AUTH_TRUSTED_ORIGINS!.split(","),
-    baseURL: process.env.BETTER_AUTH_URL,
-    secret: process.env.BETTER_AUTH_SECRET,
+    trustedOrigins: env.TRUSTED_ORIGINS.split(","),
+    // baseURL: env.BETTER_AUTH_URL,
+    secret: env.BETTER_AUTH_SECRET,
     socialProviders: {
       google: {
-        clientId: process.env.GOOGLE_CLIENT_ID!,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+        clientId: env.GOOGLE_CLIENT_ID!,
+        clientSecret: env.GOOGLE_CLIENT_SECRET!,
       },
     },
     plugins: [organization(), jwt()],

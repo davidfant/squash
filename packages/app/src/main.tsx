@@ -6,6 +6,7 @@ import { createRoot } from "react-dom/client";
 import { initReactI18next } from "react-i18next";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { PostHogProvider } from "posthog-js/react";
 import "./index.css";
 import resources from "./locales/default";
 import { RequireAuthGuard } from "./routes/auth/guard";
@@ -19,6 +20,7 @@ import { NewRepoFromProvider, NewRepoPage } from "./routes/new/repo";
 import { NewRepoManualPage } from "./routes/new/repo/manual";
 import { ReposPage } from "./routes/repos";
 
+
 i18n.use(initReactI18next).init({
   lng: "default",
   ns: Object.keys(resources),
@@ -30,47 +32,57 @@ const queryClient = new QueryClient();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <ThemeProvider>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/invite/:inviteId" element={<InvitePage />} />
-            <Route element={<RequireAuthGuard />}>
-              <Route
-                path="/"
-                element={<Navigate to="/playgrounds" replace />}
-              />
-              <Route path="/extension-auth" element={<ExtensionAuthPage />} />
-              <Route path="/playgrounds" element={<ReposPage />} />
-              <Route path="/playgrounds/:repoId" element={<ReposPage />} />
-              <Route
-                path="/playgrounds/:repoId/new"
-                element={<NewBranchFromRepoPage />}
-              />
-              <Route path="/prototypes" element={<BranchesPage />} />
-              <Route path="/prototypes/:branchId" element={<BranchPage />} />
-              <Route path="/new/repo" element={<NewRepoPage />} />
-              <Route path="/new/repo/manual" element={<NewRepoManualPage />} />
-              <Route
-                path="/new/repo/:providerId"
-                element={<NewRepoFromProvider />}
-              />
-            </Route>
+    <PostHogProvider
+      apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_KEY}
+      options={{
+        api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+        defaults: '2025-05-24',
+        capture_exceptions: true,
+        debug: import.meta.env.MODE === 'development',
+      }}
+    >
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/invite/:inviteId" element={<InvitePage />} />
+              <Route element={<RequireAuthGuard />}>
+                <Route
+                  path="/"
+                  element={<Navigate to="/playgrounds" replace />}  
+                />
+                <Route path="/extension-auth" element={<ExtensionAuthPage />} />
+                <Route path="/playgrounds" element={<ReposPage />} />
+                <Route path="/playgrounds/:repoId" element={<ReposPage />} />
+                <Route
+                  path="/playgrounds/:repoId/new"
+                  element={<NewBranchFromRepoPage />}
+                />
+                <Route path="/prototypes" element={<BranchesPage />} />
+                <Route path="/prototypes/:branchId" element={<BranchPage />} />
+                <Route path="/new/repo" element={<NewRepoPage />} />
+                <Route path="/new/repo/manual" element={<NewRepoManualPage />} />
+                <Route
+                  path="/new/repo/:providerId"
+                  element={<NewRepoFromProvider />}
+                />
+              </Route>
 
-            <Route
-              path="*"
-              element={
-                <div className="flex flex-col items-center justify-center h-screen">
-                  <h1>404 – Page Not Found</h1>
-                  <p>The page you are looking for doesn’t exist.</p>
-                </div>
-              }
-            />
-          </Routes>
-          <Toaster />
-        </BrowserRouter>
-      </QueryClientProvider>
-    </ThemeProvider>
+              <Route
+                path="*"
+                element={
+                  <div className="flex flex-col items-center justify-center h-screen">
+                    <h1>404 – Page Not Found</h1>
+                    <p>The page you are looking for doesn’t exist.</p>
+                  </div>
+                }
+              />
+            </Routes>
+            <Toaster />
+          </BrowserRouter>
+        </QueryClientProvider>
+      </ThemeProvider>
+    </PostHogProvider>
   </StrictMode>
 );

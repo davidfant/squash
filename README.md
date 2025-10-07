@@ -67,3 +67,10 @@ For oct 7
 - [x] make invite links make sense
 - [ ] figure out what to do about CC tsc
 - [ ] look into daytona pty
+
+- API Error: 500
+- At least one of the image dimensions exceed max allowed size: 8000 pixels
+- it’s like kinda doing git commits in a weird way that’s visible in the msgs it sends
+- errors in one of the branches: https://app.squash.build/prototypes/db41e30a-fc1f-4ce6-b29a-a3e9bcdea926
+- internal server error https://app.squash.build/prototypes/2bd3ac7f-4100-49fb-93af-031bc0597cd5
+- TS issues: https://app.squash.build/prototypes/6c6068f9-d981-426a-93d5-d001525e9b42

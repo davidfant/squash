@@ -341,7 +341,7 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
       this.getDeployTasks(),
     ]);
 
-    let screenshot: { url: string };
+    let screenshot: { url: string } | null = null;
     const newRepoId = randomUUID();
     const gitUrl = `s3://repos/forks/${newRepoId}`;
     const defaultBranch = "master";
@@ -364,7 +364,9 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
 
           screenshot = await fetch(
             `${env.SCREENSHOT_API_URL}?url=${encodeURIComponent(previewUrl)}`
-          ).then((r) => r.json<{ url: string }>());
+          )
+            .then((r) => r.json<{ url: string }>())
+            .catch(() => null);
 
           yield {
             type: "stdout",
@@ -433,7 +435,7 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
             private: repo.private,
             organizationId: repo.organizationId,
             gitUrl,
-            imageUrl: screenshot.url,
+            imageUrl: screenshot?.url,
             previewUrl: branch.deployment?.url,
             defaultBranch,
             hidden: false,

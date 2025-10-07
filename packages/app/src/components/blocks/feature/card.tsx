@@ -59,7 +59,7 @@ export const FeatureCard = ({
               <img
                 src={imageUrl}
                 alt={title}
-                className="h-full w-full object-cover rounded-lg rounded-b-none border-b-0 border-3 border-primary-foreground/30 shadow-lg"
+                className="h-full w-full object-cover object-top-left rounded-lg rounded-b-none border-b-0 border-3 border-primary-foreground/30 shadow-lg"
               />
             ) : (
               <div className="h-full rounded-lg border-3 border-primary-foreground/30 rounded-b-none border-b-0 overflow-hidden">

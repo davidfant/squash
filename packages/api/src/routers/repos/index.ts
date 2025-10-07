@@ -74,6 +74,23 @@ export const reposRouter = new Hono<{
       }
     }
   )
+  .patch(
+    "/:repoId",
+    zValidator("param", z.object({ repoId: z.uuid() })),
+    zValidator("json", z.object({ name: z.string().min(1).max(255) })),
+    requireRepo,
+    async (c) => {
+      const db = c.get("db");
+      const { repoId } = c.req.valid("param");
+      const body = c.req.valid("json");
+
+      await db
+        .update(schema.repo)
+        .set({ ...body, updatedAt: new Date() })
+        .where(eq(schema.repo.id, repoId));
+      return c.json({ id: repoId });
+    }
+  )
   .put(
     "/:repoId/snapshot",
     zValidator("param", z.object({ repoId: z.string() })),

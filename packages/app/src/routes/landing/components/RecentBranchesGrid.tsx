@@ -1,4 +1,5 @@
 import { authClient } from "@/auth/client";
+import { BranchFeatureCard } from "@/components/blocks/feature/branch-card";
 import { FeatureCardGrid } from "@/components/blocks/feature/grid";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,11 +9,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { api, useMutation, useQuery } from "@/hooks/api";
-import { formatDate } from "@/lib/date";
+import { api, useQuery } from "@/hooks/api";
 import { Check, ChevronDown } from "lucide-react";
 import { useLocalStorage } from "usehooks-ts";
-import { FeatureCard } from "../../../components/blocks/feature/card";
 import { useRepos } from "../hooks/useRepos";
 
 export function RecentBranchesGrid() {
@@ -33,12 +32,10 @@ export function RecentBranchesGrid() {
   });
   const branches = currentRepoId ? currentBranches : allBranches;
 
-  const deleteBranch = useMutation(api.branches[":branchId"].$delete, {
-    onSuccess: () => {
-      allBranches.refetch();
-      currentBranches.refetch();
-    },
-  });
+  const refresh = () => {
+    allBranches.refetch();
+    currentBranches.refetch();
+  };
 
   return (
     <section className="space-y-6">
@@ -79,16 +76,12 @@ export function RecentBranchesGrid() {
 
       <FeatureCardGrid empty="No prototypes yet">
         {branches.data?.map((branch, index) => (
-          <FeatureCard
+          <BranchFeatureCard
             key={branch.id}
-            title={branch.name}
-            imageUrl={branch.imageUrl}
-            subtitle={formatDate(branch.createdAt)}
-            avatar={branch.createdBy}
+            branch={branch}
             index={index}
-            onDelete={() =>
-              deleteBranch.mutate({ param: { branchId: branch.id } })
-            }
+            onDeleted={refresh}
+            onUpdated={refresh}
           />
         ))}
       </FeatureCardGrid>

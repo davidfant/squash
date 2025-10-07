@@ -70,6 +70,7 @@ export function BranchesPage() {
                 branch={b}
                 index={index}
                 onDeleted={() => branches.refetch()}
+                onUpdated={() => branches.refetch()}
               />
             ))}
           />

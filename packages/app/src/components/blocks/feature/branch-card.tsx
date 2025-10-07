@@ -1,3 +1,4 @@
+import { toast } from "@/components/ui/sonner";
 import { api, useMutation } from "@/hooks/api";
 import { formatDate } from "@/lib/date";
 import { Link } from "react-router";
@@ -7,6 +8,7 @@ export function BranchFeatureCard({
   branch,
   index,
   onDeleted,
+  onUpdated,
 }: {
   branch: {
     id: string;
@@ -17,9 +19,17 @@ export function BranchFeatureCard({
   };
   index: number;
   onDeleted: () => void;
+  onUpdated?: () => void;
 }) {
   const deleteBranch = useMutation(api.branches[":branchId"].$delete, {
     onSuccess: onDeleted,
+  });
+  const updateBranch = useMutation(api.branches[":branchId"].$patch, {
+    onSuccess: () => {
+      toast.success("Prototype renamed");
+      onUpdated?.();
+    },
+    onError: () => toast.error("Failed to rename prototype"),
   });
   return (
     <Link to={`/prototypes/${branch.id}`}>
@@ -30,6 +40,12 @@ export function BranchFeatureCard({
         avatar={branch.createdBy}
         index={index}
         onDelete={() => deleteBranch.mutate({ param: { branchId: branch.id } })}
+        onEdit={(title) =>
+          updateBranch.mutateAsync({
+            param: { branchId: branch.id },
+            json: { title },
+          })
+        }
       />
     </Link>
   );

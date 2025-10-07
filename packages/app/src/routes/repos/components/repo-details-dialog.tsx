@@ -78,6 +78,7 @@ export function RepoDetailsDialog({
                 branch={b}
                 index={index}
                 onDeleted={() => branches.refetch()}
+                onUpdated={() => branches.refetch()}
               />
             ))}
           </FeatureCardGrid>

@@ -18,6 +18,23 @@ const repoBranchRouter = new Hono<{
 }>()
   .use(zValidator("param", z.object({ branchId: z.uuid() })), requireRepoBranch)
   .get("/", async (c) => c.json(c.get("branch")))
+  .patch(
+    "/",
+    zValidator("param", z.object({ branchId: z.uuid() })),
+    zValidator("json", z.object({ title: z.string().min(1).max(255) })),
+    async (c) => {
+      const db = c.get("db");
+      const { branchId } = c.req.valid("param");
+      const body = c.req.valid("json");
+
+      await db
+        .update(schema.repoBranch)
+        .set({ ...body, updatedAt: new Date() })
+        .where(eq(schema.repoBranch.id, branchId));
+
+      return c.json({ id: branchId });
+    }
+  )
   .get(
     "/messages",
     zValidator("param", z.object({ branchId: z.uuid() })),

@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/resizable";
 import { api, useQuery } from "@/hooks/api";
 import type { ChatMessage } from "@squashai/api/agent/types";
+import { ForkButton } from "./header/ForkButton";
 
 export function BranchLayout({ branchId }: { branchId: string }) {
   const { branch, setPreviewSha } = useBranchContext();
@@ -40,6 +41,9 @@ export function BranchLayout({ branchId }: { branchId: string }) {
           title={branch.title}
           extra={
             <div className="flex items-center gap-2">
+              <RequireRole roles={["admin", "owner"]}>
+                <ForkButton />
+              </RequireRole>
               <RequireRole roles={["admin", "owner"]}>
                 <InviteButton />
               </RequireRole>

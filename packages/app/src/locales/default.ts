@@ -73,5 +73,14 @@ export default {
         unpublishing: "Unpublishing",
       },
     },
+    fork: {
+      dialog: {
+        title: "Create Playground",
+        description:
+          "Convert this prototype into a playground. This will let you use it as a starting point for new prototypes.",
+        fork: "Create Playground",
+        forking: "Creating Playground",
+      },
+    },
   },
 } as const;

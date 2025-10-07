@@ -58,10 +58,12 @@ export abstract class BaseSandboxManagerDurableObject<
     start: Handle;
     agent: Handle;
     deploy: Handle;
+    fork: Handle;
   } = {
     start: emptyHandle("start"),
     agent: emptyHandle("agent"),
     deploy: emptyHandle("deploy"),
+    fork: emptyHandle("fork"),
   };
   private encoder = new TextEncoder();
 
@@ -82,6 +84,7 @@ export abstract class BaseSandboxManagerDurableObject<
   abstract destroy(): Promise<void>;
   abstract getStartTasks(): Promise<Sandbox.Snapshot.Task.Any[]>;
   abstract getDeployTasks(): Promise<Sandbox.Snapshot.Task.Any[]>;
+  abstract getForkTasks(): Promise<Sandbox.Snapshot.Task.Any[]>;
   abstract restoreVersion(messages: ChatMessage[]): Promise<void>;
   protected abstract readClaudeCodeSessionData(
     sessionId: string
@@ -138,26 +141,37 @@ export abstract class BaseSandboxManagerDurableObject<
         active: true,
         listeners: new Map(),
         promise: Promise.resolve(executeTasks(tasks, this)).then((s) =>
-          this.consumeStream(executeTasks(tasks, this), deploy)
+          this.consumeStream(s, deploy)
         ),
       };
 
       this.handles.deploy = deploy;
-
-      //   const domains = await db
-      //   .select()
-      //   .from(schema.repoBranchDomain)
-      //   .where(eq(schema.repoBranchDomain.branchId, params.branchId));
-      // if (!domains.length) {
-      //   await db.insert(schema.repoBranchDomain).values({
-      //     branchId: params.branchId,
-      //     url: `https://${params.branchId}.hypershape.app`,
-      //   });
-      // }
     });
   }
 
-  async gitPush(abortSignal: AbortSignal | undefined): Promise<void> {
+  async fork(): Promise<void> {
+    await this.waitUntilStarted();
+    await this.state.blockConcurrencyWhile(async () => {
+      if (this.handles.fork.active) return;
+
+      const tasks = await this.getForkTasks();
+      const controller = new AbortController();
+      const fork: Handle = {
+        type: "fork",
+        controller,
+        buffer: [],
+        active: true,
+        listeners: new Map(),
+        promise: Promise.resolve(executeTasks(tasks, this)).then((s) =>
+          this.consumeStream(s, fork)
+        ),
+      };
+
+      this.handles.fork = fork;
+    });
+  }
+
+  async gitPush(abortSignal?: AbortSignal): Promise<void> {
     const options = await this.getOptions();
 
     const db = createDatabase(env);
@@ -176,8 +190,10 @@ export abstract class BaseSandboxManagerDurableObject<
           "-c",
           [
             `git remote set-url origin ${repo.gitUrl}`,
-            `git push origin ${options.branch.name}`,
-          ].join(" && "),
+            `git push origin HEAD:${options.branch.name}`,
+          ]
+            .map((v) => `(${v})`)
+            .join(" && "),
         ],
         cwd: options.config.cwd,
       },
@@ -290,6 +306,9 @@ export abstract class BaseSandboxManagerDurableObject<
   }
   listenToDeploy(): Response {
     return this.listen("deploy");
+  }
+  listenToFork(): Response {
+    return this.listen("fork");
   }
 
   private listen(type: keyof typeof this.handles & string) {

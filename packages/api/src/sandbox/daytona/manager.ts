@@ -223,28 +223,37 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
           }
 
           for (let attempt = 0; attempt < 100; attempt++) {
-            const preview = await that.sandbox!.getPreviewLink(
-              options.config.port
-            );
-            logger.debug("Fetching preview", { url: preview.url, attempt });
-            const response = await fetch(preview.url, { method: "GET" });
-            if (response.ok) {
-              const text = await response.text();
-              if (text.length) {
-                yield {
-                  type: "stdout",
-                  data: "Dev server started\n",
-                  timestamp: new Date().toISOString(),
-                };
-                return;
+            try {
+              const preview = await that.sandbox!.getPreviewLink(
+                options.config.port
+              );
+              logger.debug("Fetching preview", { url: preview.url, attempt });
+              const response = await fetch(preview.url, { method: "GET" });
+              if (response.ok) {
+                const text = await response.text();
+                if (text.length) {
+                  yield {
+                    type: "stdout",
+                    data: "Dev server started\n",
+                    timestamp: new Date().toISOString(),
+                  };
+                  return;
+                }
               }
+              logger.debug("Waiting for dev server", { url: preview.url });
+              yield {
+                type: "stdout",
+                data: "Waiting for dev server...\n",
+                timestamp: new Date().toISOString(),
+              };
+            } catch (error) {
+              logger.error("Error getting preview link", {
+                name: (error as Error).name,
+                message: (error as Error).message,
+                stack: (error as Error).stack,
+              });
             }
-            logger.debug("Waiting for dev server", { url: preview.url });
-            yield {
-              type: "stdout",
-              data: "Waiting for dev server...\n",
-              timestamp: new Date().toISOString(),
-            };
+
             await setTimeout(200);
           }
 
@@ -256,10 +265,6 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
 
   async getDeployTasks(): Promise<Sandbox.Snapshot.Task.Any[]> {
     const options = await this.getOptions();
-    const sandboxP = this.storage
-      .get("sandboxId")
-      .then((id) => this.daytona.get(id));
-
     const that = this;
     return [
       ...options.config.tasks.build,
@@ -277,7 +282,7 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
 
           const [gitSha, sandbox] = await Promise.all([
             that.gitCurrentCommit(undefined),
-            sandboxP,
+            that.getSandbox(),
           ]);
 
           const buildDir = path.join(
@@ -325,6 +330,121 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
               .set({ deployment: { url: url.origin, sha: gitSha } })
               .where(eq(schema.repoBranch.id, options.branch.id)),
           ]);
+        },
+      },
+    ];
+  }
+
+  async getForkTasks(): Promise<Sandbox.Snapshot.Task.Any[]> {
+    const [options, deployTasks] = await Promise.all([
+      this.getOptions(),
+      this.getDeployTasks(),
+    ]);
+
+    let screenshot: { url: string };
+    const newRepoId = randomUUID();
+    const gitUrl = `s3://repos/forks/${newRepoId}`;
+    const defaultBranch = "master";
+
+    const that = this;
+    return [
+      ...deployTasks,
+      {
+        id: "screenshot",
+        title: "Capturing screenshot...",
+        type: "function",
+        function: async function* () {
+          const previewUrl = await that.getPreviewUrl();
+
+          yield {
+            type: "stdout",
+            data: "Capturing screenshot...\n",
+            timestamp: new Date().toISOString(),
+          };
+
+          screenshot = await fetch(
+            `${env.SCREENSHOT_API_URL}?url=${encodeURIComponent(previewUrl)}`
+          ).then((r) => r.json<{ url: string }>());
+
+          yield {
+            type: "stdout",
+            data: "Screenshot captured\n",
+            timestamp: new Date().toISOString(),
+          };
+        },
+      },
+      {
+        id: "fork-and-push",
+        title: "Pushing playground code...",
+        dependsOn: ["screenshot"],
+        type: "command",
+        command: "sh",
+        env: {
+          AWS_ENDPOINT_URL_S3: env.R2_REPOS_ENDPOINT_URL_S3,
+          AWS_ACCESS_KEY_ID: env.R2_REPOS_ACCESS_KEY_ID,
+          AWS_SECRET_ACCESS_KEY: env.R2_REPOS_SECRET_ACCESS_KEY,
+          AWS_DEFAULT_REGION: "auto",
+        },
+        args: [
+          "-c",
+          [
+            `git remote add ${newRepoId} ${gitUrl}`,
+            `git push ${newRepoId} HEAD:${defaultBranch}`,
+          ]
+            .map((v) => `(${v})`)
+            .join(" && "),
+        ],
+      },
+      {
+        id: "create-new-repo",
+        title: "Creating new repo...",
+        dependsOn: [
+          "screenshot",
+          "fork-and-push",
+          ...deployTasks.map((task) => task.id),
+        ],
+        type: "function",
+        function: async function* () {
+          yield {
+            type: "stdout",
+            data: "Creating new repo...\n",
+            timestamp: new Date().toISOString(),
+          };
+
+          const db = createDatabase(env);
+          const [repo, branch] = await Promise.all([
+            db
+              .select()
+              .from(schema.repo)
+              .where(eq(schema.repo.id, options.branch.repoId))
+              .then(([repo]) => repo),
+            db
+              .select()
+              .from(schema.repoBranch)
+              .where(eq(schema.repoBranch.id, options.branch.id))
+              .then(([branch]) => branch),
+          ]);
+          if (!repo) throw new Error(`Repo not found: ${newRepoId}`);
+          if (!branch)
+            throw new Error(`Branch not found: ${options.branch.id}`);
+
+          await db.insert(schema.repo).values({
+            name: branch.title,
+            private: repo.private,
+            organizationId: repo.organizationId,
+            gitUrl,
+            imageUrl: screenshot.url,
+            previewUrl: branch.deployment?.url,
+            defaultBranch,
+            hidden: false,
+            snapshot: repo.snapshot,
+          });
+
+          yield {
+            type: "stdout",
+            data: "Created new repo...\n",
+            timestamp: new Date().toISOString(),
+          };
         },
       },
     ];

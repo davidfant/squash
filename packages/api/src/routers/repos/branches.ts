@@ -213,6 +213,16 @@ const repoBranchRouter = new Hono<{
       return sandbox.listenToDeploy();
     }
   )
+  .post(
+    "/fork",
+    zValidator("param", z.object({ branchId: z.uuid() })),
+    async (c) => {
+      const params = c.req.valid("param");
+      const sandbox = c.env.DAYTONA_SANDBOX_MANAGER.getByName(params.branchId);
+      await sandbox.fork();
+      return sandbox.listenToFork();
+    }
+  )
   .delete(
     "/deploy",
     zValidator("param", z.object({ branchId: z.uuid() })),

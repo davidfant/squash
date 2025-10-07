@@ -112,7 +112,7 @@ export const executeTasks = (
             (async function* (): AsyncGenerator<Sandbox.Exec.Event.Any> {
               if (task.type === "command") {
                 yield* sandbox.execute(
-                  { command: task.command, args: task.args },
+                  { command: task.command, args: task.args, env: task.env },
                   undefined
                 );
               } else if (task.type === "function") {

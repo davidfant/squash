@@ -23,7 +23,7 @@ export function MessageParts({
   console.log("MessageParts", { id, streaming, blocks });
   if (!blocks.length) {
     return (
-      <p className="text-muted-foreground italic">
+      <p className="text-muted-foreground italic text-sm">
         Failed to respond. Please try again.
       </p>
     );

@@ -44,7 +44,8 @@ export function NewBranchFromRepoPage() {
         </div>
         <div className="p-2 pl-0 flex-1">
           <IframePreview
-            url="https://feat-build-core-layout-shadcn-themes-fba9a22a.squashprototype.com/"
+            url={repo.data?.previewUrl ?? null}
+            imageUrl={repo.data?.imageUrl}
             loading={repo.isPending}
             className="h-full"
           />

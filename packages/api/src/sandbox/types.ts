@@ -13,6 +13,7 @@ export namespace Sandbox {
         type: "command";
         command: string;
         args?: string[];
+        env?: Record<string, string>;
       }
 
       export interface Function extends Base {
@@ -112,6 +113,7 @@ export namespace Sandbox {
       start(): Promise<void>;
       waitUntilStarted(): Promise<void>;
       deploy(): Promise<void>;
+      fork(): Promise<void>;
       getPreviewUrl(): Promise<string>;
       execute(
         request: Exec.Request,
@@ -139,6 +141,7 @@ export namespace Sandbox {
       listenToAgent(): Response;
       listenToStart(): Response;
       listenToDeploy(): Response;
+      listenToFork(): Response;
     }
   }
 

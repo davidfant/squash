@@ -19,10 +19,15 @@ export function ChatEmptyState() {
         <div className="flex gap-3 justify-center flex-wrap">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Suggestion suggestion="Start from PRD">
-                <FileText className="h-4 w-4 text-amber-500" />
-                Start from PRD
-              </Suggestion>
+              <div>
+                <Suggestion suggestion="Start from PRD">
+                  <FileText className="h-4 w-4 text-amber-500" />
+                  Start from PRD
+                </Suggestion>
+                <p className="text-xs text-muted-foreground mt-1">
+                  (Coming soon)
+                </p>
+              </div>
             </TooltipTrigger>
             <TooltipContent side="bottom">
               Paste your PRD in the chat and Squash will help you build it

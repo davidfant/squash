@@ -1,11 +1,4 @@
 import { Logo } from "@/components/Logo";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-} from "@/components/ui/carousel";
-import Autoplay from "embla-carousel-autoplay";
-import WheelGesturesPlugin from "embla-carousel-wheel-gestures";
 
 const PREVIEW_IMAGES = [
   "https://pub-19dc0e7a76ea4e3a9c6b55f9392d1a14.r2.dev/screenshot-api/4892bc26-bbba-48cd-bd43-b2ce439aa9b9.webp",
@@ -29,7 +22,7 @@ export const AuthLayout = ({
 
       {/* Sign in form - centered */}
       <div className="flex-1 flex items-center justify-center">
-        <div className="w-full max-w-md">{children}</div>
+        <div className="w-full max-w-sm">{children}</div>
       </div>
     </div>
 
@@ -45,7 +38,7 @@ export const AuthLayout = ({
         }}
       >
         {/* Carousel for preview images only */}
-        <div className="absolute inset-0 flex items-center justify-center">
+        {/* <div className="absolute inset-0 flex items-center justify-center">
           <Carousel
             opts={{
               loop: true,
@@ -77,7 +70,7 @@ export const AuthLayout = ({
               ))}
             </CarouselContent>
           </Carousel>
-        </div>
+        </div> */}
       </div>
     </div>
   </div>

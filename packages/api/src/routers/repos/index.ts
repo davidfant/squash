@@ -6,7 +6,7 @@ import { zUserMessagePart } from "@/routers/zod";
 import { zSandboxSnapshotConfig } from "@/sandbox/zod";
 import { zValidator } from "@hono/zod-validator";
 import { randomUUID } from "crypto";
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, isNull } from "drizzle-orm";
 import { Hono } from "hono";
 import kebabCase from "lodash.kebabcase";
 import z from "zod";
@@ -40,7 +40,7 @@ export const reposRouter = new Hono<{
         schema.member,
         eq(schema.organization.id, schema.member.organizationId)
       )
-      .orderBy(desc(schema.repo.name))
+      .orderBy(asc(schema.repo.name))
       .where(
         and(
           eq(schema.organization.id, organizationId),

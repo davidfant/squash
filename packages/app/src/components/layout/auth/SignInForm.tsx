@@ -35,15 +35,23 @@ export function SignInForm({
         {t(`form.${mode}.buttonText`)}
       </Button>
       <div className="text-center text-sm">
-        {t(`form.${mode}.switch.text`)}{" "}
-        <span
+        By signing up for Squash, you agree to our{" "}
+        {/* {t(`form.${mode}.switch.text`)}{" "} */}
+        {/* <span
           className="underline underline-offset-4 cursor-pointer"
           onClick={() =>
             setMode((prev) => (prev === "signIn" ? "signUp" : "signIn"))
           }
         >
           {t(`form.${mode}.switch.cta`)}
-        </span>
+        </span> */}
+        <a
+          href="https://docs.google.com/document/d/1T1jA-2f3CUBWI1WAh79zVf_zSv-r8hVplbDoopekqeU/edit?tab=t.0"
+          target="_blank"
+          className="underline underline-offset-4 cursor-pointer"
+        >
+          Terms of Service
+        </a>
       </div>
       {/* <Separator />
         <div className="text-center text-sm text-muted-foreground">

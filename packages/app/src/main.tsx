@@ -1,12 +1,13 @@
 import { Toaster } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import i18n from "i18next";
+import { PostHogProvider } from "posthog-js/react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { initReactI18next } from "react-i18next";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router";
+import { PosthogIdentify } from "./auth/posthog";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import { PostHogProvider } from "posthog-js/react";
 import "./index.css";
 import resources from "./locales/default";
 import { RequireAuthGuard } from "./routes/auth/guard";
@@ -19,7 +20,6 @@ import { ExtensionAuthPage } from "./routes/extension-auth";
 import { NewRepoFromProvider, NewRepoPage } from "./routes/new/repo";
 import { NewRepoManualPage } from "./routes/new/repo/manual";
 import { ReposPage } from "./routes/repos";
-
 
 i18n.use(initReactI18next).init({
   lng: "default",
@@ -36,11 +36,12 @@ createRoot(document.getElementById("root")!).render(
       apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_KEY}
       options={{
         api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
-        defaults: '2025-05-24',
+        defaults: "2025-05-24",
         capture_exceptions: true,
-        debug: import.meta.env.MODE === 'development',
+        debug: import.meta.env.MODE === "development",
       }}
     >
+      <PosthogIdentify />
       <ThemeProvider>
         <QueryClientProvider client={queryClient}>
           <BrowserRouter>
@@ -50,7 +51,7 @@ createRoot(document.getElementById("root")!).render(
               <Route element={<RequireAuthGuard />}>
                 <Route
                   path="/"
-                  element={<Navigate to="/playgrounds" replace />}  
+                  element={<Navigate to="/playgrounds" replace />}
                 />
                 <Route path="/extension-auth" element={<ExtensionAuthPage />} />
                 <Route path="/playgrounds" element={<ReposPage />} />
@@ -62,7 +63,10 @@ createRoot(document.getElementById("root")!).render(
                 <Route path="/prototypes" element={<BranchesPage />} />
                 <Route path="/prototypes/:branchId" element={<BranchPage />} />
                 <Route path="/new/repo" element={<NewRepoPage />} />
-                <Route path="/new/repo/manual" element={<NewRepoManualPage />} />
+                <Route
+                  path="/new/repo/manual"
+                  element={<NewRepoManualPage />}
+                />
                 <Route
                   path="/new/repo/:providerId"
                   element={<NewRepoFromProvider />}

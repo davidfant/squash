@@ -8,20 +8,15 @@ export function PosthogIdentify() {
 
   useEffect(() => {
     if (session.isPending) return;
-    if (!userId) return;
-
-    // Identify user once per login
-    posthog.identify(userId, {
-      email: session.data?.user?.email,
-      name: session.data?.user?.name,
-    });
-  }, [session.isPending, session.data?.user?.id]);
-
-  useEffect(() => {
-    if (!session.isPending && !session.data) {
+    if (userId) {
+      posthog.identify(userId, {
+        email: session.data?.user?.email,
+        name: session.data?.user?.name,
+      });
+    } else {
       posthog.reset();
     }
-  }, [session.isPending, !!session.data]);
+  }, [session.isPending, userId]);
 
   const organization = authClient.useActiveOrganization();
   useEffect(() => {

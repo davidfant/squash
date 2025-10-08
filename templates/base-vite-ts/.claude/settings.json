@@ -1,4 +1,12 @@
 {
+  "permissions": {
+    "deny": [
+      "Bash(npm install:*)",
+      "Bash(npm i:*)",
+      "Bash(npm ci:*)",
+      "Bash(yarn add:*)"
+    ]
+  },
   "hooks": {
     "PreToolUse": [
       {

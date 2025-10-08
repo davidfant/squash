@@ -37,6 +37,7 @@ export function createAuth(
   env: CloudflareBindings
 ): ReturnType<typeof betterAuth> {
   const db = createDatabase(env);
+
   return betterAuth({
     appName: "Squash",
     database: drizzleAdapter(db, { provider: "pg" }),
@@ -50,6 +51,7 @@ export function createAuth(
         clientSecret: env.GOOGLE_CLIENT_SECRET!,
       },
     },
+    emailAndPassword: { enabled: true },
     plugins: [organization(), jwt()],
     advanced: { database: { generateId: () => randomUUID() } },
     databaseHooks: {

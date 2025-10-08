@@ -11,7 +11,7 @@ export default {
         title: "Welcome back",
         description:
           "To continue prototyping with Squash, sign in with your Google account.",
-        buttonText: "Continue with Google",
+        buttonText: "Sign in",
         switch: {
           text: "Don't have an account?",
           cta: "Sign up",
@@ -21,7 +21,7 @@ export default {
         title: "Start Prototyping",
         description:
           "To start prototyping with Squash, sign in with your Google account.",
-        buttonText: "Continue with Google",
+        buttonText: "Sign up",
         switch: {
           text: "Already have an account?",
           cta: "Sign in",

@@ -25,6 +25,11 @@
       "binding": "DEPLOYMENTS",
       "bucket_name": "deployments-dev",
       "remote": true
+    },
+    {
+      "binding": "AGENT_SESSIONS",
+      "bucket_name": "agent-sessions-dev",
+      "remote": false
     }
   ],
   "kv_namespaces": [
@@ -69,6 +74,10 @@
         {
           "binding": "DEPLOYMENTS",
           "bucket_name": "deployments"
+        },
+        {
+          "binding": "AGENT_SESSIONS",
+          "bucket_name": "agent-sessions"
         }
       ],
       "kv_namespaces": [

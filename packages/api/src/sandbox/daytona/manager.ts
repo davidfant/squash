@@ -2,6 +2,7 @@ import type { ChatMessage } from "@/agent/types";
 import { createDatabase } from "@/database";
 import * as schema from "@/database/schema";
 import { logger } from "@/lib/logger";
+import { readAgentSessionData } from "@/lib/agent-session-storage";
 import { toAsyncIterator } from "@/lib/to-async-iterator";
 import { Daytona, Sandbox as DaytonaSandbox } from "@daytonaio/sdk";
 import { env } from "cloudflare:workers";
@@ -584,17 +585,30 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
         logger.info("Restoring Claude Code agent session", {
           id: agentSession.id,
           type: agentSession.type,
-          data: JSON.stringify(agentSession.data).slice(0, 512),
+          objectKey:
+            "objectKey" in agentSession ? agentSession.objectKey : undefined,
         });
 
         const sessionDataPath = await this.getClaudeCodeSessionDataPath(
           agentSession.id
         );
-        const sessionData = agentSession.data as string;
+        const sessionData =
+          "objectKey" in agentSession
+            ? await readAgentSessionData({
+                objectKey: agentSession.objectKey,
+              })
+            : agentSession.data;
+        if (!sessionData) {
+          logger.warn("No session data available to restore", {
+            id: agentSession.id,
+          });
+          return;
+        }
         logger.debug("Uploading Claude Code agent session file", {
           id: agentSession.id,
           file: sessionDataPath,
-          data: sessionData.slice(0, 512),
+          objectKey:
+            "objectKey" in agentSession ? agentSession.objectKey : undefined,
         });
         await sandbox.fs.uploadFile(Buffer.from(sessionData), sessionDataPath);
       })(),

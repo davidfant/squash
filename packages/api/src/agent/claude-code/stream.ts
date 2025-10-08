@@ -12,6 +12,7 @@ import { env } from "cloudflare:workers";
 import { randomUUID } from "crypto";
 import { GitCommit } from "../git";
 import type { ChatMessage } from "../types";
+import { storeAgentSessionData } from "@/lib/agent-session-storage";
 import appendSystemPrompt from "./prompt.md";
 
 export async function streamClaudeCodeAgent(opts: {
@@ -213,9 +214,19 @@ export async function streamClaudeCodeAgent(opts: {
   }
 
   const sessionData = await sessionDataPromise;
+  const objectKey = await storeAgentSessionData({
+    sessionId,
+    threadId: opts.threadId,
+    data: sessionData,
+  });
+
   opts.writer.write({
     type: "data-AgentSession",
     id: randomUUID(),
-    data: { type: "claude-code", id: sessionId, data: sessionData },
+    data: {
+      type: "claude-code",
+      id: sessionId,
+      objectKey,
+    },
   });
 }

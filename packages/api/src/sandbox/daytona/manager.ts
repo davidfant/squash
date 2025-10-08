@@ -581,12 +581,7 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
       (async () => {
         if (agentSession?.type !== "claude-code") return;
         const sandbox = await this.getSandbox();
-        logger.info("Restoring Claude Code agent session", {
-          id: agentSession.id,
-          type: agentSession.type,
-          objectKey:
-            "objectKey" in agentSession ? agentSession.objectKey : undefined,
-        });
+        logger.info("Restoring Claude Code agent session", agentSession);
 
         const sessionDataPath = await this.getClaudeCodeSessionDataPath(
           agentSession.id

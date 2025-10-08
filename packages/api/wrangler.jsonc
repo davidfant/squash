@@ -26,11 +26,7 @@
       "bucket_name": "deployments-dev",
       "remote": true
     },
-    {
-      "binding": "AGENT_SESSIONS",
-      "bucket_name": "agent-sessions-dev",
-      "remote": false
-    }
+    { "binding": "AGENT_SESSIONS", "bucket_name": "agent-sessions-dev" }
   ],
   "kv_namespaces": [
     {
@@ -71,14 +67,8 @@
         ]
       },
       "r2_buckets": [
-        {
-          "binding": "DEPLOYMENTS",
-          "bucket_name": "deployments"
-        },
-        {
-          "binding": "AGENT_SESSIONS",
-          "bucket_name": "agent-sessions"
-        }
+        { "binding": "DEPLOYMENTS", "bucket_name": "deployments" },
+        { "binding": "AGENT_SESSIONS", "bucket_name": "agent-sessions" }
       ],
       "kv_namespaces": [
         {

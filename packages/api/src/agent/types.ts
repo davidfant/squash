@@ -30,9 +30,7 @@ export type ChatMessageData = {
     description: string;
     url: string | undefined;
   };
-  AgentSession:
-    | { type: "claude-code"; id: string; objectKey: string }
-    | { type: "claude-code"; id: string; data: string };
+  AgentSession: { type: "claude-code"; id: string; objectKey: string };
   AgentState: AgentState;
   AbortRequest: { reason: string };
 };

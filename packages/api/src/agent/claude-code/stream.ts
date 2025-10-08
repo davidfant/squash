@@ -10,9 +10,9 @@ import {
 } from "ai";
 import { env } from "cloudflare:workers";
 import { randomUUID } from "crypto";
+import path from "path";
 import { GitCommit } from "../git";
 import type { ChatMessage } from "../types";
-import { storeAgentSessionData } from "@/lib/agent-session-storage";
 import appendSystemPrompt from "./prompt.md";
 
 export async function streamClaudeCodeAgent(opts: {
@@ -214,19 +214,21 @@ export async function streamClaudeCodeAgent(opts: {
   }
 
   const sessionData = await sessionDataPromise;
-  const objectKey = await storeAgentSessionData({
+  const objectKey = path.join(
+    "claude-code",
+    opts.threadId,
     sessionId,
-    threadId: opts.threadId,
-    data: sessionData,
+    opts.messages.slice(-1)[0]?.id ?? "unknown-message",
+    `${Date.now()}.jsonl`
+  );
+  logger.debug("Storing agent session in R2", { key: objectKey });
+  await env.AGENT_SESSIONS.put(objectKey, sessionData, {
+    httpMetadata: { contentType: "application/jsonl" },
   });
 
   opts.writer.write({
     type: "data-AgentSession",
     id: randomUUID(),
-    data: {
-      type: "claude-code",
-      id: sessionId,
-      objectKey,
-    },
+    data: { type: "claude-code", id: sessionId, objectKey },
   });
 }

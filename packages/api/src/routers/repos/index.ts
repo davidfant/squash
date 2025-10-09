@@ -4,6 +4,7 @@ import type { Database } from "@/database";
 import * as schema from "@/database/schema";
 import { zUserMessagePart } from "@/routers/zod";
 import { zSandboxSnapshotConfig } from "@/sandbox/zod";
+import { TEMPLATE_NAMES, forkTemplate, type TemplateName } from "@/templates";
 import { zValidator } from "@hono/zod-validator";
 import { randomUUID } from "crypto";
 import { and, asc, desc, eq, isNull } from "drizzle-orm";
@@ -129,25 +130,33 @@ export const reposRouter = new Hono<{
     zValidator(
       "json",
       z.object({
-        name: z.string(),
-        gitUrl: z.string().url(),
-        defaultBranch: z.string(),
+        template: z.enum(
+          TEMPLATE_NAMES as unknown as [TemplateName, ...TemplateName[]]
+        ),
+        name: z.string().min(1).max(255).optional(),
         hidden: z.boolean().optional(),
-        snapshot: zSandboxSnapshotConfig,
       })
     ),
     requireAuth,
     requireActiveOrganization,
     async (c) => {
-      const data = c.req.valid("json");
+      const { template, name, hidden = false } = c.req.valid("json");
       const organizationId = c.get("organizationId");
       const db = c.get("db");
 
       try {
+        const provisioned = await forkTemplate(c.env, template);
+        const repoName = name?.trim() || kebabCase(`${template}-${provisioned.id}`);
+
         const [newRepo] = await db
           .insert(schema.repo)
           .values({
-            ...data,
+            id: provisioned.id,
+            name: repoName,
+            gitUrl: provisioned.gitUrl,
+            defaultBranch: provisioned.defaultBranch,
+            snapshot: provisioned.snapshot,
+            hidden,
             private: false,
             providerId: null,
             externalId: null,

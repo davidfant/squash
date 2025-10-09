@@ -188,13 +188,24 @@ export abstract class BaseSandboxManagerDurableObject<
         command: "sh",
         args: [
           "-c",
-          [
-            `git remote set-url origin ${repo.gitUrl}`,
-            `git push origin HEAD:${options.branch.name}`,
-          ]
-            .map((v) => `(${v})`)
-            .join(" && "),
+          `
+          set -e;
+
+          if git remote get-url origin > /dev/null 2>&1; then
+            git remote set-url origin ${repo.gitUrl}
+          else
+            git remote add origin ${repo.gitUrl}
+          fi
+
+          git push --set-upstream origin HEAD:${options.branch.name}
+          `,
         ],
+        env: {
+          AWS_ENDPOINT_URL_S3: env.R2_REPOS_ENDPOINT_URL_S3,
+          AWS_ACCESS_KEY_ID: env.R2_REPOS_ACCESS_KEY_ID,
+          AWS_SECRET_ACCESS_KEY: env.R2_REPOS_SECRET_ACCESS_KEY,
+          AWS_DEFAULT_REGION: "auto",
+        },
         cwd: options.config.cwd,
       },
       abortSignal

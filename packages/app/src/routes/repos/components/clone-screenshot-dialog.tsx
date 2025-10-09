@@ -121,47 +121,7 @@ export function CloneScreenshotDialog({
 
     // Create hidden base repo
     const newRepo = await createRepo.mutateAsync({
-      json: {
-        name: `base-${Date.now()}`,
-        gitUrl: "s3://repos/templates/base-vite-ts",
-        defaultBranch: "master",
-        hidden: true,
-        snapshot: {
-          type: "daytona",
-          snapshot: "base-vite-ts:v0.0.4",
-          port: 5173,
-          cwd: "/repo",
-          env: {},
-          tasks: {
-            install: [
-              {
-                id: "install",
-                title: "Install dependencies",
-                type: "command",
-                command: "pnpm",
-                args: ["install"],
-              },
-            ],
-            dev: {
-              id: "dev",
-              title: "Start development server",
-              type: "command",
-              command: "pnpm",
-              args: ["dev"],
-            },
-            build: [
-              {
-                id: "build",
-                title: "Build",
-                type: "command",
-                command: "pnpm",
-                args: ["build"],
-              },
-            ],
-          },
-          build: { type: "static", dir: "dist" },
-        },
-      },
+      json: { template: "base-template", hidden: true },
     });
 
     // Create branch with screenshots and clone-screenshot state

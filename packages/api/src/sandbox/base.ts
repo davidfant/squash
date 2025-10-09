@@ -171,7 +171,11 @@ export abstract class BaseSandboxManagerDurableObject<
     });
   }
 
-  async gitPush(abortSignal?: AbortSignal): Promise<void> {
+  async gitCommit(
+    title: string,
+    body: string,
+    abortSignal: AbortSignal | undefined
+  ): Promise<string> {
     const options = await this.getOptions();
 
     const db = createDatabase(env);
@@ -182,8 +186,13 @@ export abstract class BaseSandboxManagerDurableObject<
       .then(([repo]) => repo);
     if (!repo) throw new Error(`Repo not found: ${options.branch.repoId}`);
 
-    logger.info("Pushing git", options.branch);
-    await this.execute(
+    logger.info("Git commit and push", {
+      title,
+      body,
+      gitUrl: repo.gitUrl,
+      ...options,
+    });
+    const stream = await this.execute(
       {
         command: "sh",
         args: [
@@ -191,13 +200,25 @@ export abstract class BaseSandboxManagerDurableObject<
           `
           set -e;
 
+          git add -A;
+          git config --global user.name 'Squash';
+          git config --global user.email 'agent@squash.build';
+          git commit --quiet ${[title, body]
+            .filter((v) => !!v.trim())
+            .map((v) => `-m ${escape([v])}`)
+            .join(" ")};
+
           if git remote get-url origin > /dev/null 2>&1; then
             git remote set-url origin ${repo.gitUrl}
           else
             git remote add origin ${repo.gitUrl}
           fi
 
-          git push --set-upstream origin HEAD:${options.branch.name}
+          git push --set-upstream origin HEAD:${options.branch.name};
+
+          echo '<sha>';
+          git rev-parse HEAD;
+          echo '</sha>';
           `,
         ],
         env: {
@@ -206,40 +227,14 @@ export abstract class BaseSandboxManagerDurableObject<
           AWS_SECRET_ACCESS_KEY: env.R2_REPOS_SECRET_ACCESS_KEY,
           AWS_DEFAULT_REGION: "auto",
         },
-        cwd: options.config.cwd,
-      },
-      abortSignal
-    );
-  }
-
-  async gitCommit(
-    title: string,
-    body: string,
-    abortSignal: AbortSignal | undefined
-  ): Promise<string> {
-    logger.info("Committing git", { title, body });
-    const stream = await this.execute(
-      {
-        command: "sh",
-        args: [
-          "-c",
-          [
-            `git add -A`,
-            `git config --global user.name 'Squash'`,
-            `git config --global user.email 'agent@squash.build'`,
-            `git commit --quiet ${[title, body]
-              .filter((v) => !!v.trim())
-              .map((v) => `-m ${escape([v])}`)
-              .join(" ")}`,
-            `git rev-parse HEAD`,
-          ].join(" && "),
-        ],
       },
       abortSignal
     );
 
     const { stdout } = await runCommand(stream);
-    return stdout.trim();
+    const sha = stdout.trim().split("<sha>")[1]?.split("</sha>")[0]?.trim();
+    if (!sha) throw new Error("Git commit failed");
+    return sha;
   }
 
   async gitReset(

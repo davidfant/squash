@@ -150,31 +150,31 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
               args: [
                 "-c",
                 `
-                set -e;
+                  set -e;
 
-                if git remote get-url origin > /dev/null 2>&1; then
-                  git remote set-url origin ${repo.gitUrl}
-                else
-                  git remote add origin ${repo.gitUrl}
-                fi
-
-                git fetch --prune origin
-
-                if git rev-parse --verify ${options.branch.name} > /dev/null 2>&1; then
-                  git checkout ${options.branch.name}
-                else
-                  if git ls-remote --exit-code origin ${options.branch.name} > /dev/null 2>&1; then
-                    git checkout -B ${options.branch.name} origin/${options.branch.name}
+                  if git remote get-url origin > /dev/null 2>&1; then
+                    git remote set-url origin ${repo.gitUrl}
                   else
-                    git checkout -B ${options.branch.name} origin/${repo.defaultBranch}
+                    git remote add origin ${repo.gitUrl}
                   fi
-                fi
 
-                if git ls-remote --exit-code origin ${options.branch.name} > /dev/null 2>&1; then
-                  git reset --hard origin/${options.branch.name}
-                else
-                  git reset --hard origin/${repo.defaultBranch}
-                fi
+                  git fetch --prune origin
+
+                  if git rev-parse --verify ${options.branch.name} > /dev/null 2>&1; then
+                    git checkout ${options.branch.name}
+                  else
+                    if git ls-remote --exit-code origin ${options.branch.name} > /dev/null 2>&1; then
+                      git checkout -B ${options.branch.name} origin/${options.branch.name}
+                    else
+                      git checkout -B ${options.branch.name} origin/${repo.defaultBranch}
+                    fi
+                  fi
+
+                  if git ls-remote --exit-code origin ${options.branch.name} > /dev/null 2>&1; then
+                    git reset --hard origin/${options.branch.name}
+                  else
+                    git reset --hard origin/${repo.defaultBranch}
+                  fi
                 `,
               ],
               // TODO: generate creds that can only access the specific repo if it's in the R2 bucket

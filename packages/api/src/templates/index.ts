@@ -1,42 +1,15 @@
+import { logger } from "@/lib/logger";
 import type { Sandbox } from "@/sandbox/types";
 import { randomUUID } from "crypto";
 
 interface TemplateDefinition {
   readonly sourcePrefix: string;
   readonly defaultBranch: string;
-  readonly snapshot: Sandbox.Snapshot.Config.Daytona;
+  readonly snapshot: Sandbox.Snapshot.Config.Any;
 }
 
-const daytonaTasks = {
-  install: [
-    {
-      id: "install",
-      title: "Install dependencies",
-      type: "command" as const,
-      command: "pnpm",
-      args: ["install"],
-    },
-  ],
-  dev: {
-    id: "dev",
-    title: "Start development server",
-    type: "command" as const,
-    command: "pnpm",
-    args: ["dev"],
-  },
-  build: [
-    {
-      id: "build",
-      title: "Build",
-      type: "command" as const,
-      command: "pnpm",
-      args: ["build"],
-    },
-  ],
-} as const satisfies Sandbox.Snapshot.Config.Daytona["tasks"];
-
 const templates = {
-  "base-template": {
+  "base-vite-ts": {
     sourcePrefix: "templates/base-vite-ts",
     defaultBranch: "master",
     snapshot: {
@@ -45,20 +18,33 @@ const templates = {
       port: 5173,
       cwd: "/repo",
       env: {},
-      tasks: daytonaTasks,
-      build: { type: "static", dir: "dist" },
-    },
-  },
-  "base-leet-ts-version-004": {
-    sourcePrefix: "templates/base-leet-ts-version-004",
-    defaultBranch: "master",
-    snapshot: {
-      type: "daytona",
-      snapshot: "base-leet-ts:version-004",
-      port: 5173,
-      cwd: "/repo",
-      env: {},
-      tasks: daytonaTasks,
+      tasks: {
+        install: [
+          {
+            id: "install",
+            title: "Install dependencies",
+            type: "command",
+            command: "pnpm",
+            args: ["install"],
+          },
+        ],
+        dev: {
+          id: "dev",
+          title: "Start development server",
+          type: "command",
+          command: "pnpm",
+          args: ["dev"],
+        },
+        build: [
+          {
+            id: "build",
+            title: "Build",
+            type: "command",
+            command: "pnpm",
+            args: ["build"],
+          },
+        ],
+      },
       build: { type: "static", dir: "dist" },
     },
   },
@@ -68,31 +54,42 @@ export type TemplateName = keyof typeof templates;
 
 export const TEMPLATE_NAMES = Object.keys(templates) as TemplateName[];
 
-export function resolveTemplate(name: TemplateName): TemplateDefinition {
-  return templates[name];
-}
-
 interface ForkResult {
   id: string;
   gitUrl: string;
   defaultBranch: string;
-  snapshot: Sandbox.Snapshot.Config.Daytona;
+  snapshot: Sandbox.Snapshot.Config.Any;
+}
+
+async function copyObject(
+  env: CloudflareBindings,
+  sourceKey: string,
+  destinationKey: string
+) {
+  logger.debug("Copying object", { sourceKey, destinationKey });
+  const sourceObject = await env.REPOS.get(sourceKey);
+  if (!sourceObject) {
+    throw new Error(`Failed to read source object ${sourceKey}`);
+  }
+  await env.REPOS.put(destinationKey, await sourceObject.arrayBuffer(), {
+    httpMetadata: sourceObject.httpMetadata,
+    customMetadata: sourceObject.customMetadata,
+  });
 }
 
 export async function forkTemplate(
   env: CloudflareBindings,
   name: TemplateName
 ): Promise<ForkResult> {
-  const template = resolveTemplate(name);
+  const template = templates[name];
   const repoId = randomUUID();
-  const destinationPrefix = `repos/${repoId}/`;
-  const sourcePrefix = template.sourcePrefix.replace(/\/?$/, "/");
-  const masterPrefix = `${sourcePrefix}refs/heads/master/`;
+  const destinationPrefix = `repos/from-template/${repoId}`;
+  const defaultBranchPrefix = `${template.sourcePrefix}/refs/heads/${template.defaultBranch}/`;
 
-  const listed = await env.REPOS.list({ prefix: masterPrefix });
+  const listed = await env.REPOS.list({ prefix: defaultBranchPrefix });
   if (!listed.objects.length) {
     throw new Error(
-      `Template ${name} is missing refs/heads/master bundles at ${masterPrefix}`
+      `Template ${name} is missing refs/heads/${template.defaultBranch} bundles at ${defaultBranchPrefix}`
     );
   }
 
@@ -103,34 +100,24 @@ export async function forkTemplate(
       : latest;
   });
 
-  const bundleObject = await env.REPOS.get(latestBundle.key);
-  if (!bundleObject) {
-    throw new Error(`Failed to read bundle ${latestBundle.key}`);
-  }
-
-  const bundleBody = await bundleObject.arrayBuffer();
-  const bundleKey = `${destinationPrefix}refs/heads/master/${latestBundle.key
-    .split("/")
-    .pop()!}`;
-  await env.REPOS.put(bundleKey, bundleBody, {
-    httpMetadata: bundleObject.httpMetadata,
-    customMetadata: bundleObject.customMetadata,
-  });
-
-  const headKey = `${sourcePrefix}HEAD`;
-  const headObject = await env.REPOS.get(headKey);
-  if (!headObject) {
-    throw new Error(`Failed to read HEAD file for template ${name}`);
-  }
-
-  await env.REPOS.put(`${destinationPrefix}HEAD`, await headObject.text(), {
-    httpMetadata: headObject.httpMetadata,
-    customMetadata: headObject.customMetadata,
-  });
+  await Promise.all([
+    copyObject(
+      env,
+      latestBundle.key,
+      `${destinationPrefix}/refs/heads/${
+        template.defaultBranch
+      }/${latestBundle.key.split("/").pop()!}`
+    ),
+    copyObject(
+      env,
+      `${template.sourcePrefix}/HEAD`,
+      `${destinationPrefix}/HEAD`
+    ),
+  ]);
 
   return {
     id: repoId,
-    gitUrl: `s3://repos/${destinationPrefix.slice(0, -1)}`,
+    gitUrl: `s3://repos/${destinationPrefix}`,
     defaultBranch: template.defaultBranch,
     snapshot: template.snapshot,
   };

@@ -119,7 +119,6 @@ export namespace Sandbox {
         request: Exec.Request,
         abortSignal?: AbortSignal
       ): AsyncGenerator<Exec.Event.Any>;
-      gitPush(abortSignal?: AbortSignal): Promise<void>;
       gitCommit(
         title: string,
         body: string,

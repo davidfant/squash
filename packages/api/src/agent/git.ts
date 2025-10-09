@@ -12,7 +12,6 @@ export const GitCommit = (sandbox: Sandbox.Manager.Base) =>
     outputSchema: z.object({ sha: z.string() }),
     execute: async ({ title, body }) => {
       const sha = await sandbox.gitCommit(title, body);
-      await sandbox.gitPush();
       return { sha };
     },
   });

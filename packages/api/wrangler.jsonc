@@ -27,7 +27,7 @@
       "remote": true
     },
     { "binding": "AGENT_SESSIONS", "bucket_name": "agent-sessions-dev" },
-    { "binding": "REPOS", "bucket_name": "repos-dev", "remote": true }
+    { "binding": "REPOS", "bucket_name": "repos", "remote": true }
   ],
   "kv_namespaces": [
     {

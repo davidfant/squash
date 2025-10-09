@@ -1,5 +1,4 @@
 import { ChatInput } from "@/components/layout/chat/input/ChatInput";
-import { ChatInputProvider } from "@/components/layout/chat/input/context";
 import { Card } from "@/components/ui/card";
 import { api, useMutation } from "@/hooks/api";
 import { AnimatePresence, motion } from "framer-motion";
@@ -96,38 +95,36 @@ export function ChatThread({
   })();
 
   return (
-    <ChatInputProvider>
-      <StickToBottom
-        key={`${loading}-${!!messages.activePath.length}`}
-        className="h-full w-full flex flex-col"
-        initial="instant"
-        resize="smooth"
-      >
-        {content}
+    <StickToBottom
+      key={`${loading}-${!!messages.activePath.length}`}
+      className="h-full w-full flex flex-col"
+      initial="instant"
+      resize="smooth"
+    >
+      {content}
 
-        <div className="p-2 pt-0">
-          <AnimatePresence>
-            {!!todos && !todos.every((t) => t.status === "completed") && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
-              >
-                <Card className="mb-2 p-2 shadow-none">
-                  <TodoList todos={todos} />
-                </Card>
-              </motion.div>
-            )}
-          </AnimatePresence>
-          <ChatInputWithScrollToBottom
-            parentId={messages.activePath[messages.activePath.length - 1]?.id!}
-            disabled={loading}
-            clearOnSubmit={clearInputOnSubmit}
-            onStop={() => stop.mutateAsync({ param: { branchId: id } })}
-          />
-        </div>
-      </StickToBottom>
-    </ChatInputProvider>
+      <div className="p-2 pt-0">
+        <AnimatePresence>
+          {!!todos && !todos.every((t) => t.status === "completed") && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden"
+            >
+              <Card className="mb-2 p-2 shadow-none">
+                <TodoList todos={todos} />
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        <ChatInputWithScrollToBottom
+          parentId={messages.activePath[messages.activePath.length - 1]?.id!}
+          disabled={loading}
+          clearOnSubmit={clearInputOnSubmit}
+          onStop={() => stop.mutateAsync({ param: { branchId: id } })}
+        />
+      </div>
+    </StickToBottom>
   );
 }

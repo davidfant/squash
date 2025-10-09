@@ -52,17 +52,15 @@ const ChatInputContext = createContext<ChatInputContextValue>({
 
 export interface ChatInputProviderProps {
   children: ReactNode;
-  initialValue?: {
-    text: string;
-    files: FileUIPart[];
-    state?: AgentState;
-  };
+  initialValue?: ChatInputValue;
+  // onChange?(value: ChatInputValue): void;
 }
 
 export function ChatInputProvider({
   children,
   initialValue,
-}: ChatInputProviderProps) {
+}: // onChange,
+ChatInputProviderProps) {
   const [text, setText] = useState(initialValue?.text ?? "");
   const [state, setState] = useState(initialValue?.state);
   const uploads = useFileUpload(
@@ -72,6 +70,16 @@ export function ChatInputProvider({
       status: "uploaded" as const,
     }))
   );
+
+  // const chatInputValue = useDebounced(
+  //   useMemo<ChatInputValue>(
+  //     () => ({ text, state, files: uploads.files }),
+  //     [text, state, uploads.files]
+  //   ),
+  //   500
+  // );
+  // console.log("chatInputValue", chatInputValue);
+  // useEffect(() => onChange?.(chatInputValue), [chatInputValue, onChange]);
 
   const value: ChatInputContextValue = {
     text,

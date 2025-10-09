@@ -5,7 +5,7 @@ import * as schema from "@/database/schema";
 import type { Sandbox } from "@/sandbox/types";
 import { createAppAuth } from "@octokit/auth-app";
 import { Octokit } from "@octokit/rest";
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull, or } from "drizzle-orm";
 import { createMiddleware } from "hono/factory";
 
 export const requireRepoProvider = createMiddleware<
@@ -71,78 +71,101 @@ export const requireRepoProvider = createMiddleware<
   await next();
 });
 
-export const requireRepo = createMiddleware<
-  {
-    Bindings: CloudflareBindings;
-    Variables: {
-      db: Database;
-      user: User;
-      organizationId: string;
-      repo: {
-        id: string;
-        name: string;
-        gitUrl: string;
-        imageUrl: string | null;
-        previewUrl: string | null;
-        defaultBranch: string;
-        snapshot: Sandbox.Snapshot.Config.Any;
-        provider: {
+export const requireRepo = (mode: "read" | "write") =>
+  createMiddleware<
+    {
+      Bindings: CloudflareBindings;
+      Variables: {
+        db: Database;
+        user: User | undefined;
+        organizationId: string | undefined;
+        repo: {
           id: string;
-          type: RepoProviderType;
-          data: RepoProviderData;
-        } | null;
+          name: string;
+          gitUrl: string;
+          imageUrl: string | null;
+          previewUrl: string | null;
+          defaultBranch: string;
+          organizationId: string;
+          snapshot: Sandbox.Snapshot.Config.Any;
+          provider: {
+            id: string;
+            type: RepoProviderType;
+            data: RepoProviderData;
+          } | null;
+        };
       };
-    };
-  },
-  string,
-  { out: { param: { repoId: string } } }
->(async (c, next) => {
-  const { repoId } = c.req.valid("param");
-  const organizationId = c.get("organizationId");
-  const db = c.get("db");
-  const user = c.get("user");
+    },
+    string,
+    { out: { param: { repoId: string } } }
+  >(async (c, next) => {
+    const { repoId } = c.req.valid("param");
+    const organizationId = c.get("organizationId");
+    const db = c.get("db");
+    const user = c.get("user");
 
-  const [repo] = await db
-    .select({
-      id: schema.repo.id,
-      name: schema.repo.name,
-      gitUrl: schema.repo.gitUrl,
-      imageUrl: schema.repo.imageUrl,
-      previewUrl: schema.repo.previewUrl,
-      defaultBranch: schema.repo.defaultBranch,
-      snapshot: schema.repo.snapshot,
-      provider: {
-        id: schema.repoProvider.id,
-        type: schema.repoProvider.type,
-        data: schema.repoProvider.data,
-      },
-    })
-    .from(schema.repo)
-    .leftJoin(
-      schema.repoProvider,
-      eq(schema.repo.providerId, schema.repoProvider.id)
-    )
-    .innerJoin(
-      schema.member,
-      eq(schema.repo.organizationId, schema.member.organizationId)
-    )
-    .where(
-      and(
-        eq(schema.repo.id, repoId),
-        eq(schema.repo.organizationId, organizationId),
-        isNull(schema.repo.deletedAt),
-        eq(schema.member.userId, user.id)
+    if (mode === "write" && (!user || !organizationId)) {
+      return c.json({ error: "User or organization not found" }, 404);
+    }
+
+    const q = db
+      .select({
+        id: schema.repo.id,
+        name: schema.repo.name,
+        gitUrl: schema.repo.gitUrl,
+        imageUrl: schema.repo.imageUrl,
+        previewUrl: schema.repo.previewUrl,
+        defaultBranch: schema.repo.defaultBranch,
+        organizationId: schema.repo.organizationId,
+        snapshot: schema.repo.snapshot,
+        provider: {
+          id: schema.repoProvider.id,
+          type: schema.repoProvider.type,
+          data: schema.repoProvider.data,
+        },
+      })
+      .from(schema.repo)
+      .leftJoin(
+        schema.repoProvider,
+        eq(schema.repo.providerId, schema.repoProvider.id)
       )
-    )
-    .limit(1);
+      .limit(1);
 
-  if (!repo) {
-    return c.json({ error: "Repository not found" }, 404);
-  }
+    const [repo] =
+      user && organizationId
+        ? await q
+            .leftJoin(
+              schema.member,
+              and(
+                eq(schema.repo.organizationId, organizationId),
+                eq(schema.member.userId, user.id)
+              )
+            )
+            .where(
+              and(
+                eq(schema.repo.id, repoId),
+                isNull(schema.repo.deletedAt),
+                or(
+                  isNotNull(schema.member.userId),
+                  eq(schema.repo.private, false)
+                )
+              )
+            )
+        : await q.where(
+            and(
+              eq(schema.repo.id, repoId),
+              isNull(schema.repo.deletedAt),
+              eq(schema.repo.private, false)
+            )
+          );
 
-  c.set("repo", repo);
-  await next();
-});
+    if (!repo) {
+      return c.json({ error: "Repository not found" }, 404);
+    }
+
+    c.set("repo", repo);
+    await next();
+  });
 
 export const requireRepoBranch = createMiddleware<
   {

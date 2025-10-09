@@ -48,6 +48,10 @@ createRoot(document.getElementById("root")!).render(
             <Routes>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/invite/:inviteId" element={<InvitePage />} />
+              <Route
+                path="/playgrounds/:repoId/new"
+                element={<NewBranchFromRepoPage />}
+              />
               <Route element={<RequireAuthGuard />}>
                 <Route
                   path="/"
@@ -56,10 +60,6 @@ createRoot(document.getElementById("root")!).render(
                 <Route path="/extension-auth" element={<ExtensionAuthPage />} />
                 <Route path="/playgrounds" element={<ReposPage />} />
                 <Route path="/playgrounds/:repoId" element={<ReposPage />} />
-                <Route
-                  path="/playgrounds/:repoId/new"
-                  element={<NewBranchFromRepoPage />}
-                />
                 <Route path="/prototypes" element={<BranchesPage />} />
                 <Route path="/prototypes/:branchId" element={<BranchPage />} />
                 <Route path="/new/repo" element={<NewRepoPage />} />

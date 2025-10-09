@@ -83,13 +83,35 @@ export async function forkTemplate(
 ): Promise<ForkResult> {
   const template = templates[name];
   const repoId = randomUUID();
+  return forkRepo(env, {
+    gitUrl: `s3://repos/from-template/${repoId}`,
+    defaultBranch: template.defaultBranch,
+    snapshot: template.snapshot,
+  });
+}
+
+export async function forkRepo(
+  env: CloudflareBindings,
+  repo: {
+    gitUrl: string;
+    defaultBranch: string;
+    snapshot: Sandbox.Snapshot.Config.Any;
+  }
+): Promise<ForkResult> {
+  const repoId = randomUUID();
+
+  if (!repo.gitUrl.startsWith("s3://repos/")) {
+    throw new Error(`Invalid git url: ${repo.gitUrl}`);
+  }
+
+  const sourcePrefix = repo.gitUrl.slice("s3://repos/".length);
   const destinationPrefix = `from-template/${repoId}`;
-  const defaultBranchPrefix = `${template.sourcePrefix}/refs/heads/${template.defaultBranch}/`;
+  const defaultBranchPrefix = `${sourcePrefix}/refs/heads/${repo.defaultBranch}/`;
 
   const listed = await env.REPOS.list({ prefix: defaultBranchPrefix });
   if (!listed.objects.length) {
     throw new Error(
-      `Template ${name} is missing refs/heads/${template.defaultBranch} bundles at ${defaultBranchPrefix}`
+      `Repo at ${repo.gitUrl} is missing refs/heads/${repo.defaultBranch} bundles at ${defaultBranchPrefix}`
     );
   }
 
@@ -104,21 +126,17 @@ export async function forkTemplate(
     copyObject(
       env,
       latestBundle.key,
-      `${destinationPrefix}/refs/heads/${
-        template.defaultBranch
-      }/${latestBundle.key.split("/").pop()!}`
+      `${destinationPrefix}/refs/heads/${repo.defaultBranch}/${latestBundle.key
+        .split("/")
+        .pop()!}`
     ),
-    copyObject(
-      env,
-      `${template.sourcePrefix}/HEAD`,
-      `${destinationPrefix}/HEAD`
-    ),
+    copyObject(env, `${sourcePrefix}/HEAD`, `${destinationPrefix}/HEAD`),
   ]);
 
   return {
     id: repoId,
     gitUrl: `s3://repos/${destinationPrefix}`,
-    defaultBranch: template.defaultBranch,
-    snapshot: template.snapshot,
+    defaultBranch: repo.defaultBranch,
+    snapshot: repo.snapshot,
   };
 }

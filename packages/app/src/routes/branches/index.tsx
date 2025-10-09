@@ -13,7 +13,7 @@ import {
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { api, useQuery } from "@/hooks/api";
 import { Check, ChevronDown } from "lucide-react";
-import { useRepos } from "../landing/hooks/useRepos";
+import { useRepos } from "./hooks/use-repos";
 
 export function BranchesPage() {
   const repos = useRepos();

@@ -2,6 +2,7 @@ import { ChevronsUpDown } from "lucide-react";
 
 import { authClient } from "@/auth/client";
 import { CreateInviteLinkDropdownMenuItem } from "@/components/blocks/CreateInviteLinkDropdownMenuItem";
+import { CreateOrganizationMenuItem } from "@/components/layout/sidebar/create-organization-menu-item";
 import { Avatar } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -17,7 +18,6 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useSwitchOrganization } from "@/hooks/use-switch-organization";
-import { CreateOrganizationMenuItem } from "@/routes/landing/components/header/CreateOrganizationMenuItem";
 
 export function OrganizationSwitcher() {
   const orgs = authClient.useListOrganizations();

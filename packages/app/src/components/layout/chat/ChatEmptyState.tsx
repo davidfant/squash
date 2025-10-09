@@ -1,10 +1,10 @@
 import { Suggestion } from "@/components/ai-elements/suggestion";
+import { useScreenshotUpload } from "@/components/layout/chat/hooks/useScreenshotUpload";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useScreenshotUpload } from "@/routes/landing/hooks/useScreenshotUpload";
 import { FileText, Image } from "lucide-react";
 
 export function ChatEmptyState() {

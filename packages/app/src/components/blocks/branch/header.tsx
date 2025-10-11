@@ -2,9 +2,11 @@ import { Link } from "react-router";
 
 export const BranchHeader = ({
   title,
+  inlineAction,
   extra,
 }: {
   title: string;
+  inlineAction?: React.ReactNode;
   extra?: React.ReactNode;
 }) => (
   <header className="flex items-center justify-between p-2">
@@ -17,6 +19,7 @@ export const BranchHeader = ({
         />
       </Link>
       <span className="font-medium text-sm">{title}</span>
+      {inlineAction}
     </div>
 
     {extra}

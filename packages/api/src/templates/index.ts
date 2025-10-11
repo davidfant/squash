@@ -66,14 +66,14 @@ async function copyObject(
   sourceKey: string,
   destinationKey: string
 ) {
-  logger.debug("Copying object", { sourceKey, destinationKey });
-  const sourceObject = await env.REPOS.get(sourceKey);
-  if (!sourceObject) {
+  const source = await env.REPOS.get(sourceKey);
+  logger.debug("Copying object", { sourceKey, destinationKey, source });
+  if (!source) {
     throw new Error(`Failed to read source object ${sourceKey}`);
   }
-  await env.REPOS.put(destinationKey, await sourceObject.arrayBuffer(), {
-    httpMetadata: sourceObject.httpMetadata,
-    customMetadata: sourceObject.customMetadata,
+  await env.REPOS.put(destinationKey, await source.arrayBuffer(), {
+    httpMetadata: source.httpMetadata,
+    customMetadata: source.customMetadata,
   });
 }
 
@@ -83,7 +83,7 @@ export async function forkTemplate(
 ): Promise<ForkResult> {
   const template = templates[name];
   const repoId = randomUUID();
-  const destinationPrefix = `repos/from-template/${repoId}`;
+  const destinationPrefix = `from-template/${repoId}`;
   const defaultBranchPrefix = `${template.sourcePrefix}/refs/heads/${template.defaultBranch}/`;
 
   const listed = await env.REPOS.list({ prefix: defaultBranchPrefix });

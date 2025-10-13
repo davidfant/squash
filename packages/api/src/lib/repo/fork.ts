@@ -82,9 +82,8 @@ export async function forkTemplate(
   name: TemplateName
 ): Promise<ForkResult> {
   const template = templates[name];
-  const repoId = randomUUID();
   return forkRepo(env, {
-    gitUrl: `s3://repos/from-template/${repoId}`,
+    gitUrl: `s3://repos/${template.sourcePrefix}`,
     defaultBranch: template.defaultBranch,
     snapshot: template.snapshot,
   });

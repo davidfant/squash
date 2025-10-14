@@ -104,6 +104,10 @@ export namespace Sandbox {
     branch: { id: string; repoId: string; name: string };
   }
 
+  export interface ForkOptions {
+    name?: string;
+  }
+
   export namespace Manager {
     export interface Base<C extends Snapshot.Config.Any = Snapshot.Config.Any> {
       name: string;
@@ -113,7 +117,7 @@ export namespace Sandbox {
       start(): Promise<void>;
       waitUntilStarted(): Promise<void>;
       deploy(): Promise<void>;
-      fork(): Promise<void>;
+      fork(options?: ForkOptions): Promise<void>;
       getPreviewUrl(): Promise<string>;
       execute(
         request: Exec.Request,

@@ -15,11 +15,17 @@ export const FeatureCardEditTitleDialog = ({
   open,
   onOpenChange,
   onEdit,
+  dialogTitle = "Rename",
+  submitLabel = "Save",
+  allowUnchanged = false,
 }: {
   title: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onEdit?(value: string): unknown;
+  dialogTitle?: string;
+  submitLabel?: string;
+  allowUnchanged?: boolean;
 }) => {
   const [editValue, setEditValue] = useState(title);
   const [saving, setSaving] = useState(false);
@@ -44,7 +50,12 @@ export const FeatureCardEditTitleDialog = ({
       event.preventDefault();
       if (!onEdit) return;
 
-      if (!trimmedValue.length || trimmedValue === title) {
+      if (!trimmedValue.length) {
+        setError("Name is required");
+        return;
+      }
+
+      if (!allowUnchanged && trimmedValue === title) {
         closeDialog();
         return;
       }
@@ -64,7 +75,7 @@ export const FeatureCardEditTitleDialog = ({
         setSaving(false);
       }
     },
-    [closeDialog, onEdit, title, trimmedValue]
+    [allowUnchanged, closeDialog, onEdit, title, trimmedValue]
   );
 
   return (
@@ -83,14 +94,17 @@ export const FeatureCardEditTitleDialog = ({
     >
       <DialogContent onClick={(e) => e.stopPropagation()}>
         <DialogHeader>
-          <DialogTitle>Rename</DialogTitle>
+          <DialogTitle>{dialogTitle}</DialogTitle>
         </DialogHeader>
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
             <Label>Name</Label>
             <Input
               value={editValue}
-              onChange={(event) => setEditValue(event.target.value)}
+              onChange={(event) => {
+                setEditValue(event.target.value);
+                if (error) setError(null);
+              }}
               autoFocus
               aria-invalid={!!error}
             />
@@ -114,7 +128,7 @@ export const FeatureCardEditTitleDialog = ({
               loading={saving}
               disabled={saving || !trimmedValue.length}
             >
-              Save
+              {submitLabel}
             </Button>
           </DialogFooter>
         </form>

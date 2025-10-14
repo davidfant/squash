@@ -84,7 +84,9 @@ export abstract class BaseSandboxManagerDurableObject<
   abstract destroy(): Promise<void>;
   abstract getStartTasks(): Promise<Sandbox.Snapshot.Task.Any[]>;
   abstract getDeployTasks(): Promise<Sandbox.Snapshot.Task.Any[]>;
-  abstract getForkTasks(): Promise<Sandbox.Snapshot.Task.Any[]>;
+  abstract getForkTasks(
+    options?: Sandbox.ForkOptions
+  ): Promise<Sandbox.Snapshot.Task.Any[]>;
   abstract restoreVersion(messages: ChatMessage[]): Promise<void>;
   protected abstract readClaudeCodeSessionData(
     sessionId: string
@@ -149,12 +151,12 @@ export abstract class BaseSandboxManagerDurableObject<
     });
   }
 
-  async fork(): Promise<void> {
+  async fork(options?: Sandbox.ForkOptions): Promise<void> {
     await this.waitUntilStarted();
     await this.state.blockConcurrencyWhile(async () => {
       if (this.handles.fork.active) return;
 
-      const tasks = await this.getForkTasks();
+      const tasks = await this.getForkTasks(options);
       const controller = new AbortController();
       const fork: Handle = {
         type: "fork",

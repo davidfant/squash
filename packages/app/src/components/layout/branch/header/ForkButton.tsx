@@ -1,4 +1,5 @@
 import { SandboxTaskStream } from "@/components/blocks/SandboxTaskStream";
+import { FeatureCardEditTitleDialog } from "@/components/blocks/feature/edit-title-dialog";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -9,13 +10,13 @@ import { useChat } from "@ai-sdk/react";
 import type { SandboxTaskMessage } from "@squashai/api/agent/types";
 import { DefaultChatTransport } from "ai";
 import { MoreVertical } from "lucide-react";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useBranchContext } from "../context";
 
 export function ForkButton() {
   const { t } = useTranslation("branch");
-  const { branch, previewSha } = useBranchContext();
+  const { branch } = useBranchContext();
 
   const stream = useChat<SandboxTaskMessage>({
     messages: [],
@@ -25,10 +26,17 @@ export function ForkButton() {
     }),
   });
 
-  const handleFork = useCallback(() => {
-    stream.setMessages([]);
-    stream.sendMessage();
-  }, [stream.sendMessage, stream.setMessages]);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  const handleFork = useCallback(
+    async (name: string) => {
+      stream.setMessages([]);
+      await stream.sendMessage(undefined, {
+        body: { name },
+      });
+    },
+    [stream.sendMessage, stream.setMessages]
+  );
 
   const forking = ["submitted", "streaming"].includes(stream.status);
 
@@ -51,12 +59,21 @@ export function ForkButton() {
           className="w-full"
           disabled={forking}
           loading={forking}
-          onClick={handleFork}
+          onClick={() => setIsDialogOpen(true)}
         >
           {forking ? t("fork.dialog.forking") : t("fork.dialog.fork")}
         </Button>
         <SandboxTaskStream stream={stream} />
       </DropdownMenuContent>
     </DropdownMenu>
+    <FeatureCardEditTitleDialog
+      title={branch.title}
+      open={isDialogOpen}
+      onOpenChange={setIsDialogOpen}
+      onEdit={(value) => handleFork(value.trim())}
+      dialogTitle={t("fork.dialog.title")}
+      submitLabel={t("fork.dialog.fork")}
+      allowUnchanged
+    />
   );
 }

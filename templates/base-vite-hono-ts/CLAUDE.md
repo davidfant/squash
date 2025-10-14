@@ -6,6 +6,9 @@ Use pnpm as your package manager, not npm or yarn
 
 Store environment variables in `.dev.vars`. When updating `.dev.vars` always run `pnpm typegen` afterwards so that Cloudflare Worker TypeScript types are updated correctly.
 
+## API best practices
+Make sure to always validate input such as params and json using `import { zValidator } from "@hono/zod-validator";`.
+
 ## Interacting with the API from the React App
 
 There are two type-safe wrappers around React Query + Hono Client to interact with the API:

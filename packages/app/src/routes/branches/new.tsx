@@ -1,5 +1,6 @@
 import { authClient } from "@/auth/client";
 import { IframePreview } from "@/components/blocks/iframe-preview";
+import { ChatEmptyState } from "@/components/layout/chat/ChatEmptyState";
 import { ChatThread } from "@/components/layout/chat/ChatThread";
 import { EmptyChatProvider } from "@/components/layout/chat/context";
 import {
@@ -78,7 +79,11 @@ export function NewBranchFromRepoPage() {
               </span>
             </div>
             <div className="flex-1">
-              <ChatThread id={repoId} clearInputOnSubmit={false} />
+              <ChatThread
+                id={repoId}
+                clearInputOnSubmit={false}
+                empty={<ChatEmptyState suggestions={repo.data?.suggestions} />}
+              />
             </div>
           </div>
           <div className="p-2 pl-0 flex-1">

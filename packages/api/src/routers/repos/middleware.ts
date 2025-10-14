@@ -89,7 +89,7 @@ export const requireRepo = (mode: "read" | "write") =>
           gitUrl: string;
           imageUrl: string | null;
           previewUrl: string | null;
-          suggestions: RepoSuggestion[];
+          suggestions: RepoSuggestion[] | null;
           defaultBranch: string;
           snapshot: Sandbox.Snapshot.Config.Any;
           provider: {
@@ -188,7 +188,6 @@ export const requireRepoBranch = createMiddleware<
         updatedAt: Date;
         deployment: { url: string; sha: string } | null;
         createdBy: { id: string; name: string; image: string | null };
-        repo: { id: string; name: string };
       };
     };
   },
@@ -209,10 +208,6 @@ export const requireRepoBranch = createMiddleware<
       deployment: schema.repoBranch.deployment,
       createdAt: schema.repoBranch.createdAt,
       updatedAt: schema.repoBranch.updatedAt,
-      repo: {
-        id: schema.repo.id,
-        name: schema.repo.name,
-      },
       createdBy: {
         id: schema.user.id,
         name: schema.user.name,

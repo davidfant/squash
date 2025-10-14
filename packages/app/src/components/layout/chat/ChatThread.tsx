@@ -3,14 +3,12 @@ import { Card } from "@/components/ui/card";
 import { api, useMutation } from "@/hooks/api";
 import { AnimatePresence, motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
-import { ChatEmptyState } from "./ChatEmptyState";
 import { ChatThreadContent } from "./ChatThreadContent";
 import { useChatContext } from "./context";
 import { useMessageLineage } from "./messageLineage";
 import { TodoList } from "./TodoList";
-import type { ChatSuggestion } from "./types";
 
 function ChatInputWithScrollToBottom({
   parentId,
@@ -49,14 +47,12 @@ export function ChatThread({
   id,
   loading,
   clearInputOnSubmit,
-  suggestions,
-  showEmptyState = true,
+  empty,
 }: {
   id: string;
   loading?: boolean;
   clearInputOnSubmit?: boolean;
-  suggestions?: ChatSuggestion[];
-  showEmptyState?: boolean;
+  empty?: ReactNode;
 }) {
   const { messages: allMessages, status } = useChatContext();
   const messages = useMessageLineage(allMessages, id);
@@ -89,14 +85,7 @@ export function ChatThread({
     }
 
     if (messages.activePath.length === 0) {
-      if (!showEmptyState) {
-        return <div className="flex-1 w-full" />;
-      }
-      return (
-        <div className="flex-1 w-full flex">
-          <ChatEmptyState suggestions={suggestions} />
-        </div>
-      );
+      return <div className="flex-1 w-full flex">{empty}</div>;
     }
 
     return <ChatThreadContent id={id} />;

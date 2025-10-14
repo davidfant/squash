@@ -1,5 +1,5 @@
 import type { Sandbox } from "@/sandbox/types";
-import { relations, sql, type InferEnum } from "drizzle-orm";
+import { relations, type InferEnum } from "drizzle-orm";
 import {
   boolean,
   index,
@@ -64,10 +64,7 @@ export const repo = pgTable("repo", {
   imageUrl: text(),
   gitUrl: text().notNull(),
   name: text().notNull(),
-  suggestions: json("suggestions")
-    .$type<RepoSuggestion[]>()
-    .notNull()
-    .default(sql`'[]'::json`),
+  suggestions: json("suggestions").$type<RepoSuggestion[] | null>(),
   snapshot: json("snapshot").$type<Sandbox.Snapshot.Config.Any>().notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

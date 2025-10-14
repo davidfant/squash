@@ -1,8 +1,8 @@
+import { generateRepoSuggestionsFromScreenshot } from "@/agent/repo/suggestions";
 import type { ChatMessage } from "@/agent/types";
 import { createDatabase } from "@/database";
 import * as schema from "@/database/schema";
 import { logger } from "@/lib/logger";
-import { generateRepoSuggestionsFromScreenshot } from "@/agent/repo/suggestions";
 import { toAsyncIterator } from "@/lib/to-async-iterator";
 import { Daytona, Sandbox as DaytonaSandbox } from "@daytonaio/sdk";
 import { env } from "cloudflare:workers";
@@ -450,9 +450,9 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
           if (!branch)
             throw new Error(`Branch not found: ${options.branch.id}`);
 
-          const suggestions = await generateRepoSuggestionsFromScreenshot(
-            screenshot?.url ?? null
-          );
+          const suggestions = screenshot
+            ? await generateRepoSuggestionsFromScreenshot(screenshot.url)
+            : null;
 
           await db.insert(schema.repo).values({
             name: forkOptions?.name ?? branch.title,

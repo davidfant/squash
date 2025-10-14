@@ -1,6 +1,7 @@
 packages:
   - packages/*
-  - templates
+  # - templates
+  - "!templates/*"
   - "!packages/chrome-extension"
   - "!packages/flyio-ssh-proxy"
   - "!packages/replicator"

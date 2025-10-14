@@ -235,16 +235,14 @@ const repoBranchRouter = new Hono<{
     zValidator("param", z.object({ branchId: z.uuid() })),
     zValidator(
       "json",
-      z
-        .object({ name: z.string().min(1).max(255).optional() })
-        .passthrough()
+      z.object({ name: z.string().min(1).max(255).optional() })
     ),
     async (c) => {
       const params = c.req.valid("param");
       const body = c.req.valid("json");
       const sandbox = c.env.DAYTONA_SANDBOX_MANAGER.getByName(params.branchId);
       const name = body.name?.trim();
-      await sandbox.fork({ name: name?.length ? name : undefined });
+      await sandbox.fork({ name });
       return sandbox.listenToFork();
     }
   )

@@ -41,39 +41,41 @@ export function ForkButton() {
   const forking = ["submitted", "streaming"].includes(stream.status);
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm">
-          <MoreVertical />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-96 p-4 space-y-4">
-        <div>
-          <h3 className="font-medium">{t("fork.dialog.title")}</h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            {t("fork.dialog.description")}
-          </p>
-        </div>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="sm">
+            <MoreVertical />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-96 p-4 space-y-4">
+          <div>
+            <h3 className="font-medium">{t("fork.dialog.title")}</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              {t("fork.dialog.description")}
+            </p>
+          </div>
 
-        <Button
-          className="w-full"
-          disabled={forking}
-          loading={forking}
-          onClick={() => setIsDialogOpen(true)}
-        >
-          {forking ? t("fork.dialog.forking") : t("fork.dialog.fork")}
-        </Button>
-        <SandboxTaskStream stream={stream} />
-      </DropdownMenuContent>
-    </DropdownMenu>
-    <FeatureCardEditTitleDialog
-      title={branch.title}
-      open={isDialogOpen}
-      onOpenChange={setIsDialogOpen}
-      onEdit={(value) => handleFork(value.trim())}
-      dialogTitle={t("fork.dialog.title")}
-      submitLabel={t("fork.dialog.fork")}
-      allowUnchanged
-    />
+          <Button
+            className="w-full"
+            disabled={forking}
+            loading={forking}
+            onClick={() => setIsDialogOpen(true)}
+          >
+            {forking ? t("fork.dialog.forking") : t("fork.dialog.fork")}
+          </Button>
+          <SandboxTaskStream stream={stream} />
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <FeatureCardEditTitleDialog
+        title={branch.title}
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        onEdit={(value) => handleFork(value.trim())}
+        dialogTitle={t("fork.dialog.title")}
+        submitLabel={t("fork.dialog.fork")}
+        allowUnchanged
+      />
+    </>
   );
 }

@@ -353,9 +353,9 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
   }
 
   async getForkTasks(
-    options?: Sandbox.ForkOptions
+    forkOptions?: Sandbox.ForkOptions
   ): Promise<Sandbox.Snapshot.Task.Any[]> {
-    const [sandboxOptions, deployTasks] = await Promise.all([
+    const [options, deployTasks] = await Promise.all([
       this.getOptions(),
       this.getDeployTasks(),
     ]);
@@ -437,22 +437,20 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
             db
               .select()
               .from(schema.repo)
-              .where(eq(schema.repo.id, sandboxOptions.branch.repoId))
+              .where(eq(schema.repo.id, options.branch.repoId))
               .then(([repo]) => repo),
             db
               .select()
               .from(schema.repoBranch)
-              .where(eq(schema.repoBranch.id, sandboxOptions.branch.id))
+              .where(eq(schema.repoBranch.id, options.branch.id))
               .then(([branch]) => branch),
           ]);
           if (!repo) throw new Error(`Repo not found: ${newRepoId}`);
           if (!branch)
-            throw new Error(
-              `Branch not found: ${sandboxOptions.branch.id}`
-            );
+            throw new Error(`Branch not found: ${options.branch.id}`);
 
           await db.insert(schema.repo).values({
-            name: options?.name ?? branch.title,
+            name: forkOptions?.name ?? branch.title,
             private: repo.private,
             organizationId: repo.organizationId,
             gitUrl,

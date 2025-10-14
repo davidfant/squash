@@ -1,3 +1,4 @@
+import type { RepoSuggestionColor } from "@/database/schema";
 import type { Sandbox } from "@/sandbox/types";
 import type { ClaudeCodeTools } from "@squashai/ai-sdk-claude-code";
 import type { InferUITools, Tool, UIMessage } from "ai";
@@ -49,3 +50,5 @@ export type SandboxTaskMessage = UIMessage<
   ChatMessageData,
   InferUITools<{ SandboxTask: SandboxTaskTool }>
 >;
+
+export type { RepoSuggestionColor };

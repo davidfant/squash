@@ -1,6 +1,10 @@
 import { type User } from "@/auth/middleware";
 import type { Database } from "@/database";
-import type { RepoProviderData, RepoProviderType } from "@/database/schema";
+import type {
+  RepoProviderData,
+  RepoProviderType,
+  RepoSuggestion,
+} from "@/database/schema";
 import * as schema from "@/database/schema";
 import type { Sandbox } from "@/sandbox/types";
 import { createAppAuth } from "@octokit/auth-app";
@@ -85,8 +89,8 @@ export const requireRepo = (mode: "read" | "write") =>
           gitUrl: string;
           imageUrl: string | null;
           previewUrl: string | null;
+          suggestions: RepoSuggestion[];
           defaultBranch: string;
-          organizationId: string;
           snapshot: Sandbox.Snapshot.Config.Any;
           provider: {
             id: string;
@@ -115,6 +119,7 @@ export const requireRepo = (mode: "read" | "write") =>
         gitUrl: schema.repo.gitUrl,
         imageUrl: schema.repo.imageUrl,
         previewUrl: schema.repo.previewUrl,
+        suggestions: schema.repo.suggestions,
         defaultBranch: schema.repo.defaultBranch,
         organizationId: schema.repo.organizationId,
         snapshot: schema.repo.snapshot,
@@ -183,6 +188,7 @@ export const requireRepoBranch = createMiddleware<
         updatedAt: Date;
         deployment: { url: string; sha: string } | null;
         createdBy: { id: string; name: string; image: string | null };
+        repo: { id: string; name: string };
       };
     };
   },
@@ -203,6 +209,10 @@ export const requireRepoBranch = createMiddleware<
       deployment: schema.repoBranch.deployment,
       createdAt: schema.repoBranch.createdAt,
       updatedAt: schema.repoBranch.updatedAt,
+      repo: {
+        id: schema.repo.id,
+        name: schema.repo.name,
+      },
       createdBy: {
         id: schema.user.id,
         name: schema.user.name,

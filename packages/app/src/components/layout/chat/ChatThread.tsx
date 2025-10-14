@@ -10,6 +10,7 @@ import { ChatThreadContent } from "./ChatThreadContent";
 import { useChatContext } from "./context";
 import { useMessageLineage } from "./messageLineage";
 import { TodoList } from "./TodoList";
+import type { ChatSuggestion } from "./types";
 
 function ChatInputWithScrollToBottom({
   parentId,
@@ -48,10 +49,14 @@ export function ChatThread({
   id,
   loading,
   clearInputOnSubmit,
+  suggestions,
+  showEmptyState = true,
 }: {
   id: string;
   loading?: boolean;
   clearInputOnSubmit?: boolean;
+  suggestions?: ChatSuggestion[];
+  showEmptyState?: boolean;
 }) {
   const { messages: allMessages, status } = useChatContext();
   const messages = useMessageLineage(allMessages, id);
@@ -84,9 +89,12 @@ export function ChatThread({
     }
 
     if (messages.activePath.length === 0) {
+      if (!showEmptyState) {
+        return <div className="flex-1 w-full" />;
+      }
       return (
         <div className="flex-1 w-full flex">
-          <ChatEmptyState />
+          <ChatEmptyState suggestions={suggestions} />
         </div>
       );
     }

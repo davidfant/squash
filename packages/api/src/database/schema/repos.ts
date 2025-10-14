@@ -1,5 +1,5 @@
 import type { Sandbox } from "@/sandbox/types";
-import { relations, type InferEnum } from "drizzle-orm";
+import { relations, sql, type InferEnum } from "drizzle-orm";
 import {
   boolean,
   index,
@@ -28,12 +28,46 @@ export interface RepoProviderData {
   installationId: string;
 }
 
+export const repoSuggestionColors = [
+  "red",
+  "orange",
+  "amber",
+  "yellow",
+  "lime",
+  "green",
+  "emerald",
+  "teal",
+  "cyan",
+  "sky",
+  "blue",
+  "indigo",
+  "violet",
+  "purple",
+  "fuchsia",
+  "pink",
+  "rose",
+  "gray",
+] as const;
+
+export type RepoSuggestionColor = (typeof repoSuggestionColors)[number];
+
+export interface RepoSuggestion {
+  title: string;
+  prompt: string;
+  icon: string;
+  color: RepoSuggestionColor;
+}
+
 export const repo = pgTable("repo", {
   id: uuid().primaryKey().defaultRandom(),
   previewUrl: text(),
   imageUrl: text(),
   gitUrl: text().notNull(),
   name: text().notNull(),
+  suggestions: json("suggestions")
+    .$type<RepoSuggestion[]>()
+    .notNull()
+    .default(sql`'[]'::json`),
   snapshot: json("snapshot").$type<Sandbox.Snapshot.Config.Any>().notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

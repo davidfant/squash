@@ -1,4 +1,5 @@
 import { generateName } from "@/agent/name/generate";
+import { generateRepoSuggestionsFromScreenshot } from "@/agent/repo/suggestions";
 import { requireActiveOrganization, requireAuth } from "@/auth/middleware";
 import type { Database } from "@/database";
 import * as schema from "@/database/schema";
@@ -158,6 +159,7 @@ export const reposRouter = new Hono<{
         const provisioned = await forkTemplate(c.env, template);
         const repoName =
           name?.trim() || kebabCase(`${template}-${provisioned.id}`);
+        const suggestions = await generateRepoSuggestionsFromScreenshot(null);
 
         const [newRepo] = await db
           .insert(schema.repo)
@@ -172,6 +174,7 @@ export const reposRouter = new Hono<{
             providerId: null,
             externalId: null,
             organizationId,
+            suggestions,
           })
           .returning();
 

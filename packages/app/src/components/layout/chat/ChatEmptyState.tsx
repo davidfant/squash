@@ -6,9 +6,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
 import type { RepoSuggestionColor } from "@squashai/api/agent/types";
-import * as Icons from "lucide-react";
+import kebabCase from "lodash.kebabCase";
 
 export interface ChatSuggestion {
   title: string;
@@ -18,25 +17,48 @@ export interface ChatSuggestion {
 }
 
 const COLOR_CLASSES: Record<RepoSuggestionColor, string> = {
-  red: "text-red-500",
-  orange: "text-orange-500",
-  amber: "text-amber-500",
-  yellow: "text-yellow-500",
-  lime: "text-lime-500",
-  green: "text-green-500",
-  emerald: "text-emerald-500",
-  teal: "text-teal-500",
-  cyan: "text-cyan-500",
-  sky: "text-sky-500",
-  blue: "text-blue-500",
-  indigo: "text-indigo-500",
-  violet: "text-violet-500",
-  purple: "text-purple-500",
-  fuchsia: "text-fuchsia-500",
-  pink: "text-pink-500",
-  rose: "text-rose-500",
-  gray: "text-gray-500",
+  red: "bg-red-500",
+  orange: "bg-orange-500",
+  amber: "bg-amber-500",
+  yellow: "bg-yellow-500",
+  lime: "bg-lime-500",
+  green: "bg-green-500",
+  emerald: "bg-emerald-500",
+  teal: "bg-teal-500",
+  cyan: "bg-cyan-500",
+  sky: "bg-sky-500",
+  blue: "bg-blue-500",
+  indigo: "bg-indigo-500",
+  violet: "bg-violet-500",
+  purple: "bg-purple-500",
+  fuchsia: "bg-fuchsia-500",
+  pink: "bg-pink-500",
+  rose: "bg-rose-500",
+  gray: "bg-gray-500",
 };
+
+// Icon component using CSS masking with CDN URLs
+function LucideIcon({ name, className }: { name: string; className?: string }) {
+  const iconUrl = `https://cdn.jsdelivr.net/npm/lucide-static@0.545.0/icons/${kebabCase(
+    name
+  )}.svg`;
+
+  return (
+    <div
+      className={className}
+      style={{
+        maskImage: `url(${iconUrl})`,
+        WebkitMaskImage: `url(${iconUrl})`,
+        maskRepeat: "no-repeat",
+        WebkitMaskRepeat: "no-repeat",
+        maskPosition: "center",
+        WebkitMaskPosition: "center",
+        maskSize: "contain",
+        WebkitMaskSize: "contain",
+      }}
+    />
+  );
+}
 
 const FALLBACK_SUGGESTIONS: ChatSuggestion[] = [
   {
@@ -85,19 +107,15 @@ export function ChatEmptyState({
 
         <div className="flex gap-3 justify-center flex-wrap">
           {items.map((suggestion, index) => {
-            const Icon =
-              (Icons[
-                suggestion.icon as keyof typeof Icons
-              ] as Icons.LucideIcon) ?? Icons.Sparkles;
-
             return (
               <Suggestion
                 key={index}
                 suggestion={suggestion.prompt}
                 onClick={input.setText}
               >
-                <Icon
-                  className={cn("size-4", COLOR_CLASSES[suggestion.color])}
+                <LucideIcon
+                  name={suggestion.icon}
+                  className={`size-4 ${COLOR_CLASSES[suggestion.color]}`}
                 />
                 {suggestion.title}
               </Suggestion>
@@ -109,9 +127,11 @@ export function ChatEmptyState({
               <Suggestion
                 suggestion="Upload a design screenshot"
                 onClick={uploadScreenshot}
-                // className="border-dashed text-muted-foreground"
               >
-                <Icons.Image className="h-4 w-4 text-muted-foreground" />
+                <LucideIcon
+                  name="Image"
+                  className="h-4 w-4 bg-muted-foreground"
+                />
                 Upload screenshot
               </Suggestion>
             </TooltipTrigger>

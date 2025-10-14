@@ -82,7 +82,11 @@ export function NewBranchFromRepoPage() {
               <ChatThread
                 id={repoId}
                 clearInputOnSubmit={false}
-                empty={<ChatEmptyState suggestions={repo.data?.suggestions} />}
+                empty={
+                  <ChatEmptyState
+                    suggestions={repo.data?.suggestions ?? undefined}
+                  />
+                }
               />
             </div>
           </div>

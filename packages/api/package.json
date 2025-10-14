@@ -25,7 +25,7 @@
     "dev:wrangler": "pnpm drizzle-kit push && wrangler dev",
     "dev:tsc": "tsc --watch --preserveWatchOutput",
     "drizzle:migrate:dev": "drizzle-kit push",
-    "drizzle:migrate:prod": "DOTENV_CONFIG_PATH=.prod.vars drizzle-kit migrate",
+    "drizzle:migrate:prod": "DOTENV_CONFIG_PATH=.env.production drizzle-kit migrate",
     "push": "wrangler deploy --env production",
     "playground": "tsx --env-file .dev.vars playground.ts",
     "build": "tsc -b",

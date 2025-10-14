@@ -92,6 +92,7 @@ export const requireRepo = (mode: "read" | "write") =>
           suggestions: RepoSuggestion[] | null;
           defaultBranch: string;
           snapshot: Sandbox.Snapshot.Config.Any;
+          organizationId: string;
           provider: {
             id: string;
             type: RepoProviderType;

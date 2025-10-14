@@ -9,7 +9,13 @@ import {
 import { cn } from "@/lib/utils";
 import type { RepoSuggestionColor } from "@squashai/api/agent/types";
 import * as Icons from "lucide-react";
-import type { ChatSuggestion } from "./types";
+
+export interface ChatSuggestion {
+  title: string;
+  prompt: string;
+  icon: string;
+  color: RepoSuggestionColor;
+}
 
 const COLOR_CLASSES: Record<RepoSuggestionColor, string> = {
   red: "text-red-500",
@@ -98,16 +104,14 @@ export function ChatEmptyState({
             );
           })}
 
-          <Tooltip delayDuration={150}>
+          <Tooltip>
             <TooltipTrigger asChild>
               <Suggestion
                 suggestion="Upload a design screenshot"
                 onClick={uploadScreenshot}
-                variant="ghost"
-                size="sm"
-                className="flex h-auto items-center gap-2 rounded-full border border-dashed px-4 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                // className="border-dashed text-muted-foreground"
               >
-                <Icons.Image className="h-4 w-4" />
+                <Icons.Image className="h-4 w-4 text-muted-foreground" />
                 Upload screenshot
               </Suggestion>
             </TooltipTrigger>

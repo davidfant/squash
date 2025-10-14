@@ -33,6 +33,9 @@ export async function generateRepoSuggestionsFromScreenshot(
         content: [{ type: "image", image: screenshotUrl }],
       },
     ],
+    providerOptions: {
+      google: { thinkingConfig: { thinkingBudget: 0 } },
+    },
   });
   return object.suggestions;
 }

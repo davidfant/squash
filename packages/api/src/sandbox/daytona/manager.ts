@@ -362,6 +362,7 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
     ]);
 
     let screenshot: { url: string } | null = null;
+    let suggestions: schema.RepoSuggestion[] | null = null;
     const newRepoId = randomUUID();
     const gitUrl = `s3://repos/forks/${newRepoId}`;
     const defaultBranch = "master";
@@ -387,6 +388,9 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
           )
             .then((r) => r.json<{ url: string }>())
             .catch(() => null);
+          suggestions = screenshot
+            ? await generateRepoSuggestionsFromScreenshot(screenshot.url)
+            : null;
 
           yield {
             type: "stdout",
@@ -449,10 +453,6 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
           if (!repo) throw new Error(`Repo not found: ${newRepoId}`);
           if (!branch)
             throw new Error(`Branch not found: ${options.branch.id}`);
-
-          const suggestions = screenshot
-            ? await generateRepoSuggestionsFromScreenshot(screenshot.url)
-            : null;
 
           await db.insert(schema.repo).values({
             name: forkOptions?.name ?? branch.title,

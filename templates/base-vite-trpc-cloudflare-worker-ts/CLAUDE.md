@@ -136,7 +136,7 @@ const result = await composio.tools.execute("GOOGLECALENDAR_CREATE_EVENT", {
     ...
   },
 });
-if (!result.successfull) {
+if (!result.successful) {
   console.error(result.error);
   return:
 }
@@ -610,6 +610,250 @@ namespace GoogleCalendarListEvents {
     entryPointType: string;
     label: string;
     uri: string;
+  }
+}
+
+// tool slug: GOOGLECALENDAR_LIST_CALENDARS
+namespace GoogleCalendarListCalendars {
+  /**
+   * Retrieves a paginated list of calendars from the user's calendar list.
+   * @slug composio.googlecalendar_list_calendars
+   */
+  export interface Input {
+    /**
+     * Maximum number of calendars to return per page. Maximum allowed value is 250.
+     * @default 100
+     * @example 50
+     */
+    maxResults?: number;
+
+    /**
+     * Minimum access role the user must have for the returned calendars.
+     * Allowed values: "freeBusyReader" | "reader" | "writer" | "owner"
+     * @example "reader"
+     */
+    minAccessRole?: string;
+
+    /**
+     * Token for retrieving a specific page of results from a previous list operation.
+     * @example "Cg0IABCw9Jj0zQEaJ..."
+     */
+    pageToken?: string;
+
+    /**
+     * Include calendar list entries deleted from the user's list.
+     * Deleted entries are returned with the `deleted` field set to true.
+     * When using `syncToken`, deleted (and hidden) entries changed since the previous list are always included,
+     * and this parameter must not be set to false.
+     * @default false
+     */
+    showDeleted?: boolean;
+
+    /**
+     * Include calendars hidden in the user interface.
+     * When using `syncToken`, hidden (and deleted) entries changed since the previous list are always included,
+     * and this parameter must not be set to false.
+     * @default false
+     */
+    showHidden?: boolean;
+
+    /**
+     * Sync token from a previous list request's `nextSyncToken` to retrieve only entries changed since the last sync.
+     * When provided, only `syncToken` and optionally `pageToken` are used; other filters are ignored.
+     * `minAccessRole` cannot be combined with `syncToken`.
+     * @example "CP_T6IWpp5ADEhtiam9ybi5zb2RlcmJlcmc5N0BnbWFpbC5jb20="
+     */
+    syncToken?: string;
+  }
+
+  export interface Output {
+    /**
+     * Whether the API call succeeded.
+     * @example true
+     */
+    successful: boolean;
+
+    /**
+     * The data returned by the API.
+     */
+    data: {
+      response_data: CalendarList;
+    };
+
+    /**
+     * Error message if the call failed.
+     * @example null
+     */
+    error: string | null;
+
+    /**
+     * Internal log identifier for tracing requests.
+     * @example "log_YjX7O_auWoa6"
+     */
+    log_id: string;
+  }
+
+  /**
+   * The full list of calendars and sync state.
+   */
+  export interface CalendarList {
+    /**
+     * Entity tag of the collection.
+     * @example "\"p33vt7q45l6jp00o\""
+     */
+    etag: string;
+
+    /**
+     * Type of the collection returned.
+     * @example "calendar#calendarList"
+     */
+    kind: string;
+
+    /**
+     * Token to use for the next incremental sync.
+     * @example "CP_T6IWpp5ADEhtiam9ybi5zb2RlcmJlcmc5N0BnbWFpbC5jb20="
+     */
+    nextSyncToken?: string;
+
+    /**
+     * Calendars in the user's calendar list.
+     */
+    items: CalendarListEntry[];
+  }
+
+  export interface CalendarListEntry {
+    /**
+     * The user's access role on the calendar.
+     * Allowed: "freeBusyReader" | "reader" | "writer" | "owner"
+     * @example "owner"
+     */
+    accessRole: string;
+
+    /**
+     * Background color of the calendar in '#RRGGBB' format.
+     * @example "#f83a22"
+     */
+    backgroundColor: string;
+
+    /**
+     * ID of the color chosen for the calendar.
+     * @example "3"
+     */
+    colorId: string;
+
+    /**
+     * The conference properties for the calendar.
+     */
+    conferenceProperties: ConferenceProperties;
+
+    /**
+     * Default reminders for events on this calendar.
+     */
+    defaultReminders: DefaultReminder[];
+
+    /**
+     * Description of the calendar, if set.
+     * @example "Week numbers displayed weekly"
+     */
+    description?: string;
+
+    /**
+     * Entity tag of the calendar entry.
+     * @example "\"1445061190412000\""
+     */
+    etag: string;
+
+    /**
+     * Foreground color of the calendar in '#RRGGBB' format.
+     * @example "#000000"
+     */
+    foregroundColor: string;
+
+    /**
+     * Identifier of the calendar.
+     * @example "primary" | "p#weeknum@group.v.calendar.google.com"
+     */
+    id: string;
+
+    /**
+     * Type of the resource.
+     * @example "calendar#calendarListEntry"
+     */
+    kind: string;
+
+    /**
+     * Whether the calendar is currently selected/visible in the UI.
+     * @default false
+     */
+    selected?: boolean;
+
+    /**
+     * User's title for the calendar.
+     * @example "Week Numbers"
+     */
+    summary: string;
+
+    /**
+     * Time zone of the calendar.
+     * @example "Europe/Stockholm"
+     */
+    timeZone: string;
+
+    /**
+     * Notification settings for calendar-level notifications.
+     */
+    notificationSettings?: NotificationSettings;
+
+    /**
+     * Whether this calendar is the primary calendar of the user.
+     */
+    primary?: boolean;
+  }
+
+  export interface ConferenceProperties {
+    /**
+     * The types of conference solutions that are allowed for this calendar.
+     * @example ["hangoutsMeet"]
+     */
+    allowedConferenceSolutionTypes: string[];
+  }
+
+  export interface DefaultReminder {
+    /**
+     * Reminder method.
+     * Allowed: "email" | "popup"
+     * @example "popup"
+     */
+    method: string;
+
+    /**
+     * Number of minutes before the event when the reminder triggers.
+     * @example 30
+     */
+    minutes: number;
+  }
+
+  export interface NotificationSettings {
+    /**
+     * List of notification rules for the calendar.
+     */
+    notifications: Notification[];
+  }
+
+  export interface Notification {
+    /**
+     * Notification method.
+     * Allowed: "email" | "sms"
+     * @example "email"
+     */
+    method: string;
+
+    /**
+     * Type of notification.
+     * Allowed: "eventCreation" | "eventChange" | "eventCancellation" | "eventResponse"
+     * @example "eventCreation"
+     */
+    type: string;
   }
 }
 ```

@@ -76,7 +76,8 @@
 	},
 	"scripts": {
 		"build": "tsc -b && vite build",
-		"postinstall": "wrangler types",
+		"typegen": "wrangler types",
+		"postinstall": "pnpm typegen",
 		"deploy": "wrangler deploy",
 		"dev": "vite"
 	},

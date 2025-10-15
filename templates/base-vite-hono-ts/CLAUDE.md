@@ -7,7 +7,8 @@ Use pnpm as your package manager, not npm or yarn
 Store environment variables in `.dev.vars`. When updating `.dev.vars` always run `pnpm typegen` afterwards so that Cloudflare Worker TypeScript types are updated correctly.
 
 ## API best practices
-Make sure to always validate input such as params and json using `import { zValidator } from "@hono/zod-validator";`.
+- Make sure to always validate input such as params and json using `import { zValidator } from "@hono/zod-validator";`.
+- Make sure to always type the API route output strongly. This ensures that the React app can use the API in a type-safe way.
 
 ## Interacting with the API from the React App
 

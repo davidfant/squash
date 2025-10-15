@@ -3,7 +3,7 @@ import { trpc } from "./trpc";
 
 export function App() {
   const isConnected = trpc.composio.isConnected.useQuery({
-    toolkitSlug: "GITHUB",
+    toolkitSlug: "GOOGLECALENDAR",
   });
 
   const waitForConnect = trpc.composio.waitForConnect.useMutation({
@@ -35,7 +35,9 @@ export function App() {
 
       {isConnected.data === false && (
         <Button
-          onClick={() => createConnectLink.mutate({ toolkitSlug: "GITHUB" })}
+          onClick={() =>
+            createConnectLink.mutate({ toolkitSlug: "GOOGLECALENDAR" })
+          }
           disabled={isLoading}
         >
           {isLoading ? "Waiting for connection..." : "Connect"}

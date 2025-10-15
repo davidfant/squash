@@ -1,7 +1,7 @@
-import { api, useQuery } from "./api";
+import { trpc } from "./trpc";
 
 export function App() {
-  const res = useQuery(api.index.$get, { params: {} });
+  const res = trpc.index.useQuery();
   return (
     <div className="flex min-h-svh flex-col items-center justify-center space-y-4">
       <h1 className="text-4xl text-center">{res.data?.name} Starter Project</h1>

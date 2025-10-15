@@ -1,7 +1,16 @@
-import { Hono } from "hono";
+import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
+import { appRouter } from "./router";
+import { createContext } from "./trpc";
 
-const app = new Hono<{ Bindings: Env }>().get("/", (c) =>
-  c.json({ name: "API" })
-);
-export default new Hono().route("/api", app);
-export type AppType = typeof app;
+export default {
+  async fetch(request: Request, _env: Env, _ctx: ExecutionContext) {
+    return fetchRequestHandler({
+      endpoint: '/api/trpc',
+      req: request,
+      router: appRouter,
+      createContext,
+    });
+  },
+};
+
+export type AppRouter = typeof appRouter;

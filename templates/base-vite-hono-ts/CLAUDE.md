@@ -1,46 +1,39 @@
 ## Environment
 
-The current project is a Cloudflare Worker containing a Vite React app and a Hono API. This will be deployed in a Cloudflare Worker and must run in workerd.
+The current project is a Cloudflare Worker containing a Vite React app and a tRPC API. This will be deployed in a Cloudflare Worker and must run in workerd.
 
 Use pnpm as your package manager, not npm or yarn
 
 Store environment variables in `.dev.vars`. When updating `.dev.vars` always run `pnpm typegen` afterwards so that Cloudflare Worker TypeScript types are updated correctly.
 
 ## API best practices
-- Make sure to always validate input such as params and json using `import { zValidator } from "@hono/zod-validator";`.
-- Make sure to always type the API route output strongly. This ensures that the React app can use the API in a type-safe way.
+- Use tRPC procedures to define your API endpoints
+- Make sure to always validate input using Zod schemas with `.input()` on procedures
+- Make sure to always type the API route output strongly using `.output()` or by returning typed data. This ensures that the React app can use the API in a type-safe way.
 
 ## Interacting with the API from the React App
 
-There are two type-safe wrappers around React Query + Hono Client to interact with the API:
-`import { useQuery, useMutation } from "@/api";`
+The project uses tRPC with React Query integration for type-safe API calls:
+`import { trpc } from "@/trpc";`
 
-These helper hoooks keep your React code **fully type-safe** while hiding boilerplate.
+This provides **fully type-safe** API calls with automatic type inference from your tRPC router.
 
-**Core Ideas**
+**Core Concepts**
 
-| Hook          | What it wraps      | Success type automatically inferred from            | Error handling              |
-| ------------- | ------------------ | --------------------------------------------------- | --------------------------- |
-| `useQuery`    | `useReactQuery`    | **response body of the endpoint** (status **<400**) | Throws `Error` on `!res.ok` |
-| `useMutation` | `useReactMutation` | same as above                                       | Throws `Error` on `!res.ok` |
-
-Both hooks:
-
-1. **Reject** any 4xx/5xx response _(no union with `{ error : string }`)_.
-2. **Infer** the success payload from the endpoint’s Hono types.
-3. Expose the full React-Query options object **minus** `queryKey`, `queryFn`, or `mutationFn` (these are provided internally).
+- **Queries**: Use `trpc.[procedure].useQuery()` for fetching data
+- **Mutations**: Use `trpc.[procedure].useMutation()` for data modifications
+- Full TypeScript type safety from server to client with zero code generation
+- Automatic React Query integration with caching, refetching, and optimistic updates
 
 ---
 
 **Queries**
 
 ```tsx
-import { api, useQuery } from "@/api";
+import { trpc } from "@/trpc";
 
 function UserCard({ id }: { id: string }) {
-  const query = useQuery(api.users[":id"].$get, {
-    params: { id },
-  });
+  const query = trpc.users.getById.useQuery({ id });
 
   if (query.isLoading) return <Spinner />;
   if (query.isError) return <Error msg={query.error.message} />;
@@ -50,23 +43,24 @@ function UserCard({ id }: { id: string }) {
 
 Notes:
 
-- `params` **must match** the route params for the endpoint; types are enforced. If no params are required, you must provide an empty object
-- The returned `data` is already narrowed to the **success payload only**.
+- Input parameters are automatically typed based on your tRPC procedure's `.input()` schema
+- The returned `data` is automatically typed based on your procedure's return type
+- All standard React Query options are available (enabled, refetchInterval, etc.)
 
 ---
 
 **Mutations**
 
 ```tsx
-import { api, useMutation } from "@/api";
+import { trpc } from "@/trpc";
 
 function RenameUser({ id }: { id: string }) {
-  const utils = useQueryClient(); // from @tanstack/react-query
+  const utils = trpc.useUtils(); // tRPC utilities for cache management
 
-  const mutation = useMutation(api.users[":id"].$put, {
+  const mutation = trpc.users.update.useMutation({
     onSuccess: (data) => {
-      // 👉 data is { id:string; name:string }
-      utils.invalidateQueries([getUser, { id }]); // optimistic sync
+      // data is fully typed based on your procedure's return type
+      utils.users.getById.invalidate({ id }); // invalidate and refetch
     },
   });
 
@@ -75,7 +69,7 @@ function RenameUser({ id }: { id: string }) {
       onSubmit={(e) => {
         e.preventDefault();
         const name = new FormData(e.currentTarget).get("name") as string;
-        mutation.mutate({ param: { id }, json: { name } });
+        mutation.mutate({ id, name });
       }}
     >
       <input name="name" />
@@ -87,19 +81,46 @@ function RenameUser({ id }: { id: string }) {
 
 Notes:
 
-- `mutation.mutate({ param, json })` mirrors the endpoint signature.
-- On failure, `mutation.error` is the `Error` thrown in the wrapper.
+- `mutation.mutate()` accepts parameters matching your procedure's `.input()` schema
+- On failure, `mutation.error` contains the error details
+- Use `trpc.useUtils()` for cache management and optimistic updates
 
 ---
+
+**Defining tRPC Procedures**
+
+In [src/worker/router.ts](src/worker/router.ts), define your API endpoints:
+
+```typescript
+import { z } from "zod";
+import { publicProcedure, router } from "./trpc";
+
+export const appRouter = router({
+  users: router({
+    getById: publicProcedure
+      .input(z.object({ id: z.string() }))
+      .query(async ({ input }) => {
+        // Fetch user by ID
+        return { id: input.id, name: "John Doe" };
+      }),
+    update: publicProcedure
+      .input(z.object({ id: z.string(), name: z.string() }))
+      .mutation(async ({ input }) => {
+        // Update user
+        return { id: input.id, name: input.name };
+      }),
+  }),
+});
+
+export type AppRouter = typeof appRouter;
+```
 
 **Error Handling Pattern**
 
 ```tsx
 if (query.error) {
-  // query.error.message contains the status code
   return <Alert variant="destructive">{query.error.message}</Alert>;
 }
 ```
 
-Because the hook throws **before** decoding, you never see a partial JSON; the
-types stay pure.
+tRPC provides type-safe error handling with detailed error information automatically propagated to the client.

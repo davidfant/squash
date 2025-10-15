@@ -9,12 +9,12 @@ interface TemplateDefinition {
 }
 
 const templates = {
-  "base-vite-ts": {
-    sourcePrefix: "templates/base-vite-ts",
+  "base-vite-trpc-cloudflare-worker-ts": {
+    sourcePrefix: "templates/base-vite-trpc-cloudflare-worker-ts",
     defaultBranch: "master",
     snapshot: {
       type: "daytona",
-      snapshot: "base-vite-ts:v0.0.4",
+      snapshot: "base-vite-trpc-cloudflare-worker-ts:v0.0.1",
       port: 5173,
       cwd: "/repo",
       env: {},

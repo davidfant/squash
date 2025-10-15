@@ -121,7 +121,7 @@ export function CloneScreenshotDialog({
 
     // Create hidden base repo
     const newRepo = await createRepo.mutateAsync({
-      json: { template: "base-vite-ts", hidden: true },
+      json: { template: "base-vite-trpc-cloudflare-worker-ts", hidden: true },
     });
 
     // Create branch with screenshots and clone-screenshot state

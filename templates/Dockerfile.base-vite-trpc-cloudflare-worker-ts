@@ -1,19 +1,34 @@
-FROM node:20-alpine
+# syntax=docker/dockerfile:1.6
+###############################################################################
+# 1) Build stage – compiles native add-ons & installs global CLIs
+###############################################################################
+ARG NODE_VERSION=20
+FROM --platform=$BUILDPLATFORM node:${NODE_VERSION}-bookworm-slim AS build
 
-RUN apk add --no-cache python3 py3-pip git bash \
- && pip3 install --break-system-packages --no-cache-dir git-remote-s3 \
- && corepack enable
+# Minimal packages for native-add-on compilation & scripting
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      git                   \
+      python3 python3-pip   \
+      bash                  \
+      build-essential       \
+  && rm -rf /var/lib/apt/lists/*
 
+# Install git-remote-s3
+RUN pip3 install --break-system-packages --no-cache-dir git-remote-s3
+
+# Activate Corepack (pnpm / yarn)
+RUN corepack enable
+
+# -------- Global CLIs you need --------
 ARG SQUASH_CLI_VERSION=0.0.9-alpha.1
-RUN npm install -g @squashai/cli@$SQUASH_CLI_VERSION
+RUN npm i -g @squashai/cli@$SQUASH_CLI_VERSION
 
+# -------- Project dependencies --------
 WORKDIR /repo
+COPY package.json pnpm-lock.yaml wrangler.json ./
+RUN pnpm install --frozen-lockfile
+RUN rm -rf package.json pnpm-lock.yaml wrangler.json
 
-COPY package.json .
-COPY pnpm-lock.yaml .
-
-RUN pnpm install
-RUN rm -rf package.json pnpm-lock.yaml
 RUN git init
 
 ENV PORT=5173

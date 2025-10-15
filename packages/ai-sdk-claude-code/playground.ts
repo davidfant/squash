@@ -68,6 +68,20 @@ const q = query({
         },
       ],
     },
+    mcpServers: {
+      squash: {
+        type: "sdk",
+        name: "squash",
+        instance: {
+          type: "stdio",
+          command: "squash",
+          args: ["--agent", "claude-code"],
+          env: {
+            ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+          },
+        },
+      },
+    },
   },
 });
 for await (const msg of q) {

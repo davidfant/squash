@@ -30,13 +30,13 @@ function build_repo() {
     TEMPLATE_VERSION=$(cat package.json | jq -r '.version')
 
     GIT_URL=s3://repos/templates/$TEMPLATE_NAME
-    # if added, set, if not, add
-    # if git remote get-url origin; then
-    #   git remote set-url origin $GIT_URL
-    # else
-    #   git remote add origin $GIT_URL
-    # fi
-    # git push --tags
+    if git remote get-url origin; then
+      git remote set-url origin $GIT_URL
+    else
+      git remote add origin $GIT_URL
+    fi
+    git push --set-upstream origin master
+    git push --tags
 
     DOCKER_TAG="$TEMPLATE_NAME:v$TEMPLATE_VERSION"
     echo "Docker tag: $DOCKER_TAG"
@@ -80,6 +80,7 @@ function build_repo() {
 #   flyctl apps create $APP_NAME
 # fi
 
-build_repo base-vite-ts
+build_repo base-vite-trpc-cloudflare-worker-ts
+# build_repo base-vite-ts
 # build_repo replicator-vite-ts
 # build_node_image 20-alpine

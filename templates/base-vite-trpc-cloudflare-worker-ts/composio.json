@@ -1,0 +1,8 @@
+{
+  "toolkits": [
+    {
+      "slug": "GITHUB",
+      "authMethod": "OAUTH2"
+    }
+  ]
+}

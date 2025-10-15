@@ -1,9 +1,10 @@
 import { initTRPC } from "@trpc/server";
 import type { FetchCreateContextFnOptions } from "@trpc/server/adapters/fetch";
 
-export const createContext = (opts: FetchCreateContextFnOptions) => ({
+export const createContext = (opts: FetchCreateContextFnOptions, env: Env) => ({
   req: opts.req,
-  env: opts.resHeaders,
+  resHeaders: opts.resHeaders,
+  env,
 })
 
 export type Context = Awaited<ReturnType<typeof createContext>>;

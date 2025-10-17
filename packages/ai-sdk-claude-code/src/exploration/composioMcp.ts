@@ -124,6 +124,7 @@ server.registerTool(
     const payload = {
       connect_request_id: link.id,
       redirect_url: link.redirectUrl,
+      auth_config_id: authConfigId,
     };
     return {
       content: [{ type: "text", text: JSON.stringify(payload, null, 2) }],

@@ -5,7 +5,7 @@ import { createContext } from "./trpc";
 export default {
   async fetch(request: Request, env: Env, _ctx: ExecutionContext) {
     return fetchRequestHandler({
-      endpoint: '/api/trpc',
+      endpoint: "/api/trpc",
       req: request,
       router: appRouter,
       createContext: (opts) => createContext(opts, env),

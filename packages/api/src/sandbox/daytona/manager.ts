@@ -2,6 +2,7 @@ import { generateRepoSuggestionsFromScreenshot } from "@/agent/repo/suggestions"
 import type { ChatMessage } from "@/agent/types";
 import { createDatabase } from "@/database";
 import * as schema from "@/database/schema";
+import { createProject } from "@/lib/composio";
 import { logger } from "@/lib/logger";
 import { toAsyncIterator } from "@/lib/to-async-iterator";
 import { Daytona, Sandbox as DaytonaSandbox } from "@daytonaio/sdk";
@@ -65,7 +66,7 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
     return [
       {
         id: "create-sandbox",
-        title: "Start environment",
+        title: "Starting environment...",
         type: "function",
         function: async function* () {
           let sandbox = await that.getSandbox().catch(() => null);
@@ -132,7 +133,7 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
       },
       {
         id: "pull-latest-changes",
-        title: "Loading latest changes",
+        title: "Loading latest changes...",
         type: "function",
         function: async function* () {
           const db = createDatabase(env);
@@ -194,7 +195,7 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
       },
       {
         id: "install-squash-cli",
-        title: "Install Squash",
+        title: "Installling Squash...",
         dependsOn: ["create-sandbox"],
         type: "command",
         command: "npm",
@@ -204,19 +205,81 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
           `@squashai/cli@${env.SQUASH_CLI_VERSION}`,
         ],
       },
+      {
+        id: "setup-composio",
+        title: "Setting up integrations...",
+        dependsOn: ["create-sandbox"],
+        type: "function",
+        function: async function* () {
+          yield {
+            type: "stdout",
+            data: "Setting up Composio...\n",
+            timestamp: new Date().toISOString(),
+          };
+
+          const devVarsPath = path.join(options.config.cwd, ".dev.vars");
+          const devVarsBuffer = await downloadFileFromSandbox(
+            that.sandbox!.id,
+            devVarsPath
+          );
+          let devVarsString = devVarsBuffer.toString("utf-8");
+
+          const devVars: Record<string, string> = {};
+          for (const line of devVarsString.split(/\r?\n/)) {
+            const m = line.match(/^\s*([^#=\s]+)\s*=\s*(.*)\s*$/);
+            if (m) devVars[m[1]!] = m[2]!;
+          }
+
+          if (
+            devVars.COMPOSIO_API_KEY &&
+            devVars.COMPOSIO_PROJECT_ID &&
+            devVars.COMPOSIO_PLAYGROUND_USER_ID
+          ) {
+            yield {
+              type: "stdout",
+              data: "Using existing Composio setup...\n",
+              timestamp: new Date().toISOString(),
+            };
+            return;
+          }
+
+          yield {
+            type: "stdout",
+            data: "Creating new Composio project...\n",
+            timestamp: new Date().toISOString(),
+          };
+
+          const project = await createProject(options.branch.repoId);
+          devVarsString += `\nCOMPOSIO_PROJECT_ID=${project.id}`;
+          devVarsString += `\nCOMPOSIO_API_KEY=${project.api_key}`;
+          devVarsString += `\nCOMPOSIO_PLAYGROUND_USER_ID=playground-${randomUUID()}`;
+
+          const sandbox = await that.getSandbox();
+          await sandbox.fs.uploadFile(Buffer.from(devVarsString), devVarsPath);
+
+          yield {
+            type: "stdout",
+            data: "Created new Composio project...\n",
+            timestamp: new Date().toISOString(),
+          };
+        },
+      },
       ...options.config.tasks.install.map((task) => ({
         ...task,
         dependsOn: [
           ...(task.dependsOn ?? []),
           "create-sandbox",
+          "setup-composio",
           "pull-latest-changes",
         ],
       })),
       {
         id: "start-dev-server",
-        title: "Start development server",
+        title: "Starting development server...",
         dependsOn: [
           "create-sandbox",
+          "setup-composio",
+          "pull-latest-changes",
           ...options.config.tasks.install.map((task) => task.id),
         ],
         type: "function",
@@ -288,7 +351,7 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
       ...options.config.tasks.build,
       {
         id: "upload-static-files",
-        title: "Upload",
+        title: "Uploading...",
         type: "function",
         dependsOn: options.config.tasks.build.map((task) => task.id),
         function: async function* () {

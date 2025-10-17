@@ -427,13 +427,34 @@ importers:
       '@anthropic-ai/claude-agent-sdk':
         specifier: ^0.1.1
         version: 0.1.20(zod@4.1.12)
+      '@composio/core':
+        specifier: ^0.1.55
+        version: 0.1.55(ws@8.18.3)(zod@4.1.12)
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.20.1
+        version: 1.20.1
       commander:
         specifier: ^14.0.1
         version: 14.0.1
+      lodash.camelcase:
+        specifier: ^4.3.0
+        version: 4.3.0
+      lodash.upperfirst:
+        specifier: ^4.3.1
+        version: 4.3.1
       zod:
         specifier: ^4.0.16
         version: 4.1.12
     devDependencies:
+      '@types/json-schema':
+        specifier: ^7.0.15
+        version: 7.0.15
+      '@types/lodash.camelcase':
+        specifier: ^4.3.9
+        version: 4.3.9
+      '@types/lodash.upperfirst':
+        specifier: ^4.3.9
+        version: 4.3.9
       '@types/node':
         specifier: ^22.8.7
         version: 22.18.8
@@ -6475,9 +6496,28 @@ snapshots:
     transitivePeerDependencies:
       - ws
 
+  '@composio/core@0.1.55(ws@8.18.3)(zod@4.1.12)':
+    dependencies:
+      '@composio/client': 0.1.0-alpha.37
+      '@composio/json-schema-to-zod': 0.1.16(zod@4.1.12)
+      '@types/json-schema': 7.0.15
+      chalk: 4.1.2
+      openai: 5.23.2(ws@8.18.3)(zod@4.1.12)
+      pusher-js: 8.4.0
+      semver: 7.7.2
+      uuid: 13.0.0
+      zod: 4.1.12
+      zod-to-json-schema: 3.24.6(zod@4.1.12)
+    transitivePeerDependencies:
+      - ws
+
   '@composio/json-schema-to-zod@0.1.16(zod@3.25.76)':
     dependencies:
       zod: 3.25.76
+
+  '@composio/json-schema-to-zod@0.1.16(zod@4.1.12)':
+    dependencies:
+      zod: 4.1.12
 
   '@cspotcode/source-map-support@0.8.1':
     dependencies:

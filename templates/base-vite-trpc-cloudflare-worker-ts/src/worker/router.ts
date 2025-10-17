@@ -1,9 +1,7 @@
-import { Composio } from "@composio/core";
 import { env } from "cloudflare:workers";
 import { z } from "zod";
+import { composio } from "./composio";
 import { procedure, router } from "./trpc";
-
-const composio = new Composio({ apiKey: env.COMPOSIO_API_KEY });
 
 export const appRouter = router({
   composio: router({
@@ -11,7 +9,7 @@ export const appRouter = router({
       .input(z.object({ toolkitSlug: z.string() }))
       .query(async ({ input }) => {
         const page = await composio.connectedAccounts.list({
-          userIds: [env.COMPOSIO_USER_ID],
+          userIds: [env.COMPOSIO_PLAYGROUND_USER_ID],
           toolkitSlugs: [input.toolkitSlug],
           statuses: ["ACTIVE"],
           limit: 1,
@@ -21,15 +19,16 @@ export const appRouter = router({
     createConnectLink: procedure
       .input(z.object({ toolkitSlug: z.string() }))
       .mutation(async ({ input }) => {
-        const authConfigId =
-          env[`COMPOSIO_${input.toolkitSlug}_AUTH_CONFIG_ID`];
-        if (!authConfigId) {
-          throw new Error(`Auth config id for ${input.toolkitSlug} not found`);
+        const authConfigs = await composio.authConfigs.list({
+          toolkit: input.toolkitSlug,
+        });
+        if (!authConfigs.items.length) {
+          throw new Error(`Toolkit ${input.toolkitSlug} not connected`);
         }
 
         const req = await composio.connectedAccounts.link(
-          env.COMPOSIO_USER_ID,
-          authConfigId
+          env.COMPOSIO_PLAYGROUND_USER_ID,
+          authConfigs.items[0]!.id
         );
         if (!req.redirectUrl) {
           throw new Error("Failed to create connect link");

@@ -1,4 +1,3 @@
-import { parseEnvFile } from "@/lib/parse-env-file";
 import type { ClaudeCodeCLIOptions, ClaudeCodeSession } from "@/schema";
 import {
   query,
@@ -8,7 +7,8 @@ import {
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { subagents } from "./subagents";
+import { parseEnvFile } from "../../lib/parse-env-file.js";
+import { subagents } from "./subagents.js";
 
 const MAX_RETRIES = 3;
 
@@ -63,7 +63,7 @@ export async function runClaudeCode(
     args: [
       path.resolve(
         path.dirname(fileURLToPath(import.meta.url)),
-        "./composio.mcp.js"
+        "composio.mcp.js"
       ),
     ],
     env: parseEnvFile(path.join(req.cwd, ".dev.vars")),

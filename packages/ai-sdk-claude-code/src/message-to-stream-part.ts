@@ -37,6 +37,7 @@ export function messageToStreamPart(
   };
   let finishReason: LanguageModelV2FinishReason = "unknown";
   let providerMetadata: AnthropicProviderMetadata | undefined = undefined;
+  let subagents = new Set<string>();
 
   return (m: SDKMessage) => {
     if (m.type === "user") {
@@ -118,6 +119,10 @@ export function messageToStreamPart(
                       toolName: toToolName(value.content_block.name),
                     }
               );
+              if (value.content_block.name === "Task") {
+                console.log("XXX SUBAGENTS ADD", value.content_block.id);
+                subagents.add(value.content_block.id);
+              }
               return;
             }
 
@@ -397,15 +402,20 @@ export function messageToStreamPart(
         }
 
         case "message_stop": {
-          controller.enqueue({
-            type: "finish",
-            finishReason,
-            usage,
-            providerMetadata,
-          });
-          usage.inputTokens = undefined;
-          usage.outputTokens = undefined;
-          usage.totalTokens = undefined;
+          console.log("XXX MESSAGE STOP", m.parent_tool_use_id, subagents);
+          if (m.parent_tool_use_id) {
+            subagents.delete(m.parent_tool_use_id);
+          } else if (!subagents.size) {
+            controller.enqueue({
+              type: "finish",
+              finishReason,
+              usage,
+              providerMetadata,
+            });
+            usage.inputTokens = undefined;
+            usage.outputTokens = undefined;
+            usage.totalTokens = undefined;
+          }
           return;
         }
 

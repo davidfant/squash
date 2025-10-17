@@ -100,6 +100,7 @@ export class ClaudeCodeLanguageModel implements LanguageModelV2 {
             },
           });
           for await (const msg of q) process(msg);
+          console.log("XXX DONE PROCESSING!!!");
         } catch (error) {
           console.error("Error in ClaudeCodeLanguageModel.doStream", error);
         } finally {

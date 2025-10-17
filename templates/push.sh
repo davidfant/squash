@@ -14,13 +14,13 @@ quiet() {
 }
 
 daytona_() {
-  # echo "Daytona dev: $@"
-  # daytona login --api-key $DAYTONA_API_KEY_DEV
-  # daytona "$@"
-
-  echo "Daytona prod: $@"
-  daytona login --api-key $DAYTONA_API_KEY_PROD
+  echo "Daytona dev: $@"
+  daytona login --api-key $DAYTONA_API_KEY_DEV
   daytona "$@"
+
+  # echo "Daytona prod: $@"
+  # daytona login --api-key $DAYTONA_API_KEY_PROD
+  # daytona "$@"
 }
 
 function build_repo() {
@@ -40,7 +40,7 @@ function build_repo() {
 
     DOCKER_TAG="$TEMPLATE_NAME:v$TEMPLATE_VERSION"
     echo "Docker tag: $DOCKER_TAG"
-    quiet docker build \
+    docker build \
       --platform linux/amd64 \
       --build-arg SQUASH_CLI_VERSION=$SQUASH_CLI_VERSION \
       --tag $DOCKER_TAG \
@@ -54,7 +54,9 @@ function build_repo() {
     # FLY_DOCKER_TAG="registry.fly.io/$APP_NAME:$DOCKER_TAG"
     # docker tag $DOCKER_TAG $FLY_DOCKER_TAG
     # docker push $DOCKER_TAG
-    daytona_ snapshot push "$DOCKER_TAG" --name "$DOCKER_TAG" --entrypoint "sleep infinity" --disk 1 || echo "Did not push snapshot"
+    export NO_PROXY=cr.app.daytona.io,localhost,127.0.0.1
+
+    daytona_ snapshot push "$DOCKER_TAG" --name "$DOCKER_TAG" --entrypoint "sleep infinity" --memory 2 --disk 1 || echo "Did not push snapshot"
   popd
 }
 

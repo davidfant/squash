@@ -131,6 +131,7 @@ export function CloneScreenshotDialog({
         message: {
           parts: [
             { type: "text", text: "Clone this screenshot" },
+            // { type: "text", text: "show me my google calendar events" },
             ...uploads.files.map((f) => ({
               type: "file" as const,
               url: f.url,
@@ -166,6 +167,37 @@ export function CloneScreenshotDialog({
           </DialogDescription>
         </DialogHeader>
 
+        {/* <Button
+          onClick={async () => {
+            const newRepo = await createRepo.mutateAsync({
+              json: {
+                template: "base-vite-trpc-cloudflare-worker-ts",
+                hidden: false,
+              },
+            });
+
+            // await createBranch.mutateAsync({
+            //   param: { repoId: newRepo.id },
+            //   json: {
+            //     message: {
+            //       parts: [
+            //         { type: "text", text: "Clone this screenshot" },
+            //         // { type: "text", text: "show me my google calendar events" },
+            //         ...uploads.files.map((f) => ({
+            //           type: "file" as const,
+            //           url: f.url,
+            //           mediaType: f.mediaType,
+            //           filename: f.filename,
+            //         })),
+            //         { type: "data-AgentState", data: { type: "clone-screenshot" } },
+            //       ],
+            //     },
+            //   },
+            // });
+          }}
+        >
+          Test
+        </Button> */}
         {/* Hidden file input */}
         {uploads.input}
 

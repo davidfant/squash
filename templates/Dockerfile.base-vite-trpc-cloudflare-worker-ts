@@ -3,7 +3,7 @@
 # 1) Build stage – compiles native add-ons & installs global CLIs
 ###############################################################################
 ARG NODE_VERSION=20
-FROM --platform=$BUILDPLATFORM node:${NODE_VERSION}-bookworm-slim AS build
+FROM node:${NODE_VERSION}-bookworm-slim AS build
 
 # Minimal packages for native-add-on compilation & scripting
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -20,14 +20,14 @@ RUN pip3 install --break-system-packages --no-cache-dir git-remote-s3
 RUN corepack enable
 
 # -------- Global CLIs you need --------
-ARG SQUASH_CLI_VERSION=0.0.9-alpha.1
+ARG SQUASH_CLI_VERSION=0.1.0-alpha.1
 RUN npm i -g @squashai/cli@$SQUASH_CLI_VERSION
 
 # -------- Project dependencies --------
 WORKDIR /repo
 COPY package.json pnpm-lock.yaml wrangler.json ./
 RUN pnpm install --frozen-lockfile
-RUN rm -rf package.json pnpm-lock.yaml wrangler.json
+RUN rm -rf package.json pnpm-lock.yaml wrangler.json update-check v8-compile-cache-*
 
 RUN git init
 

@@ -14,7 +14,11 @@ import { setTimeout } from "node:timers/promises";
 import escape from "shell-escape";
 import { BaseSandboxManagerDurableObject } from "../base";
 import type { Sandbox } from "../types";
-import { downloadFileFromSandbox, uploadSandboxFileToDeployment } from "./api";
+import {
+  downloadFileFromSandbox,
+  fileExists,
+  uploadSandboxFileToDeployment,
+} from "./api";
 
 export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
   Sandbox.Snapshot.Config.Daytona,
@@ -218,11 +222,16 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
           };
 
           const devVarsPath = path.join(options.config.cwd, ".dev.vars");
-          const devVarsBuffer = await downloadFileFromSandbox(
-            that.sandbox!.id,
-            devVarsPath
-          );
-          let devVarsString = devVarsBuffer.toString("utf-8");
+          let devVarsString = await (async () => {
+            const exists = await fileExists(that.sandbox!.id, devVarsPath);
+            if (!exists) return "";
+
+            const buffer = await downloadFileFromSandbox(
+              that.sandbox!.id,
+              devVarsPath
+            );
+            return buffer.toString("utf-8");
+          })();
 
           const devVars: Record<string, string> = {};
           for (const line of devVarsString.split(/\r?\n/)) {
@@ -249,7 +258,7 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
             timestamp: new Date().toISOString(),
           };
 
-          const project = await createProject(options.branch.repoId);
+          const project = await createProject(options.branch.id);
           devVarsString += `\nCOMPOSIO_PROJECT_ID=${project.id}`;
           devVarsString += `\nCOMPOSIO_API_KEY=${project.api_key}`;
           devVarsString += `\nCOMPOSIO_PLAYGROUND_USER_ID=playground-${randomUUID()}`;

@@ -7,7 +7,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { RepoSuggestionColor } from "@squashai/api/agent/types";
-import kebabCase from "lodash.kebabCase";
+import kebabCase from "lodash.kebabcase";
 
 export interface ChatSuggestion {
   title: string;

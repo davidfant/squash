@@ -12,7 +12,7 @@ export const createProject = (repoId: string) =>
     {
       method: "POST",
       headers: {
-        "x-api-key": env.COMPOSIO_ORGANIZATION_ACCESS_TOKEN,
+        "x-org-api-key": env.COMPOSIO_ORGANIZATION_ACCESS_TOKEN,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ name: repoId, should_create_api_key: true }),

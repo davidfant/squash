@@ -35,7 +35,14 @@ function streamInner(params: {
   return createUIMessageStream<ChatMessage>({
     // originalMessages: params.messages, // needed for generateId to be called
     generateId: randomUUID,
-    onFinish: ({ responseMessage }) => params.onFinish(responseMessage),
+    onFinish: ({ responseMessage, ...args }) => {
+      console.log(
+        "XXX onFinish",
+        params.controller.signal.aborted,
+        JSON.stringify(responseMessage.parts, null, 2)
+      );
+      params.onFinish(responseMessage);
+    },
     execute: async ({ writer }) => {
       switch (state?.type) {
         case "implement":
@@ -178,6 +185,7 @@ export function streamAgent(params: {
         messages.push(newMessage);
       }
 
+      console.log("XXX FINISH 222", params.controller.signal.aborted);
       writer.write({ type: "finish" });
     },
   });

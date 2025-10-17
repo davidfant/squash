@@ -1,6 +1,6 @@
 {
   "name": "@squashai/cli",
-  "version": "0.0.9-alpha.1",
+  "version": "0.1.0-alpha.4",
   "bin": {
     "squash": "./bin/squash.js"
   },
@@ -21,7 +21,7 @@
     "commander": "^14.0.1",
     "lodash.camelcase": "^4.3.0",
     "lodash.upperfirst": "^4.3.1",
-    "zod": "^4.0.16"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/json-schema": "^7.0.15",

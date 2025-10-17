@@ -79,6 +79,7 @@ export async function streamClaudeCodeAgent(opts: {
           } catch {}
         }
       }
+      console.log("XXX agent stream finished...");
     }),
     messages: convertToModelMessages(opts.messages),
     tools,

@@ -36,7 +36,7 @@ export function MessageParts({
             // return null;
             return <Markdown key={idx}>{block.content}</Markdown>;
           case "reasoning":
-            return <ReasoningSummaries block={block} />;
+            return <ReasoningSummaries key={idx} block={block} />;
           // case "abort":
           //   return (
           //     <Alert className="text-muted-foreground">

@@ -20,6 +20,7 @@ import { ExtensionAuthPage } from "./routes/extension-auth";
 import { NewRepoFromProvider, NewRepoPage } from "./routes/new/repo";
 import { NewRepoManualPage } from "./routes/new/repo/manual";
 import { ReposPage } from "./routes/repos";
+import { Splash2Page } from "./routes/splash2";
 
 i18n.use(initReactI18next).init({
   lng: "default",
@@ -48,6 +49,7 @@ createRoot(document.getElementById("root")!).render(
             <Routes>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/invite/:inviteId" element={<InvitePage />} />
+              <Route path="/splash2" element={<Splash2Page />} />
               <Route
                 path="/playgrounds/:repoId/new"
                 element={<NewBranchFromRepoPage />}

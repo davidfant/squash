@@ -4,7 +4,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import camelCase from "lodash.camelcase";
 import upperFirst from "lodash.upperfirst";
 import { z } from "zod";
-import { convertSchemaToTypeScript } from "../../lib/convert-schema-to-typescript";
+import { convertSchemaToTypeScript } from "../../lib/convert-schema-to-typescript.js";
 
 const composio = new Composio({ apiKey: process.env.COMPOSIO_API_KEY! });
 

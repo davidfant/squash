@@ -199,7 +199,7 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
       },
       {
         id: "install-squash-cli",
-        title: "Installling Squash...",
+        title: "Installing Squash...",
         dependsOn: ["create-sandbox"],
         type: "command",
         command: "npm",
@@ -222,7 +222,7 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
           };
 
           const devVarsPath = path.join(options.config.cwd, ".dev.vars");
-          let devVarsString = await (async () => {
+          const devVarsString = await (async () => {
             const exists = await fileExists(that.sandbox!.id, devVarsPath);
             if (!exists) return "";
 
@@ -232,6 +232,7 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
             );
             return buffer.toString("utf-8");
           })();
+          let updatedDevVarsString = devVarsString;
 
           const devVars: Record<string, string> = {};
           for (const line of devVarsString.split(/\r?\n/)) {
@@ -239,38 +240,38 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
             if (m) devVars[m[1]!] = m[2]!;
           }
 
+          if (!devVars.TZ) updatedDevVarsString += `\nTZ=${env.TZ}`;
+
           if (
-            devVars.COMPOSIO_API_KEY &&
-            devVars.COMPOSIO_PROJECT_ID &&
-            devVars.COMPOSIO_PLAYGROUND_USER_ID
+            !devVars.COMPOSIO_API_KEY ||
+            !devVars.COMPOSIO_PROJECT_ID ||
+            !devVars.COMPOSIO_PLAYGROUND_USER_ID
           ) {
             yield {
               type: "stdout",
-              data: "Using existing Composio setup...\n",
+              data: "Creating new Composio project...\n",
               timestamp: new Date().toISOString(),
             };
-            return;
+
+            const project = await createProject(options.branch.id);
+            updatedDevVarsString += `\nCOMPOSIO_PROJECT_ID=${project.id}`;
+            updatedDevVarsString += `\nCOMPOSIO_API_KEY=${project.api_key}`;
+            updatedDevVarsString += `\nCOMPOSIO_PLAYGROUND_USER_ID=playground-${randomUUID()}`;
+
+            yield {
+              type: "stdout",
+              data: "Created new Composio project...\n",
+              timestamp: new Date().toISOString(),
+            };
           }
 
-          yield {
-            type: "stdout",
-            data: "Creating new Composio project...\n",
-            timestamp: new Date().toISOString(),
-          };
-
-          const project = await createProject(options.branch.id);
-          devVarsString += `\nCOMPOSIO_PROJECT_ID=${project.id}`;
-          devVarsString += `\nCOMPOSIO_API_KEY=${project.api_key}`;
-          devVarsString += `\nCOMPOSIO_PLAYGROUND_USER_ID=playground-${randomUUID()}`;
-
-          const sandbox = await that.getSandbox();
-          await sandbox.fs.uploadFile(Buffer.from(devVarsString), devVarsPath);
-
-          yield {
-            type: "stdout",
-            data: "Created new Composio project...\n",
-            timestamp: new Date().toISOString(),
-          };
+          if (updatedDevVarsString !== devVarsString) {
+            const sandbox = await that.getSandbox();
+            await sandbox.fs.uploadFile(
+              Buffer.from(updatedDevVarsString),
+              devVarsPath
+            );
+          }
         },
       },
       ...options.config.tasks.install.map((task) => ({

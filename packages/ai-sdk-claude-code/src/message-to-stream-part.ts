@@ -40,10 +40,28 @@ export function messageToStreamPart(
   let subagents = new Set<string>();
 
   return (m: SDKMessage) => {
-    if (m.type === "user") {
+    if (
+      m.type === "user" ||
+      (m.type === "assistant" && !!m.parent_tool_use_id)
+    ) {
       if (Array.isArray(m.message.content)) {
         for (const part of m.message.content) {
           switch (part.type) {
+            case "tool_use": {
+              const id = String(part.id);
+              controller.enqueue({
+                id,
+                type: "tool-input-start",
+                toolName: toToolName(part.name),
+              });
+              controller.enqueue({
+                id,
+                type: "tool-input-delta",
+                delta: JSON.stringify(part.input),
+              });
+              controller.enqueue({ id, type: "tool-input-end" });
+              break;
+            }
             case "tool_result": {
               const tc = contentBlocks
                 .filter((cb) => cb.type === "tool-call")
@@ -55,6 +73,7 @@ export function messageToStreamPart(
                 result: part.content,
                 providerExecuted: true,
               });
+              break;
             }
           }
         }
@@ -120,7 +139,7 @@ export function messageToStreamPart(
                     }
               );
               if (value.content_block.name === "Task") {
-                console.log("XXX SUBAGENTS ADD", value.content_block.id);
+                // console.log("XXX SUBAGENTS ADD", value.content_block.id);
                 subagents.add(value.content_block.id);
               }
               return;
@@ -370,21 +389,23 @@ export function messageToStreamPart(
         }
 
         case "message_start": {
-          usage.inputTokens = value.message.usage.input_tokens;
-          usage.cachedInputTokens =
-            value.message.usage.cache_read_input_tokens ?? undefined;
+          if (!m.parent_tool_use_id) {
+            usage.inputTokens = value.message.usage.input_tokens;
+            usage.cachedInputTokens =
+              value.message.usage.cache_read_input_tokens ?? undefined;
 
-          providerMetadata = {
-            usage: value.message.usage,
-            cacheCreationInputTokens:
-              value.message.usage.cache_creation_input_tokens ?? null,
-          };
+            providerMetadata = {
+              usage: value.message.usage,
+              cacheCreationInputTokens:
+                value.message.usage.cache_creation_input_tokens ?? null,
+            };
 
-          controller.enqueue({
-            type: "response-metadata",
-            id: value.message.id ?? undefined,
-            modelId: value.message.model ?? undefined,
-          });
+            controller.enqueue({
+              type: "response-metadata",
+              id: value.message.id ?? undefined,
+              modelId: value.message.model ?? undefined,
+            });
+          }
 
           return;
         }
@@ -402,7 +423,7 @@ export function messageToStreamPart(
         }
 
         case "message_stop": {
-          console.log("XXX MESSAGE STOP", m.parent_tool_use_id, subagents);
+          // console.log("XXX MESSAGE STOP", m.parent_tool_use_id, subagents);
           if (m.parent_tool_use_id) {
             subagents.delete(m.parent_tool_use_id);
           } else if (!subagents.size) {

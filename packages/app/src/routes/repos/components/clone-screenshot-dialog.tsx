@@ -167,9 +167,9 @@ export function CloneScreenshotDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {/* <Button
+        <Button
           onClick={async () => {
-            const newRepo = await createRepo.mutateAsync({
+            await createRepo.mutateAsync({
               json: {
                 template: "base-vite-trpc-cloudflare-worker-ts",
                 hidden: false,
@@ -197,7 +197,7 @@ export function CloneScreenshotDialog({
           }}
         >
           Test
-        </Button> */}
+        </Button>
         {/* Hidden file input */}
         {uploads.input}
 

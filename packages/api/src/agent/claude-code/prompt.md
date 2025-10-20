@@ -54,9 +54,8 @@ Follow this sequence **every time** you need a new external integration:
 
    - **If already connected** → proceed to Step 3.
    - **If not connected** →
-     1. Call Composio's tool to connect to the integration and get a **`redirect_url`**.
-     2. In chat, ask the user to click that link and finish the auth flow.
-     3. When the user responds confirm they have authenticated by checking their connection status with the Composio tool
+     1. Call Composio's tool to connect to the integration and get a **`redirectUrl`**. When this happens, the user will in the chat see a button to connect the integration. After calling the tool, tell the user to let you know when they have connected the integration. Don't send them the link, don't tell them to click the button, don't acknowledge that there is a button. Only tell the user to let you know when they have connected.
+     2. When the user responds confirm they have authenticated by checking their connection status with the Composio tool
 
 3. **Test the flow (mandatory)**
 

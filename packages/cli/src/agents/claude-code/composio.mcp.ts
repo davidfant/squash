@@ -26,13 +26,13 @@ used to solve a particular problem, user query or complete a task. Usage guideli
 
 • Use this tool whenever the user wants to integrate a new external app. Post this, keep coming back to this tool to discover new tools.
 • If the user pivots to a different use case in same chat, you MUST call this tool again with the new use case.
-• Specify the use_case with a normalized description of the problem, query, or task.
+• Specify the useCase with a normalized description of the problem, query, or task.
   Be clear and precise so the system can find the most relevant tools. Queries can
   involve one or multiple apps, and be simple or complex — from a quick action to a
   multi-step, cross-app workflow.
 
 Example: User query: "send an email to John welcoming him"
-Search call: { use_case: "send an email to someone" }
+Search call: { useCase: "send an email to someone" }
 
 Response:
 
@@ -40,12 +40,12 @@ Response:
   tool_slug, description, input schema, and related tools for prerequisites, alternatives,
   or next steps. Includes execution order and a brief reasoning.
       `.trim(),
-    inputSchema: { use_case: z.string() },
+    inputSchema: { useCase: z.string() },
     // outputSchema: { results: z.any() },
   },
   async (args) => {
     const tools = await composio.tools.getRawComposioTools({
-      search: args.use_case,
+      search: args.useCase,
     });
     const resp = await composio.connectedAccounts.list({
       userIds: [process.env.COMPOSIO_PLAYGROUND_USER_ID!],
@@ -86,32 +86,47 @@ server.registerTool(
   "connect_to_toolkit",
   {
     title: "Start auth flow for a toolkit",
-    description: `Create/manage connections to user's toolkits. If search_tools finds no active connection for a toolkit, call this with the toolkit slug and get auth redirect_url in response. Supports OAuth (default/custom), API Key, Bearer Token, Basic Auth, hybrid, and no-auth. Batch-safe, isolates errors, allows selective re-init, returns per-app results and summary.`,
-    inputSchema: { toolkit_slug: z.string() },
-    outputSchema: { redirect_url: z.string(), connect_request_id: z.string() },
+    description: `Create/manage connections to user's toolkits. If search_tools finds no active connection for a toolkit, call this with the toolkit slug and get auth redirectUrl in response. Supports OAuth (default/custom), API Key, Bearer Token, Basic Auth, hybrid, and no-auth. Batch-safe, isolates errors, allows selective re-init, returns per-app results and summary.`,
+    inputSchema: { toolkitSlug: z.string() },
+    outputSchema: {
+      redirectUrl: z.string(),
+      connectRequestId: z.string(),
+      toolkit: z.object({
+        name: z.string(),
+        logoUrl: z.string(),
+        authConfigId: z.string(),
+      }),
+    },
   },
-  async ({ toolkit_slug }) => {
-    const authConfigId = await (async () => {
-      const existing = await composio.authConfigs.list({
-        toolkit: toolkit_slug,
-      });
-      if (existing.items.length) return existing.items[0]!.id;
+  async ({ toolkitSlug }) => {
+    const [toolkit, authConfigId] = await Promise.all([
+      composio.toolkits.get(toolkitSlug),
+      (async () => {
+        const existing = await composio.authConfigs.list({
+          toolkit: toolkitSlug,
+        });
+        if (existing.items.length) return existing.items[0]!.id;
 
-      const created = await composio.authConfigs.create(toolkit_slug, {
-        type: "use_composio_managed_auth",
-      });
+        const created = await composio.authConfigs.create(toolkitSlug, {
+          type: "use_composio_managed_auth",
+        });
 
-      return created.id;
-    })();
+        return created.id;
+      })(),
+    ]);
 
     const link = await composio.connectedAccounts.link(
       process.env.COMPOSIO_PLAYGROUND_USER_ID!,
       authConfigId
     );
     const payload = {
-      connect_request_id: link.id,
-      redirect_url: link.redirectUrl,
-      auth_config_id: authConfigId,
+      toolkit: {
+        name: toolkit.name,
+        logoUrl: `https://logos.composio.dev/api/${toolkitSlug}`,
+        authConfigId: authConfigId,
+      },
+      connectRequestId: link.id,
+      redirectUrl: link.redirectUrl,
     };
     return {
       content: [{ type: "text", text: JSON.stringify(payload, null, 2) }],
@@ -234,31 +249,28 @@ Use this tool to execute up to 20 tools in parallel across apps. Response contai
 * Tools should be used highly parallelly.
     `.trim(),
     inputSchema: {
-      tool_calls: z.array(
+      toolCalls: z.array(
         z.object({
-          tool_slug: z.string(),
+          toolSlug: z.string(),
+          reason: z.string(),
           arguments: z.record(z.string(), z.any()),
         })
       ),
     },
     outputSchema: {
-      results: z.array(z.object({ tool_slug: z.string(), result: z.any() })),
+      results: z.array(z.object({ toolSlug: z.string(), result: z.any() })),
     },
   },
-  async ({ tool_calls }) => {
+  async ({ toolCalls }) => {
     const results = await Promise.all(
-      tool_calls.map(async (tc) => {
-        const result = await composio.tools.execute(tc.tool_slug, {
+      toolCalls.map(async (tc) => {
+        const r = await composio.tools.execute(tc.toolSlug, {
           userId: process.env.COMPOSIO_PLAYGROUND_USER_ID!,
           arguments: tc.arguments,
         });
         return {
-          tool_slug: tc.tool_slug,
-          result: {
-            successful: result.successful,
-            error: result.error,
-            data: result.data,
-          },
+          toolSlug: tc.toolSlug,
+          result: { successful: r.successful, error: r.error, data: r.data },
         };
       })
     );

@@ -5,8 +5,12 @@ import {
   EyeIcon,
   FilePenIcon,
   FolderSearch,
+  ListTodoIcon,
   SearchIcon,
   TerminalIcon,
+  TriangleAlertIcon,
+  UnplugIcon,
+  ZapIcon,
   type LucideIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -16,6 +20,7 @@ import { FileBadge } from "../FileBadge";
 interface TextBlock {
   type: "text";
   content: string;
+  streaming: boolean;
 }
 
 export interface ReasoningBlock {
@@ -32,6 +37,12 @@ interface GitCommitBlock {
   type: "commit";
   title: string;
   sha: string;
+}
+
+export interface ConnectToToolkitBlock {
+  type: "connect-to-toolkit";
+  redirectUrl: string;
+  toolkit: { name: string; logoUrl: string };
 }
 
 interface LoadingBlock {
@@ -54,6 +65,7 @@ type Block =
   | TextBlock
   | ReasoningBlock
   | AbortBlock
+  | ConnectToToolkitBlock
   | GitCommitBlock
   | EventBlock
   | LoadingBlock;
@@ -120,7 +132,11 @@ export function groupMessageEvents(
       case "text":
         if (part.text.trim()) {
           flushEvents();
-          blocks.push({ type: "text", content: part.text });
+          blocks.push({
+            type: "text",
+            content: part.text,
+            streaming: part.state === "streaming",
+          });
         }
         break;
       case "tool-AnalyzeScreenshot": {
@@ -128,6 +144,7 @@ export function groupMessageEvents(
         blocks.push({
           type: "text",
           content: "Finished analyzing the screenshot...",
+          streaming: false,
         });
         break;
       }
@@ -256,6 +273,79 @@ export function groupMessageEvents(
         });
         break;
       }
+      case "tool-ClaudeCodeTask": {
+        currentEvents.push({
+          icon: ListTodoIcon,
+          loading: isToolLoading(part.state),
+          label: part.input?.description,
+        });
+        break;
+      }
+      case "tool-ClaudeCodemcp__composio__search_tools": {
+        currentEvents.push({
+          icon: SearchIcon,
+          loading: isToolLoading(part.state),
+          label: (
+            <>
+              <span>Search for</span>
+              {!!part.input?.useCase && (
+                <Badge variant="outline" className="border-none bg-muted">
+                  {part.input?.useCase}
+                </Badge>
+              )}
+            </>
+          ),
+        });
+        break;
+      }
+      case "tool-ClaudeCodemcp__composio__check_connection_status": {
+        currentEvents.push({
+          icon: UnplugIcon,
+          loading: isToolLoading(part.state),
+          label: "Check connection status",
+        });
+        break;
+      }
+      case "tool-ClaudeCodemcp__composio__multi_execute_tool": {
+        part.input?.toolCalls?.map((tc) =>
+          currentEvents.push({
+            icon: ZapIcon,
+            loading: isToolLoading(part.state),
+            label: tc.reason,
+          })
+        );
+        break;
+      }
+      case "tool-ClaudeCodemcp__composio__connect_to_toolkit": {
+        if (part.state === "output-available") {
+          try {
+            const data = JSON.parse(part.output) as {
+              redirectUrl: string;
+              connectRequestId: string;
+              toolkit: { name: string; logoUrl: string; authConfigId: string };
+            };
+            flushEvents();
+            blocks.push({
+              type: "connect-to-toolkit",
+              redirectUrl: data.redirectUrl,
+              toolkit: data.toolkit,
+            });
+          } catch (error) {
+            console.warn(
+              "Failed to parse Composio connect to toolkit output:",
+              part
+            );
+            currentEvents.push({
+              icon: TriangleAlertIcon,
+              loading: false,
+              label: "Failed to connect to toolkit",
+            });
+          }
+        }
+        break;
+      }
+      case "tool-ClaudeCodemcp__composio__get_connected_tools":
+        break;
       case "tool-GitCommit": {
         if (part.state === "output-available") {
           flushEvents();
@@ -290,6 +380,8 @@ export function groupMessageEvents(
       last?.type === "events" &&
       !last.events.some((ev) => ev.loading)
     ) {
+      blocks.push({ type: "loading" });
+    } else if (last?.type === "text" && !last.streaming) {
       blocks.push({ type: "loading" });
     }
   }

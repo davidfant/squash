@@ -2,6 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { ChatMessage } from "@squashai/api/agent/types";
 import { useMemo } from "react";
 import { Markdown } from "../../../Markdown";
+import { ConnectToToolkitAlert } from "./ConnectToToolkitAlert";
 import { EventsCollapsible } from "./EventsCollapsible";
 import { GitCommitAlert } from "./GitCommitAlert";
 import { groupMessageEvents } from "./groupMessageEvents";
@@ -62,7 +63,9 @@ export function MessageParts({
               />
             );
           case "loading":
-            return <Skeleton className="h-4 w-48" />;
+            return <Skeleton key={idx} className="h-4 w-48" />;
+          case "connect-to-toolkit":
+            return <ConnectToToolkitAlert key={idx} block={block} />;
         }
       })}
     </div>

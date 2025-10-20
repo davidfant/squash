@@ -112,7 +112,8 @@ export async function streamClaudeCodeAgent(opts: {
   }
   const sessionDataPromise = opts.readSessionData(sessionId);
 
-  const shouldCommit = (await agentStream.toolCalls).some(
+  const toolCalls = await agentStream.toolCalls;
+  const shouldCommit = toolCalls.some(
     (t) =>
       !t.dynamic &&
       [
@@ -122,6 +123,10 @@ export async function streamClaudeCodeAgent(opts: {
         "ClaudeCodeNotebookEdit",
       ].includes(t.toolName)
   );
+  logger.debug("Should commit", {
+    shouldCommit,
+    toolNames: toolCalls.map((t) => t.toolName),
+  });
   if (shouldCommit) {
     const screenshotPromise = fetch(
       `${env.SCREENSHOT_API_URL}?url=${encodeURIComponent(opts.previewUrl)}`
@@ -158,7 +163,7 @@ export async function streamClaudeCodeAgent(opts: {
       .filter((c): c is string => !!c);
 
     const commitStream = streamText({
-      model: google("gemini-2.5-flash-lite"),
+      model: google("gemini-flash-latest"),
       messages: [
         {
           role: "system",

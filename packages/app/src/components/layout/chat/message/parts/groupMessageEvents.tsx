@@ -345,25 +345,6 @@ export function groupMessageEvents(
                   p.input?.connectRequestId === connectData.connectRequestId
               );
             if (waitForConnectionPart?.output) {
-              const waitData = safeJsonParse<{
-                isConnected: boolean;
-                reason: string | null;
-              }>(waitForConnectionPart.output);
-              if (waitData?.isConnected) {
-                currentEvents.push({
-                  icon: Check,
-                  loading: false,
-                  label: `Connected to ${connectData.toolkit.name}`,
-                });
-              } else {
-                currentEvents.push({
-                  icon: TriangleAlertIcon,
-                  loading: false,
-                  label:
-                    waitData?.reason ??
-                    `Failed to connect to ${connectData.toolkit.name}`,
-                });
-              }
             } else {
               flushEvents();
               blocks.push({

@@ -22,22 +22,59 @@ const q = query({
       type: "preset",
       preset: "claude_code",
       append: `
-Always start by reading package.json. Thereafter your ultimate goal is to generate a list of hashtags for a tweet. Therefore, you should use the tweet-hashtag-generator sub-agent to generate a list of hashtags for the given topic.
+Always start by reading package.json. Thereafter your ultimate goal is to generate a list of hashtags for a tweet. Don't explore the project more than the package.json, unless any instructions tell you otherwise.
       `.trim(),
+      // Therefore, you should use the tweet-hashtag-generator sub-agent to generate a list of hashtags for the given topic.
     },
     executable: "node",
-    includePartialMessages: true,
+    // includePartialMessages: true,
     permissionMode: "bypassPermissions",
     settingSources: ["project"],
-    agents: {
-      "tweet-hashtag-generator": {
-        description: "Generates a list of hashtags for a given topic.",
-        prompt: `
-You are **Tweet Hashtag Generator**, a specialised Claude sub-agent.  
-Your mission: generate a list of hashtags for a given topic. You should read instructions.txt and then return a list of hashtags that are relevant to the topic based on the instructions.
-          `.trim(),
-        tools: ["Read"],
-      },
+    //     agents: {
+    //       "tweet-hashtag-generator": {
+    //         description: "Generates a list of hashtags for a given topic.",
+    //         prompt: `
+    // You are **Tweet Hashtag Generator**, a specialised Claude sub-agent.
+    // Your mission: generate a list of hashtags for a given topic. You should read instructions.txt and then return a list of hashtags that are relevant to the topic based on the instructions.
+    //           `.trim(),
+    //         tools: ["Read"],
+    //       },
+    //     },
+    hooks: {
+      // UserPromptSubmit: [
+      //   {
+      //     hooks: [
+      //       async () => {
+      //         console.log("XXX USER PROMPT SUBMIT");
+      //         console.error("XXX USER PROMPT SUBMIT");
+      //         return {
+      //           continue: true,
+      //           systemMessage: "Always respond in Swedish",
+      //         };
+      //       },
+      //     ],
+      //   },
+      // ],
+      PostToolUse: [
+        {
+          matcher: "Read",
+          hooks: [
+            async (input) => {
+              // console.log("XXXwow", input);
+              // console.error("XXXwow", input);
+              return {
+                continue: true,
+                // systemMessage: "file moved!",
+                // hookSpecificOutput: {
+                //   hookEventName: "PostToolUse",
+                //   additionalContext:
+                //     "package.json has been moved to instructions.txt - read that file instead!",
+                // },
+              };
+            },
+          ],
+        },
+      ],
     },
   },
 });

@@ -1,6 +1,6 @@
 {
   "name": "@squashai/cli",
-  "version": "0.1.0-alpha.8",
+  "version": "0.1.0-alpha.10",
   "bin": {
     "squash": "./bin/squash.js"
   },

@@ -136,20 +136,44 @@ server.registerTool(
 );
 
 server.registerTool(
+  "wait_for_connection",
+  {
+    title: "Wait for a connection to be established",
+    description: `Wait for a connection to be established for a toolkit. You MUST call this tool immediately after calling connect_to_toolkit, and cannot call it any other time.`,
+    inputSchema: { connectRequestId: z.string() },
+    outputSchema: { isConnected: z.boolean(), reason: z.string().nullable() },
+  },
+  async ({ connectRequestId }) => {
+    const res = await composio.connectedAccounts.waitForConnection(
+      connectRequestId,
+      120000
+    );
+    const data = {
+      isConnected: res.status === "ACTIVE",
+      reason: res.statusReason,
+    };
+    return {
+      content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
+      structuredContent: data,
+    };
+  }
+);
+
+server.registerTool(
   "check_connection_status",
   {
     title: "Check connection status for a toolkit",
     description: `After a user has connected to a toolkit, call this tool to check if they are connected to a toolkit before using it. If when searching for tools, you find that a tool is already connected, you can skip this step.`,
-    inputSchema: { toolkit_slug: z.string() },
-    outputSchema: { is_connected: z.boolean() },
+    inputSchema: { toolkitSlug: z.string() },
+    outputSchema: { isConnected: z.boolean() },
   },
-  async ({ toolkit_slug }) => {
+  async ({ toolkitSlug }) => {
     const resp = await composio.connectedAccounts.list({
       userIds: [process.env.COMPOSIO_PLAYGROUND_USER_ID!],
-      toolkitSlugs: [toolkit_slug],
+      toolkitSlugs: [toolkitSlug],
       statuses: ["ACTIVE"],
     });
-    const data = { is_connected: !!resp.items.length };
+    const data = { isConnected: !!resp.items.length };
     return {
       content: [{ type: "text", text: JSON.stringify(data, null, 2) }],
       structuredContent: data,
@@ -252,7 +276,11 @@ Use this tool to execute up to 20 tools in parallel across apps. Response contai
       toolCalls: z.array(
         z.object({
           toolSlug: z.string(),
-          reason: z.string(),
+          reason: z
+            .string()
+            .describe(
+              "Brief explanation of the tool call, e.g. 'Send an email to John welcoming him'"
+            ),
           arguments: z.record(z.string(), z.any()),
         })
       ),

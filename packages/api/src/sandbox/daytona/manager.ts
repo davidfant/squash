@@ -745,6 +745,11 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
     );
   }
 
+  async ping(): Promise<void> {
+    const sandbox = await this.getSandbox();
+    await sandbox.refreshData();
+  }
+
   async getPreviewUrl(): Promise<string> {
     await this.waitUntilStarted();
     const [options, sandbox] = await Promise.all([

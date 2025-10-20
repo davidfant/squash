@@ -287,6 +287,10 @@ export const tools = {
     }),
     outputSchema: z.unknown(),
   }),
+  ClaudeCodemcp__composio__wait_for_connection: tool({
+    inputSchema: z.object({ connectRequestId: z.string() }),
+    outputSchema: z.string(),
+  }),
   ClaudeCodemcp__composio__check_connection_status: tool({
     inputSchema: z.unknown(),
     outputSchema: z.unknown(),

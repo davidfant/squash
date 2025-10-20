@@ -91,6 +91,7 @@ export abstract class BaseSandboxManagerDurableObject<
   protected abstract readClaudeCodeSessionData(
     sessionId: string
   ): Promise<string>;
+  abstract ping(): Promise<void>;
 
   async init(options: Sandbox.Options<C>): Promise<void> {
     await this.state.storage.put("options", options);

@@ -32,6 +32,13 @@ export async function streamClaudeCodeAgent(opts: {
     sessionId: opts.sessionId,
   });
 
+  const pingInterval = setInterval(() => {
+    logger.debug("Pinging sandbox", { sandbox: opts.sandbox.name });
+    opts.sandbox.ping().catch((e) => {
+      logger.error("Error pinging sandbox", e);
+    });
+  }, 10_000);
+
   let sessionId: string | undefined = undefined;
   const agentStream = streamText({
     model: new ClaudeCodeLanguageModel("", async function* ({ prompt }) {
@@ -231,4 +238,6 @@ export async function streamClaudeCodeAgent(opts: {
     id: randomUUID(),
     data: { type: "claude-code", id: sessionId, objectKey },
   });
+
+  clearInterval(pingInterval);
 }

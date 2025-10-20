@@ -15,6 +15,7 @@ const q = query({
         content: "tweet: i am elon and am very cool",
       },
     };
+    await new Promise(() => {});
   })(),
   options: {
     cwd,
@@ -60,10 +61,8 @@ Always start by reading package.json. Thereafter your ultimate goal is to genera
           matcher: "Read",
           hooks: [
             async (input) => {
-              // console.log("XXXwow", input);
-              // console.error("XXXwow", input);
               return {
-                continue: true,
+                continue: false,
                 // systemMessage: "file moved!",
                 // hookSpecificOutput: {
                 //   hookEventName: "PostToolUse",

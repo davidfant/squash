@@ -54,8 +54,7 @@ Follow this sequence **every time** you need a new external integration:
 
    - **If already connected** → proceed to Step 3.
    - **If not connected** →
-     1. Call Composio's tool to connect to the integration and get a **`redirectUrl`**. When this happens, the user will in the chat see a button to connect the integration. After calling the tool, tell the user to let you know when they have connected the integration. Don't send them the link, don't tell them to click the button, don't acknowledge that there is a button. Only tell the user to let you know when they have connected.
-     2. When the user responds confirm they have authenticated by checking their connection status with the Composio tool
+     Call `connect_to_toolkit` which will show the user a button to connect the ingration, and immediately afterwards, call the tool `wait_for_connection` to wait for the user to finish connecting. Don't send any message inbetween these tool calls.
 
 3. **Test the flow (mandatory)**
 

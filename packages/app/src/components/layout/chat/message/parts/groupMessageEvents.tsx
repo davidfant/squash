@@ -73,6 +73,14 @@ type Block =
 const isToolLoading = (state: `input-${string}` | `output-${string}`) =>
   state.startsWith("input-");
 
+function safeJsonParse<T>(src: string): T | null {
+  try {
+    return JSON.parse(src) as T;
+  } catch (error) {
+    return null;
+  }
+}
+
 function parseReasoningSummaries(src: string): ReasoningBlock["summaries"] {
   const headerRE = /\*\*(.*?)\*\*/g;
   const sections: ReasoningBlock["summaries"] = [];
@@ -320,22 +328,51 @@ export function groupMessageEvents(
       }
       case "tool-ClaudeCodemcp__composio__connect_to_toolkit": {
         if (part.state === "output-available") {
-          try {
-            const data = JSON.parse(part.output) as {
-              redirectUrl: string;
-              toolkit: { name: string; logoUrl: string };
-            };
-            flushEvents();
-            blocks.push({
-              type: "connect-to-toolkit",
-              redirectUrl: data.redirectUrl,
-              toolkit: data.toolkit,
-            });
-          } catch (error) {
-            console.warn(
-              "Failed to parse Composio connect to toolkit output:",
-              part
-            );
+          const connectData = safeJsonParse<{
+            redirectUrl: string;
+            connectRequestId: string;
+            toolkit: { name: string; logoUrl: string };
+          }>(part.output);
+
+          if (connectData) {
+            const waitForConnectionPart = parts
+              .filter(
+                (p) =>
+                  p.type === "tool-ClaudeCodemcp__composio__wait_for_connection"
+              )
+              .find(
+                (p) =>
+                  p.input?.connectRequestId === connectData.connectRequestId
+              );
+            if (waitForConnectionPart?.output) {
+              const waitData = safeJsonParse<{
+                isConnected: boolean;
+                reason: string | null;
+              }>(waitForConnectionPart.output);
+              if (waitData?.isConnected) {
+                currentEvents.push({
+                  icon: Check,
+                  loading: false,
+                  label: `Connected to ${connectData.toolkit.name}`,
+                });
+              } else {
+                currentEvents.push({
+                  icon: TriangleAlertIcon,
+                  loading: false,
+                  label:
+                    waitData?.reason ??
+                    `Failed to connect to ${connectData.toolkit.name}`,
+                });
+              }
+            } else {
+              flushEvents();
+              blocks.push({
+                type: "connect-to-toolkit",
+                redirectUrl: connectData.redirectUrl,
+                toolkit: connectData.toolkit,
+              });
+            }
+          } else {
             currentEvents.push({
               icon: TriangleAlertIcon,
               loading: false,

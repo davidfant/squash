@@ -270,6 +270,53 @@ export const tools = {
     outputSchema: z.unknown(),
     description: "Terminates a long-running Bash shell by its ID.",
   }),
+
+  ClaudeCodemcp__composio__get_connected_tools: tool({
+    inputSchema: z.unknown(),
+    outputSchema: z.unknown(),
+  }),
+  ClaudeCodemcp__composio__multi_execute_tool: tool({
+    inputSchema: z.object({
+      toolCalls: z.array(
+        z.object({
+          toolSlug: z.string(),
+          arguments: z.record(z.string(), z.any()),
+          reason: z.string(),
+        })
+      ),
+    }),
+    outputSchema: z.unknown(),
+  }),
+  ClaudeCodemcp__composio__check_connection_status: tool({
+    inputSchema: z.unknown(),
+    outputSchema: z.unknown(),
+  }),
+  ClaudeCodemcp__composio__search_tools: tool({
+    inputSchema: z.object({ useCase: z.string() }),
+    outputSchema: z.unknown(),
+  }),
+  ClaudeCodemcp__composio__connect_to_toolkit: tool({
+    inputSchema: z.object({ toolkitSlug: z.string() }),
+    outputSchema: z.string(),
+    //   outputSchema: z.preprocess(
+    //     (data) => {
+    //       try {
+    //         return JSON.parse(data);
+    //       } catch (error) {
+    //         return z.NEVER;
+    //       }
+    //     },
+    //     z.object({
+    //       redirectUrl: z.string(),
+    //       connectRequestId: z.string(),
+    //       toolkit: z.object({
+    //         name: z.string(),
+    //         logoUrl: z.string(),
+    //         authConfigId: z.string(),
+    //       }),
+    //     })
+    //   ),
+  }),
 };
 
 export type ClaudeCodeTools = typeof tools;

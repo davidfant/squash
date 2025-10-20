@@ -307,13 +307,15 @@ export function groupMessageEvents(
         break;
       }
       case "tool-ClaudeCodemcp__composio__multi_execute_tool": {
-        part.input?.toolCalls?.map((tc) =>
-          currentEvents.push({
-            icon: ZapIcon,
-            loading: isToolLoading(part.state),
-            label: tc.reason,
-          })
-        );
+        part.input?.toolCalls
+          ?.filter((tc) => !!tc)
+          .map((tc) =>
+            currentEvents.push({
+              icon: ZapIcon,
+              loading: isToolLoading(part.state),
+              label: tc!.reason,
+            })
+          );
         break;
       }
       case "tool-ClaudeCodemcp__composio__connect_to_toolkit": {
@@ -321,8 +323,7 @@ export function groupMessageEvents(
           try {
             const data = JSON.parse(part.output) as {
               redirectUrl: string;
-              connectRequestId: string;
-              toolkit: { name: string; logoUrl: string; authConfigId: string };
+              toolkit: { name: string; logoUrl: string };
             };
             flushEvents();
             blocks.push({

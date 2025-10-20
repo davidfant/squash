@@ -132,3 +132,12 @@ If you’re working on a feature that **combines** AI and third-party tools (e.g
 
 </ai_model_integrations>
 </integrations>
+
+<design_guidelines>
+Unless the user explicitly tells you about their design preferences or has direct design requests, follow the provided guidelines:
+
+- Style the UI like Linear using ShadCN components, but default to light mode
+- Avoid gradientsg
+- Avoid adding lots of colors everywhere. Be very sparing with colors, and only add them when strictly necessary
+- Avoid font weights above 400 for titles, headlines, and similar.
+  </design_guidelines>

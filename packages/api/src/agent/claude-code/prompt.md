@@ -108,14 +108,20 @@ const createdEvent = await executeTool<GoogleCalendar.CreateEventInput, GoogleCa
 </third_party_integrations>
 
 <ai_model_integrations>
-For **LLM-based features**, you don’t need to use Composio or the discovery/tester agents.
-These integrations are handled automatically through Squash’s **AI Gateway**, which is already **authenticated** and **configured**.
+Our project supports integration with LLMs and routes traffic using Vercel's AI SDK v5 and routes traffic through an **AI Gateway** that transparently handles authentication, usage metering, and provider fallback. For **LLM-based features**, you should not use Composio or the discovery/tester agents.
 
-The AI Gateway provides unified access to the following providers:
+You **do not need** to modify the gateway setup in `src/worker/ai-gateway.ts`; simply pass the fully‑qualified model name (`provider/model-id`) to the helper exported from that file.
 
-- **OpenAI**
-- **Anthropic**
-- **Google AI Studio**
+**Supported Providers & Model Naming**
+The gateway exposes any model that the underlying provider supports. Prefix the model name with one of:
+
+| Provider prefix     | Example model id                       |
+| ------------------- | -------------------------------------- |
+| `openai/`           | `openai/gpt-4o-mini`, `openai/gpt-5`   |
+| `anthropic/`        | `anthropic/claude-sonnet-4-5-20250929` |
+| `google-ai-studio/` | `google-ai-studio/gemini-2.5-flash`    |
+
+> **Tip — unknown models:** New models appear frequently. If a user claims a model exists, **trust them and try it**. If the gateway returns _“model not found”_ or similar at runtime, handle the error and inform the user.
 
 You do **not** need to:
 
@@ -128,6 +134,77 @@ If you’re working on a feature that **combines** AI and third-party tools (e.g
 - Use Composio for the third-party tool.
 - Use the AI Gateway for the AI model.
 - When testing or simulating flows, you can “pretend” to be the AI — e.g., produce expected outputs, summaries, or mock data — without actually calling the model.
+
+## AI Examples
+
+**Generating Free‑form Text**
+
+Use `generateText` from `ai` to obtain unstructured completions.
+
+```ts
+import { generateText } from "ai";
+import { gateway } from "./ai-gateway";
+
+function generateHeadline(titleIdea: string) {
+  const { text } = await generateText({
+    model: gateway("openai/gpt-5"),
+    prompt: `Write a catchy one‑sentence headline for: "${titleIdea}"`,
+  });
+
+  return text;
+}
+```
+
+**Generating Typed Objects**
+
+`generateObject` makes the model return structured data into a validated TypeScript type by supplying a **Zod** schema.
+
+```ts
+import { z } from "zod";
+import { generateObject } from "ai";
+import { gateway } from "./ai-gateway";
+
+const recipeSchema = z.object({
+  title: z.string(),
+  ingredients: z.array(z.string()),
+  instructions: z.string(),
+});
+
+export async function createRecipe(idea: string) {
+  const { object: recipe } = await generateObject({
+    model: gateway("google-ai-studio/gemini-2.5-flash"),
+    prompt: `Create a simple recipe for ${idea}. Return JSON only.`,
+    schema: recipeSchema,
+  });
+
+  // recipe is fully typed & validated here
+  return recipe;
+}
+```
+
+**Combining Composio and LLM**
+For complex workflows and tasks, we might need to combine the AI Gateway with third party tools from Composio. If possible we should prefer using Composio and the AI gateway separately, but some tasks are only possible by having an LLM plan and use tools on the fly. By wiring the two together we let the model decide when it needs to call which Composio tools to accomplish the user's request and generate its answer.
+
+```ts
+import { z } from "zod";
+import { generateObject } from "ai";
+import { env } from "cloudflare:workers";
+import { gateway } from "./ai-gateway";
+import { composio } from "./composio";
+
+export async function reviewImportantPullRequests() {
+  const tools = composio.tools.get(env.COMPOSIO_PLAYGROUND_USER_ID, {
+    tools: ["GOOGLECALENDAR_CREATE_EVENT", "GITHUB_FIND_PULL_REQUESTS"],
+  });
+  const { text } = await generateText({
+    model: gateway("anthropic/claude-sonnet-4-5-20250929"),
+    prompt: `Find all open GitHub pull requests, and for the most important one, schedule a Google Calendar event with the author`,
+    tools,
+  });
+
+  return text;
+}
+```
 
 </ai_model_integrations>
 </integrations>

@@ -1,7 +1,11 @@
 import { Composio } from "@composio/core";
+import { VercelProvider } from "@composio/vercel";
 import { env } from "cloudflare:workers";
 
-export const composio = new Composio({ apiKey: env.COMPOSIO_API_KEY });
+export const composio = new Composio({
+  apiKey: env.COMPOSIO_API_KEY,
+  provider: new VercelProvider(),
+});
 
 export async function executeTool<
   Input extends Record<string, unknown>,

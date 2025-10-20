@@ -14,7 +14,7 @@ const MemoizedMarkdownBlock = memo(
             href={href}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-primary"
+            className="text-primary underline"
           >
             {children}
           </a>

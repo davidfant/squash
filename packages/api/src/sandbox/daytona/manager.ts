@@ -232,7 +232,7 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
             );
             return buffer.toString("utf-8");
           })();
-          let updatedDevVarsString = devVarsString;
+          let updated = devVarsString;
 
           const devVars: Record<string, string> = {};
           for (const line of devVarsString.split(/\r?\n/)) {
@@ -240,7 +240,13 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
             if (m) devVars[m[1]!] = m[2]!;
           }
 
-          if (!devVars.TZ) updatedDevVarsString += `\nTZ=${env.TZ}`;
+          if (!devVars.TZ) updated += `TZ=utc\n`;
+          if (!devVars.AI_GATEWAY_BASE_URL) {
+            updated += `AI_GATEWAY_BASE_URL=${env.AI_GATEWAY_BASE_URL}\n`;
+          }
+          if (!devVars.AI_GATEWAY_API_KEY) {
+            updated += `\nAI_GATEWAY_API_KEY=${env.AI_GATEWAY_API_KEY}\n`;
+          }
 
           if (
             !devVars.COMPOSIO_API_KEY ||
@@ -254,9 +260,9 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
             };
 
             const project = await createProject(options.branch.id);
-            updatedDevVarsString += `\nCOMPOSIO_PROJECT_ID=${project.id}`;
-            updatedDevVarsString += `\nCOMPOSIO_API_KEY=${project.api_key}`;
-            updatedDevVarsString += `\nCOMPOSIO_PLAYGROUND_USER_ID=playground-${randomUUID()}`;
+            updated += `COMPOSIO_PROJECT_ID=${project.id}\n`;
+            updated += `COMPOSIO_API_KEY=${project.api_key}\n`;
+            updated += `COMPOSIO_PLAYGROUND_USER_ID=playground-${randomUUID()}\n`;
 
             yield {
               type: "stdout",
@@ -265,12 +271,9 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
             };
           }
 
-          if (updatedDevVarsString !== devVarsString) {
+          if (updated !== devVarsString) {
             const sandbox = await that.getSandbox();
-            await sandbox.fs.uploadFile(
-              Buffer.from(updatedDevVarsString),
-              devVarsPath
-            );
+            await sandbox.fs.uploadFile(Buffer.from(updated), devVarsPath);
           }
         },
       },

@@ -14,6 +14,7 @@
     "publish": true
   },
   "dependencies": {
+    "@ai-sdk/openai": "^2.0.42",
     "@composio/core": "^0.1.55",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
@@ -46,6 +47,7 @@
     "@trpc/client": "^11.6.0",
     "@trpc/react-query": "^11.6.0",
     "@trpc/server": "^11.6.0",
+    "ai": "^5.0.76",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -67,6 +69,7 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
+    "@ai-sdk/provider": "^2.0.0",
     "@cloudflare/vite-plugin": "^1.13.13",
     "@types/node": "^24.0.4",
     "@types/react": "19.0.10",

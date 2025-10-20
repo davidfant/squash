@@ -16,6 +16,7 @@ export default {
     }
 
     const upstreamURL = new URL(req.url);
+    upstreamURL.protocol = "https:";
     upstreamURL.hostname = `${previewId}.proxy.daytona.works`;
     // upstream.hostname = previewId.replaceAll("---", ".");
     upstreamURL.port = "";

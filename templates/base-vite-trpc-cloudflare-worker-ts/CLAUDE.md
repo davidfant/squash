@@ -1,6 +1,7 @@
 ## Environment
 
-The current project is a Cloudflare Worker containing a Vite React app and a tRPC API. This will be deployed in a Cloudflare Worker and must run in workerd.
+The project is a Cloudflare Worker containing a Vite React app and a tRPC API. This will be deployed in a Cloudflare Worker and must run in workerd. While the nodejs_compat flag is enabled, all NodeJS features won
+t work. The full configuration lives in `wrangler.json`
 
 Use pnpm as your package manager, not npm or yarn
 
@@ -125,3 +126,67 @@ if (query.error) {
 ```
 
 tRPC provides type-safe error handling with detailed error information automatically propagated to the client.
+
+## AI & LLM Integration
+
+Our project supports integration with LLMs and routes traffic using Vercel's AI SDK v5 and routes traffic through an **AI Gateway** that transparently handles authentication, usage metering, and provider fallback. You **do not need** to modify the gateway setup in `src/worker/ai-gateway.ts`; simply pass the fully‑qualified model name (`provider/model-id`) to the helper exported from that file.
+
+```ts
+import { gateway } from "./ai-gateway";
+```
+
+**Supported Providers & Model Naming**
+The gateway exposes any model that the underlying provider supports. Prefix the model name with one of:
+
+| Provider prefix     | Example model id                       |
+| ------------------- | -------------------------------------- |
+| `openai/`           | `openai/gpt-4o-mini`, `openai/gpt-5`   |
+| `anthropic/`        | `anthropic/claude-sonnet-4-5-20250929` |
+| `google-ai-studio/` | `google-ai-studio/gemini-2.5-flash`    |
+
+> **Tip — unknown models:** New models appear frequently. If a user claims a model exists, **trust them and try it**. If the gateway returns _“model not found”_ or similar at runtime, handle the error and inform the user.
+
+**Generating Free‑form Text**
+
+Use `generateText` from `ai` to obtain unstructured completions.
+
+```ts
+import { generateText } from "ai";
+import { gateway } from "./ai-gateway";
+
+function generateHeadline(titleIdea: string) {
+  const { text } = await generateText({
+    model: gateway("openai/gpt-5"),
+    prompt: `Write a catchy one‑sentence headline for: "${titleIdea}"`,
+  });
+
+  return text;
+}
+```
+
+**Generating Typed Objects**
+
+`generateObject` makes the model return structured data into a validated TypeScript type by supplying a **Zod** schema.
+
+```ts
+import { z } from "zod";
+import { generateObject } from "ai";
+import { gateway } from "./ai-gateway";
+
+const recipeSchema = z.object({
+  title: z.string(),
+  ingredients: z.array(z.string()),
+  instructions: z.string(),
+});
+
+export async function createRecipe(idea: string) {
+  const { object: recipe } = await generateObject({
+    model: gateway("google-ai-studio/gemini-2.5-flash"),
+    prompt: `Create a simple recipe for ${idea}. Return JSON only.`,
+    schema: recipeSchema,
+  });
+
+  // recipe is fully typed & validated here
+  return recipe;
+}
+```

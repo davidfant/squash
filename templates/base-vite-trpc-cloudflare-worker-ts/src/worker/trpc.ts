@@ -11,14 +11,30 @@ export type Context = Awaited<ReturnType<typeof createContext>>;
 
 const t = initTRPC.context<Context>().create();
 
-const loggerMiddleware = t.middleware(async ({ path, type, next }) => {
-  console.log(`[${type}] ${path}`);
+const loggerMiddleware = t.middleware(async ({ path, type, input, next }) => {
+  console.log({
+    message: `tRPC request`,
+    type,
+    path,
+    input,
+  });
   const start = Date.now();
 
   const result = await next();
 
-  const durationMs = Date.now() - start;
-  console.log(`[${type}] ${path} completed in ${durationMs}ms`);
+  const duration = Date.now() - start;
+  console.log({
+    message: `tRPC response`,
+    type,
+    path,
+    input,
+    duration,
+    result: {
+      ok: result.ok,
+      error: result.ok ? undefined : result.error,
+      data: result.ok ? result.data : undefined,
+    },
+  });
 
   if (!result.ok) {
     console.error(`[${type}] ${path} error:`, result.error);

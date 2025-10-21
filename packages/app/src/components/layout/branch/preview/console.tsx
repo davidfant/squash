@@ -3,24 +3,11 @@ import {
   type WebPreviewConsoleLogEntry,
 } from "@/components/ai-elements/web-preview";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useBranchContext } from "./context";
+import { useBranchContext } from "../context";
 
 const MAX_LOG_LINES = 200;
 
-const formatter = new Intl.DateTimeFormat(undefined, {
-  hour: "2-digit",
-  minute: "2-digit",
-  second: "2-digit",
-});
-
-const getLogTone = (text: string) => {
-  const lower = text.toLowerCase();
-  if (lower.includes("error")) return "text-red-400";
-  if (lower.includes("warn")) return "text-amber-300";
-  return "text-zinc-100";
-};
-
-export function BranchPreviewLogs({ className }: { className?: string }) {
+export function BranchPreviewConsole() {
   const { branch } = useBranchContext();
   const [entries, setEntries] = useState<WebPreviewConsoleLogEntry[]>([]);
   const [status, setStatus] = useState<
@@ -28,13 +15,11 @@ export function BranchPreviewLogs({ className }: { className?: string }) {
   >("connecting");
   const containerRef = useRef<HTMLDivElement>(null);
   const pendingRef = useRef("");
-  const idRef = useRef(0);
 
   useEffect(() => {
     setEntries([]);
     setStatus("connecting");
     pendingRef.current = "";
-    idRef.current = 0;
 
     const appendLines = (lines: string[]) => {
       if (!lines.length) return;

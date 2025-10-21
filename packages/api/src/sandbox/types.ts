@@ -1,4 +1,5 @@
 import type { ChatMessage } from "@/agent/types";
+import type { Buffer } from "node:buffer";
 
 export namespace Sandbox {
   export namespace Snapshot {
@@ -132,6 +133,8 @@ export namespace Sandbox {
       gitCurrentCommit(abortSignal?: AbortSignal): Promise<string>;
       destroy(): Promise<void>;
       restoreVersion(messages: ChatMessage[]): Promise<void>;
+      listFiles(): Promise<string[]>;
+      readFile(path: string): Promise<Buffer>;
 
       isAgentRunning(): Promise<boolean>;
       startAgent(req: {

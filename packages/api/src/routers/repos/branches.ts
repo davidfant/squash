@@ -8,6 +8,7 @@ import { resolveMessageThreadHistory } from "@/lib/resolveMessageThreadHistory";
 import { zValidator } from "@hono/zod-validator";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { Hono } from "hono";
+import mime from "mime/lite";
 import z from "zod";
 import { zUserMessagePart } from "../zod";
 import { requireRepoBranch } from "./middleware";
@@ -167,6 +168,47 @@ const repoBranchRouter = new Hono<{
       const params = c.req.valid("param");
       const sandbox = c.env.DAYTONA_SANDBOX_MANAGER.getByName(params.branchId);
       return sandbox.listenToAgent();
+    }
+  )
+  .get(
+    "/fs",
+    zValidator("param", z.object({ branchId: z.uuid() })),
+    async (c) => {
+      const { branchId } = c.req.valid("param");
+      const sandbox = c.env.DAYTONA_SANDBOX_MANAGER.getByName(branchId);
+      const files: string[] = await sandbox.listFiles();
+      return c.json({ files });
+    }
+  )
+  .get(
+    "/fs/content",
+    zValidator("param", z.object({ branchId: z.uuid() })),
+    zValidator("query", z.object({ path: z.string().min(1) })),
+    async (c) => {
+      const { branchId } = c.req.valid("param");
+      const { path: filePath } = c.req.valid("query");
+      const sandbox = c.env.DAYTONA_SANDBOX_MANAGER.getByName(branchId);
+
+      try {
+        const file = await sandbox.readFile(filePath);
+        const contentType =
+          mime.getType(filePath) ?? "application/octet-stream";
+        return c.body(file, 200, {
+          "content-type": contentType,
+          "x-filename": encodeURIComponent(filePath),
+        });
+      } catch (error) {
+        logger.error("Failed to read file from sandbox", {
+          branchId,
+          path: filePath,
+          error: {
+            message: (error as Error).message,
+            name: (error as Error).name,
+            stack: (error as Error).stack,
+          },
+        });
+        return c.json({ error: "Failed to read file" }, 400);
+      }
     }
   )
   .get(

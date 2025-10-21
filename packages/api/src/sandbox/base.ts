@@ -10,6 +10,7 @@ import { eq } from "drizzle-orm";
 import escape from "shell-escape";
 import type { Sandbox } from "./types";
 import { executeTasks, runCommand, storage, type Storage } from "./util";
+import type { Buffer } from "node:buffer";
 
 interface Handle {
   type: string;
@@ -92,6 +93,7 @@ export abstract class BaseSandboxManagerDurableObject<
     sessionId: string
   ): Promise<string>;
   abstract ping(): Promise<void>;
+  abstract readFile(path: string): Promise<Buffer>;
 
   async init(options: Sandbox.Options<C>): Promise<void> {
     await this.state.storage.put("options", options);
@@ -264,6 +266,28 @@ export abstract class BaseSandboxManagerDurableObject<
 
     const { stdout } = await runCommand(stream);
     return stdout.trim();
+  }
+
+  async listFiles(): Promise<string[]> {
+    await this.waitUntilStarted();
+    const options = await this.getOptions();
+
+    logger.info("Listing repository files");
+    const stream = await this.execute(
+      {
+        command: "git",
+        args: ["ls-files", "--cached", "--others", "--exclude-standard"],
+        cwd: options.config.cwd,
+      },
+      undefined
+    );
+    const { stdout } = await runCommand(stream);
+
+    return stdout
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => !!line)
+      .sort((a, b) => a.localeCompare(b));
   }
 
   async isAgentRunning(): Promise<boolean> {

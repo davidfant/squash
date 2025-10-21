@@ -7,10 +7,11 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { BranchLayoutSkeleton } from "./preview-skeleton";
+import { BranchLayoutSkeleton } from "./skeleton";
 import type { Branch } from "./types";
 
 export type ScreenSize = "desktop" | "tablet" | "mobile";
+export type Tab = "preview" | "code";
 
 export interface BranchContextValue {
   branch: Branch;

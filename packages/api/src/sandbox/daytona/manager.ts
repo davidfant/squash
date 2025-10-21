@@ -9,6 +9,7 @@ import { Daytona, Sandbox as DaytonaSandbox } from "@daytonaio/sdk";
 import { env } from "cloudflare:workers";
 import { eq } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
+import type { Buffer } from "node:buffer";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
 import escape from "shell-escape";
@@ -551,6 +552,44 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
         },
       },
     ];
+  }
+
+  async readFile(relativePath: string): Promise<Buffer> {
+    await this.waitUntilStarted();
+
+    const [options, sandbox] = await Promise.all([
+      this.getOptions(),
+      this.getSandbox(),
+    ]);
+
+    const cwd = options.config.cwd.replace(/\\/g, "/");
+    const normalizedRelative = path.posix
+      .normalize(relativePath)
+      .replace(/^\/+/, "");
+
+    if (!normalizedRelative || normalizedRelative === ".") {
+      throw new Error("Cannot read directory path");
+    }
+
+    if (normalizedRelative.startsWith("..")) {
+      throw new Error("Invalid file path");
+    }
+
+    const absolutePath = path.posix.join(cwd, normalizedRelative);
+    const resolved = path.posix.normalize(absolutePath);
+    const root = path.posix.normalize(cwd);
+    const rootWithSep = root.endsWith("/") ? root : `${root}/`;
+
+    if (!(resolved === root || resolved.startsWith(rootWithSep))) {
+      throw new Error("Resolved path is outside of repository root");
+    }
+
+    logger.debug("Reading file from sandbox", {
+      sandboxId: sandbox.id,
+      path: resolved,
+    });
+
+    return downloadFileFromSandbox(sandbox.id, resolved);
   }
 
   // TODO: avoid getting sandbox and session each time. Cache this somehow...

@@ -21,9 +21,15 @@ const iconMap = {
   md: { component: SiMarkdown, color: "#000000" },
 };
 
+export function getFileIcon(path: string) {
+  const name = path.split("/").pop()!;
+  const ext = name.split(".").pop() as keyof typeof iconMap | undefined;
+  return ext ? iconMap[ext] : undefined;
+}
+
 export function FileBadge({ path }: { path: string }) {
   const name = path.split("/").pop()!;
-  const icon = iconMap[name.split(".").pop() as keyof typeof iconMap];
+  const icon = getFileIcon(path);
   return (
     <Badge variant="outline" className="border-none bg-muted">
       {icon && <icon.component color={icon.color} className="size-4" />}

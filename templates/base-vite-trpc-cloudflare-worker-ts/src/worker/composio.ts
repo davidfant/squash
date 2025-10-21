@@ -2,10 +2,7 @@ import { Composio } from "@composio/core";
 import { VercelProvider } from "@composio/vercel";
 import { env } from "cloudflare:workers";
 
-export const composio = new Composio({
-  apiKey: env.COMPOSIO_API_KEY,
-  provider: new VercelProvider(),
-});
+export const composio = new Composio({ apiKey: env.COMPOSIO_API_KEY });
 
 export async function executeTool<
   Input extends Record<string, unknown>,
@@ -29,4 +26,11 @@ export async function executeTool<
     error: res.error,
     data: res.data as Output,
   };
+}
+
+export function getAIGatewayTools(userId: string, toolSlugs: string[]) {
+  return new Composio({
+    apiKey: env.COMPOSIO_API_KEY,
+    provider: new VercelProvider(),
+  }).tools.get(userId, { tools: toolSlugs });
 }

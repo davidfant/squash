@@ -190,12 +190,13 @@ import { z } from "zod";
 import { generateObject } from "ai";
 import { env } from "cloudflare:workers";
 import { gateway } from "./ai-gateway";
-import { composio } from "./composio";
+import { getAIGatewayTools } from "./composio";
 
 export async function reviewImportantPullRequests() {
-  const tools = composio.tools.get(env.COMPOSIO_PLAYGROUND_USER_ID, {
-    tools: ["GOOGLECALENDAR_CREATE_EVENT", "GITHUB_FIND_PULL_REQUESTS"],
-  });
+  const tools = getAIGatewayTools(env.COMPOSIO_PLAYGROUND_USER_ID, [
+    "GOOGLECALENDAR_CREATE_EVENT",
+    "GITHUB_FIND_PULL_REQUESTS",
+  ]);
   const { text } = await generateText({
     model: gateway("anthropic/claude-sonnet-4-5-20250929"),
     prompt: `Find all open GitHub pull requests, and for the most important one, schedule a Google Calendar event with the author`,

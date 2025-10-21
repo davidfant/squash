@@ -284,7 +284,7 @@ export function groupMessageEvents(
       case "tool-ClaudeCodeTask": {
         currentEvents.push({
           icon: ListTodoIcon,
-          loading: isToolLoading(part.state),
+          loading: false, // isToolLoading(part.state),
           label: part.input?.description,
         });
         break;

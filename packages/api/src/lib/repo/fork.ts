@@ -32,8 +32,10 @@ const templates = {
           id: "dev",
           title: "Start development server",
           type: "command",
-          command: "pnpm",
-          args: ["dev"],
+          // command: "pnpm",
+          // args: ["dev"],
+          command: "sh",
+          args: ["-c", "pnpm dev 2>&1 | tee dev.log"],
         },
         build: [
           {

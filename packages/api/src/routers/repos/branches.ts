@@ -190,6 +190,15 @@ const repoBranchRouter = new Hono<{
     }
   )
   .get(
+    "/preview/logs",
+    zValidator("param", z.object({ branchId: z.uuid() })),
+    async (c) => {
+      const params = c.req.valid("param");
+      const sandbox = c.env.DAYTONA_SANDBOX_MANAGER.getByName(params.branchId);
+      return sandbox.listenToLogs();
+    }
+  )
+  .get(
     "/preview/version",
     zValidator("param", z.object({ branchId: z.uuid() })),
     requireRepoBranch,

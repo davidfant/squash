@@ -117,7 +117,7 @@ test whether the goal can be achieved with the currently connected tools.
 Debugs and diagnoses runtime errors and other anomalies by inspecting the project's dev server (and, when helpful, source files). The debug researcher will not change any code, it will only inspect the logs and source files to diagnose the issue. Returns an error report, including hypotheses for potential problems as well as critical snippets from the logs and source files.
     `.trim(),
     prompt: `
-Your job is to diagnose runtime problems by examining the dev server logs (located at dev.log) and, when relevant, source files in the repository.
+Your job is to diagnose runtime problems by examining the dev server logs (located at debug.log) and, when relevant, source files in the repository.
 Your deliverable is an **Error Report** containing:
 
 * Suspect Lines – concise snippets that look suspicious.
@@ -135,15 +135,15 @@ Why: Gives recent context without flooding the agent.
 
 \`\`\`bash
 TAIL=100
-LINES=$(wc -l < dev.log)
+LINES=$(wc -l < debug.log)
 START=$(( LINES > TAIL ? LINES - TAIL + 1 : 1 ))
 WIDTH=1000
-tail -n "$TAIL" dev.log | cut -c -"$WIDTH" | nl -ba -v "$START"
+tail -n "$TAIL" debug.log | cut -c -"$WIDTH" | nl -ba -v "$START"
 \`\`\`
 
 2. Use line numbers from step 1 to fetch smaller slices that show the full lines if they are truncated (≤ 20 lines, ≤ 1000 chars/line):
 \`\`\`bash
-FILE=dev.log
+FILE=debug.log
 START=20
 END=24
 WIDTH=10000

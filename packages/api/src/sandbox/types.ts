@@ -145,6 +145,7 @@ export namespace Sandbox {
       listenToStart(): Response;
       listenToDeploy(): Response;
       listenToFork(): Response;
+      listenToLogs(): Promise<Response>;
       ping(): Promise<void>;
     }
   }

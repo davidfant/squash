@@ -319,6 +319,7 @@ export abstract class BaseSandboxManagerDurableObject<
   listenToFork(): Response {
     return this.listen("fork");
   }
+  abstract listenToLogs(): Promise<Response>;
 
   private listen(type: keyof typeof this.handles & string) {
     const handle = this.handles[type];

@@ -773,6 +773,76 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
     ].join("");
   }
 
+  async listenToLogs(): Promise<Response> {
+    await this.waitUntilStarted();
+
+    const encoder = new TextEncoder();
+    const devServer = await this.storage.get("devServer", null);
+
+    if (!devServer) {
+      logger.warn("Dev server logs requested before command started");
+      return new Response(null, { status: 204 });
+    }
+
+    const sandbox = await this.getSandbox();
+    let aborted = false;
+
+    const stream = new ReadableStream<Uint8Array>({
+      async start(controller) {
+        const send = (chunk: string | undefined | null) => {
+          if (aborted || !chunk) return;
+          const lines = chunk.replace(/\r/g, "").split("\n");
+          if (!lines.length) return;
+          const payload = lines.map((line) => `data: ${line}`).join("\n");
+          controller.enqueue(encoder.encode(`${payload}\n\n`));
+        };
+
+        try {
+          const history = await sandbox.process.getSessionCommandLogs(
+            devServer.sessionId,
+            devServer.commandId
+          );
+
+          if (history.output) {
+            send(history.output);
+          }
+
+          await sandbox.process.getSessionCommandLogs(
+            devServer.sessionId,
+            devServer.commandId,
+            (data: string) => send(data),
+            (data: string) => send(data)
+          );
+        } catch (error) {
+          logger.error("Failed streaming dev server logs", {
+            error: {
+              message: (error as Error).message,
+              stack: (error as Error).stack,
+              name: (error as Error).name,
+            },
+            sandboxId: sandbox.id,
+            devServer,
+          });
+          send(`ERROR: ${(error as Error).message}`);
+        } finally {
+          controller.close();
+        }
+      },
+      cancel() {
+        aborted = true;
+      },
+    });
+
+    return new Response(stream, {
+      status: 200,
+      headers: {
+        "content-type": "text/event-stream",
+        "cache-control": "no-cache",
+        connection: "keep-alive",
+      },
+    });
+  }
+
   async destroy(): Promise<void> {
     const sandbox = await this.getSandbox();
     await sandbox.delete();

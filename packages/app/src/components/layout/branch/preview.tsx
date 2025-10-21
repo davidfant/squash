@@ -1,5 +1,5 @@
+import { WebPreview } from "@/components/ai-elements/web-preview";
 import { SandboxTaskStream } from "@/components/blocks/SandboxTaskStream";
-import { Card } from "@/components/ui/card";
 import { useMounted } from "@/hooks/useMounted";
 import { cn } from "@/lib/utils";
 import { useChat } from "@ai-sdk/react";
@@ -7,6 +7,7 @@ import type { SandboxTaskMessage } from "@squashai/api/agent/types";
 import { DefaultChatTransport } from "ai";
 import { useEffect, useRef } from "react";
 import { useBranchContext } from "./context";
+import { BranchPreviewLogs } from "./preview-logs";
 
 export function BranchPreview({ className }: { className?: string }) {
   const { screenSize, previewPath, previewUrl, branch } = useBranchContext();
@@ -104,21 +105,26 @@ export function BranchPreview({ className }: { className?: string }) {
 
   return (
     <div className={cn("relative h-full", className)}>
-      <Card className="p-0 h-full overflow-hidden shadow-none bg-muted">
+      <WebPreview>
+        {/* <Card className="p-0 h-full overflow-hidden shadow-none bg-muted"> */}
         {!!previewUrl && (
-          <iframe
-            ref={iframeRef}
-            src={`${previewUrl}${previewPath}`}
-            className={cn(
-              "h-full mx-auto transition-all duration-300 z-2",
-              getPreviewWidth()
-            )}
-          />
+          <div className="flex-1 flex flex-col z-2">
+            <iframe
+              ref={iframeRef}
+              src={`${previewUrl}${previewPath}`}
+              className={cn(
+                "flex-1 mx-auto transition-all duration-300 z-2",
+                getPreviewWidth()
+              )}
+            />
+            <BranchPreviewLogs />
+          </div>
         )}
         <div className="absolute inset-0 z-1 overflow-y-auto">
           {placeholder}
         </div>
-      </Card>
+        {/* </Card> */}
+      </WebPreview>
       {/* <AnimatePresence mode="wait">
         {comment && (
           <motion.div

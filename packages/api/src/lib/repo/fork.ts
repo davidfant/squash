@@ -35,7 +35,7 @@ const templates = {
           // command: "pnpm",
           // args: ["dev"],
           command: "sh",
-          args: ["-c", "pnpm dev 2>&1 | tee dev.log"],
+          args: ["-c", "pnpm dev 2>&1 | tee debug.log"],
         },
         build: [
           {

@@ -45,57 +45,86 @@ used to solve a particular problem, user query or complete a task. Usage guideli
 
 • Use this tool whenever the user wants to integrate a new external app. Post this, keep coming back to this tool to discover new tools.
 • If the user pivots to a different use case in same chat, you MUST call this tool again with the new use case.
-• Specify the useCase with a normalized description of the problem, query, or task.
-  Be clear and precise so the system can find the most relevant tools. Queries can
-  involve one or multiple apps, and be simple or complex — from a quick action to a
-  multi-step, cross-app workflow.
+• Specify keywords to search for tools, including the name of the thirdparty app or tool.
 
 Example: User query: "send an email to John welcoming him"
-Search call: { useCase: "send an email to someone" }
+Search call: { keywords: "send email" }
 
 Response:
 
-• The response lists toolkits (apps) and tools suitable for the task, along with their
-  tool_slug, description, input schema, and related tools for prerequisites, alternatives,
-  or next steps. Includes execution order and a brief reasoning.
+• The response lists tools suitable for the task, along with their
+  tool slug, name and description
+• The response also lists toolkits (apps) and their auth schemes suitable for the task, along with their. To connect to a toolkit, you need to call ConnectToToolkit with the toolkit slug and the auth scheme name.
       `.trim(),
-    inputSchema: { useCase: z.string() },
+    inputSchema: { keywords: z.string() },
     // outputSchema: { results: z.any() },
   },
   async (args) => {
-    const tools = await composio.tools.getRawComposioTools({
-      search: args.useCase,
-    });
-    const resp = await composio.connectedAccounts.list({
-      userIds: [process.env.COMPOSIO_PLAYGROUND_USER_ID!],
-      statuses: ["ACTIVE"],
-    });
-
-    const text = tools
-      // .slice(0, 10)
-      .map((tool) =>
-        [
-          `<${tool.slug} name="${tool.name}">`,
-          `**Connection Status:** ${
-            resp.items.some((c) => c.toolkit.slug === tool.toolkit?.slug)
-              ? "Connected"
-              : "Not connected"
-          }`,
-          tool.description?.replace(/\n+/g, " ") ?? "",
-          "",
-          `**Toolkit:** ${tool.toolkit?.name} \`(${tool.toolkit?.slug})\``,
-          tool.scopes?.length
-            ? `**Scopes:** ${tool.scopes
-                .map((s: string) => "`" + s + "`")
-                .join(", ")}`
-            : "N/A",
-          "",
-          "```ts",
-          "```",
-          `</${tool.slug}>`,
-        ].join("\n")
+    const [tools, accs] = await Promise.all([
+      composio.tools.getRawComposioTools({
+        search: args.keywords,
+      }),
+      composio.connectedAccounts.list({
+        userIds: [process.env.COMPOSIO_PLAYGROUND_USER_ID!],
+        statuses: ["ACTIVE"],
+      }),
+    ]);
+    const toolkits = await Promise.all(
+      [...new Set(tools.map((t) => t.toolkit?.slug ?? ""))].map((s) =>
+        composio.toolkits.get(s)
       )
-      .join("\n---\n");
+    );
+
+    const text = [
+      "<tools>",
+      ...tools.map((tool) =>
+        [
+          `<tool slug="${tool.slug}">`,
+          JSON.stringify(
+            {
+              slug: tool.slug,
+              name: tool.name,
+              scopes: tool.scopes,
+              toolkitSlug: tool.toolkit?.slug,
+            },
+            null,
+            2
+          ),
+          `</tool>`,
+        ].join("\n")
+      ),
+      "</tools>",
+      "<toolkits>",
+      ...toolkits.map((t) =>
+        [
+          `<toolkit slug="${t.slug}">`,
+          JSON.stringify(
+            {
+              name: t.name,
+              slug: t.slug,
+              isConnected: !!accs.items.some((c) => c.toolkit.slug === t.slug),
+              // authSchemes: t.authConfigDetails
+              //   ?.filter(
+              //     (d) =>
+              //       !blacklistedAuthModes
+              //         .get(t.slug)
+              //         ?.includes(d.mode as string)
+              //   )
+              //   ?.filter(
+              //     (d) =>
+              //       !d.fields.authConfigCreation.required.length ||
+              //       t.composioManagedAuthSchemes?.includes(d.mode as string)
+              //   )
+              //   .map((d) => ({ name: d.name, mode: d.mode })),
+            },
+            null,
+            2
+          ),
+          `</toolkit>`,
+        ].join("\n")
+      ),
+      "</toolkits>",
+    ].join("\n");
 
     return { content: [{ type: "text", text }] };
   }

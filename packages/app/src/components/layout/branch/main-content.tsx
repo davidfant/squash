@@ -1,4 +1,5 @@
 import { WebPreview } from "@/components/ai-elements/web-preview";
+import { SandboxTaskStream } from "@/components/blocks/SandboxTaskStream";
 import { TabsContent } from "@/components/ui/tabs";
 import { useMounted } from "@/hooks/useMounted";
 import { cn } from "@/lib/utils";
@@ -28,20 +29,26 @@ export function BranchTabContent({ className }: { className?: string }) {
     if (mounted) {
       stream.sendMessage();
     }
-  }, [mounted, stream]);
+  }, [mounted]);
+
+  const placeholder = (
+    <div className="flex flex-col gap-2 h-full items-center pt-[30%] p-8 overflow-y-auto">
+      <SandboxTaskStream stream={stream} label="Your preview is loading..." />
+    </div>
+  );
 
   return (
     <WebPreview className={cn("relative h-full", className)}>
-      <TabsContent
-        value="preview"
-        className="relative h-full focus-visible:outline-none"
-      >
-        <BranchPreview className="h-full" />
-      </TabsContent>
+      <div className="z-2 w-full h-full">
+        <TabsContent value="preview" className="h-full">
+          <BranchPreview className="h-full" />
+        </TabsContent>
 
-      <TabsContent value="code" className="h-full">
-        <BranchCodeViewer />
-      </TabsContent>
+        <TabsContent value="code" className="h-full">
+          <BranchCodeViewer />
+        </TabsContent>
+      </div>
+      <div className="absolute inset-0 z-1 overflow-y-auto">{placeholder}</div>
     </WebPreview>
   );
 }

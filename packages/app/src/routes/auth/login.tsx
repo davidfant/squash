@@ -16,7 +16,9 @@ export function LoginPage() {
     <AuthLayout>
       <SignInForm
         showHeader
-        callbackURL={searchParams.get("redirect") as string | undefined}
+        callbackURL={
+          searchParams.get("redirect") ?? (undefined as string | undefined)
+        }
       />
     </AuthLayout>
   );

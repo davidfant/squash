@@ -21,7 +21,11 @@ export function IframePreview({
       )}
     >
       {url ? (
-        <iframe src={url} className="w-full h-full" />
+        <iframe
+          src={url}
+          className="w-full h-full"
+          allow="microphone; speech-recognition; on-device-speech-recognition"
+        />
       ) : imageUrl ? (
         <img
           src={imageUrl}

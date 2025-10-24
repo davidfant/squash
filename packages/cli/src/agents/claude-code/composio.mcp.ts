@@ -1,4 +1,4 @@
-import { Composio } from "@composio/core";
+import { Composio, type CreateAuthConfigParams } from "@composio/core";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import camelCase from "lodash.camelcase";
@@ -7,6 +7,25 @@ import { z } from "zod";
 import { convertSchemaToTypeScript } from "../../lib/convert-schema-to-typescript.js";
 
 const composio = new Composio({ apiKey: process.env.COMPOSIO_API_KEY! });
+
+function getAuthConfigParams(toolkitSlug: string): CreateAuthConfigParams {
+  switch (toolkitSlug.toUpperCase()) {
+    case "PIPEDRIVE":
+      return {
+        type: "use_custom_auth",
+        authScheme: "API_KEY",
+        credentials: {},
+      };
+    case "POSTHOG":
+      return {
+        type: "use_custom_auth",
+        authScheme: "API_KEY",
+        credentials: {},
+      };
+    default:
+      return { type: "use_composio_managed_auth" };
+  }
+}
 
 /**
  * 1  Create the server skeleton
@@ -107,9 +126,10 @@ server.registerTool(
         });
         if (existing.items.length) return existing.items[0]!.id;
 
-        const created = await composio.authConfigs.create(toolkitSlug, {
-          type: "use_composio_managed_auth",
-        });
+        const created = await composio.authConfigs.create(
+          toolkitSlug,
+          getAuthConfigParams(toolkitSlug)
+        );
 
         return created.id;
       })(),

@@ -23,6 +23,7 @@ export function BranchPreview({ className }: { className?: string }) {
           "flex-1 mx-auto transition-all duration-300 z-2",
           getPreviewWidth()
         )}
+        allow="microphone; speech-recognition; on-device-speech-recognition"
       />
       <BranchPreviewConsole />
     </div>

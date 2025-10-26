@@ -178,7 +178,6 @@ export function streamAgent(params: {
         messages.push(newMessage);
       }
 
-      console.log(" FINISH 222", params.controller.signal.aborted);
       writer.write({ type: "finish" });
     },
   });

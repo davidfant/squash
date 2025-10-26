@@ -99,7 +99,7 @@ export async function runClaudeCode(
           settingSources: ["project"],
           agents: subagents,
           mcpServers: {
-            composio: {
+            Composio: {
               type: "sse",
               url: "https://mcp-composio-production.squash.workers.dev/sse",
               headers: {

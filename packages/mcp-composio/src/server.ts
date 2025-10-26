@@ -67,6 +67,7 @@ export function registerComposioTools(
               {
                 slug: tool.slug,
                 name: tool.name,
+                description: tool.description,
                 scopes: tool.scopes,
                 toolkitSlug: tool.toolkit?.slug,
               },
@@ -227,7 +228,7 @@ export function registerComposioTools(
     },
     async ({ toolkitSlug }) => {
       const resp = await composio.connectedAccounts.list({
-        userIds: [process.env.COMPOSIO_PLAYGROUND_USER_ID!],
+        userIds: [userId],
         toolkitSlugs: [toolkitSlug],
         statuses: ["ACTIVE"],
       });
@@ -248,14 +249,14 @@ export function registerComposioTools(
   
   Response:
   • Lists all tools from connected toolkits with their slug, name, description, and TypeScript input/output schemas.
-  • Tools are ready to be executed via \`multi_execute_tool\` without requiring additional authentication.
+  • Tools are ready to be executed via \`MultiExecuteTool\` without requiring additional authentication.
       `.trim(),
       inputSchema: {},
     },
     async () => {
       // Get all connected accounts for the user
       const connectedAccounts = await composio.connectedAccounts.list({
-        userIds: [process.env.COMPOSIO_PLAYGROUND_USER_ID!],
+        userIds: [userId],
         statuses: ["ACTIVE"],
       });
 
@@ -274,7 +275,7 @@ export function registerComposioTools(
       // Flatten the array of tool arrays
       const tools = allTools.flat();
 
-      // Format tools similar to search_tools
+      // Format tools similar to SearchTools
       const text = tools
         .map((tool) =>
           [
@@ -313,12 +314,12 @@ export function registerComposioTools(
     {
       title: "Execute a multi-step tool",
       description: `
-  **Fast and parallel tool executor for tools discovered through \`search_tools\`.**
+  **Fast and parallel tool executor for tools discovered through \`SearchTools\`.**
   Use this tool to execute up to 20 tools in parallel across apps. Response contains structured outputs ready for immediate analysis.
   
   ### Prerequisites:
   
-  * Always use valid tool slugs and their parameters discovered through \`search_tools\`.
+  * Always use valid tool slugs and their parameters discovered through \`SearchTools\`.
     **NEVER** invent tool slugs. **ALWAYS** pass arguments with the \`tool_slug\` in each tool.
   * Before executing a tool, make sure you have an active connection with the toolkit. If no active connection exists, call \`connect_to_toolkit\` to create one.
   * Ensure that the tools you are executing do not have any dependencies on each other.
@@ -326,7 +327,7 @@ export function registerComposioTools(
   ### Usage guidelines:
   
   * To be used whenever a tool is discovered and has to be called, either as part of a multi-step workflow or as a standalone tool.
-  * If \`search_tools\` returns a tool that can perform the task, prefer calling it via this executor.
+  * If \`SearchTools\` returns a tool that can perform the task, prefer calling it via this executor.
     Do not write custom API calls or ad-hoc scripts for tasks that can be completed by available Composio tools.
   * Tools should be used highly parallelly.
       `.trim(),
@@ -351,7 +352,7 @@ export function registerComposioTools(
       const results = await Promise.all(
         toolCalls.map(async (tc) => {
           const r = await composio.tools.execute(tc.toolSlug, {
-            userId: process.env.COMPOSIO_PLAYGROUND_USER_ID!,
+            userId: userId,
             arguments: tc.arguments,
           });
           return {

@@ -289,16 +289,16 @@ export function groupMessageEvents(
         });
         break;
       }
-      case "tool-ClaudeCode__mcp__composio__SearchTools": {
+      case "tool-ClaudeCode__mcp__Composio__SearchTools": {
         currentEvents.push({
           icon: SearchIcon,
           loading: isToolLoading(part.state),
           label: (
             <>
               <span>Search for</span>
-              {!!part.input?.useCase && (
+              {!!part.input?.keywords && (
                 <Badge variant="outline" className="border-none bg-muted">
-                  {part.input?.useCase}
+                  {part.input?.keywords}
                 </Badge>
               )}
             </>
@@ -306,7 +306,7 @@ export function groupMessageEvents(
         });
         break;
       }
-      case "tool-ClaudeCode__mcp__composio__CheckConnectionStatus": {
+      case "tool-ClaudeCode__mcp__Composio__CheckConnectionStatus": {
         currentEvents.push({
           icon: UnplugIcon,
           loading: isToolLoading(part.state),
@@ -314,7 +314,7 @@ export function groupMessageEvents(
         });
         break;
       }
-      case "tool-ClaudeCode__mcp__composio__MultiExecuteTool": {
+      case "tool-ClaudeCode__mcp__Composio__MultiExecuteTool": {
         part.input?.toolCalls
           ?.filter((tc) => !!tc)
           .map((tc) =>
@@ -326,7 +326,7 @@ export function groupMessageEvents(
           );
         break;
       }
-      case "tool-ClaudeCode__mcp__composio__ConnectToToolkit": {
+      case "tool-ClaudeCode__mcp__Composio__ConnectToToolkit": {
         if (part.state === "output-available") {
           const connectData = safeJsonParse<{
             redirectUrl: string;
@@ -338,7 +338,7 @@ export function groupMessageEvents(
             const waitForConnectionPart = parts
               .filter(
                 (p) =>
-                  p.type === "tool-ClaudeCode__mcp__composio__WaitForConnection"
+                  p.type === "tool-ClaudeCode__mcp__Composio__WaitForConnection"
               )
               .find(
                 (p) =>
@@ -363,7 +363,8 @@ export function groupMessageEvents(
         }
         break;
       }
-      case "tool-ClaudeCode__mcp__composio__GetConnectedTools":
+      case "tool-ClaudeCode__mcp__Composio__GetConnectedTools":
+      case "tool-ClaudeCode__mcp__Composio__WaitForConnection":
         break;
       case "tool-GitCommit": {
         if (part.state === "output-available") {

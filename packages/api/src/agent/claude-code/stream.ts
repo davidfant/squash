@@ -94,22 +94,17 @@ export async function streamClaudeCodeAgent(opts: {
       logger.error("Error in ClaudeCode agent", { error }),
   });
 
-  opts.writer.merge(
-    agentStream.toUIMessageStream({
-      sendStart: false,
-      sendFinish: false,
-      messageMetadata: opts.messageMetadata,
-    })
-  );
-
-  await agentStream.consumeStream();
-  if (opts.abortSignal.aborted) {
-    throw new Error("Cancelled");
+  for await (const msg of agentStream.toUIMessageStream<ChatMessage>({
+    sendStart: false,
+    sendFinish: false,
+    messageMetadata: opts.messageMetadata,
+  })) {
+    opts.writer.write(msg);
   }
 
-  if (!sessionId) {
-    throw new Error("Claude Code session not detected");
-  }
+  if (opts.abortSignal.aborted) throw new Error("Cancelled");
+  if (!sessionId) throw new Error("Claude Code session not detected");
+
   const sessionDataPromise = opts.readSessionData(sessionId);
 
   const toolCalls = await agentStream.toolCalls;
@@ -117,10 +112,10 @@ export async function streamClaudeCodeAgent(opts: {
     (t) =>
       !t.dynamic &&
       [
-        "ClaudeCodeEdit",
-        "ClaudeCodeMultiEdit",
-        "ClaudeCodeWrite",
-        "ClaudeCodeNotebookEdit",
+        "ClaudeCode__Edit",
+        "ClaudeCode__MultiEdit",
+        "ClaudeCode__Write",
+        "ClaudeCode__NotebookEdit",
       ].includes(t.toolName)
   );
   logger.debug("Should commit", {

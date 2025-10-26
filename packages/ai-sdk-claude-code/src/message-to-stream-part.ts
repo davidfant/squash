@@ -49,6 +49,12 @@ export function messageToStreamPart(
           switch (part.type) {
             case "tool_use": {
               const id = String(part.id);
+              contentBlocks[part.id] = {
+                type: "tool-call",
+                toolCallId: part.id,
+                toolName: toToolName(part.name),
+                input: "",
+              };
               controller.enqueue({
                 id,
                 type: "tool-input-start",

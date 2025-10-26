@@ -32,28 +32,20 @@ toolkit's current connection status for the user.
    For every toolkit in your shortlist, determine whether the user is already connected, which you can see in the \`SearchTools\` response.
 
 4. **Return the result**  
-   Respond with *only* the JSON array below—no additional commentary.
+   Respond with *only* a list of the tools in the below format:
 
-\`\`\`json
-[
-  {
-    "toolkit_slug": "AIRTABLE",
-    "toolkit_name": "Airtable",
-    "tool_slug": "AIRTABLE_CREATE_RECORD",
-    "tool_name": "Create Record",
-    "connected": false,
-    "why_relevant": "Adds a row to a specified base/table"
-  },
-  {
-    "toolkit_slug": "GOOGLE_SHEETS",
-    "toolkit_name": "Google Sheets",
-    "tool_slug": "GOOGLESHEETS_APPEND_ROW",
-    "tool_name": "Append Row",
-    "connected": true,
-    "why_relevant": "Appends data to an existing sheet"
-  }
-]
-\`\`\``,
+   **[tool name]**
+   [why relevant]
+   Toolkit: [toolkit name] (slug: [toolkit slug])
+   Connected: [YES/NO]
+
+   For example:
+   **Create Record**
+   Adds a row to a specified base/table
+   Toolkit: Airtable (slug: AIRTABLE)
+   Connected: YES
+
+`.trim(),
   },
 
   "integration-tester": {
@@ -68,8 +60,8 @@ the shape of the successful input and output
 `.trim(),
 
     tools: [
-      "mcp__composio__multi_execute_tool",
-      "mcp__composio__get_connected_tools",
+      "mcp__Composio__MultiExecuteTool",
+      "mcp__Composio__GetConnectedTools",
       "Read",
       "Write",
       "Edit",
@@ -84,7 +76,7 @@ test whether the goal can be achieved with the currently connected tools.
 ## 🛠 Workflow
 
 1. **Gather context**
-   Call \`get_connected_tools\` to list every integration and tool available to you.
+   Call \`GetConnectedTools\` to list every integration and tool available to you.
 
 2. **Test execution**
    Use the Composio MCP server to run the appropriate tool calls.

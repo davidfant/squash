@@ -1,0 +1,226 @@
+diff --git a/dist/index.mjs b/dist/index.mjs
+index ee768c3aab27c1ae9a6e6368c00100c9988b5860..b89288be966b4e343d0945b89b9a2b40c10466fc 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -5,7 +5,7 @@ var __export = (target, all) => {
+ };
+ 
+ // src/index.ts
+-import { gateway as gateway2, createGateway } from "@ai-sdk/gateway";
++import { createGateway, gateway as gateway2 } from "@ai-sdk/gateway";
+ import {
+   asSchema as asSchema5,
+   createIdGenerator as createIdGenerator5,
+@@ -666,8 +666,8 @@ function detectMediaType({
+ 
+ // src/util/download/download.ts
+ import {
+-  withUserAgentSuffix,
+-  getRuntimeEnvironmentUserAgent
++  getRuntimeEnvironmentUserAgent,
++  withUserAgentSuffix
+ } from "@ai-sdk/provider-utils";
+ 
+ // src/version.ts
+@@ -2856,8 +2856,8 @@ import {
+ } from "@ai-sdk/provider-utils";
+ 
+ // src/ui-message-stream/ui-message-chunks.ts
+-import { z as z7 } from "zod/v4";
+ import { lazyValidator, zodSchema } from "@ai-sdk/provider-utils";
++import { z as z7 } from "zod/v4";
+ var uiMessageChunkSchema = lazyValidator(
+   () => zodSchema(
+     z7.union([
+@@ -3535,6 +3535,7 @@ function processUIMessageStream({
+               state.message.metadata = mergedMetadata;
+             }
+           }
++          console.log('[vercel/ai] processUIMessageStream:', JSON.stringify(chunk).slice(0, 256));
+           switch (chunk.type) {
+             case "text-start": {
+               const textPart = {
+@@ -7839,7 +7840,11 @@ var DefaultStreamObjectResult = class {
+ };
+ 
+ // src/generate-speech/generate-speech.ts
+-import { withUserAgentSuffix as withUserAgentSuffix7 } from "@ai-sdk/provider-utils";
++import {
++  asSchema as asSchema4,
++  safeParseJSON as safeParseJSON4,
++  safeValidateTypes as safeValidateTypes4, withUserAgentSuffix as withUserAgentSuffix7
++} from "@ai-sdk/provider-utils";
+ 
+ // src/generate-speech/generated-audio-file.ts
+ var DefaultGeneratedAudioFile = class extends DefaultGeneratedFile {
+@@ -7942,11 +7947,6 @@ __export(output_exports, {
+   object: () => object,
+   text: () => text
+ });
+-import {
+-  asSchema as asSchema4,
+-  safeParseJSON as safeParseJSON4,
+-  safeValidateTypes as safeValidateTypes4
+-} from "@ai-sdk/provider-utils";
+ var text = () => ({
+   type: "text",
+   responseFormat: { type: "text" },
+@@ -8089,8 +8089,8 @@ function pruneMessages({
+ }
+ 
+ // src/generate-text/smooth-stream.ts
+-import { delay as originalDelay } from "@ai-sdk/provider-utils";
+ import { InvalidArgumentError as InvalidArgumentError2 } from "@ai-sdk/provider";
++import { delay as originalDelay } from "@ai-sdk/provider-utils";
+ var CHUNKING_REGEXPS = {
+   word: /\S+\s+/m,
+   line: /\n+/m
+@@ -8784,9 +8784,9 @@ var DefaultTranscriptionResult = class {
+ 
+ // src/ui/call-completion-api.ts
+ import {
++  getRuntimeEnvironmentUserAgent as getRuntimeEnvironmentUserAgent2,
+   parseJsonEventStream,
+-  withUserAgentSuffix as withUserAgentSuffix9,
+-  getRuntimeEnvironmentUserAgent as getRuntimeEnvironmentUserAgent2
++  withUserAgentSuffix as withUserAgentSuffix9
+ } from "@ai-sdk/provider-utils";
+ 
+ // src/ui/process-text-stream.ts
+@@ -8960,9 +8960,9 @@ import { parseJsonEventStream as parseJsonEventStream2 } from "@ai-sdk/provider-
+ 
+ // src/ui/http-chat-transport.ts
+ import {
++  getRuntimeEnvironmentUserAgent as getRuntimeEnvironmentUserAgent3,
+   resolve,
+-  withUserAgentSuffix as withUserAgentSuffix10,
+-  getRuntimeEnvironmentUserAgent as getRuntimeEnvironmentUserAgent3
++  withUserAgentSuffix as withUserAgentSuffix10
+ } from "@ai-sdk/provider-utils";
+ var HttpChatTransport = class {
+   constructor({
+@@ -9940,46 +9940,8 @@ function readUIMessageStream({
+   return createAsyncIterableStream(outputStream);
+ }
+ export {
+-  AISDKError17 as AISDKError,
+-  APICallError,
+-  AbstractChat,
+-  DefaultChatTransport,
+-  DownloadError,
+-  EmptyResponseBodyError,
+-  Agent as Experimental_Agent,
+-  HttpChatTransport,
+-  InvalidArgumentError,
+-  InvalidDataContentError,
+-  InvalidMessageRoleError,
+-  InvalidPromptError,
+-  InvalidResponseDataError,
+-  InvalidStreamPartError,
+-  InvalidToolInputError,
+-  JSONParseError,
+-  JsonToSseTransformStream,
+-  LoadAPIKeyError,
+-  LoadSettingError,
+-  MessageConversionError,
+-  NoContentGeneratedError,
+-  NoImageGeneratedError,
+-  NoObjectGeneratedError,
+-  NoOutputGeneratedError,
+-  NoOutputSpecifiedError,
+-  NoSpeechGeneratedError,
+-  NoSuchModelError,
+-  NoSuchProviderError,
+-  NoSuchToolError,
+-  output_exports as Output,
+-  RetryError,
+-  SerialJobExecutor,
+-  TextStreamChatTransport,
+-  TooManyEmbeddingValuesForCallError,
+-  ToolCallRepairError,
+-  TypeValidationError,
+-  UI_MESSAGE_STREAM_HEADERS,
+-  UnsupportedFunctionalityError,
+-  UnsupportedModelVersionError,
+-  asSchema5 as asSchema,
++  AbstractChat, AISDKError17 as AISDKError,
++  APICallError, asSchema5 as asSchema,
+   assistantModelMessageSchema,
+   callCompletionApi,
+   consumeStream,
+@@ -9998,12 +9960,10 @@ export {
+   createTextStreamResponse,
+   createUIMessageStream,
+   createUIMessageStreamResponse,
+-  customProvider,
+-  defaultSettingsMiddleware,
+-  dynamicTool,
++  customProvider, DefaultChatTransport, defaultSettingsMiddleware, DownloadError, dynamicTool,
+   embed,
+-  embedMany,
+-  experimental_createProviderRegistry,
++  embedMany, EmptyResponseBodyError,
++  Agent as Experimental_Agent, experimental_createProviderRegistry,
+   experimental_customProvider,
+   generateImage as experimental_generateImage,
+   generateSpeech as experimental_generateSpeech,
+@@ -10016,35 +9976,44 @@ export {
+   getTextFromDataUrl,
+   getToolName,
+   getToolOrDynamicToolName,
+-  hasToolCall,
+-  isDataUIPart,
++  hasToolCall, HttpChatTransport,
++  InvalidArgumentError,
++  InvalidDataContentError,
++  InvalidMessageRoleError,
++  InvalidPromptError,
++  InvalidResponseDataError,
++  InvalidStreamPartError,
++  InvalidToolInputError, isDataUIPart,
+   isDeepEqualData,
+   isFileUIPart,
+   isReasoningUIPart,
+   isTextUIPart,
+   isToolOrDynamicToolUIPart,
+-  isToolUIPart,
+-  jsonSchema,
+-  lastAssistantMessageIsCompleteWithToolCalls,
+-  modelMessageSchema,
+-  parseJsonEventStream3 as parseJsonEventStream,
++  isToolUIPart, JSONParseError, jsonSchema, JsonToSseTransformStream, lastAssistantMessageIsCompleteWithToolCalls, LoadAPIKeyError,
++  LoadSettingError,
++  MessageConversionError, modelMessageSchema, NoContentGeneratedError,
++  NoImageGeneratedError,
++  NoObjectGeneratedError,
++  NoOutputGeneratedError,
++  NoOutputSpecifiedError,
++  NoSpeechGeneratedError,
++  NoSuchModelError,
++  NoSuchProviderError,
++  NoSuchToolError,
++  output_exports as Output, parseJsonEventStream3 as parseJsonEventStream,
+   parsePartialJson,
+   pipeTextStreamToResponse,
+   pipeUIMessageStreamToResponse,
+   pruneMessages,
+-  readUIMessageStream,
+-  safeValidateUIMessages,
+-  simulateReadableStream,
++  readUIMessageStream, RetryError, safeValidateUIMessages, SerialJobExecutor, simulateReadableStream,
+   simulateStreamingMiddleware,
+   smoothStream,
+   stepCountIs,
+   streamObject,
+   streamText,
+-  systemModelMessageSchema,
+-  tool,
+-  toolModelMessageSchema,
+-  uiMessageChunkSchema,
+-  userModelMessageSchema,
++  systemModelMessageSchema, TextStreamChatTransport, tool, ToolCallRepairError, toolModelMessageSchema, TooManyEmbeddingValuesForCallError, TypeValidationError,
++  UI_MESSAGE_STREAM_HEADERS, uiMessageChunkSchema, UnsupportedFunctionalityError,
++  UnsupportedModelVersionError, userModelMessageSchema,
+   validateUIMessages,
+   wrapLanguageModel,
+   wrapProvider,

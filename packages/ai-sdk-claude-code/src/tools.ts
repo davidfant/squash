@@ -271,11 +271,11 @@ export const tools = {
     description: "Terminates a long-running Bash shell by its ID.",
   }),
 
-  ClaudeCode__mcp__composio__GetConnectedTools: tool({
+  ClaudeCode__mcp__Composio__GetConnectedTools: tool({
     inputSchema: z.unknown(),
     outputSchema: z.unknown(),
   }),
-  ClaudeCode__mcp__composio__MultiExecuteTool: tool({
+  ClaudeCode__mcp__Composio__MultiExecuteTool: tool({
     inputSchema: z.object({
       toolCalls: z.array(
         z.object({
@@ -287,19 +287,19 @@ export const tools = {
     }),
     outputSchema: z.unknown(),
   }),
-  ClaudeCode__mcp__composio__WaitForConnection: tool({
+  ClaudeCode__mcp__Composio__WaitForConnection: tool({
     inputSchema: z.object({ connectRequestId: z.string() }),
     outputSchema: z.string(),
   }),
-  ClaudeCode__mcp__composio__CheckConnectionStatus: tool({
+  ClaudeCode__mcp__Composio__CheckConnectionStatus: tool({
     inputSchema: z.unknown(),
     outputSchema: z.unknown(),
   }),
-  ClaudeCode__mcp__composio__SearchTools: tool({
-    inputSchema: z.object({ useCase: z.string() }),
+  ClaudeCode__mcp__Composio__SearchTools: tool({
+    inputSchema: z.object({ keywords: z.string() }),
     outputSchema: z.unknown(),
   }),
-  ClaudeCode__mcp__composio__ConnectToToolkit: tool({
+  ClaudeCode__mcp__Composio__ConnectToToolkit: tool({
     inputSchema: z.object({ toolkitSlug: z.string() }),
     outputSchema: z.string(),
     //   outputSchema: z.preprocess(

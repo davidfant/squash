@@ -156,7 +156,7 @@ export function groupMessageEvents(
         });
         break;
       }
-      case "tool-ClaudeCodeRead": {
+      case "tool-ClaudeCode__Read": {
         const path = part.input?.file_path;
         currentEvents.push({
           icon: EyeIcon,
@@ -170,9 +170,9 @@ export function groupMessageEvents(
         });
         break;
       }
-      case "tool-ClaudeCodeEdit":
-      case "tool-ClaudeCodeMultiEdit":
-      case "tool-ClaudeCodeWrite": {
+      case "tool-ClaudeCode__Edit":
+      case "tool-ClaudeCode__MultiEdit":
+      case "tool-ClaudeCode__Write": {
         const path = part.input?.file_path;
         currentEvents.push({
           icon: FilePenIcon,
@@ -186,7 +186,7 @@ export function groupMessageEvents(
         });
         break;
       }
-      case "tool-ClaudeCodeBash": {
+      case "tool-ClaudeCode__Bash": {
         currentEvents.push({
           icon: TerminalIcon,
           loading: isToolLoading(part.state),
@@ -203,7 +203,7 @@ export function groupMessageEvents(
         });
         break;
       }
-      case "tool-ClaudeCodeTodoWrite": {
+      case "tool-ClaudeCode__TodoWrite": {
         if (part.state === "output-available") {
           const nextTodos = part.input.todos.map((t) => ({
             id: t.content,
@@ -244,7 +244,7 @@ export function groupMessageEvents(
         }
         break;
       }
-      case "tool-ClaudeCodeGlob": {
+      case "tool-ClaudeCode__Glob": {
         currentEvents.push({
           icon: FolderSearch,
           loading: isToolLoading(part.state),
@@ -264,7 +264,7 @@ export function groupMessageEvents(
           ),
         });
       }
-      case "tool-ClaudeCodeGrep": {
+      case "tool-ClaudeCode__Grep": {
         currentEvents.push({
           icon: SearchIcon,
           loading: isToolLoading(part.state),
@@ -281,7 +281,7 @@ export function groupMessageEvents(
         });
         break;
       }
-      case "tool-ClaudeCodeTask": {
+      case "tool-ClaudeCode__Task": {
         currentEvents.push({
           icon: ListTodoIcon,
           loading: false, // isToolLoading(part.state),
@@ -289,7 +289,7 @@ export function groupMessageEvents(
         });
         break;
       }
-      case "tool-ClaudeCodemcp__composio__search_tools": {
+      case "tool-ClaudeCode__mcp__composio__SearchTools": {
         currentEvents.push({
           icon: SearchIcon,
           loading: isToolLoading(part.state),
@@ -306,7 +306,7 @@ export function groupMessageEvents(
         });
         break;
       }
-      case "tool-ClaudeCodemcp__composio__check_connection_status": {
+      case "tool-ClaudeCode__mcp__composio__CheckConnectionStatus": {
         currentEvents.push({
           icon: UnplugIcon,
           loading: isToolLoading(part.state),
@@ -314,7 +314,7 @@ export function groupMessageEvents(
         });
         break;
       }
-      case "tool-ClaudeCodemcp__composio__multi_execute_tool": {
+      case "tool-ClaudeCode__mcp__composio__MultiExecuteTool": {
         part.input?.toolCalls
           ?.filter((tc) => !!tc)
           .map((tc) =>
@@ -326,7 +326,7 @@ export function groupMessageEvents(
           );
         break;
       }
-      case "tool-ClaudeCodemcp__composio__connect_to_toolkit": {
+      case "tool-ClaudeCode__mcp__composio__ConnectToToolkit": {
         if (part.state === "output-available") {
           const connectData = safeJsonParse<{
             redirectUrl: string;
@@ -338,7 +338,7 @@ export function groupMessageEvents(
             const waitForConnectionPart = parts
               .filter(
                 (p) =>
-                  p.type === "tool-ClaudeCodemcp__composio__wait_for_connection"
+                  p.type === "tool-ClaudeCode__mcp__composio__WaitForConnection"
               )
               .find(
                 (p) =>
@@ -363,7 +363,7 @@ export function groupMessageEvents(
         }
         break;
       }
-      case "tool-ClaudeCodemcp__composio__get_connected_tools":
+      case "tool-ClaudeCode__mcp__composio__GetConnectedTools":
         break;
       case "tool-GitCommit": {
         if (part.state === "output-available") {

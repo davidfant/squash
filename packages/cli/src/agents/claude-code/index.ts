@@ -1,12 +1,10 @@
 import type { ClaudeCodeCLIOptions, ClaudeCodeSession } from "@/schema";
 import {
   query,
-  type McpStdioServerConfig,
   type SDKPartialAssistantMessage,
 } from "@anthropic-ai/claude-agent-sdk";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { parseEnvFile } from "../../lib/parse-env-file.js";
 import { subagents } from "./subagents.js";
 
@@ -57,17 +55,7 @@ export async function runClaudeCode(
 ): Promise<ClaudeCodeSession> {
   let sessionId = req.options?.sessionId;
 
-  const composioMcp: McpStdioServerConfig = {
-    type: "stdio",
-    command: "node",
-    args: [
-      path.resolve(
-        path.dirname(fileURLToPath(import.meta.url)),
-        "composio.mcp.js"
-      ),
-    ],
-    env: parseEnvFile(path.join(req.cwd, ".dev.vars")),
-  };
+  const envVars = parseEnvFile(path.join(req.cwd, ".dev.vars"));
 
   retryLoop: for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {
@@ -110,7 +98,15 @@ export async function runClaudeCode(
           },
           settingSources: ["project"],
           agents: subagents,
-          mcpServers: { composio: composioMcp },
+          mcpServers: {
+            composio: {
+              type: "sse",
+              url: "https://mcp-composio-production.squash.workers.dev/sse",
+              headers: {
+                authorization: `Bearer ${envVars.COMPOSIO_API_KEY}:${envVars.COMPOSIO_PLAYGROUND_USER_ID}`,
+              },
+            },
+          },
         },
       });
 

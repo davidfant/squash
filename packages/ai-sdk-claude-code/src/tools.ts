@@ -2,7 +2,7 @@ import { tool } from "ai";
 import { z } from "zod";
 
 export const tools = {
-  ClaudeCodeTask: tool({
+  ClaudeCode__Task: tool({
     inputSchema: z.object({
       description: z
         .string()
@@ -17,7 +17,7 @@ export const tools = {
       "Launch a new agent to handle complex, multi-step tasks autonomously.",
   }),
 
-  ClaudeCodeBash: tool({
+  ClaudeCode__Bash: tool({
     inputSchema: z.object({
       command: z.string().describe("The command to execute"),
       timeout: z
@@ -42,7 +42,7 @@ export const tools = {
       "Executes a bash command in a persistent, secured shell session.",
   }),
 
-  ClaudeCodeGlob: tool({
+  ClaudeCode__Glob: tool({
     inputSchema: z.object({
       pattern: z.string().describe("The glob pattern to match files against"),
       path: z
@@ -57,7 +57,7 @@ export const tools = {
       "Finds files matching a glob pattern, sorted by modification time.",
   }),
 
-  ClaudeCodeGrep: tool({
+  ClaudeCode__Grep: tool({
     inputSchema: z.object({
       pattern: z.string().describe("The regex pattern to search for"),
       path: z
@@ -110,7 +110,7 @@ export const tools = {
     description: "Searches file contents with ripgrep-powered regex matching.",
   }),
 
-  ClaudeCodeExitPlanMode: tool({
+  ClaudeCode__ExitPlanMode: tool({
     inputSchema: z.object({
       plan: z
         .string()
@@ -123,7 +123,7 @@ export const tools = {
       "Signal that planning is complete and code implementation should begin.",
   }),
 
-  ClaudeCodeRead: tool({
+  ClaudeCode__Read: tool({
     inputSchema: z.object({
       file_path: z.string().describe("The absolute path to the file to read"),
       offset: z
@@ -137,7 +137,7 @@ export const tools = {
       "Reads a file’s content (text, PDF, notebook, or image) from disk.",
   }),
 
-  ClaudeCodeEdit: tool({
+  ClaudeCode__Edit: tool({
     inputSchema: z.object({
       file_path: z.string().describe("The absolute path to the file to modify"),
       old_string: z.string().describe("The text to replace"),
@@ -151,7 +151,7 @@ export const tools = {
     description: "Performs a single find-and-replace edit in a file.",
   }),
 
-  ClaudeCodeMultiEdit: tool({
+  ClaudeCode__MultiEdit: tool({
     inputSchema: z.object({
       file_path: z.string().describe("The absolute path to the file to modify"),
       edits: z
@@ -173,7 +173,7 @@ export const tools = {
       "Applies multiple find-and-replace edits to a single file atomically.",
   }),
 
-  ClaudeCodeWrite: tool({
+  ClaudeCode__Write: tool({
     inputSchema: z.object({
       file_path: z.string().describe("The absolute path to the file to write"),
       content: z.string().describe("The content to write to the file"),
@@ -182,7 +182,7 @@ export const tools = {
     description: "Writes (or overwrites) a file on the local filesystem.",
   }),
 
-  ClaudeCodeNotebookEdit: tool({
+  ClaudeCode__NotebookEdit: tool({
     inputSchema: z.object({
       notebook_path: z
         .string()
@@ -210,7 +210,7 @@ export const tools = {
       "Replaces, inserts, or deletes a specific cell in a Jupyter notebook.",
   }),
 
-  ClaudeCodeWebFetch: tool({
+  ClaudeCode__WebFetch: tool({
     inputSchema: z.object({
       url: z.string().url().describe("The URL to fetch content from"),
       prompt: z.string().describe("The prompt to run on the fetched content"),
@@ -219,7 +219,7 @@ export const tools = {
     description: "Fetches and analyzes webpage content using an AI model.",
   }),
 
-  ClaudeCodeTodoWrite: tool({
+  ClaudeCode__TodoWrite: tool({
     inputSchema: z.object({
       todos: z
         .array(
@@ -238,7 +238,7 @@ export const tools = {
       "Creates or updates a structured todo list for the current session.",
   }),
 
-  ClaudeCodeWebSearch: tool({
+  ClaudeCode__WebSearch: tool({
     inputSchema: z.object({
       query: z.string().min(2).describe("The search query to use"),
       allowed_domains: z
@@ -254,7 +254,7 @@ export const tools = {
     description: "Performs a web search to retrieve up-to-date information.",
   }),
 
-  ClaudeCodeBashOutput: tool({
+  ClaudeCode__BashOutput: tool({
     inputSchema: z.object({
       bash_id: z.string().describe("The ID of the background shell to query"),
       filter: z.string().optional().describe("Regex to filter output lines"),
@@ -263,7 +263,7 @@ export const tools = {
     description: "Retrieves new output from a running or completed Bash shell.",
   }),
 
-  ClaudeCodeKillBash: tool({
+  ClaudeCode__KillBash: tool({
     inputSchema: z.object({
       shell_id: z.string().describe("The ID of the background shell to kill"),
     }),
@@ -271,11 +271,11 @@ export const tools = {
     description: "Terminates a long-running Bash shell by its ID.",
   }),
 
-  ClaudeCodemcp__composio__get_connected_tools: tool({
+  ClaudeCode__mcp__composio__GetConnectedTools: tool({
     inputSchema: z.unknown(),
     outputSchema: z.unknown(),
   }),
-  ClaudeCodemcp__composio__multi_execute_tool: tool({
+  ClaudeCode__mcp__composio__MultiExecuteTool: tool({
     inputSchema: z.object({
       toolCalls: z.array(
         z.object({
@@ -287,19 +287,19 @@ export const tools = {
     }),
     outputSchema: z.unknown(),
   }),
-  ClaudeCodemcp__composio__wait_for_connection: tool({
+  ClaudeCode__mcp__composio__WaitForConnection: tool({
     inputSchema: z.object({ connectRequestId: z.string() }),
     outputSchema: z.string(),
   }),
-  ClaudeCodemcp__composio__check_connection_status: tool({
+  ClaudeCode__mcp__composio__CheckConnectionStatus: tool({
     inputSchema: z.unknown(),
     outputSchema: z.unknown(),
   }),
-  ClaudeCodemcp__composio__search_tools: tool({
+  ClaudeCode__mcp__composio__SearchTools: tool({
     inputSchema: z.object({ useCase: z.string() }),
     outputSchema: z.unknown(),
   }),
-  ClaudeCodemcp__composio__connect_to_toolkit: tool({
+  ClaudeCode__mcp__composio__ConnectToToolkit: tool({
     inputSchema: z.object({ toolkitSlug: z.string() }),
     outputSchema: z.string(),
     //   outputSchema: z.preprocess(

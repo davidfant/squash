@@ -1,0 +1,42 @@
+{
+  "name": "@squashai/mcp-composio",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "dist/server.js",
+  "types": "dist/server.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/server.js",
+      "types": "./dist/server.d.ts"
+    },
+    "./worker": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "dev": "wrangler dev",
+    "dev:inspect": "npx @modelcontextprotocol/inspector",
+    "push": "wrangler deploy --env production",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@composio/core": "^0.1.55",
+    "@modelcontextprotocol/sdk": "^1.20.1",
+    "agents": "^0.2.8",
+    "lodash.camelcase": "^4.3.0",
+    "lodash.upperfirst": "^4.3.1",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250204.0",
+    "@types/json-schema": "^7.0.15",
+    "@types/lodash.camelcase": "^4.3.9",
+    "@types/lodash.upperfirst": "^4.3.9",
+    "@types/node": "^22.8.7",
+    "typescript": "~5.8.3",
+    "wrangler": "^4.42.0"
+  }
+}

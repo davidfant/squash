@@ -63,7 +63,7 @@ export function ChatThread({
     () =>
       messages.activePath
         .flatMap((p) => p.parts)
-        .filter((p) => p.type === "tool-ClaudeCodeTodoWrite")
+        .filter((p) => p.type === "tool-ClaudeCode__TodoWrite")
         .findLast((p) => p.state === "output-available")
         ?.input.todos.map((t) => ({
           id: t.content,

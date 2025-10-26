@@ -18,7 +18,7 @@ interface AnthropicProviderMetadata extends SharedV2ProviderMetadata {
   usage: Record<string, JSONValue>;
 }
 
-const toToolName = (name: string) => `ClaudeCode${name}`;
+const toToolName = (name: string) => `ClaudeCode__${name}`;
 
 export function messageToStreamPart(
   controller: ReadableStreamDefaultController<LanguageModelV2StreamPart>

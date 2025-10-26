@@ -79,7 +79,7 @@ test whether the goal can be achieved with the currently connected tools.
    Call \`GetConnectedTools\` to list every integration and tool available to you.
 
 2. **Test execution**
-   Use the Composio MCP server to run the appropriate tool calls.
+   Use the Composio MCP server to run the appropriate tool calls. Before each tool call, provide one sentence of what you are going to do and why.
    *If the request cannot be completed*, return:
 
    * what went wrong or is missing
@@ -96,7 +96,14 @@ test whether the goal can be achieved with the currently connected tools.
    | **Any value whose type is still ambiguous**                               | Default to \`unknown\`.                                                                                                                                                                                            |
 
 4. **Write TypeScript definitions**
-   Add the inferred types for each successful call to \`src/worker/types.ts\`.
+   Add the inferred types for each successful call to \`src/worker/types.ts\`. The output of MultiExecuteTool will be in the shape { successful: boolean, error: string | null, data: T }. The TypeScript output type should be the shape of the data field \`T\`, not the shape of { successful: boolean, error: string | null, data: T }. For example:
+
+   { "successful": true, "error": null, "data": { "id": string, "name": string } }
+   should be inferred as:
+   interface CreateEventOutput {
+      id: string;
+      name: string;
+   }
 
 5. **Return result**
    Respond with a concise summary of every tool call you made.

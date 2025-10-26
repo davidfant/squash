@@ -785,8 +785,26 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
   }
 
   async ping(): Promise<void> {
-    const sandbox = await this.getSandbox();
-    await sandbox.refreshData();
+    const [sandbox, options] = await Promise.all([
+      this.getSandbox(),
+      this.getOptions(),
+    ]);
+
+    const [preview] = await Promise.all([
+      sandbox.getPreviewLink(options.config.port),
+      sandbox.refreshData(),
+    ]);
+    logger.debug("Refreshed Daytona sandbox data", {
+      sandboxId: sandbox.id,
+      state: sandbox.state,
+    });
+
+    const response = await fetch(preview.url, { method: "GET" });
+    if (!response.ok) {
+      throw new Error(
+        `Failed to ping Daytona sandbox: ${response.status} ${response.statusText}`
+      );
+    }
   }
 
   async getPreviewUrl(): Promise<string> {

@@ -152,11 +152,19 @@ const repoBranchRouter = new Hono<{
 
       const sandbox = c.env.DAYTONA_SANDBOX_MANAGER.getByName(params.branchId);
 
+      const restoreVersion =
+        allMessages.slice(-1)[0]?.id !== body.message.parentId;
+      logger.info("Starting agent", {
+        count: messages.length,
+        branchId: params.branchId,
+        threadId,
+        restoreVersion,
+      });
       await sandbox.startAgent({
         messages,
         threadId,
         branchId: params.branchId,
-        restoreVersion: allMessages.slice(-1)[0]?.id !== body.message.parentId,
+        restoreVersion,
       });
       return sandbox.listenToAgent();
     }

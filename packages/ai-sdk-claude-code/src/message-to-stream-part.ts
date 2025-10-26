@@ -394,23 +394,23 @@ export function messageToStreamPart(
         }
 
         case "message_start": {
-          if (!m.parent_tool_use_id) {
-            usage.inputTokens = value.message.usage.input_tokens;
-            usage.cachedInputTokens =
-              value.message.usage.cache_read_input_tokens ?? undefined;
+          // if (!m.parent_tool_use_id) {
+          usage.inputTokens = value.message.usage.input_tokens;
+          usage.cachedInputTokens =
+            value.message.usage.cache_read_input_tokens ?? undefined;
 
-            providerMetadata = {
-              usage: value.message.usage,
-              cacheCreationInputTokens:
-                value.message.usage.cache_creation_input_tokens ?? null,
-            };
+          providerMetadata = {
+            usage: value.message.usage,
+            cacheCreationInputTokens:
+              value.message.usage.cache_creation_input_tokens ?? null,
+          };
 
-            controller.enqueue({
-              type: "response-metadata",
-              id: value.message.id ?? undefined,
-              modelId: value.message.model ?? undefined,
-            });
-          }
+          controller.enqueue({
+            type: "response-metadata",
+            id: value.message.id ?? undefined,
+            modelId: value.message.model ?? undefined,
+          });
+          // }
 
           return;
         }

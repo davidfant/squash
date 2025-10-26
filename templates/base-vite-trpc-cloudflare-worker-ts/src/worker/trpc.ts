@@ -34,7 +34,13 @@ const loggerMiddleware = t.middleware(async ({ path, type, input, next }) => {
       durationMs,
       result: {
         ok: result.ok,
-        error: result.ok ? undefined : result.error,
+        error: result.ok
+          ? undefined
+          : {
+              code: result.error.code,
+              message: result.error.message,
+              stack: result.error.stack,
+            },
         data: result.ok ? result.data : undefined,
       },
     })

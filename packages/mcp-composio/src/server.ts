@@ -12,6 +12,14 @@ export interface ComposioMcpServerOptions {
   userId: string;
 }
 
+const escapeAttribute = (value: string): string =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
 export function registerComposioTools(
   server: McpServer,
   { apiKey, userId }: ComposioMcpServerOptions
@@ -344,9 +352,6 @@ export function registerComposioTools(
           })
         ),
       },
-      outputSchema: {
-        results: z.array(z.object({ toolSlug: z.string(), result: z.any() })),
-      },
     },
     async ({ toolCalls }) => {
       const results = await Promise.all(
@@ -362,10 +367,69 @@ export function registerComposioTools(
         })
       );
 
-      return {
-        content: [{ type: "text", text: JSON.stringify(results, null, 2) }],
-        structuredContent: { results },
+      const TOTAL_CHAR_BUDGET = 50_000;
+      const perCallBudget = Math.floor(TOTAL_CHAR_BUDGET / toolCalls.length);
+
+      const indentBlock = (text: string, spaces = 6): string => {
+        const prefix = " ".repeat(spaces);
+        return text
+          .split("\n")
+          .map((line) => `${prefix}${line}`)
+          .join("\n");
       };
+
+      const summaries = results
+        .map((res, index) => {
+          const errorValue =
+            res.result.error === null || res.result.error === undefined
+              ? "null"
+              : typeof res.result.error === "string"
+              ? res.result.error
+              : JSON.stringify(res.result.error);
+          return `    <result slug="${
+            res.toolSlug
+          }" index="${index}" successful="${Boolean(
+            res.result.successful
+          )}" error="${escapeAttribute(errorValue)}"/>`;
+        })
+        .join("\n");
+
+      const details = results
+        .map((res, index) => {
+          const data = JSON.stringify(res.result);
+          const visibleChars = Math.min(perCallBudget, data.length);
+          const visibleData = data.slice(0, visibleChars);
+          const truncated =
+            visibleChars < data.length
+              ? `${Math.round(
+                  (visibleChars / data.length) * 100
+                )}% of the data visible (${visibleChars} of ${
+                  data.length
+                } chars)`
+              : "false";
+          const body = indentBlock(visibleData || "");
+
+          return [
+            `    <resultDetail slug="${res.toolSlug}" index="${index}" truncated="${truncated}">`,
+            body,
+            `    </resultDetail>`,
+          ].join("\n");
+        })
+        .join("\n\n");
+
+      const text = [
+        `<results>`,
+        `  <summaries>`,
+        summaries,
+        `  </summaries>`,
+        ``,
+        `  <details>`,
+        details,
+        `  </details>`,
+        `</results>`,
+      ].join("\n");
+
+      return { content: [{ type: "text", text }] };
     }
   );
 }

@@ -62,15 +62,21 @@ Follow this sequence **every time** you need a new external integration:
    - Provide the tester with the integrations you want it to use and a detailed description of what it should test
    - The tester will:
      - Execute the calls end-to-end in a sandbox.
-     - Return **TypeScript definitions** for every tool’s input and output.
+     - Return **TypeScript definitions** for every tool's input and output.
      - Report any failures or missing scopes.
    - **Do not** proceed until the tester reports success.
 
-4. **Implement in worker**
+4. **Confirm test results with user**
+
+   - After the integration-tester completes, provide the user with a brief, plain-language summary of what was tested and what the results showed.
+   - Ask the user to confirm that the test did what they expected before proceeding to implementation.
+   - Example: "I tested creating a Slack message in the #general channel with the text 'Hello from Squash'. The test was successful and returned a message ID. Does this match what you expected?"
+
+5. **Implement in worker**
 
    - Use the validated TypeScript types from Step 3 to implement the integration in your worker or server code.
    - Keep inputs and outputs **fully typed** — no `any`.
-   - If additional tools are required, repeat Steps 1–3 before coding.
+   - If additional tools are required, repeat Steps 1–4 before coding.
 
 Example worker integration snippet:
 
@@ -98,12 +104,12 @@ const createdEvent = await executeTool<GoogleCalendar.CreateEventInput, GoogleCa
 // createdEvent has shape { successful: boolean: error: string | null; data: GoogleCalendar.CreateEventOutput }
 ```
 
-5. **Confirm with the user**
+6. **Confirm with the user**
 
    - Once implemented, describe in plain terms what the integration now does.
    - Ask the user to try the feature in the live preview and confirm it works.
 
-> **Shortcut rule**: If the user only wants to _explore_ whether something is possible, you may stop after Step 2 (or Step 3 if testing is quick) and summarize feasibility — no need to write backend code yet.
+> **Shortcut rule**: If the user only wants to _explore_ whether something is possible, you may stop after Step 2 (or Step 4 if testing is quick) and summarize feasibility — no need to write backend code yet.
 
 </third_party_integrations>
 

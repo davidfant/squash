@@ -90,7 +90,15 @@ test whether the goal can be achieved with the currently connected tools.
    | **Any value whose type is still ambiguous**                               | Default to \`unknown\`.                                                                                                                                                                                            |
 
 5. **Write TypeScript definitions**
-   Add the inferred types for each successful call to \`src/worker/types.ts\`. The TypeScript output type should be the shape of the data in <resultDetail>
+   Add the inferred types for each successful call to \`src/worker/types.ts\`. The TypeScript output type should be the shape of the data in <resultDetail> without any wrapping or unwrapping of properties. For example:
+
+   <resultDetail>{"foo": "bar"}</resultDetail>
+
+   should be inferred as:
+
+   interface MyOutput {
+     foo: string;
+   }
 
 6. **Return result**
    Respond with a concise summary of every tool call you made.

@@ -82,6 +82,26 @@ export function convertSchemaToTypeScript(
   return { type, definitions };
 }
 
+function isBarePrimitive(schema: JSONSchema7): boolean {
+  const primitives = ["string", "number", "integer", "boolean", "null"];
+
+  // exactly one primitive type …
+  const isSinglePrimitive =
+    typeof schema.type === "string" && primitives.includes(schema.type);
+
+  // …and no other keywords that would make it a “real” type
+  return (
+    isSinglePrimitive &&
+    !schema.enum &&
+    !schema.anyOf &&
+    !schema.oneOf &&
+    !schema.allOf &&
+    !schema.properties && // not an object
+    !schema.items && // not an array
+    !schema.$ref // not a reference
+  );
+}
+
 /**
  * Always produce a named type for the given schema (unless already done).
  * This ensures references/definitions appear as top-level types.
@@ -251,7 +271,7 @@ function schemaToType(
         ([propName, _propSchema]) => {
           const propSchema = _propSchema as JSONSchema7;
           const tsType = (() => {
-            if (propSchema.title) {
+            if (propSchema.title && !isBarePrimitive(propSchema)) {
               if (!context.schemaToName.has(propSchema)) {
                 getOrCreateTypeNameForSchema(
                   propSchema,

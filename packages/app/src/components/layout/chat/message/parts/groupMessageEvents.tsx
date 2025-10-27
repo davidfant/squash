@@ -6,6 +6,7 @@ import {
   FilePenIcon,
   FolderSearch,
   ListTodoIcon,
+  PlugIcon,
   SearchIcon,
   TerminalIcon,
   TriangleAlertIcon,
@@ -289,7 +290,8 @@ export function groupMessageEvents(
         });
         break;
       }
-      case "tool-ClaudeCode__mcp__Composio__SearchTools": {
+      case "tool-ClaudeCode__mcp__Composio__SearchTools":
+      case "tool-ClaudeCode__mcp__Composio__SearchToolkits": {
         currentEvents.push({
           icon: SearchIcon,
           loading: isToolLoading(part.state),
@@ -303,6 +305,14 @@ export function groupMessageEvents(
               )}
             </>
           ),
+        });
+        break;
+      }
+      case "tool-ClaudeCode__mcp__Composio__ListConnectedToolkits": {
+        currentEvents.push({
+          icon: PlugIcon,
+          loading: isToolLoading(part.state),
+          label: "List connected toolkits",
         });
         break;
       }

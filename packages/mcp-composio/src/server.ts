@@ -1,4 +1,8 @@
-import { Composio } from "@composio/core";
+import {
+  Composio,
+  ComposioError,
+  type ToolkitRetrieveResponse,
+} from "@composio/core";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import camelCase from "lodash.camelcase";
 import upperFirst from "lodash.upperfirst";
@@ -20,6 +24,26 @@ const escapeAttribute = (value: string): string =>
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
 
+const toolkitToString = (t: ToolkitRetrieveResponse, isConnected: boolean) =>
+  [
+    `<toolkit slug="${t.slug}">`,
+    JSON.stringify({
+      name: t.name,
+      slug: t.slug,
+      description: t.meta.description,
+      isConnected: isConnected,
+      authSchemes: t.authConfigDetails
+        ?.filter((d) => !blacklistedAuthModes.get(t.slug)?.includes(d.mode))
+        ?.filter(
+          (d) =>
+            !d.fields.authConfigCreation.required.length ||
+            t.composioManagedAuthSchemes?.includes(d.mode as string)
+        )
+        .map((d) => ({ name: d.name, mode: d.mode })),
+    }),
+    `</toolkit>`,
+  ].join("\n");
+
 export function registerComposioTools(
   server: McpServer,
   { apiKey, userId }: ComposioMcpServerOptions
@@ -27,28 +51,24 @@ export function registerComposioTools(
   const composio = new Composio({ apiKey });
 
   server.registerTool(
-    "SearchTools",
+    "SearchToolkits",
     {
-      title: "Search Composio tools",
+      title: "Search Composio toolkits",
       description: `
-  Extremely fast search tool to discover available MCP callable tools that can be
+  Extremely fast search toolkits to discover available MCP toolkits that can be
   used to solve a particular problem, user query or complete a task. Usage guidelines:
   
-  • Use this tool whenever the user wants to integrate a new external app. Post this, keep coming back to this tool to discover new tools.
+  • Use this toolkits whenever the user wants to integrate a new external app. After connecting to a toolkit, keep coming back to this tool to discover new toolkits.
   • If the user pivots to a different use case in same chat, you MUST call this tool again with the new use case.
-  • Specify keywords to search for tools, including the name of the thirdparty app or tool.
+  • Specify keywords to search for toolkits, including the name of the thirdparty app or tool.
   
   Example: User query: "send an email to John welcoming him"
   Search call: { keywords: "send email" }
   
   Response:
-  
-  • The response lists tools suitable for the task, along with their
-    tool slug, name and description
-  • The response also lists toolkits (apps) and their auth schemes suitable for the task, along with their. To connect to a toolkit, you need to call ConnectToToolkit with the toolkit slug and the auth scheme name.
+  • The response lists toolkits (apps) and their auth schemes suitable for the task, along with their. To connect to a toolkit, you need to call ConnectToToolkit with the toolkit slug and the auth scheme name.
         `.trim(),
       inputSchema: { keywords: z.string() },
-      // outputSchema: { results: z.any() },
     },
     async (args) => {
       const [tools, accs] = await Promise.all([
@@ -66,59 +86,75 @@ export function registerComposioTools(
         )
       );
 
-      const text = [
-        "<tools>",
-        ...tools.map((tool) =>
-          [
-            `<tool slug="${tool.slug}">`,
-            JSON.stringify(
-              {
-                slug: tool.slug,
-                name: tool.name,
-                description: tool.description,
-                scopes: tool.scopes,
-                toolkitSlug: tool.toolkit?.slug,
-              },
-              null,
-              2
-            ),
-            `</tool>`,
-          ].join("\n")
-        ),
-        "</tools>",
-        "<toolkits>",
-        ...toolkits.map((t) =>
-          [
-            `<toolkit slug="${t.slug}">`,
-            JSON.stringify(
-              {
-                name: t.name,
-                slug: t.slug,
-                isConnected: !!accs.items.some(
-                  (c) => c.toolkit.slug === t.slug
-                ),
-                authSchemes: t.authConfigDetails
-                  ?.filter(
-                    (d) =>
-                      !blacklistedAuthModes
-                        .get(t.slug)
-                        ?.includes(d.mode as string)
-                  )
-                  ?.filter(
-                    (d) =>
-                      !d.fields.authConfigCreation.required.length ||
-                      t.composioManagedAuthSchemes?.includes(d.mode as string)
-                  )
-                  .map((d) => ({ name: d.name, mode: d.mode })),
-              },
-              null,
-              2
-            ),
-            `</toolkit>`,
-          ].join("\n")
-        ),
-        "</toolkits>",
-      ].join("\n");
+      const text = toolkits
+        .map((t) =>
+          toolkitToString(
+            t,
+            !!accs.items.some((c) => c.toolkit.slug === t.slug)
+          )
+        )
+        .join("\n");
+
+      return { content: [{ type: "text", text }] };
+    }
+  );
+
+  server.registerTool(
+    "SearchTools",
+    {
+      title: "Search Composio tools",
+      description: `
+  Extremely fast search tool to discover available MCP callable tools for a given toolkit that can be
+  used to solve a particular problem, user query or complete a task. Usage guidelines:
+  
+  • Use this tool whenever the user wants to integrate a new external app. Post this, keep coming back to this tool to discover new tools.
+  • If the user pivots to a different use case in same chat, you MUST call this tool again with the new use case.
+  • Specify keywords to search for tools, including the name of the thirdparty app or tool.
+  
+  Example: User query: "send an email to John welcoming him"
+  Search call: { keywords: "send email" }
+  
+  Response:
+  • The response lists tools suitable for the task, along with their
+    tool slug, name, description and input/output schemas
+  • Tools can be executed via \`MultiExecuteTool\` without requiring additional authentication
+        `.trim(),
+      inputSchema: { toolkitSlug: z.string(), keywords: z.string().optional() },
+      // outputSchema: { results: z.any() },
+    },
+    async (args) => {
+      const tools = await composio.tools.getRawComposioTools({
+        search: args.keywords,
+        toolkits: [args.toolkitSlug],
+      });
+
+      const text = tools
+        .flatMap((tool) => [
+          `<tool slug="${tool.slug}" name="${tool.name}">`,
+          "<description>",
+          tool.description?.replace(/\n+/g, " ") ?? "",
+          "</description>",
+          "<input_schema>",
+          convertSchemaToTypeScript(
+            {
+              ...tool.inputParameters,
+              title: `${upperFirst(camelCase(tool.slug))}Input`,
+            },
+            { comments: false }
+          ).definitions,
+          "</input_schema>",
+          "<output_schema>",
+          convertSchemaToTypeScript(
+            {
+              ...tool.outputParameters?.properties?.data,
+              title: `${upperFirst(camelCase(tool.slug))}Output`,
+            },
+            { comments: false }
+          ).definitions,
+          "</output_schema>",
+          `</tool>`,
+        ])
+        .join("\n");
 
       return { content: [{ type: "text", text }] };
     }
@@ -249,11 +285,11 @@ export function registerComposioTools(
   );
 
   server.registerTool(
-    "GetConnectedTools",
+    "ListConnectedToolkits",
     {
-      title: "Get all tools from connected toolkits",
+      title: "List all connected toolkits",
       description: `
-  Retrieves all available tools from the user's connected toolkits. This is useful when you want to see what tools are already available to use without needing to search for specific use cases.
+  Retrieves all connected toolkits for the user. This is useful when you want to see what toolkits are already connected to the user without needing to search for specific use cases.
   
   Response:
   • Lists all tools from connected toolkits with their slug, name, description, and TypeScript input/output schemas.
@@ -268,50 +304,12 @@ export function registerComposioTools(
         statuses: ["ACTIVE"],
       });
 
-      // Extract unique toolkit slugs from connected accounts
-      const connectedToolkitSlugs = [
-        ...new Set(connectedAccounts.items.map((c) => c.toolkit.slug)),
-      ];
-
-      // Get all tools for connected toolkits
-      const allTools = await Promise.all(
-        connectedToolkitSlugs.map((slug) =>
-          composio.tools.getRawComposioTools({ toolkits: [slug] })
+      const toolkits = await Promise.all(
+        [...new Set(connectedAccounts.items.map((c) => c.toolkit.slug))].map(
+          (slug) => composio.toolkits.get(slug)
         )
       );
-
-      // Flatten the array of tool arrays
-      const tools = allTools.flat();
-
-      // Format tools similar to SearchTools
-      const text = tools
-        .map((tool) =>
-          [
-            `<${tool.slug} name="${tool.name}">`,
-            tool.description?.replace(/\n+/g, " ") ?? "",
-            "",
-            "<input_schema>",
-            convertSchemaToTypeScript(
-              {
-                ...tool.inputParameters,
-                title: `${upperFirst(camelCase(tool.slug))}Input`,
-              },
-              { comments: false }
-            ).definitions,
-            "/<input_schema>",
-            "<output_schema>",
-            convertSchemaToTypeScript(
-              {
-                ...tool.outputParameters,
-                title: `${upperFirst(camelCase(tool.slug))}Output`,
-              },
-              { comments: false }
-            ).definitions,
-            "</output_schema>",
-            `</${tool.slug}>`,
-          ].join("\n")
-        )
-        .join("\n---\n");
+      const text = toolkits.map((t) => toolkitToString(t, true)).join("\n");
 
       return { content: [{ type: "text", text }] };
     }
@@ -327,16 +325,14 @@ export function registerComposioTools(
   
   ### Prerequisites:
   
-  * Always use valid tool slugs and their parameters discovered through \`SearchTools\`.
-    **NEVER** invent tool slugs. **ALWAYS** pass arguments with the \`tool_slug\` in each tool.
-  * Before executing a tool, make sure you have an active connection with the toolkit. If no active connection exists, call \`connect_to_toolkit\` to create one.
+  * Always use valid tool slugs and their parameters discovered through \`SearchTools\` or \`GetConnectedTools\`. You CANNOT make up tool slugs and can only ever reference Composio tool slugs that have been discovered through previous tool calls.
+  * Before executing a tool, make sure you have an active connection with the toolkit. If no active connection exists, call \`ConnectToToolkit\` to create one.
   * Ensure that the tools you are executing do not have any dependencies on each other.
   
   ### Usage guidelines:
   
   * To be used whenever a tool is discovered and has to be called, either as part of a multi-step workflow or as a standalone tool.
-  * If \`SearchTools\` returns a tool that can perform the task, prefer calling it via this executor.
-    Do not write custom API calls or ad-hoc scripts for tasks that can be completed by available Composio tools.
+  * If \`SearchTools\` or \`GetConnectedTools\` returns a tool that can perform the task, prefer calling it via this executor. Do not write custom API calls or ad-hoc scripts for tasks that can be completed by available Composio tools.
   * Tools should be used highly parallelly.
       `.trim(),
       inputSchema: {
@@ -356,14 +352,33 @@ export function registerComposioTools(
     async ({ toolCalls }) => {
       const results = await Promise.all(
         toolCalls.map(async (tc) => {
-          const r = await composio.tools.execute(tc.toolSlug, {
-            userId: userId,
-            arguments: tc.arguments,
-          });
-          return {
-            toolSlug: tc.toolSlug,
-            result: { successful: r.successful, error: r.error, data: r.data },
-          };
+          try {
+            const r = await composio.tools.execute(tc.toolSlug, {
+              userId: userId,
+              arguments: tc.arguments,
+            });
+            return {
+              toolSlug: tc.toolSlug,
+              result: {
+                successful: r.successful,
+                error: r.error,
+                data: r.data,
+              },
+            };
+          } catch (e) {
+            const error =
+              e instanceof ComposioError
+                ? [e.message, e.cause, ...(e.possibleFixes ?? [])]
+                    .filter((s) => !!s)
+                    .join("\n")
+                : e instanceof Error
+                ? e.message
+                : String(e);
+            return {
+              toolSlug: tc.toolSlug,
+              result: { successful: false, error: error, data: null },
+            };
+          }
         })
       );
 
@@ -396,7 +411,7 @@ export function registerComposioTools(
 
       const details = results
         .map((res, index) => {
-          const data = JSON.stringify(res.result);
+          const data = JSON.stringify(res.result.data);
           const visibleChars = Math.min(perCallBudget, data.length);
           const visibleData = data.slice(0, visibleChars);
           const truncated =

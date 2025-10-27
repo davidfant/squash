@@ -296,7 +296,15 @@ export const tools = {
     outputSchema: z.unknown(),
   }),
   ClaudeCode__mcp__Composio__SearchTools: tool({
+    inputSchema: z.object({ toolkitSlug: z.string(), keywords: z.string() }),
+    outputSchema: z.unknown(),
+  }),
+  ClaudeCode__mcp__Composio__SearchToolkits: tool({
     inputSchema: z.object({ keywords: z.string() }),
+    outputSchema: z.unknown(),
+  }),
+  ClaudeCode__mcp__Composio__ListConnectedToolkits: tool({
+    inputSchema: z.unknown(),
     outputSchema: z.unknown(),
   }),
   ClaudeCode__mcp__Composio__ConnectToToolkit: tool({

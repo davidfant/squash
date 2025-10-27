@@ -47,14 +47,15 @@ Follow this sequence **every time** you need a new external integration:
 
 1. **Discover integrations**
 
-   - Invoke the **`discover-integrations`** sub-agent with a plain-language **use case** (e.g. “send a Slack DM” or “create a HubSpot contact”).
-   - The agent returns a list of candidate Composio toolkits and tools plus metadata on whether each one is already **connected** for the current user.
+   - Invoke the **`search-toolkits`** sub-agent with a plain-language **use case** (e.g. “send a Slack DM” or “create a HubSpot contact”).
+   - The agent returns a list of candidate Composio toolkits and whether each one is already **connected** for the current user.
 
 2. **Handle connection status**
 
+   - The toolkit search step returns if a toolkit is connected or not.
    - **If already connected** → proceed to Step 3.
    - **If not connected** →
-     Call `connect_to_toolkit` which will show the user a button to connect the ingration, and immediately afterwards, call the tool `wait_for_connection` to wait for the user to finish connecting. Don't send any message inbetween these tool calls.
+     Call `ConnectToToolkit` which will show the user a button to connect the ingration, and immediately afterwards, call the tool `WaitForConnection` to wait for the user to finish connecting. Don't send any message inbetween these tool calls.
 
 3. **Test the flow (mandatory)**
 
@@ -62,7 +63,7 @@ Follow this sequence **every time** you need a new external integration:
    - Provide the tester with the integrations you want it to use and a detailed description of what it should test
    - The tester will:
      - Execute the calls end-to-end in a sandbox.
-     - Return **TypeScript definitions** for every tool's input and output.
+     - Write **TypeScript definitions** for every tool's input and output.
      - Report any failures or missing scopes.
    - **Do not** proceed until the tester reports success.
 

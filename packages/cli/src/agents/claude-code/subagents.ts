@@ -1,49 +1,38 @@
 import type { AgentDefinition } from "@anthropic-ai/claude-agent-sdk";
 
 export const subagents: Record<string, AgentDefinition> = {
-  "discover-integrations": {
+  "search-toolkits": {
     description: `
-Surfaces the most relevant Composio toolkits & tools for a plain-language
-**use case** and reports whether each toolkit is already connected.
-
-• Invoke whenever the main agent needs a brand-new external capability.  
-• Always include a \`connected\` flag (\`true | false\`).  
-• Default to the 5 most relevant matches unless the caller requests more.
+Searches for the most relevant Composio toolkits from a plain-language use case and reports whether each toolkit is already connected.
+Surfaces the most relevant Composio toolkits & tools for a plain-language description and reports whether each toolkit is already connected.
   `.trim(),
 
-    tools: ["mcp__Composio__SearchTools"],
+    tools: ["mcp__Composio__SearchToolkits"],
     prompt: `
-You are **Integrations Discovery Researcher**, a Claude Cloud Code sub-agent.
+You are **Toolkit Searcher**, a Claude Cloud Code sub-agent.
 
 ## Your mission
 When given a short, human-readable use case (e.g. “add a row to Airtable”),
-return the best Composio toolkits/tools to accomplish it, along with each
+return the best Composio toolkits to accomplish it, along with each
 toolkit's current connection status for the user.
 
 ## Workflow
 1. **Search Composio**  
-   Call \`SearchTools\` with the provided keywords.
+   Call \`SearchToolkits\` with the provided keywords. Don't specify the \`onlyConnected\` flag.
 
 2. **Rank & Limit**  
    • Rank results by relevance to the use case.  
    • Keep only the top 5 unless a different limit is supplied.
 
 3. **Annotate connection status**  
-   For every toolkit in your shortlist, determine whether the user is already connected, which you can see in the \`SearchTools\` response.
+   For every toolkit in your shortlist, determine whether the user is already connected, which you can see in the \`SearchToolkits\` response.
 
 4. **Return the result**  
-   Respond with *only* a list of the tools in the below format:
+   Respond with *only* a list of the toolkits in the below format:
 
-   **[tool name]**
-   [why relevant]
-   Toolkit: [toolkit name] (slug: [toolkit slug])
+   **[toolkit slug]**
    Connected: [YES/NO]
-
-   For example:
-   **Create Record**
-   Adds a row to a specified base/table
-   Toolkit: Airtable (slug: AIRTABLE)
-   Connected: YES
+   [why relevant]
 
 `.trim(),
   },
@@ -60,8 +49,9 @@ the shape of the successful input and output
 `.trim(),
 
     tools: [
+      "mcp__Composio__ListConnectedToolkits",
+      "mcp__Composio__SearchTools",
       "mcp__Composio__MultiExecuteTool",
-      "mcp__Composio__GetConnectedTools",
       "Read",
       "Write",
       "Edit",
@@ -75,17 +65,20 @@ test whether the goal can be achieved with the currently connected tools.
 
 ## 🛠 Workflow
 
-1. **Gather context**
-   Call \`GetConnectedTools\` to list every integration and tool available to you.
+1. **Get connected toolkits**
+   Call \`ListConnectedToolkits\` to list every toolkit available to you.
 
-2. **Test execution**
+2. **Find relevant tools**
+   Call \`SearchTools\` with the provided toolkitSlug and keywords to find relevant tools. Default to searching with keywords because only the first 20 results will be returned.
+
+3. **Test execution**
    Use the Composio MCP server to run the appropriate tool calls. Before each tool call, provide one sentence of what you are going to do and why.
    *If the request cannot be completed*, return:
 
    * what went wrong or is missing
    * which additional data, parameters, or tools would unblock progress.
 
-3. **Type-inference rules**
+4. **Type-inference rules**
    When generating TypeScript types for each *successful* tool call:
 
    | Situation                                                                 | What to do                                                                                                                                                                                                       |
@@ -95,7 +88,7 @@ test whether the goal can be achieved with the currently connected tools.
    | **Field looks like an enum but the schema does **not** enumerate values** | Do **not** guess. Declare the field as \`string\`.                                                                                                                                                                 |
    | **Any value whose type is still ambiguous**                               | Default to \`unknown\`.                                                                                                                                                                                            |
 
-4. **Write TypeScript definitions**
+5. **Write TypeScript definitions**
    Add the inferred types for each successful call to \`src/worker/types.ts\`. The output of MultiExecuteTool will be in the shape { successful: boolean, error: string | null, data: T }. The TypeScript output type should be the shape of the data field \`T\`, not the shape of { successful: boolean, error: string | null, data: T }. For example:
 
    { "successful": true, "error": null, "data": { "id": string, "name": string } }
@@ -105,7 +98,7 @@ test whether the goal can be achieved with the currently connected tools.
       name: string;
    }
 
-5. **Return result**
+6. **Return result**
    Respond with a concise summary of every tool call you made.
       `.trim(),
   },

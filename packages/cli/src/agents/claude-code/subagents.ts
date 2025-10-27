@@ -50,7 +50,8 @@ the shape of the successful input and output
 
     tools: [
       "mcp__Composio__ListConnectedToolkits",
-      "mcp__Composio__SearchTools",
+      "mcp__Composio__ListTools",
+      "mcp__Composio__GetToolDetails",
       "mcp__Composio__MultiExecuteTool",
       "Read",
       "Write",
@@ -69,7 +70,7 @@ test whether the goal can be achieved with the currently connected tools.
    Call \`ListConnectedToolkits\` to list every toolkit available to you.
 
 2. **Find relevant tools**
-   Call \`SearchTools\` with the provided toolkitSlug and keywords to find relevant tools. Default to searching with keywords because only the first 20 results will be returned.
+   Call \`ListTools\` with the provided toolkitSlug to find all available tools for a toolkit. Call \`GetToolDetails\` with the tool slug to get the details of a tool, including its input/output schemas which are needed before calling \`MultiExecuteTool\`.
 
 3. **Test execution**
    Use the Composio MCP server to run the appropriate tool calls. Before each tool call, provide one sentence of what you are going to do and why.
@@ -89,14 +90,7 @@ test whether the goal can be achieved with the currently connected tools.
    | **Any value whose type is still ambiguous**                               | Default to \`unknown\`.                                                                                                                                                                                            |
 
 5. **Write TypeScript definitions**
-   Add the inferred types for each successful call to \`src/worker/types.ts\`. The output of MultiExecuteTool will be in the shape { successful: boolean, error: string | null, data: T }. The TypeScript output type should be the shape of the data field \`T\`, not the shape of { successful: boolean, error: string | null, data: T }. For example:
-
-   { "successful": true, "error": null, "data": { "id": string, "name": string } }
-   should be inferred as:
-   interface CreateEventOutput {
-      id: string;
-      name: string;
-   }
+   Add the inferred types for each successful call to \`src/worker/types.ts\`. The TypeScript output type should be the shape of the data in <resultDetail>
 
 6. **Return result**
    Respond with a concise summary of every tool call you made.

@@ -100,40 +100,62 @@ export function registerComposioTools(
   );
 
   server.registerTool(
-    "SearchTools",
+    "ListTools",
     {
-      title: "Search Composio tools",
+      title: "List Composio tools for a toolkit",
       description: `
-  Extremely fast search tool to discover available MCP callable tools for a given toolkit that can be
-  used to solve a particular problem, user query or complete a task. Usage guidelines:
-  
-  • Use this tool whenever the user wants to integrate a new external app. Post this, keep coming back to this tool to discover new tools.
-  • If the user pivots to a different use case in same chat, you MUST call this tool again with the new use case.
-  • Specify keywords to search for tools, including the name of the thirdparty app or tool.
-  
-  Example: User query: "send an email to John welcoming him"
-  Search call: { keywords: "send email" }
+  List all available MCP callable tools for a given toolkit. Use this tool to know everything about a toolkit's tools.
   
   Response:
-  • The response lists tools suitable for the task, along with their
-    tool slug, name, description and input/output schemas
-  • Tools can be executed via \`MultiExecuteTool\` without requiring additional authentication
+  • The response lists all tools for the toolkit, along with their
+    tool slug, name, description. 
+    
+  **Note**: You cannot yet execute the tool with the information provided here. To execute a tool, you need to call GetToolDetails with the tool slug to know the input/output schemas.
         `.trim(),
-      inputSchema: { toolkitSlug: z.string(), keywords: z.string().optional() },
+      inputSchema: { toolkitSlug: z.string(), toolkitName: z.string() },
       // outputSchema: { results: z.any() },
     },
     async (args) => {
       const tools = await composio.tools.getRawComposioTools({
-        search: args.keywords,
         toolkits: [args.toolkitSlug],
+        limit: 9999,
       });
 
       const text = tools
         .flatMap((tool) => [
-          `<tool slug="${tool.slug}" name="${tool.name}">`,
-          "<description>",
+          `**${tool.name} (slug: ${tool.slug})**`,
           tool.description?.replace(/\n+/g, " ") ?? "",
-          "</description>",
+        ])
+        .join("\n\n");
+
+      return { content: [{ type: "text", text }] };
+    }
+  );
+
+  server.registerTool(
+    "GetToolDetails",
+    {
+      title: "Get Composio tool details",
+      description: `
+  Get the details of a given Composio tool, including its input/output schemas. Use this tool before calling MultiExecuteTool to know the input/output schemas of a tool.
+
+  Provide a one line reason for why you are calling this tool without mentioning input/output schemas, which will be displayed to the user. E.g. 'Figure out how to send email using Gmail'
+  
+  Response:
+  • The response lists the tool's slug, name, description and input/output schemas
+        `.trim(),
+      inputSchema: { reason: z.string(), toolSlug: z.string() },
+    },
+    async (args) => {
+      const tools = await composio.tools.getRawComposioTools({
+        tools: [args.toolSlug],
+      });
+
+      const text = tools
+        .flatMap((tool) => [
+          `**${tool.name} (slug: ${tool.slug})**`,
+          tool.description?.replace(/\n+/g, " ") ?? "",
+
           "<input_schema>",
           convertSchemaToTypeScript(
             {
@@ -152,9 +174,8 @@ export function registerComposioTools(
             { comments: false }
           ).definitions,
           "</output_schema>",
-          `</tool>`,
         ])
-        .join("\n");
+        .join("\n\n");
 
       return { content: [{ type: "text", text }] };
     }

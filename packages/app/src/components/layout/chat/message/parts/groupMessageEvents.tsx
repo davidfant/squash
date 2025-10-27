@@ -1,12 +1,14 @@
 import { Badge } from "@/components/ui/badge";
 import type { ChatMessage } from "@squashai/api/agent/types";
 import {
+  BoxesIcon,
   Check,
   EyeIcon,
   FilePenIcon,
   FolderSearch,
   ListTodoIcon,
-  PlugIcon,
+  PackageIcon,
+  PackageSearchIcon,
   SearchIcon,
   TerminalIcon,
   TriangleAlertIcon,
@@ -54,6 +56,7 @@ export interface EventBlockItem {
   icon: LucideIcon;
   loading: boolean;
   label: ReactNode;
+  dialogContent?: ReactNode;
 }
 
 interface EventBlock {
@@ -290,7 +293,22 @@ export function groupMessageEvents(
         });
         break;
       }
-      case "tool-ClaudeCode__mcp__Composio__SearchTools":
+      case "tool-ClaudeCode__mcp__Composio__ListTools": {
+        currentEvents.push({
+          icon: PackageIcon,
+          loading: isToolLoading(part.state),
+          label: `List tools for ${part.input?.toolkitName}`,
+        });
+        break;
+      }
+      case "tool-ClaudeCode__mcp__Composio__GetToolDetails": {
+        currentEvents.push({
+          icon: PackageSearchIcon,
+          loading: isToolLoading(part.state),
+          label: part.input?.reason,
+        });
+        break;
+      }
       case "tool-ClaudeCode__mcp__Composio__SearchToolkits": {
         currentEvents.push({
           icon: SearchIcon,
@@ -310,7 +328,7 @@ export function groupMessageEvents(
       }
       case "tool-ClaudeCode__mcp__Composio__ListConnectedToolkits": {
         currentEvents.push({
-          icon: PlugIcon,
+          icon: BoxesIcon,
           loading: isToolLoading(part.state),
           label: "List connected toolkits",
         });
@@ -355,6 +373,16 @@ export function groupMessageEvents(
                   p.input?.connectRequestId === connectData.connectRequestId
               );
             if (waitForConnectionPart?.output) {
+              const isConnected = safeJsonParse<{ isConnected: boolean }>(
+                waitForConnectionPart.output
+              )?.isConnected;
+              currentEvents.push({
+                icon: isConnected ? UnplugIcon : TriangleAlertIcon,
+                loading: false,
+                label: isConnected
+                  ? `Connected to ${connectData.toolkit.name}`
+                  : `Failed to connect to ${connectData.toolkit.name}`,
+              });
             } else {
               flushEvents();
               blocks.push({

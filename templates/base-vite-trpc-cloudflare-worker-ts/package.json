@@ -1,7 +1,7 @@
 {
   "name": "base-vite-trpc-cloudflare-worker-ts",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.0.2",
   "type": "module",
   "dependencies": {
     "@ai-sdk/openai": "^2.0.42",

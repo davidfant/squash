@@ -20,7 +20,7 @@ RUN pip3 install --break-system-packages --no-cache-dir git-remote-s3
 RUN corepack enable
 
 # -------- Global CLIs you need --------
-ARG SQUASH_CLI_VERSION=0.1.0-alpha.1
+ARG SQUASH_CLI_VERSION=latest
 RUN npm i -g @squashai/cli@$SQUASH_CLI_VERSION
 
 # -------- Project dependencies --------
@@ -28,7 +28,5 @@ WORKDIR /repo
 COPY package.json pnpm-lock.yaml wrangler.json ./
 RUN pnpm install --frozen-lockfile
 RUN rm -rf package.json pnpm-lock.yaml wrangler.json update-check v8-compile-cache-*
-
-RUN git init
 
 ENV PORT=5173

@@ -36,7 +36,7 @@ index ee768c3aab27c1ae9a6e6368c00100c9988b5860..b89288be966b4e343d0945b89b9a2b40
                state.message.metadata = mergedMetadata;
              }
            }
-+          console.log('[vercel/ai] processUIMessageStream:', JSON.stringify(chunk).slice(0, 256));
++          console.log('[vercel/ai] processUIMessageStream: ' + JSON.stringify(chunk).slice(0, 256));
            switch (chunk.type) {
              case "text-start": {
                const textPart = {

@@ -1,3 +1,5 @@
+import { setTimeout } from "timers/promises";
+
 export default {
   async fetch(req: Request, env: CloudflareBindings): Promise<Response> {
     const root = env.PREVIEW_ROOT;
@@ -33,13 +35,19 @@ export default {
       });
     }
 
-    const res = await fetch(upstreamURL, {
-      method: req.method,
-      headers: upstreamHeaders,
-      body: req.body,
-      redirect: "follow",
-      cache: "no-store",
-    });
+    let res: Response = undefined as any;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      res = await fetch(upstreamURL, {
+        method: req.method,
+        headers: upstreamHeaders,
+        body: req.body,
+        redirect: "follow",
+        cache: "no-store",
+      });
+
+      if (res.status !== 504) break;
+      await setTimeout(1000);
+    }
 
     const resHeaders = new Headers(res.headers);
     resHeaders.set("Cache-Control", "no-store");

@@ -121,11 +121,11 @@ You **do not need** to modify the gateway setup in `src/worker/ai-gateway.ts`; s
 **Supported Providers & Model Naming**
 The gateway exposes any model that the underlying provider supports. Prefix the model name with one of:
 
-| Provider prefix     | Example model id                       |
-| ------------------- | -------------------------------------- |
-| `openai/`           | `openai/gpt-4o-mini`, `openai/gpt-5`   |
-| `anthropic/`        | `anthropic/claude-sonnet-4-5-20250929` |
-| `google-ai-studio/` | `google-ai-studio/gemini-2.5-flash`    |
+| Provider prefix     | Example model id                       | Supported helpers                |
+| ------------------- | -------------------------------------- | -------------------------------- |
+| `openai/`           | `openai/gpt-4o-mini`, `openai/gpt-5`   | `generateText`, `generateObject` |
+| `anthropic/`        | `anthropic/claude-sonnet-4-5-20250929` | `generateText`                   |
+| `google-ai-studio/` | `google-ai-studio/gemini-2.5-flash`    | `generateText`, `generateObject` |
 
 > **Tip — unknown models:** New models appear frequently. If a user claims a model exists, **trust them and try it**. If the gateway returns _“model not found”_ or similar at runtime, handle the error and inform the user.
 

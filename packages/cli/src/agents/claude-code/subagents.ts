@@ -41,8 +41,8 @@ toolkit's current connection status for the user.
     description: `
 Tests if the current set of available tools and integrations is
 sufficient to fulfil the user's request.
-• Use PROACTIVELY every time new connections are added or before executing a
-workflow.  
+• Use PROACTIVELY every time a new toolkit is connected OR before using a Composio tool for the first time in code
+• If you have accidentally used a Composio tool in the code without having tested it first, immediately call this agent to test it. This might result in changes in the TypeScript types and that the usage of the tool needs to be updated.
 • If it can complete the task, it will create TypeScript definitions that describe
 the shape of the successful input and output
 • It will return a concise Markdown summary.  

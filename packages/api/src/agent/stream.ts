@@ -54,6 +54,7 @@ function streamInner(params: {
           );
 
           if (params.restoreVersion) {
+            logger.info("Restoring version before streaming Claude Code agent");
             await raceWithAbortSignal(
               params.sandbox.restoreVersion(params.messages),
               params.controller.signal
@@ -119,6 +120,7 @@ export function streamAgent(params: {
     messages: params.messages.length,
     threadId: params.threadId,
     branchId: params.branchId,
+    restoreVersion: params.restoreVersion,
   });
 
   const messageMetadata: UIMessageStreamOptions<ChatMessage>["messageMetadata"] =

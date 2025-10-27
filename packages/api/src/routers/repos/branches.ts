@@ -275,6 +275,7 @@ const repoBranchRouter = new Hono<{
       const messages = resolveMessageThreadHistory(allMessages, body.messageId);
 
       sandbox.stopAgent();
+      logger.info("Restoring version from API request");
       await sandbox.restoreVersion(messages);
       return c.json({ success: true });
     }

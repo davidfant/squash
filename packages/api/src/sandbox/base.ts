@@ -7,10 +7,10 @@ import { type InferUIMessageChunk } from "ai";
 import { DurableObject, env } from "cloudflare:workers";
 import { randomUUID } from "crypto";
 import { eq } from "drizzle-orm";
+import type { Buffer } from "node:buffer";
 import escape from "shell-escape";
 import type { Sandbox } from "./types";
 import { executeTasks, runCommand, storage, type Storage } from "./util";
-import type { Buffer } from "node:buffer";
 
 interface Handle {
   type: string;
@@ -92,8 +92,9 @@ export abstract class BaseSandboxManagerDurableObject<
   protected abstract readClaudeCodeSessionData(
     sessionId: string
   ): Promise<string>;
-  abstract ping(): Promise<void>;
   abstract readFile(path: string): Promise<Buffer>;
+  protected async prepareAgentRun(): Promise<void> {}
+  protected async cleanupAgentRun(): Promise<void> {}
 
   async init(options: Sandbox.Options<C>): Promise<void> {
     await this.state.storage.put("options", options);
@@ -219,7 +220,7 @@ export abstract class BaseSandboxManagerDurableObject<
             git remote add origin ${repo.gitUrl}
           fi
 
-          git push --set-upstream origin HEAD:${options.branch.name};
+          git push --force --set-upstream origin HEAD:${options.branch.name};
 
           echo '<sha>';
           git rev-parse HEAD;
@@ -318,14 +319,17 @@ export abstract class BaseSandboxManagerDurableObject<
         buffer: [],
         active: true,
         listeners: new Map(),
-        promise: Promise.resolve(
-          streamAgent({
-            ...req,
-            controller,
-            sandbox: this,
-            readSessionData: (id) => this.readClaudeCodeSessionData(id),
-          })
-        ).then((s) => (s ? this.consumeStream(s, agent) : undefined)),
+        promise: this.prepareAgentRun()
+          .then(() =>
+            streamAgent({
+              ...req,
+              controller,
+              sandbox: this,
+              readSessionData: (id) => this.readClaudeCodeSessionData(id),
+            })
+          )
+          .then((s) => this.consumeStream(s, agent))
+          .finally(() => this.cleanupAgentRun()),
       };
       this.handles.agent = agent;
     });

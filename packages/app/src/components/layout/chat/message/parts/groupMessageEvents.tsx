@@ -4,12 +4,12 @@ import {
   BoxesIcon,
   Check,
   EyeIcon,
-  FilePenIcon,
   FolderSearch,
   ListTodoIcon,
   PackageIcon,
   PackageSearchIcon,
   SearchIcon,
+  SquarePenIcon,
   TerminalIcon,
   TriangleAlertIcon,
   UnplugIcon,
@@ -179,7 +179,7 @@ export function groupMessageEvents(
       case "tool-ClaudeCode__Write": {
         const path = part.input?.file_path;
         currentEvents.push({
-          icon: FilePenIcon,
+          icon: SquarePenIcon,
           loading: part.state.startsWith("input-"),
           label: (
             <>

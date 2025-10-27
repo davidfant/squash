@@ -12,7 +12,7 @@ import { env } from "cloudflare:workers";
 import { randomUUID } from "crypto";
 import path from "path";
 import { GitCommit } from "../git";
-import type { ChatMessage } from "../types";
+import type { AllTools, ChatMessage } from "../types";
 import appendSystemPrompt from "./prompt.md";
 
 export async function streamClaudeCodeAgent(opts: {
@@ -31,13 +31,6 @@ export async function streamClaudeCodeAgent(opts: {
     sandbox: opts.sandbox.name,
     sessionId: opts.sessionId,
   });
-
-  const pingInterval = setInterval(() => {
-    logger.debug("Pinging sandbox", { sandbox: opts.sandbox.name });
-    opts.sandbox.ping().catch((e) => {
-      logger.error("Error pinging sandbox", e);
-    });
-  }, 10_000);
 
   let sessionId: string | undefined = undefined;
   const agentStream = streamText({
@@ -94,12 +87,16 @@ export async function streamClaudeCodeAgent(opts: {
       logger.error("Error in ClaudeCode agent", { error }),
   });
 
+  const usedTools = new Set<string>();
   for await (const msg of agentStream.toUIMessageStream<ChatMessage>({
     sendStart: false,
     sendFinish: false,
     messageMetadata: opts.messageMetadata,
   })) {
     opts.writer.write(msg);
+    if (msg.type === "tool-input-start") {
+      usedTools.add(msg.toolName);
+    }
   }
 
   if (opts.abortSignal.aborted) throw new Error("Cancelled");
@@ -107,21 +104,15 @@ export async function streamClaudeCodeAgent(opts: {
 
   const sessionDataPromise = opts.readSessionData(sessionId);
 
-  const toolCalls = await agentStream.toolCalls;
-  const shouldCommit = toolCalls.some(
-    (t) =>
-      !t.dynamic &&
-      [
-        "ClaudeCode__Edit",
-        "ClaudeCode__MultiEdit",
-        "ClaudeCode__Write",
-        "ClaudeCode__NotebookEdit",
-      ].includes(t.toolName)
-  );
-  logger.debug("Should commit", {
-    shouldCommit,
-    toolNames: toolCalls.map((t) => t.toolName),
-  });
+  const shouldCommit = (
+    [
+      "ClaudeCode__Edit",
+      "ClaudeCode__MultiEdit",
+      "ClaudeCode__Write",
+      "ClaudeCode__NotebookEdit",
+    ] satisfies Array<keyof AllTools>
+  ).some((t) => usedTools.has(t));
+  logger.debug("Should commit", { shouldCommit, usedTools: [...usedTools] });
   if (shouldCommit) {
     const screenshotPromise = fetch(
       `${env.SCREENSHOT_API_URL}?url=${encodeURIComponent(opts.previewUrl)}`
@@ -209,15 +200,14 @@ export async function streamClaudeCodeAgent(opts: {
         });
       },
     });
-    opts.writer.merge(
-      commitStream.toUIMessageStream({
-        sendStart: false,
-        sendFinish: false,
-        sendReasoning: false,
-        messageMetadata: opts.messageMetadata,
-      })
-    );
-    await commitStream.consumeStream();
+    for await (const msg of commitStream.toUIMessageStream<ChatMessage>({
+      sendStart: false,
+      sendFinish: false,
+      sendReasoning: false,
+      messageMetadata: opts.messageMetadata,
+    })) {
+      opts.writer.write(msg);
+    }
   }
 
   const sessionData = await sessionDataPromise;
@@ -238,6 +228,4 @@ export async function streamClaudeCodeAgent(opts: {
     id: randomUUID(),
     data: { type: "claude-code", id: sessionId, objectKey },
   });
-
-  clearInterval(pingInterval);
 }

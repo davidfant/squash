@@ -78,6 +78,8 @@ Follow this sequence **every time** you need a new external integration:
    - Use the validated TypeScript types from Step 3 to implement the integration in your worker or server code.
    - Keep inputs and outputs **fully typed** — no `any`.
    - If additional tools are required, repeat Steps 1–4 before coding.
+   - Before implementing, you must have tested every single Composio tool you will need. If the user instructions changes what tools might be needed, always go back to step 3 to test the updated flow.
+   - If you have used a Composio tool in the code without having first tested it, immediately go back to step 3 to test the Composio tool. This might result in chnages of the TypeScript types or an updated understanding of how the tool works, which might mean that the implementation needs to change.
 
 Example worker integration snippet:
 

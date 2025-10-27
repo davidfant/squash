@@ -12,6 +12,7 @@ import { Buffer } from "node:buffer";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { setTimeout } from "node:timers/promises";
+import pRetry, { AbortError } from "p-retry";
 import escape from "shell-escape";
 import { BaseSandboxManagerDurableObject } from "../base";
 import type { Sandbox } from "../types";
@@ -652,18 +653,49 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
         add({ type: "start", timestamp: now() });
 
         const streamed = { stdout: "", stderr: "" };
-        await sandbox.process.getSessionCommandLogs(
-          exec.sessionId,
-          exec.commandId,
-          (data: string) => {
-            add({ type: "stdout", data, timestamp: now() });
-            streamed.stdout += data;
-          },
-          (data: string) => {
-            add({ type: "stderr", data, timestamp: now() });
-            streamed.stderr += data;
+        await pRetry(
+          () =>
+            sandbox.process.getSessionCommandLogs(
+              exec.sessionId,
+              exec.commandId,
+              (data: string) => {
+                add({ type: "stdout", data, timestamp: now() });
+                streamed.stdout += data;
+              },
+              (data: string) => {
+                add({ type: "stderr", data, timestamp: now() });
+                streamed.stderr += data;
+              }
+            ),
+          {
+            retries: Infinity,
+            factor: 2,
+            maxTimeout: 0,
+            onFailedAttempt: async (ctx) => {
+              logger.error("Error streaming session command logs", {
+                attempt: ctx.attemptNumber,
+                message: ctx.error.message,
+                stack: ctx.error.stack,
+                name: ctx.error.name,
+              });
+
+              const result = await sandbox.process.getSessionCommand(
+                exec.sessionId,
+                exec.commandId
+              );
+              if (typeof result.exitCode === "number") {
+                throw new AbortError(
+                  `Command has exited with code ${result.exitCode}`
+                );
+              } else {
+                logger.debug(
+                  "Command is still running, will retry log streaming",
+                  { sessionId: exec.sessionId, commandId: exec.commandId }
+                );
+              }
+            },
           }
-        );
+        ).catch(() => {});
 
         if (abortSignal?.aborted) {
           add({ type: "error", error: "Aborted", timestamp: now() });
@@ -828,29 +860,6 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
     );
   }
 
-  async ping(): Promise<void> {
-    const [sandbox, options] = await Promise.all([
-      this.getSandbox(),
-      this.getOptions(),
-    ]);
-
-    const [preview] = await Promise.all([
-      sandbox.getPreviewLink(options.config.port),
-      sandbox.refreshData(),
-    ]);
-    logger.debug("Refreshed Daytona sandbox data", {
-      sandboxId: sandbox.id,
-      state: sandbox.state,
-    });
-
-    const response = await fetch(preview.url, { method: "GET" });
-    if (!response.ok) {
-      throw new Error(
-        `Failed to ping Daytona sandbox: ${response.status} ${response.statusText}`
-      );
-    }
-  }
-
   async getPreviewUrl(): Promise<string> {
     await this.waitUntilStarted();
     const [options, sandbox] = await Promise.all([
@@ -947,5 +956,15 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
   async destroy(): Promise<void> {
     const sandbox = await this.getSandbox();
     await sandbox.delete();
+  }
+
+  async prepareAgentRun(): Promise<void> {
+    const sandbox = await this.getSandbox();
+    await sandbox.setAutostopInterval(0);
+  }
+
+  async cleanupAgentRun(): Promise<void> {
+    const sandbox = await this.getSandbox();
+    await sandbox.setAutostopInterval(5);
   }
 }

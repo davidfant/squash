@@ -24,11 +24,12 @@ export function messageToStreamPart(
   controller: ReadableStreamDefaultController<LanguageModelV2StreamPart>
 ) {
   const usesJsonResponseTool = false;
-  const contentBlocks: Array<
+  const contentBlocks: Record<
+    string,
     | { type: "text" }
     | { type: "reasoning" }
     | { type: "tool-call"; toolCallId: string; toolName: string; input: string }
-  > = [];
+  > = {};
 
   const usage: LanguageModelV2Usage = {
     inputTokens: undefined,
@@ -69,13 +70,20 @@ export function messageToStreamPart(
               break;
             }
             case "tool_result": {
-              const tc = contentBlocks
+              const tc = Object.values(contentBlocks)
                 .filter((cb) => cb.type === "tool-call")
                 .find((cb) => cb.toolCallId === part.tool_use_id);
+              if (!tc) {
+                console.error("Received tool result for unknown tool call", {
+                  contentBlocks,
+                  part,
+                });
+                throw new Error("Tool call not found", part.tool_use_id);
+              }
               controller.enqueue({
                 type: "tool-result",
                 toolCallId: part.tool_use_id,
-                toolName: tc?.toolName ?? "unknown",
+                toolName: tc.toolName,
                 result: part.content,
                 providerExecuted: true,
               });

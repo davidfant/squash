@@ -316,9 +316,9 @@ export function groupMessageEvents(
           label: (
             <>
               <span>Search for</span>
-              {!!part.input?.keywords && (
+              {!!part.input?.useCase && (
                 <Badge variant="outline" className="border-none bg-muted">
-                  {part.input?.keywords}
+                  {part.input?.useCase}
                 </Badge>
               )}
             </>

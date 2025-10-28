@@ -1,3 +1,4 @@
+import { experimental_createMCPClient } from "@ai-sdk/mcp";
 import {
   Composio,
   ComposioError,
@@ -50,6 +51,9 @@ export function registerComposioTools(
 ) {
   const composio = new Composio({ apiKey });
 
+  composio.experimental.toolRouter.createSession(userId, {
+    toolkits: ["gmail", "github"],
+  });
   server.registerTool(
     "SearchToolkits",
     {
@@ -60,40 +64,67 @@ export function registerComposioTools(
   
   • Use this toolkits whenever the user wants to integrate a new external app. After connecting to a toolkit, keep coming back to this tool to discover new toolkits.
   • If the user pivots to a different use case in same chat, you MUST call this tool again with the new use case.
-  • Specify keywords to search for toolkits, including the name of the thirdparty app or tool.
+  • Specify one or more plain-language use cases to search for toolkits, including the name of the thirdparty app or tool.
   
-  Example: User query: "send an email to John welcoming him"
-  Search call: { keywords: "send email" }
+  Example: User query: "get the most recent hubspot lead and send them a welcome email"
+  Search call: { useCases: ["get the most recent hubspot lead", "send an email to someone"] }
   
   Response:
   • The response lists toolkits (apps) and their auth schemes suitable for the task, along with their. To connect to a toolkit, you need to call ConnectToToolkit with the toolkit slug and the auth scheme name.
         `.trim(),
-      inputSchema: { keywords: z.string() },
+      inputSchema: { useCases: z.string().array() },
     },
     async (args) => {
-      const [tools, accs] = await Promise.all([
-        composio.tools.getRawComposioTools({
-          search: args.keywords,
-        }),
+      const [results, accs] = await Promise.all([
+        (async () => {
+          const session = await composio.experimental.toolRouter.createSession(
+            userId
+          );
+
+          const client = await experimental_createMCPClient({
+            transport: { type: "http", url: session.url },
+          });
+
+          // @ts-expect-error - callTool is not typed
+          const mcpToolOutput = await client.callTool({
+            name: "COMPOSIO_SEARCH_TOOLS",
+            args: { queries: args.useCases.map((u) => ({ use_case: u })) },
+          });
+
+          console.log(mcpToolOutput);
+          return (
+            JSON.parse(mcpToolOutput.content[0].text).data.results as Array<{
+              toolkits: string[];
+              reasoning: string;
+            }>
+          ).map((r) => ({
+            useCases: args.useCases,
+            reasoning: r.reasoning,
+            toolkitSlugs: r.toolkits,
+          }));
+        })(),
         composio.connectedAccounts.list({
           userIds: [userId],
           statuses: ["ACTIVE"],
         }),
       ]);
       const toolkits = await Promise.all(
-        [...new Set(tools.map((t) => t.toolkit?.slug ?? ""))].map((s) =>
+        [...new Set(results.flatMap((r) => r.toolkitSlugs))].map((s) =>
           composio.toolkits.get(s)
         )
       );
 
-      const text = toolkits
-        .map((t) =>
+      const text = [
+        "<results>",
+        JSON.stringify(results, null, 2),
+        "</results>",
+        ...toolkits.map((t) =>
           toolkitToString(
             t,
             !!accs.items.some((c) => c.toolkit.slug === t.slug)
           )
-        )
-        .join("\n");
+        ),
+      ].join("\n");
 
       return { content: [{ type: "text", text }] };
     }

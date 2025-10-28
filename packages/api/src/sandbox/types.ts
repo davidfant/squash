@@ -149,6 +149,7 @@ export namespace Sandbox {
       listenToDeploy(): Response;
       listenToFork(): Response;
       listenToLogs(): Promise<Response>;
+      keepAlive(): Promise<void>;
     }
   }
 

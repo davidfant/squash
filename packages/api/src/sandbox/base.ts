@@ -93,8 +93,7 @@ export abstract class BaseSandboxManagerDurableObject<
     sessionId: string
   ): Promise<string>;
   abstract readFile(path: string): Promise<Buffer>;
-  protected async prepareAgentRun(): Promise<void> {}
-  protected async cleanupAgentRun(): Promise<void> {}
+  abstract keepAlive(): Promise<void>;
 
   async init(options: Sandbox.Options<C>): Promise<void> {
     await this.state.storage.put("options", options);
@@ -319,17 +318,14 @@ export abstract class BaseSandboxManagerDurableObject<
         buffer: [],
         active: true,
         listeners: new Map(),
-        promise: this.prepareAgentRun()
-          .then(() =>
-            streamAgent({
-              ...req,
-              controller,
-              sandbox: this,
-              readSessionData: (id) => this.readClaudeCodeSessionData(id),
-            })
-          )
-          .then((s) => this.consumeStream(s, agent))
-          .finally(() => this.cleanupAgentRun()),
+        promise: Promise.resolve(
+          streamAgent({
+            ...req,
+            controller,
+            sandbox: this,
+            readSessionData: (id) => this.readClaudeCodeSessionData(id),
+          })
+        ).then((s) => this.consumeStream(s, agent)),
       };
       this.handles.agent = agent;
     });

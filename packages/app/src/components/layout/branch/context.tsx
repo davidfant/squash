@@ -1,5 +1,6 @@
 import { api, useMutation, useQuery } from "@/hooks/api";
 import { keepPreviousData } from "@tanstack/react-query";
+import { usePageInView } from "framer-motion";
 import {
   createContext,
   useContext,
@@ -61,10 +62,12 @@ export const BranchContextProvider = ({
   const [previewPath, setPreviewPath] = useState("");
   const [previewSha, setPreviewSha] = useState<string | null>(null);
 
+  const isVisible = usePageInView();
   const previewUrl =
     useQuery(api.branches[":branchId"].preview.$get, {
       params: { branchId },
-      refetchInterval: 60_000,
+      refetchInterval: isVisible ? 10_000 : false,
+      refetchOnWindowFocus: true,
       ...({ placeholderData: keepPreviousData } as any),
     }).data?.url ?? null;
 

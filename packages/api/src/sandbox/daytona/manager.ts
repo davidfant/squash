@@ -958,13 +958,13 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
     await sandbox.delete();
   }
 
-  async prepareAgentRun(): Promise<void> {
+  async keepAlive(): Promise<void> {
     const sandbox = await this.getSandbox();
-    await sandbox.setAutostopInterval(0);
-  }
-
-  async cleanupAgentRun(): Promise<void> {
-    const sandbox = await this.getSandbox();
-    await sandbox.setAutostopInterval(5);
+    await sandbox.process.executeCommand("pwd");
+    await sandbox.refreshData();
+    logger.debug("Kept Daytona sandbox alive", {
+      sandboxId: sandbox.id,
+      state: sandbox.state,
+    });
   }
 }

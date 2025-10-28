@@ -32,6 +32,13 @@ export async function streamClaudeCodeAgent(opts: {
     sessionId: opts.sessionId,
   });
 
+  const keepAliveInterval = setInterval(() => {
+    logger.debug("Keeping sandbox alive", { sandbox: opts.sandbox.name });
+    opts.sandbox.keepAlive().catch((e) => {
+      logger.error("Error keeping sandbox alive", e);
+    });
+  }, 10_000);
+
   let sessionId: string | undefined = undefined;
   const agentStream = streamText({
     model: new ClaudeCodeLanguageModel("", async function* ({ prompt }) {
@@ -228,4 +235,6 @@ export async function streamClaudeCodeAgent(opts: {
     id: randomUUID(),
     data: { type: "claude-code", id: sessionId, objectKey },
   });
+
+  clearInterval(keepAliveInterval);
 }

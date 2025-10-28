@@ -94,11 +94,12 @@ export function registerComposioTools(
           console.log(mcpToolOutput);
           return (
             JSON.parse(mcpToolOutput.content[0].text).data.results as Array<{
+              useCase: string;
               toolkits: string[];
               reasoning: string;
             }>
-          ).map((r) => ({
-            useCases: args.useCases,
+          ).map((r, index) => ({
+            useCase: args.useCases[index]!,
             reasoning: r.reasoning,
             toolkitSlugs: r.toolkits,
           }));

@@ -1,5 +1,11 @@
+import aiGatewayComposioDocs from "./ai-gateway-composio.md";
+import aiGatewayDocs from "./ai-gateway.md";
 import clerkTrpcDocs from "./clerk-trpc.md";
 import clerkDocs from "./clerk.md";
+import cloudflareWorkerDocs from "./cloudflare-worker.md";
+import composioDocs from "./composio.md";
+import shadcnDocs from "./shadcn.md";
+import trpcDocs from "./trpc.md";
 
 export interface Documentation {
   modules: string[];
@@ -37,6 +43,12 @@ export function parseDocs(modules: string[], src: string): Documentation {
 }
 
 export const docs: Documentation[] = [
+  parseDocs(["ai-gateway"], aiGatewayDocs),
+  parseDocs(["ai-gateway", "composio"], aiGatewayComposioDocs),
+  parseDocs(["cloudflare-worker"], cloudflareWorkerDocs),
+  parseDocs(["composio"], composioDocs),
+  parseDocs(["shadcn"], shadcnDocs),
+  parseDocs(["trpc"], trpcDocs),
   parseDocs(["clerk"], clerkDocs),
   parseDocs(["clerk", "trpc"], clerkTrpcDocs),
 ];

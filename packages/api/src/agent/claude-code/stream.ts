@@ -54,7 +54,13 @@ export async function streamClaudeCodeAgent(opts: {
               JSON.stringify({
                 appendSystemPrompt: [
                   appendSystemPrompt,
-                  getDocsPrompt(["trpc"]),
+                  getDocsPrompt([
+                    "ai-gateway",
+                    "cloudflare-worker",
+                    "composio",
+                    "shadcn",
+                    "trpc",
+                  ]),
                 ].join("\n"),
                 sessionId: opts.sessionId ?? undefined,
               }),

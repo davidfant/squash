@@ -19,10 +19,7 @@ export type AllTools = ClaudeCodeTools & {
   AnalyzeScreenshot: Tool<undefined, string>;
 };
 
-export type AgentState =
-  | { type: "discover" }
-  | { type: "implement" }
-  | { type: "clone-screenshot" };
+export type AgentState = { type: "discover" } | { type: "implement" };
 
 export type ChatMessageData = {
   GitSha: {

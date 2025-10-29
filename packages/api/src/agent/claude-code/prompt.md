@@ -99,7 +99,7 @@ export namespace GoogleCalendar {
 // worker/your-file.ts
 import { env } from "cloudflare:workers";
 import { GoogleCalendar } from "./types";
-import { executeTool } from "./composio";
+import { executeTool } from "./integrations/composio";
 
 const createdEvent = await executeTool<GoogleCalendar.CreateEventInput, GoogleCalendar.CreateEventOutput>({
   tool: "GOOGLECALENDAR_CREATE_EVENT",
@@ -121,7 +121,7 @@ const createdEvent = await executeTool<GoogleCalendar.CreateEventInput, GoogleCa
 <ai_model_integrations>
 Our project supports integration with LLMs and routes traffic using Vercel's AI SDK v5 and routes traffic through an **AI Gateway** that transparently handles authentication, usage metering, and provider fallback. For **LLM-based features**, you should not use Composio or the discovery/tester agents.
 
-You **do not need** to modify the gateway setup in `src/worker/ai-gateway.ts`; simply pass the fully‑qualified model name (`provider/model-id`) to the helper exported from that file.
+You **do not need** to modify the gateway setup in `src/worker/integrations/ai-gateway.ts`; simply pass the fully‑qualified model name (`provider/model-id`) to the helper exported from that file.
 
 **Supported Providers & Model Naming**
 The gateway exposes any model that the underlying provider supports. Prefix the model name with one of:
@@ -154,7 +154,7 @@ Use `generateText` from `ai` to obtain unstructured completions.
 
 ```ts
 import { generateText } from "ai";
-import { gateway } from "./ai-gateway";
+import { gateway } from "./integrations/ai-gateway";
 
 function generateHeadline(titleIdea: string) {
   const { text } = await generateText({
@@ -173,7 +173,7 @@ function generateHeadline(titleIdea: string) {
 ```ts
 import { z } from "zod";
 import { generateObject } from "ai";
-import { gateway } from "./ai-gateway";
+import { gateway } from "./integrations/ai-gateway";
 
 const recipeSchema = z.object({
   title: z.string(),
@@ -200,8 +200,8 @@ For complex workflows and tasks, we might need to combine the AI Gateway with th
 import { z } from "zod";
 import { generateObject } from "ai";
 import { env } from "cloudflare:workers";
-import { gateway } from "./ai-gateway";
-import { getAIGatewayTools } from "./composio";
+import { gateway } from "./integrations/ai-gateway";
+import { getAIGatewayTools } from "./integrations/composio";
 
 export async function reviewImportantPullRequests() {
   const tools = getAIGatewayTools(env.COMPOSIO_PLAYGROUND_USER_ID, [

@@ -83,7 +83,7 @@ export function ReasoningSummaries({ block }: { block: ReasoningBlock }) {
   const collapsedContent = (
     <p className="font-medium text-sm opacity-50 hover:opacity-100 transition-opacity">
       {block.streaming ? (
-        <span className="text-shimmer">{lastTitle}</span>
+        <span className="shimmer">{lastTitle}</span>
       ) : (
         <span>Thought for {block.summaries.length} steps...</span>
       )}

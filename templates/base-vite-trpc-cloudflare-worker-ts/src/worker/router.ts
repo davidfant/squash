@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { z } from "zod";
-import { composio } from "./composio";
+import { composio } from "./integrations/composio";
 import { procedure, router } from "./trpc";
 
 export const appRouter = router({

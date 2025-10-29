@@ -3,16 +3,22 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { usePrevious } from "@/hooks/usePrevious";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
-import { Loader2 } from "lucide-react";
+import { Loader2, type LucideIcon } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { type EventBlockItem } from "./groupMessageEvents";
 
-const Event = ({
-  event,
+export const Event = ({
+  label,
+  Icon,
+  loading,
+  shimmer,
   actions,
   onClick,
 }: {
-  event: EventBlockItem;
+  label: ReactNode;
+  Icon: LucideIcon;
+  loading: boolean;
+  shimmer: boolean;
   actions?: ReactNode;
   onClick?: () => void;
 }) => {
@@ -21,17 +27,18 @@ const Event = ({
     <div
       className={cn(
         "flex items-center gap-2 text-muted-foreground text-sm min-h-7",
-        clickable ? "cursor-pointer" : "cursor-default"
+        clickable ? "cursor-pointer" : "cursor-default",
+        shimmer && "shimmer"
       )}
       onClick={onClick}
     >
-      {event.loading ? (
+      {loading ? (
         <Loader2 className="size-3 shrink-0 animate-spin" />
       ) : (
-        <event.icon className="size-3 shrink-0" />
+        <Icon className="size-3 shrink-0" />
       )}
       <div className="flex-1 inline space-x-2 overflow-hidden *:max-w-full">
-        {event.label}
+        {label}
       </div>
       {actions}
     </div>
@@ -83,7 +90,10 @@ export function EventsCollapsible({
     return (
       <>
         <Event
-          event={firstEvent}
+          label={firstEvent.label}
+          Icon={firstEvent.icon}
+          loading={firstEvent.loading}
+          shimmer={firstEvent.loading}
           onClick={
             firstEvent.dialogContent
               ? () => handleEventSelection(firstEvent)
@@ -114,25 +124,23 @@ export function EventsCollapsible({
     <>
       <div className="@container">
         <Event
-          event={
-            open
-              ? firstEvent
-              : {
-                  label: (
-                    <>
-                      {firstEvent.label}
-                      <span>
-                        {" "}
-                        and {otherCount} more{" "}
-                        {otherCount === 1 ? "step" : "steps"}
-                        ...
-                      </span>
-                    </>
-                  ),
-                  loading: events.some((event) => event.loading),
-                  icon: firstEvent.icon,
-                }
+          label={
+            open ? (
+              firstEvent.label
+            ) : (
+              <>
+                {firstEvent.label}
+                <span>
+                  {" "}
+                  and {otherCount} more {otherCount === 1 ? "step" : "steps"}
+                  ...
+                </span>
+              </>
+            )
           }
+          Icon={firstEvent.icon}
+          loading={open ? firstEvent.loading : events.some((e) => e.loading)}
+          shimmer={open ? firstEvent.loading : events.some((e) => e.loading)}
           actions={
             !streaming && (
               <Button
@@ -162,7 +170,10 @@ export function EventsCollapsible({
               {events.slice(1).map((event, idx) => (
                 <Event
                   key={idx}
-                  event={event}
+                  label={event.label}
+                  Icon={event.icon}
+                  loading={event.loading}
+                  shimmer={event.loading}
                   onClick={
                     event.dialogContent
                       ? () => handleEventSelection(event)

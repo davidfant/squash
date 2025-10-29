@@ -1,9 +1,9 @@
-import { Skeleton } from "@/components/ui/skeleton";
 import type { ChatMessage } from "@squashai/api/agent/types";
+import { BrainIcon } from "lucide-react";
 import { useMemo } from "react";
 import { Markdown } from "../../../Markdown";
 import { ConnectToToolkitAlert } from "./ConnectToToolkitAlert";
-import { EventsCollapsible } from "./EventsCollapsible";
+import { Event, EventsCollapsible } from "./EventsCollapsible";
 import { GitCommitAlert } from "./GitCommitAlert";
 import { groupMessageEvents } from "./groupMessageEvents";
 import { ReasoningSummaries } from "./ReasoningSummaries";
@@ -63,7 +63,16 @@ export function MessageParts({
               />
             );
           case "loading":
-            return <Skeleton key={idx} className="h-4 w-48" />;
+            // return <Skeleton key={idx} className="h-4 w-48" />;
+            return (
+              <Event
+                key={idx}
+                label="Thinking..."
+                Icon={BrainIcon}
+                loading={false}
+                shimmer={true}
+              />
+            );
           case "connect-to-toolkit":
             return <ConnectToToolkitAlert key={idx} block={block} />;
         }

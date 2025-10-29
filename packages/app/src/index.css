@@ -128,39 +128,49 @@
   }
 }
 
-
 @layer utilities {
   :root {
-    --color-shimmer: var(--color-foreground);
-  }
-
-  @keyframes text-shimmer {
-    0%   { background-position-x: 100%; }
-    100% { background-position-x:  -100%; }
-  }
-
-  .text-shimmer {
-    background-image: linear-gradient(
+    --mask-stripe: linear-gradient(
       90deg,
-      var(--color-shimmer) 30%,
-      rgb(from var(--color-shimmer) r g b / .2) 50%,
-      var(--color-shimmer) 70%
+      #fff 30%,
+      /* fully opaque */ rgba(255, 255, 255, 0.2) 50%,
+      /* ~80 % transparent “dip” */ #fff 70% /* back to opaque */
     );
-
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-
-    background-size: 200% 100%;
-    animation: text-shimmer 2s linear infinite;
   }
 
+  /* One animation for the whole group -------------------------------- */
+  @keyframes shimmer {
+    0% {
+      mask-position: 100% 0;
+      -webkit-mask-position: 100% 0;
+    }
+    100% {
+      mask-position: -100% 0;
+      -webkit-mask-position: -100% 0;
+    }
+  }
+
+  /* Apply the mask to the wrapper ------------------------------------ */
+  .shimmer {
+    /* the mask */
+    mask-image: var(--mask-stripe);
+    -webkit-mask-image: var(--mask-stripe); /* Safari / old Chromium */
+    mask-size: 200% 100%;
+    -webkit-mask-size: 200% 100%;
+
+    /* keep children visible wherever mask-alpha > 0 */
+    mask-repeat: repeat;
+    -webkit-mask-repeat: repeat;
+
+    /* motion */
+    animation: shimmer 2s linear infinite;
+  }
 }
 
 @utility scrollbar-hidden {
   /* Firefox */
   scrollbar-width: none;
-  
+
   /* Safari and Chrome */
   &::-webkit-scrollbar {
     display: none;

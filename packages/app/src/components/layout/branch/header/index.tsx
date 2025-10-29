@@ -1,3 +1,4 @@
+import { LogoIcon } from "@/components/Logo";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "react-router";
 
@@ -14,11 +15,7 @@ export function BranchHeader({
     <header className="flex items-center justify-between p-2">
       <div className="flex items-center gap-2">
         <Link to="/" className="flex items-center">
-          <img
-            src="/preview/gradients/0.jpg"
-            alt="Squash"
-            className="size-6 hover:opacity-80 transition-opacity rounded-full"
-          />
+          <LogoIcon className="size-6 hover:opacity-80 transition-opacity" />
         </Link>
         <span className="font-medium text-sm">{title}</span>
         {inlineAction}

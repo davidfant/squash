@@ -316,11 +316,15 @@ export function groupMessageEvents(
           label: (
             <>
               <span>Search for</span>
-              {!!part.input?.useCase && (
-                <Badge variant="outline" className="border-none bg-muted">
-                  {part.input?.useCase}
+              {part.input?.useCases?.map((useCase, index) => (
+                <Badge
+                  key={index}
+                  variant="outline"
+                  className="border-none bg-muted"
+                >
+                  {useCase}
                 </Badge>
-              )}
+              ))}
             </>
           ),
         });

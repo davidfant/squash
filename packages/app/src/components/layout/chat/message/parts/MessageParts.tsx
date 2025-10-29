@@ -1,5 +1,4 @@
 import type { ChatMessage } from "@squashai/api/agent/types";
-import { BrainIcon } from "lucide-react";
 import { useMemo } from "react";
 import { Markdown } from "../../../Markdown";
 import { ConnectToToolkitAlert } from "./ConnectToToolkitAlert";
@@ -68,7 +67,7 @@ export function MessageParts({
               <Event
                 key={idx}
                 label="Thinking..."
-                Icon={BrainIcon}
+                Icon={null}
                 loading={false}
                 shimmer={true}
               />

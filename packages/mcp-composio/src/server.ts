@@ -64,7 +64,7 @@ export function registerComposioTools(
   
   • Use this toolkits whenever the user wants to integrate a new external app. After connecting to a toolkit, keep coming back to this tool to discover new toolkits.
   • If the user pivots to a different use case in same chat, you MUST call this tool again with the new use case.
-  • Specify one or more plain-language use cases to search for toolkits, including the name of the thirdparty app or tool.
+  • Specify one or more plain-language use cases to search for toolkits, including the name of the thirdparty app or tool. Don't provide multiple use cases for a single thirdparty app, instead include all use cases of that app in one use case string.
   
   Example: User query: "get the most recent hubspot lead and send them a welcome email"
   Search call: { useCases: ["get the most recent hubspot lead", "send an email to someone"] }

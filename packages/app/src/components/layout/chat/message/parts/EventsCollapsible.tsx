@@ -16,7 +16,7 @@ export const Event = ({
   onClick,
 }: {
   label: ReactNode;
-  Icon: LucideIcon;
+  Icon: LucideIcon | null;
   loading: boolean;
   shimmer: boolean;
   actions?: ReactNode;
@@ -35,7 +35,7 @@ export const Event = ({
       {loading ? (
         <Loader2 className="size-3 shrink-0 animate-spin" />
       ) : (
-        <Icon className="size-3 shrink-0" />
+        Icon && <Icon className="size-3 shrink-0" />
       )}
       <div className="flex-1 inline space-x-2 overflow-hidden *:max-w-full">
         {label}

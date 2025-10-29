@@ -12,7 +12,7 @@ const templates = {
   "base-vite-trpc-cloudflare-worker-ts": {
     sourcePrefix: "templates/base-vite-trpc-cloudflare-worker-ts",
     // defaultBranch: "master",
-    defaultBranch: "next",
+    defaultBranch: "master",
     snapshot: {
       type: "daytona",
       snapshot: "base-vite-trpc-cloudflare-worker-ts:v0.0.2",

@@ -54,7 +54,7 @@ export async function streamClaudeCodeAgent(opts: {
               JSON.stringify({
                 appendSystemPrompt: [
                   appendSystemPrompt,
-                  getDocsPrompt(["clerk", "trpc"]),
+                  getDocsPrompt(["trpc"]),
                 ].join("\n"),
                 sessionId: opts.sessionId ?? undefined,
               }),

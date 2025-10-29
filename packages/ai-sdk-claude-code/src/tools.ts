@@ -296,7 +296,7 @@ export const tools = {
     outputSchema: z.unknown(),
   }),
   ClaudeCode__mcp__Composio__SearchToolkits: tool({
-    inputSchema: z.object({ useCase: z.string() }),
+    inputSchema: z.object({ useCases: z.string().array() }),
     outputSchema: z.unknown(),
   }),
   ClaudeCode__mcp__Composio__ListConnectedToolkits: tool({

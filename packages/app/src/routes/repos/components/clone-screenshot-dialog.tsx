@@ -138,7 +138,6 @@ export function CloneScreenshotDialog({
               mediaType: f.mediaType,
               filename: f.filename,
             })),
-            { type: "data-AgentState", data: { type: "clone-screenshot" } },
           ],
         },
       },

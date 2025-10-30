@@ -167,6 +167,9 @@ importers:
       p-retry:
         specifier: ^7.1.0
         version: 7.1.0
+      postgres:
+        specifier: ^3.4.7
+        version: 3.4.7
       shell-escape:
         specifier: ^0.2.0
         version: 0.2.0
@@ -10664,8 +10667,7 @@ snapshots:
     dependencies:
       xtend: 4.0.2
 
-  postgres@3.4.7:
-    optional: true
+  postgres@3.4.7: {}
 
   posthog-js@1.273.0:
     dependencies:

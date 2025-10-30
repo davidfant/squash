@@ -19,6 +19,7 @@ import { NewBranchFromRepoPage } from "./routes/branches/new";
 import { ExtensionAuthPage } from "./routes/extension-auth";
 import { NewRepoFromProvider, NewRepoPage } from "./routes/new/repo";
 import { NewRepoManualPage } from "./routes/new/repo/manual";
+import { NextPage } from "./routes/next";
 import { ReposPage } from "./routes/repos";
 
 i18n.use(initReactI18next).init({
@@ -46,6 +47,7 @@ createRoot(document.getElementById("root")!).render(
         <QueryClientProvider client={queryClient}>
           <BrowserRouter>
             <Routes>
+              <Route path="/next" element={<NextPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/invite/:inviteId" element={<InvitePage />} />
               <Route

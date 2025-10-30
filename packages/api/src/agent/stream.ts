@@ -10,7 +10,6 @@ import { env } from "cloudflare:workers";
 import { randomUUID } from "crypto";
 import { eq } from "drizzle-orm";
 import { mergeScreenshotAnalysisIntoUserMessages } from "./claude-code/merge-screenshot-analysis-with-prev-user-message";
-import { streamCloneScreenshotPlanAgent } from "./clone-screenshot/stream";
 import { storeInitialCommitInSystemMessage } from "./util";
 
 const getState = (messages: ChatMessage[]) =>
@@ -81,14 +80,6 @@ function streamInner(params: {
                 .set({ imageUrl, updatedAt: new Date() })
                 .where(eq(schema.repoBranch.id, params.branchId)),
           });
-          break;
-        case "clone-screenshot":
-          await streamCloneScreenshotPlanAgent(
-            writer,
-            params.messages.filter((m) => m.role !== "system"),
-            params.controller.signal,
-            params.messageMetadata
-          );
           break;
         // case "discover":
         // default:

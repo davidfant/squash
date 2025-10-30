@@ -15,6 +15,7 @@ import { getDocsPrompt } from "../docs";
 import { GitCommit } from "../git";
 import type { AllTools, ChatMessage } from "../types";
 import appendSystemPrompt from "./prompt.md";
+import { subagents } from "./subagents";
 
 export async function streamClaudeCodeAgent(opts: {
   writer: UIMessageStreamWriter<ChatMessage>;
@@ -63,9 +64,10 @@ export async function streamClaudeCodeAgent(opts: {
                   ]),
                 ].join("\n"),
                 sessionId: opts.sessionId ?? undefined,
+                subagents: Object.fromEntries(
+                  subagents.map(({ name, ...s }) => [name, s])
+                ),
               }),
-              "--model",
-              "claude-sonnet-4-5-20250929",
             ],
             env: { IS_SANDBOX: "1", ANTHROPIC_API_KEY: env.ANTHROPIC_API_KEY },
           },

@@ -2,7 +2,7 @@ import { Command } from "commander";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { runClaudeCode } from "./agents/claude-code/index.js";
+import { runClaudeCode } from "./agents/claude-code.js";
 import { CLIOptionsSchema } from "./schema.js";
 
 export async function main(argv: string[] = process.argv) {

@@ -34,6 +34,14 @@ export const ClaudeCodeSessionSchema = z.object({ id: z.string() });
 export const ClaudeCodeOptionsSchema = z.object({
   appendSystemPrompt: z.string().optional(),
   sessionId: z.string().optional(),
+  subagents: z.record(
+    z.string(),
+    z.object({
+      description: z.string(),
+      tools: z.array(z.string()),
+      prompt: z.string(),
+    })
+  ),
 });
 
 export const ClaudeCodeCLIOptionsSchema = z.object({

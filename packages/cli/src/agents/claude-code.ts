@@ -5,8 +5,7 @@ import {
 } from "@anthropic-ai/claude-agent-sdk";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
-import { parseEnvFile } from "../../lib/parse-env-file.js";
-import { subagents } from "./subagents.js";
+import { parseEnvFile } from "../lib/parse-env-file.js";
 
 const MAX_RETRIES = 3;
 
@@ -97,7 +96,7 @@ export async function runClaudeCode(
             append: req.options?.appendSystemPrompt,
           },
           settingSources: ["project"],
-          agents: subagents,
+          agents: req.options?.subagents,
           mcpServers: {
             Composio: {
               type: "sse",

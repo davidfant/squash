@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { FeatureCardEditTitleDialog } from "./edit-title-dialog";
 
 export const FeatureCard = ({
@@ -25,7 +25,7 @@ export const FeatureCard = ({
 }: {
   title: string;
   imageUrl: string | null;
-  subtitle?: string;
+  subtitle?: ReactNode;
   avatar?: { name: string; image: string | null };
   index: number;
   className?: string;
@@ -79,17 +79,17 @@ export const FeatureCard = ({
             />
           )}
           <p className="text-sm text-foreground flex-1 truncate">{title}</p>
-          {!!subtitle && (
-            <>
-              <p
-                className={cn(
-                  "text-sm text-muted-foreground",
-                  hasMenu && "group-hover:opacity-0 transition-opacity"
-                )}
-              >
-                {subtitle}
-              </p>
-            </>
+          {typeof subtitle === "string" ? (
+            <p
+              className={cn(
+                "text-sm text-muted-foreground",
+                hasMenu && "group-hover:opacity-0 transition-opacity"
+              )}
+            >
+              {subtitle}
+            </p>
+          ) : (
+            subtitle
           )}
           {hasMenu && (
             <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute right-0">

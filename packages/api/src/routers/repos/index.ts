@@ -22,6 +22,31 @@ export const reposRouter = new Hono<{
   Bindings: CloudflareBindings;
   Variables: { db: Database };
 }>()
+  .get("/public", async (c) => {
+    const db = c.get("db");
+
+    const repos = await db
+      .select({
+        id: schema.repo.id,
+        name: schema.repo.name,
+        previewUrl: schema.repo.previewUrl,
+        imageUrl: schema.repo.imageUrl,
+        createdAt: schema.repo.createdAt,
+        updatedAt: schema.repo.updatedAt,
+      })
+      .from(schema.repo)
+      .where(
+        and(
+          eq(schema.repo.private, false),
+          eq(schema.repo.hidden, false),
+          isNull(schema.repo.deletedAt)
+        )
+      )
+      .orderBy(desc(schema.repo.updatedAt))
+      .limit(24);
+
+    return c.json(repos);
+  })
   .get("/", requireAuth, requireActiveOrganization, async (c) => {
     const user = c.get("user");
     const db = c.get("db");

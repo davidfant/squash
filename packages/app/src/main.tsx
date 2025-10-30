@@ -5,7 +5,7 @@ import { PostHogProvider } from "posthog-js/react";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { initReactI18next } from "react-i18next";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router";
+import { BrowserRouter, Route, Routes } from "react-router";
 import { PosthogIdentify } from "./auth/posthog";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import "./index.css";
@@ -17,9 +17,9 @@ import { BranchesPage } from "./routes/branches";
 import { BranchPage } from "./routes/branches/details";
 import { NewBranchFromRepoPage } from "./routes/branches/new";
 import { ExtensionAuthPage } from "./routes/extension-auth";
+import { NextPage } from "./routes/landing";
 import { NewRepoFromProvider, NewRepoPage } from "./routes/new/repo";
 import { NewRepoManualPage } from "./routes/new/repo/manual";
-import { NextPage } from "./routes/next";
 import { ReposPage } from "./routes/repos";
 
 i18n.use(initReactI18next).init({
@@ -47,7 +47,7 @@ createRoot(document.getElementById("root")!).render(
         <QueryClientProvider client={queryClient}>
           <BrowserRouter>
             <Routes>
-              <Route path="/next" element={<NextPage />} />
+              <Route path="/" element={<NextPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/invite/:inviteId" element={<InvitePage />} />
               <Route
@@ -55,10 +55,6 @@ createRoot(document.getElementById("root")!).render(
                 element={<NewBranchFromRepoPage />}
               />
               <Route element={<RequireAuthGuard />}>
-                <Route
-                  path="/"
-                  element={<Navigate to="/playgrounds" replace />}
-                />
                 <Route path="/extension-auth" element={<ExtensionAuthPage />} />
                 <Route path="/playgrounds" element={<ReposPage />} />
                 <Route path="/playgrounds/:repoId" element={<ReposPage />} />

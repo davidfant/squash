@@ -6,7 +6,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { toast } from "@/components/ui/sonner";
 import { api, type QueryOutput, useMutation, useQuery } from "@/hooks/api";
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useNavigate, useParams } from "react-router";
 import { CreateRepoCard } from "./components/create-repo-card";
 import { RepoDetailsDialog } from "./components/repo-details-dialog";
 
@@ -44,6 +44,7 @@ function RepoCard({
 }
 
 export function ReposPage() {
+  const navigate = useNavigate();
   const repos = useQuery(api.repos.$get, { params: {} });
   const { repoId } = useParams();
 
@@ -80,7 +81,13 @@ export function ReposPage() {
       </SidebarInset>
 
       {/* Dialog is always rendered once we have repo data, but open state is controlled by URL */}
-      {currentRepo && <RepoDetailsDialog repo={currentRepo} open={!!repoId} />}
+      {currentRepo && (
+        <RepoDetailsDialog
+          repo={currentRepo}
+          open={!!repoId}
+          onOpenChange={() => navigate("/playgrounds")}
+        />
+      )}
     </SidebarProvider>
   );
 }

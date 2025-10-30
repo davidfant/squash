@@ -74,9 +74,7 @@ export function NewBranchFromRepoPage() {
                   <ArrowLeft className="size-4" />
                 </Button>
               </Link>
-              <span className="truncate">
-                New Prototype in {repo.data?.name}
-              </span>
+              <span className="truncate">{repo.data?.name}</span>
             </div>
             <div className="flex-1">
               <ChatThread

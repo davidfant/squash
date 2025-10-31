@@ -54,7 +54,7 @@ export async function runClaudeCode(
 ): Promise<ClaudeCodeSession> {
   let sessionId = req.options?.sessionId;
 
-  const envVars = parseEnvFile(path.join(req.cwd, ".dev.vars"));
+  const envVars = parseEnvFile(path.join(req.cwd, ".env"));
 
   retryLoop: for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {

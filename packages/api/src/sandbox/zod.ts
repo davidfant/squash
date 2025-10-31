@@ -26,6 +26,20 @@ const zSandboxSnapshotTask = z.union([
   zSandboxSnapshotFunctionTask,
 ]) satisfies z.ZodType<Sandbox.Snapshot.Task.Any>;
 
+const zSandboxSnapshotBuildStatic = z.object({
+  type: z.literal("static"),
+  dir: z.string(),
+}) satisfies z.ZodType<Sandbox.Snapshot.Build.Static>;
+
+const zSandboxSnapshotBuildCloudflareWorker = z.object({
+  type: z.literal("cloudflare-worker"),
+}) satisfies z.ZodType<Sandbox.Snapshot.Build.CloudflareWorker>;
+
+const zSandboxSnapshotBuild = z.union([
+  zSandboxSnapshotBuildStatic,
+  zSandboxSnapshotBuildCloudflareWorker,
+]) satisfies z.ZodType<Sandbox.Snapshot.Build.Any>;
+
 const zSandboxSnapshotBaseConfig = z.object({
   port: z.number(),
   cwd: z.string(),
@@ -39,7 +53,7 @@ const zSandboxSnapshotBaseConfig = z.object({
       Sandbox.Snapshot.Task.Any[]
     >,
   }),
-  build: z.object({ type: z.literal("static"), dir: z.string() }),
+  build: zSandboxSnapshotBuild,
 }) satisfies z.ZodType<Sandbox.Snapshot.Config.Base>;
 
 export const zSandboxSnapshotConfig = z.union([

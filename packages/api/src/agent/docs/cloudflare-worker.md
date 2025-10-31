@@ -6,4 +6,4 @@ Use pnpm as your package manager, not npm or yarn
 
 ---
 
-Store environment variables in `.dev.vars`. When updating `.dev.vars` always run `pnpm typegen` afterwards so that Cloudflare Worker TypeScript types are updated correctly.
+Store environment variables in `.env`. When updating `.env` always run `pnpm typegen` afterwards so that Cloudflare Worker TypeScript types are updated correctly.

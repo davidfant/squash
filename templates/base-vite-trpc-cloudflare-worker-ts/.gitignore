@@ -4,6 +4,6 @@ node_modules
 dist
 .DS_Store
 *.tsbuildinfo
-.dev.vars
+.env
 .turbo
 worker-configuration.d.ts

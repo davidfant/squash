@@ -2,7 +2,7 @@ import { Daytona } from "@daytonaio/sdk";
 import dotenv from "dotenv";
 import { setTimeout } from "timers/promises";
 
-dotenv.config({ path: ".dev.vars" });
+dotenv.config({ path: ".env" });
 
 const daytona = new Daytona({ apiKey: process.env.DAYTONA_API_KEY! });
 

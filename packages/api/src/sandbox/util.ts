@@ -191,7 +191,8 @@ export const executeTasks = (
           .map((id) => tasks.find((task) => task.id === id)!)
           .map((t) => `'${t.title}'`)
           .join(", ")}`;
-        c.enqueue({ type: "error", errorText });
+        c.enqueue({ type: "finish" });
+        // c.enqueue({ type: "error", errorText });
 
         await new Promise((r) => setTimeout(r, 0));
         c.error(new Error(errorText));

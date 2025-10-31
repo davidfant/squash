@@ -39,16 +39,17 @@ const templates = {
           args: ["-c", "pnpm dev 2>&1 | tee debug.log"],
         },
         build: [
-          {
-            id: "build",
-            title: "Build",
-            type: "command",
-            command: "pnpm",
-            args: ["build"],
-          },
+          // {
+          //   id: "build",
+          //   title: "Build",
+          //   type: "command",
+          //   command: "pnpm",
+          //   args: ["build"],
+          // },
         ],
       },
-      build: { type: "static", dir: "dist" },
+      // build: { type: "static", dir: "dist" },
+      build: { type: "cloudflare-worker" },
     },
   },
 } as const satisfies Record<string, TemplateDefinition>;

@@ -18,7 +18,7 @@ export const AssistantMessage = ({
   streaming?: boolean;
   onRetry?: () => void;
 }) => (
-  <div className={cn("group space-y-3", className)}>
+  <div className={cn("group space-y-1", className)}>
     <MessageHeader author="Squash" />
     <div className="ml-7">
       <MessageParts

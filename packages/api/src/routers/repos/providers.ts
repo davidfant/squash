@@ -2,7 +2,6 @@ import { requireActiveOrganization, requireAuth } from "@/auth/middleware";
 import type { Database } from "@/database";
 import * as schema from "@/database/schema";
 import { zSandboxSnapshotConfig } from "@/sandbox/zod";
-import { RepoService } from "@/services/repoService";
 import { zValidator } from "@hono/zod-validator";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { Hono } from "hono";
@@ -41,51 +40,6 @@ export const repoProvidersRouter = new Hono<{
 
     return c.json(providers);
   })
-  .post(
-    "/:providerId/detect-framework",
-    zValidator("param", z.object({ providerId: z.string() })),
-    zValidator("json", z.object({ repoId: z.string() })),
-    requireRepoProvider,
-    async (c) => {
-      const { repoId } = c.req.valid("json");
-      const provider = c.get("provider");
-
-      try {
-        // Get repository details from provider
-        const allRepos = await provider.octokit.paginate(
-          provider.octokit.rest.apps.listReposAccessibleToInstallation,
-          { installation_id: provider.data.installationId }
-        );
-
-        const targetRepo = allRepos.find((r) => r.id.toString() === repoId);
-        if (!targetRepo) {
-          return c.json(
-            { error: "Repository not found or not accessible" },
-            404
-          );
-        }
-
-        // Use RepoService to detect framework
-        const { framework, snapshot } =
-          await RepoService.detectAndApplyFramework({
-            repo: {
-              url: targetRepo.clone_url,
-              defaultBranch: targetRepo.default_branch,
-            },
-            provider: provider,
-            env: c.env,
-          });
-
-        return c.json({
-          framework: framework,
-          snapshot: snapshot,
-        });
-      } catch (error) {
-        console.error("Error detecting framework:", error);
-        return c.json({ error: "Failed to detect framework" }, 500);
-      }
-    }
-  )
   .get(
     "/:providerId",
     zValidator("param", z.object({ providerId: z.string() })),

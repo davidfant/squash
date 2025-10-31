@@ -12,7 +12,7 @@ import { useChat } from "@ai-sdk/react";
 import type { SandboxTaskMessage } from "@squashai/api/agent/types";
 import { DefaultChatTransport } from "ai";
 import { ExternalLink, Share } from "lucide-react";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useBranchContext } from "../context";
 
@@ -20,15 +20,24 @@ export function ShareButton() {
   const { t } = useTranslation("branch");
   const { branch, previewSha, refetch } = useBranchContext();
 
+  const [messages, setMessages] = useState<SandboxTaskMessage[]>([]);
   const stream = useChat<SandboxTaskMessage>({
-    messages: [],
     transport: new DefaultChatTransport({
       api: `${import.meta.env.VITE_API_URL}/branches/${branch.id}/deploy`,
       credentials: "include",
     }),
-    onFinish: async () => {
+    onFinish: async ({ message }) => {
       await refetch();
-      stream.setMessages([]);
+      console.log("onFinish", message);
+      if (
+        message.parts.every(
+          (p) => p.type === "tool-SandboxTask" && p.state === "output-available"
+        )
+      ) {
+        stream.setMessages([]);
+        // } else {
+        //   setMessages([message]);
+      }
     },
   });
 
@@ -56,14 +65,14 @@ export function ShareButton() {
       <DropdownMenuTrigger asChild>
         <Button variant="default" size="sm">
           <Share />
-          {t("share.button")}
+          {t("deploy.button")}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-96 p-4 space-y-4">
         <div>
-          <h3 className="font-medium">{t("share.dialog.title")}</h3>
+          <h3 className="font-medium">{t("deploy.dialog.title")}</h3>
           <p className="text-sm text-muted-foreground mt-1">
-            {t("share.dialog.description")}
+            {t("deploy.dialog.description")}
           </p>
         </div>
 
@@ -92,8 +101,8 @@ export function ShareButton() {
               }
             >
               {unpublish.isPending
-                ? t("share.dialog.unpublishing")
-                : t("share.dialog.unpublish")}
+                ? t("deploy.dialog.unpublishing")
+                : t("deploy.dialog.unpublish")}
             </Button>
           </div>
         )}
@@ -106,13 +115,13 @@ export function ShareButton() {
             onClick={handlePublish}
           >
             {publishing
-              ? t("share.dialog.publishing")
-              : t("share.dialog.publish")}
+              ? t("deploy.dialog.publishing")
+              : t("deploy.dialog.publish")}
           </Button>
         )}
         {isDeploymentOutdated && (
           <p className="text-sm text-muted-foreground">
-            {t("share.dialog.outdatedWarning")}
+            {t("deploy.dialog.outdatedWarning")}
           </p>
         )}
         <SandboxTaskStream stream={stream} />

@@ -226,6 +226,7 @@ const repoBranchRouter = new Hono<{
     async (c) => {
       const params = c.req.valid("param");
       const sandbox = c.env.DAYTONA_SANDBOX_MANAGER.getByName(params.branchId);
+      c.executionCtx.waitUntil(sandbox.keepAlive());
       return c.json({ url: await sandbox.getPreviewUrl() });
     }
   )

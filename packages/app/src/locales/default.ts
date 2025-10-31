@@ -59,16 +59,16 @@ export default {
       },
       refresh: "Refresh",
     },
-    share: {
-      button: "Share",
+    deploy: {
+      button: "Publish",
       dialog: {
-        title: "Share",
+        title: "Publish",
         description:
-          "Publish this prototype to share it with your team, testers, or others.",
+          "Publish this app to share it with your team, customers, or others.",
         publish: "Publish",
         publishing: "Publishing",
         outdatedWarning:
-          "The current prototype is showing an older version. Publish to update to the current version.",
+          "The current app version is outdated. Publish to update to the latest version.",
         unpublish: "Unpublish",
         unpublishing: "Unpublishing",
       },

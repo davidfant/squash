@@ -267,37 +267,37 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
             timestamp: new Date().toISOString(),
           };
 
-          const devVarsPath = path.join(options.config.cwd, ".dev.vars");
-          const devVarsString = await (async () => {
-            const exists = await fileExists(that.sandbox!.id, devVarsPath);
+          const envVarsPath = path.join(options.config.cwd, ".env");
+          const envVarsString = await (async () => {
+            const exists = await fileExists(that.sandbox!.id, envVarsPath);
             if (!exists) return "";
 
             const buffer = await downloadFileFromSandbox(
               that.sandbox!.id,
-              devVarsPath
+              envVarsPath
             );
             return buffer.toString("utf-8");
           })();
-          let updated = devVarsString;
+          let updated = envVarsString;
 
-          const devVars: Record<string, string> = {};
-          for (const line of devVarsString.split(/\r?\n/)) {
+          const envVars: Record<string, string> = {};
+          for (const line of envVarsString.split(/\r?\n/)) {
             const m = line.match(/^\s*([^#=\s]+)\s*=\s*(.*)\s*$/);
-            if (m) devVars[m[1]!] = m[2]!;
+            if (m) envVars[m[1]!] = m[2]!;
           }
 
-          if (!devVars.TZ) updated += `TZ=utc\n`;
-          if (!devVars.AI_GATEWAY_BASE_URL) {
+          if (!envVars.TZ) updated += `TZ=utc\n`;
+          if (!envVars.AI_GATEWAY_BASE_URL) {
             updated += `AI_GATEWAY_BASE_URL=${env.AI_GATEWAY_BASE_URL}\n`;
           }
-          if (!devVars.AI_GATEWAY_API_KEY) {
+          if (!envVars.AI_GATEWAY_API_KEY) {
             updated += `\nAI_GATEWAY_API_KEY=${env.AI_GATEWAY_API_KEY}\n`;
           }
 
           if (
-            !devVars.COMPOSIO_API_KEY ||
-            !devVars.COMPOSIO_PROJECT_ID ||
-            !devVars.COMPOSIO_PLAYGROUND_USER_ID
+            !envVars.COMPOSIO_API_KEY ||
+            !envVars.COMPOSIO_PROJECT_ID ||
+            !envVars.COMPOSIO_PLAYGROUND_USER_ID
           ) {
             yield {
               type: "stdout",
@@ -317,9 +317,9 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
             };
           }
 
-          if (updated !== devVarsString) {
+          if (updated !== envVarsString) {
             const sandbox = await that.getSandbox();
-            await sandbox.fs.uploadFile(Buffer.from(updated), devVarsPath);
+            await sandbox.fs.uploadFile(Buffer.from(updated), envVarsPath);
           }
         },
       },
@@ -406,73 +406,155 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
   async getDeployTasks(): Promise<Sandbox.Snapshot.Task.Any[]> {
     const options = await this.getOptions();
     const that = this;
-    return [
-      ...options.config.tasks.build,
-      {
-        id: "upload-static-files",
-        title: "Uploading...",
-        type: "function",
-        dependsOn: options.config.tasks.build.map((task) => task.id),
-        function: async function* () {
-          yield {
-            type: "stdout",
-            data: "Preparing to upload files...\n",
-            timestamp: new Date().toISOString(),
-          };
 
-          const [gitSha, sandbox] = await Promise.all([
-            that.gitCurrentCommit(undefined),
-            that.getSandbox(),
-          ]);
+    if (Math.random()) {
+      options.config.build = { type: "cloudflare-worker" };
+      options.config.tasks.build = [];
+    }
 
-          const buildDir = path.join(
-            options.config.cwd,
-            options.config.build.dir
-          );
+    if (options.config.build.type === "static") {
+      const build = options.config.build;
+      return [
+        ...options.config.tasks.build,
+        {
+          id: "upload-static-files",
+          title: "Uploading...",
+          type: "function",
+          dependsOn: options.config.tasks.build.map((task) => task.id),
+          function: async function* () {
+            yield {
+              type: "stdout",
+              data: "Preparing to upload files...\n",
+              timestamp: new Date().toISOString(),
+            };
 
-          const { files } = await sandbox.fs.searchFiles(buildDir, "*.*");
-          yield {
-            type: "stdout",
-            data: `Found ${files.length} files to upload\n`,
-            timestamp: new Date().toISOString(),
-          };
+            const [gitSha, sandbox] = await Promise.all([
+              that.gitCurrentCommit(undefined),
+              that.getSandbox(),
+            ]);
 
-          yield {
-            type: "stdout",
-            data: "Starting parallel uploads...\n",
-            timestamp: new Date().toISOString(),
-          };
+            const buildDir = path.join(options.config.cwd, build.dir);
 
-          const deploymentPath = `${options.branch.repoId}/${options.branch.id}/${gitSha}`;
-          await Promise.all(
-            files.map((file) =>
-              uploadSandboxFileToDeployment(
-                sandbox.id,
-                { absolute: file, relative: path.relative(buildDir, file) },
-                deploymentPath
+            const { files } = await sandbox.fs.searchFiles(buildDir, "*.*");
+            yield {
+              type: "stdout",
+              data: `Found ${files.length} files to upload\n`,
+              timestamp: new Date().toISOString(),
+            };
+
+            yield {
+              type: "stdout",
+              data: "Starting parallel uploads...\n",
+              timestamp: new Date().toISOString(),
+            };
+
+            const deploymentPath = `${options.branch.repoId}/${options.branch.id}/${gitSha}`;
+            await Promise.all(
+              files.map((file) =>
+                uploadSandboxFileToDeployment(
+                  sandbox.id,
+                  { absolute: file, relative: path.relative(buildDir, file) },
+                  deploymentPath
+                )
               )
-            )
-          );
+            );
 
-          yield {
-            type: "stdout",
-            data: `Successfully uploaded ${files.length} files\n`,
-            timestamp: new Date().toISOString(),
-          };
+            yield {
+              type: "stdout",
+              data: `Successfully uploaded ${files.length} files\n`,
+              timestamp: new Date().toISOString(),
+            };
 
-          const url = new URL(env.DEPLOYMENT_PROXY_URL);
-          url.host = `${options.branch.name}.${url.host}`;
-          const db = createDatabase(env);
-          await Promise.all([
-            env.DOMAIN_MAPPINGS.put(url.host, deploymentPath),
-            db
-              .update(schema.repoBranch)
-              .set({ deployment: { url: url.origin, sha: gitSha } })
-              .where(eq(schema.repoBranch.id, options.branch.id)),
-          ]);
+            const url = new URL(env.DEPLOYMENT_PROXY_URL);
+            url.host = `${options.branch.name}.${url.host}`;
+            const db = createDatabase(env);
+            await Promise.all([
+              env.DOMAIN_MAPPINGS.put(url.host, deploymentPath),
+              db
+                .update(schema.repoBranch)
+                .set({ deployment: { url: url.origin, sha: gitSha } })
+                .where(eq(schema.repoBranch.id, options.branch.id)),
+            ]);
+          },
         },
-      },
-    ];
+      ];
+    } else if (options.config.build.type === "cloudflare-worker") {
+      return [
+        ...options.config.tasks.build,
+        {
+          id: "deploy-cloudflare-worker",
+          title: "Deploying...",
+          type: "function",
+          dependsOn: options.config.tasks.build.map((task) => task.id),
+          function: async function* () {
+            yield {
+              type: "stdout",
+              data: "Preparing to upload files...\n",
+              timestamp: new Date().toISOString(),
+            };
+
+            const [gitSha, sandbox] = await Promise.all([
+              that.gitCurrentCommit(undefined),
+              that.getSandbox(),
+            ]);
+
+            // todo: write .env
+
+            const deploymentName = options.branch.repoId.split("-")[0]!;
+
+            const stream = await that.execute(
+              {
+                // command: "pnpm",
+                // args: [
+                //   "wrangler",
+                //   "deploy",
+                //   "--name",
+                //   deploymentName,
+                //   "--env-file",
+                //   ".env",
+                // ],
+                command: "sh",
+                args: [
+                  "-c",
+                  [
+                    `pnpm wrangler secret bulk .env --name ${deploymentName}`,
+                    `pnpm wrangler deploy --name ${deploymentName}`,
+                  ].join(" && "),
+                ],
+                env: {
+                  CLOUDFLARE_API_TOKEN:
+                    env.CLOUDFLARE_WRANGLER_DEPLOY_API_TOKEN,
+                },
+              },
+              undefined
+            );
+            for await (const ev of stream) {
+              if (ev.type === "stdout" || ev.type === "stderr") yield ev;
+              if (ev.type === "error") throw new Error(ev.error);
+            }
+
+            // TODO: get base origin from env somehow
+            const url = `https://${deploymentName}.squash.workers.dev`;
+
+            yield {
+              type: "stdout",
+              data: `Successfully deployed Cloudflare Worker\n`,
+              timestamp: new Date().toISOString(),
+            };
+
+            const db = createDatabase(env);
+            await db
+              .update(schema.repoBranch)
+              .set({ deployment: { url: url, sha: gitSha } })
+              .where(eq(schema.repoBranch.id, options.branch.id));
+          },
+        },
+      ];
+    } else {
+      throw new Error(
+        `Unsupported build type: ${JSON.stringify(options.config.build)}`
+      );
+    }
   }
 
   async getForkTasks(

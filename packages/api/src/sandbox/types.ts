@@ -27,6 +27,19 @@ export namespace Sandbox {
       export type Any = Command | Function;
     }
 
+    export namespace Build {
+      export interface Static {
+        type: "static";
+        dir: string;
+      }
+
+      export interface CloudflareWorker {
+        type: "cloudflare-worker";
+      }
+
+      export type Any = Static | CloudflareWorker;
+    }
+
     export namespace Config {
       export interface Base {
         port: number;
@@ -37,7 +50,7 @@ export namespace Sandbox {
           dev: Task.Command;
           build: Task.Any[];
         };
-        build: { type: "static"; dir: string };
+        build: Build.Any;
       }
 
       export interface Docker extends Base {

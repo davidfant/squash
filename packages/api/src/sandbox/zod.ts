@@ -43,7 +43,7 @@ const zSandboxSnapshotBuild = z.union([
 const zSandboxSnapshotBaseConfig = z.object({
   port: z.number(),
   cwd: z.string(),
-  env: z.record(z.string(), z.string()),
+  envFile: z.string(),
   tasks: z.object({
     install: z.array(zSandboxSnapshotTask) as unknown as z.ZodType<
       Sandbox.Snapshot.Task.Any[]

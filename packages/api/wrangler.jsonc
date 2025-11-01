@@ -37,23 +37,21 @@
     { "tag": "v1", "new_sqlite_classes": ["DaytonaSandboxManager"] }
   ],
   "vars": {
-    "SQUASH_CLI_VERSION": "latest",
+    "SQUASH_CLI_PACKAGE": "@squashai/cli@latest",
     "APP_URL": "http://localhost:5173",
     "TRUSTED_ORIGINS": "http://localhost:5173",
     "PREVIEW_PROXY_URL": "http://localhost:8788",
     "DEPLOYMENT_PROXY_URL": "http://localhost:8790",
-    "SCREENSHOT_API_URL": "http://localhost:8789",
     "TZ": "utc"
   },
   "env": {
     "production": {
       "vars": {
-        "SQUASH_CLI_VERSION": "latest",
+        "SQUASH_CLI_PACKAGE": "@squashai/cli@latest",
         "APP_URL": "https://app.squash.build",
         "TRUSTED_ORIGINS": "https://app.squash.build,https://*.app-7j7.pages.dev",
         "PREVIEW_PROXY_URL": "https://magicsite.app",
         "DEPLOYMENT_PROXY_URL": "https://squashprototype.com",
-        "SCREENSHOT_API_URL": "https://screenshot-api-production.squash.workers.dev",
         "TZ": "utc"
       },
       "durable_objects": {

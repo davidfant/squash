@@ -23,7 +23,7 @@ export async function storeInitialCommitInSystemMessage(
   const description =
     "This is the starting point before any changes have been made.";
   rootMessage.parts = [
-    { type: "data-GitSha", data: { sha, title, description, url: undefined } },
+    { type: "data-GitSha", data: { sha, title, description } },
   ];
   logger.info("Storing initial commit in system message", { sha });
   await db

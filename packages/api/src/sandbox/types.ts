@@ -44,7 +44,7 @@ export namespace Sandbox {
       export interface Base {
         port: number;
         cwd: string;
-        env: Record<string, string>;
+        envFile: string;
         tasks: {
           install: Task.Any[];
           dev: Task.Command;
@@ -163,6 +163,8 @@ export namespace Sandbox {
       listenToFork(): Response;
       listenToLogs(): Promise<Response>;
       keepAlive(): Promise<void>;
+      readEnvFile(): Promise<Record<string, string | null>>;
+      writeEnvFile(env: Record<string, string | null>): Promise<void>;
     }
   }
 

@@ -3,7 +3,7 @@ import { relations, type InferEnum } from "drizzle-orm";
 import {
   boolean,
   index,
-  json,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -64,8 +64,9 @@ export const repo = pgTable("repo", {
   imageUrl: text(),
   gitUrl: text().notNull(),
   name: text().notNull(),
-  suggestions: json("suggestions").$type<RepoSuggestion[] | null>(),
-  snapshot: json("snapshot").$type<Sandbox.Snapshot.Config.Any>().notNull(),
+  suggestions: jsonb("suggestions").$type<RepoSuggestion[] | null>(),
+  snapshot: jsonb("snapshot").$type<Sandbox.Snapshot.Config.Any>().notNull(),
+  env: jsonb("env").$type<Record<string, string | null>>(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),
@@ -89,7 +90,7 @@ export const repoBranch = pgTable(
       .notNull()
       .default("cloudflare"),
     imageUrl: text("image_url"),
-    deployment: json("deployment").$type<{ url: string; sha: string }>(),
+    deployment: jsonb("deployment").$type<{ url: string; sha: string }>(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
     deletedAt: timestamp("deleted_at"),
@@ -113,7 +114,7 @@ export const repoProvider = pgTable("repo_provider", {
   organizationId: uuid("organization_id")
     .notNull()
     .references(() => organization.id),
-  data: json("data").$type<RepoProviderData>().notNull(),
+  data: jsonb("data").$type<RepoProviderData>().notNull(),
   // scopes: text("scopes").notNull(),
   // token: text().notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),

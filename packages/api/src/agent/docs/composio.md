@@ -44,6 +44,10 @@ Follow this sequence **every time** you need a new external integration:
    - Before implementing, you must have tested every single Composio tool you will need. If the user instructions changes what tools might be needed, always go back to step 3 to test the updated flow.
    - If you have used a Composio tool in the code without having first tested it, immediately go back to step 3 to test the Composio tool. This might result in chnages of the TypeScript types or an updated understanding of how the tool works, which might mean that the implementation needs to change.
 
+6. **Add auth in UI**:
+
+   - After the backend is ready, make sure there is a user‑facing auth step so end‑users can link their accounts the first time they try the feature. This includes (1) checking that the toolkit is connected, (2) render a Connect button in the UI that redirects users to Composio's connect link auth flow, (3) wait for the connection to be established.
+
 Example API integration snippet:
 
 ```typescript

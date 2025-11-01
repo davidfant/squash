@@ -8,8 +8,6 @@ import type { Sandbox } from "@/sandbox/types";
 import { createUIMessageStream, type UIMessageStreamOptions } from "ai";
 import { env } from "cloudflare:workers";
 import { randomUUID } from "crypto";
-import { eq } from "drizzle-orm";
-import { mergeScreenshotAnalysisIntoUserMessages } from "./claude-code/merge-screenshot-analysis-with-prev-user-message";
 import { storeInitialCommitInSystemMessage } from "./util";
 
 const getState = (messages: ChatMessage[]) =>
@@ -66,19 +64,20 @@ function streamInner(params: {
 
           await streamClaudeCodeAgent({
             writer,
-            messages: mergeScreenshotAnalysisIntoUserMessages(params.messages),
+            messages: params.messages,
             sandbox: params.sandbox,
             threadId: params.threadId,
+            branchId: params.branchId,
             sessionId: agentSession?.data.id,
             previewUrl: await params.sandbox.getPreviewUrl(),
             abortSignal: params.controller.signal,
             messageMetadata: params.messageMetadata,
             readSessionData: params.readSessionData,
-            onScreenshot: (imageUrl) =>
-              db
-                .update(schema.repoBranch)
-                .set({ imageUrl, updatedAt: new Date() })
-                .where(eq(schema.repoBranch.id, params.branchId)),
+            // onScreenshot: (imageUrl) =>
+            //   db
+            //     .update(schema.repoBranch)
+            //     .set({ imageUrl, updatedAt: new Date() })
+            //     .where(eq(schema.repoBranch.id, params.branchId)),
           });
           break;
         // case "discover":
@@ -111,6 +110,7 @@ export function streamAgent(params: {
     messages: params.messages.length,
     threadId: params.threadId,
     branchId: params.branchId,
+    repoId: params.repoId,
     restoreVersion: params.restoreVersion,
   });
 

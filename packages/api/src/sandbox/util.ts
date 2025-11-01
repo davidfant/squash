@@ -211,3 +211,80 @@ export const executeTasks = (
       }
     },
   });
+
+export const pullLatestChanges = (opts: {
+  gitUrl: string;
+  defaultBranch: string;
+  targetBranch: string;
+}) =>
+  `
+    set -e
+
+    # ------------------------------------------------------------------------------
+    # CONFIG
+    # ------------------------------------------------------------------------------
+    remote_url="${opts.gitUrl}"
+    target_branch="${opts.targetBranch}"
+    default_branch="${opts.defaultBranch}"
+
+    # ------------------------------------------------------------------------------
+    # 1. If we are *not* already inside a Git repo, initialise & “clone in-place”
+    #    (keeps any pre-existing, git-ignored files such as node_modules/)
+    # ------------------------------------------------------------------------------
+    if [ ! -d .git ]; then
+      git init                                   # create empty repo in current dir
+      git remote add origin "$remote_url"
+
+      git fetch --prune origin                   # grab all refs
+      git checkout -B "$default_branch" "origin/$default_branch"  # sync default
+
+      # fork out the desired working branch if it isn’t the default
+      if [ "$target_branch" != "$default_branch" ]; then
+        git checkout -b "$target_branch"
+      fi
+      exit 0                                     # done – nothing more to do
+    fi
+
+    # ------------------------------------------------------------------------------
+    # 2. Repo already exists – make sure the remote is correct, then fetch
+    # ------------------------------------------------------------------------------
+    if git remote get-url origin >/dev/null 2>&1; then
+      git remote set-url origin "$remote_url"
+    else
+      git remote add origin "$remote_url"
+    fi
+
+    git fetch --prune origin
+
+    # ------------------------------------------------------------------------------
+    # 3. Decide whether we need to switch branches
+    #    – If already on $target_branch → nothing to do
+    #    – Else, follow the priority rules:
+    #         a) local branch exists  → checkout it
+    #         b) remote branch exists → checkout & track it
+    #         c) otherwise            → checkout default, then create new branch
+    # ------------------------------------------------------------------------------
+    current_branch="$(git symbolic-ref --quiet --short HEAD || true)"
+
+    if [ "$current_branch" = "$target_branch" ]; then
+      # Already where we need to be – finished
+      exit 0
+    fi
+
+    if git rev-parse --verify "$target_branch" >/dev/null 2>&1; then
+      git checkout "$target_branch"
+
+    elif git ls-remote --exit-code origin "$target_branch" >/dev/null 2>&1; then
+      git checkout -B "$target_branch" "origin/$target_branch"
+
+    else
+      # Switch to default first (creating it locally if needed) …
+      if ! git rev-parse --verify "$default_branch" >/dev/null 2>&1; then
+        git checkout -B "$default_branch" "origin/$default_branch"
+      else
+        git checkout "$default_branch"
+      fi
+      # … then fork out the new working branch
+      git checkout -b "$target_branch"
+    fi
+  `.trim();

@@ -1,7 +1,8 @@
+import { createDatabase } from "@/database";
+import * as schema from "@/database/schema";
 import { streamText } from "@/lib/ai";
 import { logger } from "@/lib/logger";
 import type { Sandbox } from "@/sandbox/types";
-import { google } from "@ai-sdk/google";
 import { ClaudeCodeLanguageModel, tools } from "@squashai/ai-sdk-claude-code";
 import {
   convertToModelMessages,
@@ -10,9 +11,10 @@ import {
 } from "ai";
 import { env } from "cloudflare:workers";
 import { randomUUID } from "crypto";
+import { eq } from "drizzle-orm";
 import path from "path";
 import { getDocsPrompt } from "../docs";
-import { GitCommit } from "../git";
+import { commitChangesToGit } from "../git";
 import type { AllTools, ChatMessage } from "../types";
 import appendSystemPrompt from "./prompt.md";
 import { subagents } from "./subagents";
@@ -22,12 +24,12 @@ export async function streamClaudeCodeAgent(opts: {
   messages: ChatMessage[];
   sandbox: Sandbox.Manager.Base;
   threadId: string;
+  branchId: string;
   sessionId: string | undefined;
   previewUrl: string;
   abortSignal: AbortSignal;
   messageMetadata: UIMessageStreamOptions<ChatMessage>["messageMetadata"];
   readSessionData(sessionId: string): Promise<string>;
-  onScreenshot(url: string): void;
 }) {
   logger.debug("Starting Claude Code stream", {
     sandbox: opts.sandbox.name,
@@ -122,141 +124,88 @@ export async function streamClaudeCodeAgent(opts: {
     if (opts.abortSignal.aborted) throw new Error("Cancelled");
     if (!sessionId) throw new Error("Claude Code session not detected");
 
-    const sessionDataPromise = opts.readSessionData(sessionId);
+    await Promise.all([
+      (async () => {
+        const sessionData = await opts.readSessionData(sessionId);
+        logger.debug("Storing agent session", { sessionId });
+        const objectKey = path.join(
+          "claude-code",
+          opts.threadId,
+          sessionId,
+          opts.messages.slice(-1)[0]?.id ?? "unknown-message",
+          `${Date.now()}.jsonl`
+        );
+        logger.debug("Putting agent session in R2", { key: objectKey });
+        await env.AGENT_SESSIONS.put(objectKey, sessionData, {
+          httpMetadata: { contentType: "application/jsonl" },
+        });
 
-    const shouldCommit = (
-      [
-        "ClaudeCode__Edit",
-        "ClaudeCode__MultiEdit",
-        "ClaudeCode__Write",
-        "ClaudeCode__NotebookEdit",
-      ] satisfies Array<keyof AllTools>
-    ).some((t) => usedTools.has(t));
-    logger.debug("Should commit", { shouldCommit, usedTools: [...usedTools] });
-    if (shouldCommit) {
-      const screenshotAbortController = new AbortController();
-      const screenshotPromise = fetch(
-        `${env.SCREENSHOT_API_URL}?url=${encodeURIComponent(opts.previewUrl)}`,
-        {
-          signal: screenshotAbortController.signal,
+        opts.writer.write({
+          type: "data-AgentSession",
+          id: randomUUID(),
+          data: { type: "claude-code", id: sessionId, objectKey },
+        });
+      })(),
+      (async () => {
+        const shouldCommit = (
+          [
+            "ClaudeCode__Edit",
+            "ClaudeCode__MultiEdit",
+            "ClaudeCode__Write",
+            "ClaudeCode__NotebookEdit",
+          ] satisfies Array<keyof AllTools>
+        ).some((t) => usedTools.has(t));
+        logger.debug("Should commit", {
+          shouldCommit,
+          usedTools: [...usedTools],
+        });
+
+        if (shouldCommit) {
+          const commitStream = commitChangesToGit({
+            history: opts.messages,
+            changes: (await agentStream.response).messages,
+            sandbox: opts.sandbox,
+            writer: opts.writer,
+          });
+
+          for await (const msg of commitStream.toUIMessageStream<ChatMessage>({
+            sendStart: false,
+            sendFinish: false,
+            sendReasoning: false,
+            messageMetadata: opts.messageMetadata,
+          })) {
+            opts.writer.write(msg);
+          }
         }
-      ).then((r) => r.json<{ url: string }>());
-      setTimeout(() => screenshotAbortController.abort(), 5_000);
-
-      const history = opts.messages
-        .filter((m) => m.role === "assistant" || m.role === "user")
-        .map((m) => ({
-          role: m.role,
-          content: m.parts
-            .map((p) => {
-              if (p.type === "text") return p.text;
-              if (p.type === "tool-GitCommit")
-                return JSON.stringify({ commit: p.input });
-              return undefined;
-            })
-            .filter((c): c is string => !!c),
-        }));
-
-      const summary = (await agentStream.response).messages
-        .filter((m) => m.role === "assistant")
-        .flatMap((m) =>
-          typeof m.content === "string"
-            ? [{ type: "text" as const, text: m.content }]
-            : m.content
-        )
-        .map((p) => {
-          if (p.type === "text") return p.text;
-          if (p.type === "tool-call") {
-            return JSON.stringify({ tool: p.toolName, input: p.input });
-          }
-          return undefined;
-        })
-        .filter((c): c is string => !!c);
-
-      const commitStream = streamText({
-        model: google("gemini-flash-latest"),
-        messages: [
-          {
-            role: "system",
-            content:
-              "Your job is to generate ONE commit message based on the changes wrapped in <changes>. In <history> you can see a history of previous changes that have been made to the codebase. The commit message should only focus on <changes> not on <history>. The commit message has both a title and a description. The title should be a short summary of the changes, and the description should be a more detailed description of the changes. Both the title and description should be non-technical and easy to understand for someone who is not a developer. For example, avoid using technical terms like 'refactor' or 'feat: ...'",
-          },
-          {
-            role: "user",
-            content: [
-              "<changes>",
-              ...summary,
-              "</changes>",
-              "",
-              "<history>",
-              ...history.flatMap((h) => [
-                `<${h.role}>`,
-                ...h.content,
-                `</${h.role}>`,
-              ]),
-              "</history>",
-            ].join("\n"),
-          },
-        ],
-        tools: { GitCommit: GitCommit(opts.sandbox) },
-        toolChoice: { type: "tool", toolName: "GitCommit" },
-        onStepFinish: async (step) => {
-          logger.debug("Waiting for screenshot");
-          const screenshot = await screenshotPromise.catch((e) => {
-            logger.error("Error getting screenshot", e);
-            return undefined;
-          });
-          logger.debug("Got screenshot", screenshot);
-
-          if (screenshot) {
-            await opts.onScreenshot(screenshot.url);
-          }
-
-          step.toolResults.forEach((tc) => {
-            if (!tc.dynamic && tc.toolName === "GitCommit") {
-              opts.writer.write({
-                type: "data-GitSha",
-                id: tc.toolCallId,
-                data: {
-                  sha: tc.output.sha,
-                  title: tc.input.title,
-                  description: tc.input.body,
-                  url: screenshot?.url,
-                },
-              });
-            }
-          });
-        },
-      });
-      for await (const msg of commitStream.toUIMessageStream<ChatMessage>({
-        sendStart: false,
-        sendFinish: false,
-        sendReasoning: false,
-        messageMetadata: opts.messageMetadata,
-      })) {
-        opts.writer.write(msg);
-      }
-    }
-
-    logger.debug("Storing agent session", { sessionId });
-    const sessionData = await sessionDataPromise;
-    const objectKey = path.join(
-      "claude-code",
-      opts.threadId,
-      sessionId,
-      opts.messages.slice(-1)[0]?.id ?? "unknown-message",
-      `${Date.now()}.jsonl`
-    );
-    logger.debug("Putting agent session in R2", { key: objectKey });
-    await env.AGENT_SESSIONS.put(objectKey, sessionData, {
-      httpMetadata: { contentType: "application/jsonl" },
+      })(),
+      (async () => {
+        logger.debug("Reading env file", { branchId: opts.branchId });
+        const db = createDatabase(env);
+        const [envVars, repo] = await Promise.all([
+          opts.sandbox.readEnvFile(),
+          db
+            .select()
+            .from(schema.repo)
+            .innerJoin(
+              schema.repoBranch,
+              eq(schema.repo.id, schema.repoBranch.repoId)
+            )
+            .then(([repo]) => repo),
+        ]);
+        if (!repo) {
+          throw new Error(`Repo for branch not found: ${opts.branchId}`);
+        }
+        await db.update(schema.repo).set({ env: envVars });
+      })(),
+    ]);
+  } catch (error) {
+    logger.error("Error in Claude Code stream", {
+      message: (error as Error).message,
+      stack: (error as Error).stack,
+      name: (error as Error).name,
+      cause: (error as Error).cause,
     });
-
-    opts.writer.write({
-      type: "data-AgentSession",
-      id: randomUUID(),
-      data: { type: "claude-code", id: sessionId, objectKey },
-    });
+    throw error;
   } finally {
     clearInterval(keepAliveInterval);
   }

@@ -18,7 +18,7 @@ const templates = {
       snapshot: "base-vite-trpc-cloudflare-worker-ts:v0.0.2",
       port: 5173,
       cwd: "/repo",
-      env: {},
+      envFile: ".env",
       tasks: {
         install: [
           {

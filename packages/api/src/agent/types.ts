@@ -26,7 +26,6 @@ export type ChatMessageData = {
     sha: string;
     title: string;
     description: string;
-    url: string | undefined;
   };
   AgentSession: { type: "claude-code"; id: string; objectKey: string };
   AgentState: AgentState;

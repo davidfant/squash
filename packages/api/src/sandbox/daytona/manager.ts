@@ -1,12 +1,12 @@
-import { generateRepoSuggestionsFromScreenshot } from "@/agent/repo/suggestions";
 import type { ChatMessage } from "@/agent/types";
 import { createDatabase } from "@/database";
 import * as schema from "@/database/schema";
-import { createProject } from "@/lib/composio";
+import { createEnvVariables } from "@/lib/composio";
 import { logger } from "@/lib/logger";
 import { toAsyncIterator } from "@/lib/to-async-iterator";
 import { Daytona, Sandbox as DaytonaSandbox } from "@daytonaio/sdk";
 import { env } from "cloudflare:workers";
+import dotenv from "dotenv";
 import { eq } from "drizzle-orm";
 import { Buffer } from "node:buffer";
 import { randomUUID } from "node:crypto";
@@ -16,11 +16,8 @@ import pRetry, { AbortError } from "p-retry";
 import escape from "shell-escape";
 import { BaseSandboxManagerDurableObject } from "../base";
 import type { Sandbox } from "../types";
-import {
-  downloadFileFromSandbox,
-  fileExists,
-  uploadSandboxFileToDeployment,
-} from "./api";
+import { pullLatestChanges } from "../util";
+import { downloadFileFromSandbox, uploadSandboxFileToDeployment } from "./api";
 
 export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
   Sandbox.Snapshot.Config.Daytona,
@@ -69,6 +66,7 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
   async getStartTasks(): Promise<Sandbox.Snapshot.Task.Any[]> {
     const options = await this.getOptions();
     const that = this;
+    const db = createDatabase(env);
     return [
       {
         id: "create-sandbox",
@@ -101,7 +99,6 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
               snapshot: options.config.snapshot,
               autoArchiveInterval: 24 * 60,
               autoStopInterval: 5,
-              envVars: options.config.env,
             });
             logger.debug("Created new sandbox", { sandboxId: sandbox.id });
             yield {
@@ -142,14 +139,14 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
         title: "Loading latest changes...",
         type: "function",
         function: async function* () {
-          const db = createDatabase(env);
           const repo = await db
             .select()
             .from(schema.repo)
             .where(eq(schema.repo.id, options.branch.repoId))
             .then(([repo]) => repo);
-          if (!repo)
+          if (!repo) {
             throw new Error(`Repo not found: ${options.branch.repoId}`);
+          }
 
           logger.info("Pulling latest changes", options.branch);
           yield* that.execute(
@@ -157,77 +154,11 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
               command: "sh",
               args: [
                 "-c",
-                `
-                  set -e
-
-                  # ------------------------------------------------------------------------------
-                  # CONFIG
-                  # ------------------------------------------------------------------------------
-                  remote_url="${repo.gitUrl}"
-                  target_branch="${options.branch.name}"
-                  default_branch="${repo.defaultBranch}"
-
-                  # ------------------------------------------------------------------------------
-                  # 1. If we are *not* already inside a Git repo, initialise & “clone in-place”
-                  #    (keeps any pre-existing, git-ignored files such as node_modules/)
-                  # ------------------------------------------------------------------------------
-                  if [ ! -d .git ]; then
-                    git init                                   # create empty repo in current dir
-                    git remote add origin "$remote_url"
-
-                    git fetch --prune origin                   # grab all refs
-                    git checkout -B "$default_branch" "origin/$default_branch"  # sync default
-
-                    # fork out the desired working branch if it isn’t the default
-                    if [ "$target_branch" != "$default_branch" ]; then
-                      git checkout -b "$target_branch"
-                    fi
-                    exit 0                                     # done – nothing more to do
-                  fi
-
-                  # ------------------------------------------------------------------------------
-                  # 2. Repo already exists – make sure the remote is correct, then fetch
-                  # ------------------------------------------------------------------------------
-                  if git remote get-url origin >/dev/null 2>&1; then
-                    git remote set-url origin "$remote_url"
-                  else
-                    git remote add origin "$remote_url"
-                  fi
-
-                  git fetch --prune origin
-
-                  # ------------------------------------------------------------------------------
-                  # 3. Decide whether we need to switch branches
-                  #    – If already on $target_branch → nothing to do
-                  #    – Else, follow the priority rules:
-                  #         a) local branch exists  → checkout it
-                  #         b) remote branch exists → checkout & track it
-                  #         c) otherwise            → checkout default, then create new branch
-                  # ------------------------------------------------------------------------------
-                  current_branch="$(git symbolic-ref --quiet --short HEAD || true)"
-
-                  if [ "$current_branch" = "$target_branch" ]; then
-                    # Already where we need to be – finished
-                    exit 0
-                  fi
-
-                  if git rev-parse --verify "$target_branch" >/dev/null 2>&1; then
-                    git checkout "$target_branch"
-
-                  elif git ls-remote --exit-code origin "$target_branch" >/dev/null 2>&1; then
-                    git checkout -B "$target_branch" "origin/$target_branch"
-
-                  else
-                    # Switch to default first (creating it locally if needed) …
-                    if ! git rev-parse --verify "$default_branch" >/dev/null 2>&1; then
-                      git checkout -B "$default_branch" "origin/$default_branch"
-                    else
-                      git checkout "$default_branch"
-                    fi
-                    # … then fork out the new working branch
-                    git checkout -b "$target_branch"
-                  fi
-                `,
+                pullLatestChanges({
+                  gitUrl: repo.gitUrl,
+                  defaultBranch: repo.defaultBranch,
+                  targetBranch: options.branch.name,
+                }),
               ],
               // TODO: generate creds that can only access the specific repo if it's in the R2 bucket
               env: {
@@ -249,11 +180,7 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
         dependsOn: ["create-sandbox"],
         type: "command",
         command: "npm",
-        args: [
-          "install",
-          "--global",
-          `@squashai/cli@${env.SQUASH_CLI_VERSION}`,
-        ],
+        args: ["install", "--global", env.SQUASH_CLI_PACKAGE],
       },
       {
         id: "setup-composio",
@@ -267,31 +194,23 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
             timestamp: new Date().toISOString(),
           };
 
-          const envVarsPath = path.join(options.config.cwd, ".env");
-          const envVarsString = await (async () => {
-            const exists = await fileExists(that.sandbox!.id, envVarsPath);
-            if (!exists) return "";
-
-            const buffer = await downloadFileFromSandbox(
-              that.sandbox!.id,
-              envVarsPath
-            );
-            return buffer.toString("utf-8");
-          })();
-          let updated = envVarsString;
-
-          const envVars: Record<string, string> = {};
-          for (const line of envVarsString.split(/\r?\n/)) {
-            const m = line.match(/^\s*([^#=\s]+)\s*=\s*(.*)\s*$/);
-            if (m) envVars[m[1]!] = m[2]!;
+          const repo = await db
+            .select()
+            .from(schema.repo)
+            .where(eq(schema.repo.id, options.branch.repoId))
+            .then(([repo]) => repo);
+          if (!repo) {
+            throw new Error(`Repo not found: ${options.branch.repoId}`);
           }
 
-          if (!envVars.TZ) updated += `TZ=utc\n`;
+          const envVars = { ...repo.env };
+
+          if (!envVars.TZ) envVars.TZ = "utc";
           if (!envVars.AI_GATEWAY_BASE_URL) {
-            updated += `AI_GATEWAY_BASE_URL=${env.AI_GATEWAY_BASE_URL}\n`;
+            envVars.AI_GATEWAY_BASE_URL = env.AI_GATEWAY_BASE_URL;
           }
           if (!envVars.AI_GATEWAY_API_KEY) {
-            updated += `\nAI_GATEWAY_API_KEY=${env.AI_GATEWAY_API_KEY}\n`;
+            envVars.AI_GATEWAY_API_KEY = env.AI_GATEWAY_API_KEY;
           }
 
           if (
@@ -305,10 +224,8 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
               timestamp: new Date().toISOString(),
             };
 
-            const project = await createProject(options.branch.id);
-            updated += `COMPOSIO_PROJECT_ID=${project.id}\n`;
-            updated += `COMPOSIO_API_KEY=${project.api_key}\n`;
-            updated += `COMPOSIO_PLAYGROUND_USER_ID=playground-${randomUUID()}\n`;
+            const composioEnvVars = await createEnvVariables(options.branch.id);
+            Object.assign(envVars, composioEnvVars);
 
             yield {
               type: "stdout",
@@ -317,9 +234,8 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
             };
           }
 
-          if (updated !== envVarsString) {
-            const sandbox = await that.getSandbox();
-            await sandbox.fs.uploadFile(Buffer.from(updated), envVarsPath);
+          if (JSON.stringify(envVars) !== JSON.stringify(repo.env)) {
+            await that.writeEnvFile(envVars);
           }
         },
       },
@@ -498,26 +414,14 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
               that.getSandbox(),
             ]);
 
-            // todo: write .env
-
             const deploymentName = options.branch.repoId.split("-")[0]!;
-
             const stream = await that.execute(
               {
-                // command: "pnpm",
-                // args: [
-                //   "wrangler",
-                //   "deploy",
-                //   "--name",
-                //   deploymentName,
-                //   "--env-file",
-                //   ".env",
-                // ],
                 command: "sh",
                 args: [
                   "-c",
                   [
-                    `pnpm wrangler secret bulk .env --name ${deploymentName}`,
+                    `pnpm wrangler secret bulk ${options.config.envFile} --name ${deploymentName}`,
                     `pnpm wrangler deploy --name ${deploymentName}`,
                   ].join(" && "),
                 ],
@@ -565,8 +469,8 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
       this.getDeployTasks(),
     ]);
 
-    let screenshot: { url: string } | null = null;
-    let suggestions: schema.RepoSuggestion[] | null = null;
+    // let screenshot: { url: string } | null = null;
+    // let suggestions: schema.RepoSuggestion[] | null = null;
     const newRepoId = randomUUID();
     const gitUrl = `s3://repos/forks/${newRepoId}`;
     const defaultBranch = "master";
@@ -574,35 +478,35 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
     const that = this;
     return [
       ...deployTasks,
-      {
-        id: "screenshot",
-        title: "Capturing screenshot...",
-        type: "function",
-        function: async function* () {
-          const previewUrl = await that.getPreviewUrl();
+      // {
+      //   id: "screenshot",
+      //   title: "Capturing screenshot...",
+      //   type: "function",
+      //   function: async function* () {
+      //     const previewUrl = await that.getPreviewUrl();
 
-          yield {
-            type: "stdout",
-            data: "Capturing screenshot...\n",
-            timestamp: new Date().toISOString(),
-          };
+      //     yield {
+      //       type: "stdout",
+      //       data: "Capturing screenshot...\n",
+      //       timestamp: new Date().toISOString(),
+      //     };
 
-          screenshot = await fetch(
-            `${env.SCREENSHOT_API_URL}?url=${encodeURIComponent(previewUrl)}`
-          )
-            .then((r) => r.json<{ url: string }>())
-            .catch(() => null);
-          suggestions = screenshot
-            ? await generateRepoSuggestionsFromScreenshot(screenshot.url)
-            : null;
+      //     screenshot = await fetch(
+      //       `${env.SCREENSHOT_API_URL}?url=${encodeURIComponent(previewUrl)}`
+      //     )
+      //       .then((r) => r.json<{ url: string }>())
+      //       .catch(() => null);
+      //     suggestions = screenshot
+      //       ? await generateRepoSuggestionsFromScreenshot(screenshot.url)
+      //       : null;
 
-          yield {
-            type: "stdout",
-            data: "Screenshot captured\n",
-            timestamp: new Date().toISOString(),
-          };
-        },
-      },
+      //     yield {
+      //       type: "stdout",
+      //       data: "Screenshot captured\n",
+      //       timestamp: new Date().toISOString(),
+      //     };
+      //   },
+      // },
       {
         id: "fork-and-push",
         title: "Pushing playground code...",
@@ -663,12 +567,12 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
             private: repo.private,
             organizationId: repo.organizationId,
             gitUrl,
-            imageUrl: screenshot?.url,
+            // imageUrl: screenshot?.url,
             previewUrl: branch.deployment?.url,
             defaultBranch,
             hidden: false,
             snapshot: repo.snapshot,
-            suggestions,
+            // suggestions,
           });
 
           yield {
@@ -955,7 +859,6 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
     return [
       proxy.protocol,
       "//",
-      // target.hostname.replaceAll(".", "---"),
       target.hostname.split(".")[0],
       ".",
       proxy.host,
@@ -995,9 +898,7 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
             devServer.commandId
           );
 
-          if (history.output) {
-            send(history.output);
-          }
+          if (history.output) send(history.output);
 
           await sandbox.process.getSessionCommandLogs(
             devServer.sessionId,
@@ -1048,5 +949,27 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
       sandboxId: sandbox.id,
       state: sandbox.state,
     });
+  }
+
+  async readEnvFile(): Promise<Record<string, string | null>> {
+    const [sandbox, options] = await Promise.all([
+      this.getSandbox(),
+      this.getOptions(),
+    ]);
+    const envVarsPath = path.join(options.config.cwd, ".env");
+    const envVars = await downloadFileFromSandbox(sandbox.id, envVarsPath);
+    return dotenv.parse(envVars.toString("utf-8"));
+  }
+
+  async writeEnvFile(env: Record<string, string | null>): Promise<void> {
+    const [sandbox, options] = await Promise.all([
+      this.getSandbox(),
+      this.getOptions(),
+    ]);
+    const envVarsPath = path.join(options.config.cwd, ".env");
+    const envString = Object.entries(env)
+      .map(([k, v]) => `${k}=${v === null ? "" : JSON.stringify(v)}`)
+      .join("\n");
+    await sandbox.fs.uploadFile(Buffer.from(envString), envVarsPath);
   }
 }

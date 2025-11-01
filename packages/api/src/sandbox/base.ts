@@ -94,6 +94,8 @@ export abstract class BaseSandboxManagerDurableObject<
   ): Promise<string>;
   abstract readFile(path: string): Promise<Buffer>;
   abstract keepAlive(): Promise<void>;
+  abstract readEnvFile(): Promise<Record<string, string | null>>;
+  abstract writeEnvFile(env: Record<string, string | null>): Promise<void>;
 
   async init(options: Sandbox.Options<C>): Promise<void> {
     await this.state.storage.put("options", options);

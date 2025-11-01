@@ -398,7 +398,13 @@ export abstract class BaseSandboxManagerDurableObject<
       if (error instanceof DOMException && error.name === "AbortError") {
         return;
       }
-      logger.error("Stream failed", { type: handle.type, error });
+      logger.error("Stream failed", {
+        type: handle.type,
+        error: (error as Error).message,
+        stack: (error as Error).stack,
+        name: (error as Error).name,
+        cause: (error as Error).cause,
+      });
       throw error;
     } finally {
       for (const listener of handle.listeners.values() ?? []) {

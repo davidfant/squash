@@ -28,7 +28,11 @@ export const AssistantMessage = ({
       />
       {isLast && <ChatErrorAlert />}
       {!streaming && (
-        <AssistantMessageActions className="-ml-3" onRetry={onRetry} />
+        <AssistantMessageActions
+          className="-ml-3"
+          onRetry={onRetry}
+          messageId={message.id}
+        />
       )}
     </div>
   </div>

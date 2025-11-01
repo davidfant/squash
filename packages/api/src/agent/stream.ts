@@ -110,7 +110,6 @@ export function streamAgent(params: {
     messages: params.messages.length,
     threadId: params.threadId,
     branchId: params.branchId,
-    repoId: params.repoId,
     restoreVersion: params.restoreVersion,
   });
 

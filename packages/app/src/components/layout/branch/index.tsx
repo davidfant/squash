@@ -69,6 +69,7 @@ export function BranchLayout({ branchId }: { branchId: string }) {
                 <Button
                   variant="ghost"
                   size="icon"
+                  className="size-8"
                   onClick={toggleChatVisibility}
                   aria-pressed={!isChatCollapsed}
                   aria-label={`${

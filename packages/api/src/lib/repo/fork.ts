@@ -39,13 +39,13 @@ const templates = {
           args: ["-c", "pnpm dev 2>&1 | tee debug.log"],
         },
         build: [
-          // {
-          //   id: "build",
-          //   title: "Build",
-          //   type: "command",
-          //   command: "pnpm",
-          //   args: ["build"],
-          // },
+          {
+            id: "build",
+            title: "Build",
+            type: "command",
+            command: "pnpm",
+            args: ["build"],
+          },
         ],
       },
       // build: { type: "static", dir: "dist" },

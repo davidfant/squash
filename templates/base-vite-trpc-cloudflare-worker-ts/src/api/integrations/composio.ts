@@ -4,10 +4,7 @@ import { env } from "cloudflare:workers";
 
 export const composio = new Composio({ apiKey: env.COMPOSIO_API_KEY });
 
-export async function executeTool<
-  Input extends Record<string, unknown>,
-  Output extends Record<string, unknown>
->(params: {
+export async function executeTool<Input, Output>(params: {
   tool: string;
   userId: string;
   input: Input;
@@ -21,7 +18,7 @@ export async function executeTool<
   try {
     const res = await composio.tools.execute(params.tool, {
       userId: params.userId,
-      arguments: params.input,
+      arguments: params.input as Record<string, unknown>,
     });
 
     console.log(

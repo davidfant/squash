@@ -59,7 +59,7 @@ test whether the goal can be achieved with the currently connected tools.
   → Default to `unknown`.
 
 5. **Write TypeScript definitions**
-   Add the inferred types for each successful call to `src/worker/types.ts`. The TypeScript output type should be the shape of the data in <resultDetail> without any wrapping or unwrapping of properties. For example:
+   Add the inferred types for each successful call to `src/api/types.ts`. The TypeScript output type should be the shape of the data in <resultDetail> without any wrapping or unwrapping of properties. For example:
 
    <resultDetail>{"foo": "bar"}</resultDetail>
 

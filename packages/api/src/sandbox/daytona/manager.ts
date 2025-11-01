@@ -421,6 +421,7 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
                 args: [
                   "-c",
                   [
+                    `pnpm wrangler build`,
                     `pnpm wrangler secret bulk ${options.config.envFile} --name ${deploymentName}`,
                     `pnpm wrangler deploy --name ${deploymentName}`,
                   ].join(" && "),

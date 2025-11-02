@@ -195,7 +195,10 @@ export async function streamClaudeCodeAgent(opts: {
         if (!repo) {
           throw new Error(`Repo for branch not found: ${opts.branchId}`);
         }
-        await db.update(schema.repo).set({ env: envVars });
+        await db
+          .update(schema.repoBranch)
+          .set({ env: envVars })
+          .where(eq(schema.repoBranch.id, opts.branchId));
       })(),
     ]);
   } catch (error) {

@@ -194,16 +194,16 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
             timestamp: new Date().toISOString(),
           };
 
-          const repo = await db
+          const branch = await db
             .select()
-            .from(schema.repo)
-            .where(eq(schema.repo.id, options.branch.repoId))
-            .then(([repo]) => repo);
-          if (!repo) {
-            throw new Error(`Repo not found: ${options.branch.repoId}`);
+            .from(schema.repoBranch)
+            .where(eq(schema.repoBranch.id, options.branch.id))
+            .then(([branch]) => branch);
+          if (!branch) {
+            throw new Error(`Branch not found: ${options.branch.id}`);
           }
 
-          const envVars = { ...repo.env };
+          const envVars = { ...branch.env };
 
           if (!envVars.TZ) envVars.TZ = "utc";
           if (!envVars.AI_GATEWAY_BASE_URL) {
@@ -235,7 +235,7 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
           }
 
           if (
-            JSON.stringify(envVars) !== JSON.stringify(repo.env) ||
+            JSON.stringify(envVars) !== JSON.stringify(branch.env) ||
             !(await that
               .readEnvFile()
               .then(() => true)

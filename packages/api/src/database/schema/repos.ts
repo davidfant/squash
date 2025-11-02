@@ -66,7 +66,6 @@ export const repo = pgTable("repo", {
   name: text().notNull(),
   suggestions: jsonb("suggestions").$type<RepoSuggestion[] | null>(),
   snapshot: jsonb("snapshot").$type<Sandbox.Snapshot.Config.Any>().notNull(),
-  env: jsonb("env").$type<Record<string, string | null>>(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),
@@ -89,6 +88,7 @@ export const repoBranch = pgTable(
     sandboxProvider: sandboxProviderType("sandbox_provider")
       .notNull()
       .default("cloudflare"),
+    env: jsonb("env").$type<Record<string, string | null>>(),
     imageUrl: text("image_url"),
     deployment: jsonb("deployment").$type<{ url: string; sha: string }>(),
     createdAt: timestamp("created_at").defaultNow().notNull(),

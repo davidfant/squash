@@ -6,4 +6,5 @@ dist
 *.tsbuildinfo
 .env
 .turbo
+.wrangler
 worker-configuration.d.ts

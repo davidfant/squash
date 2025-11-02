@@ -37,7 +37,7 @@
     { "tag": "v1", "new_sqlite_classes": ["DaytonaSandboxManager"] }
   ],
   "vars": {
-    "SQUASH_CLI_PACKAGE": "@squashai/cli@latest",
+    "SQUASH_CLI_PACKAGE": "@squashai/cli@next",
     "APP_URL": "http://localhost:5173",
     "TRUSTED_ORIGINS": "http://localhost:5173",
     "PREVIEW_PROXY_URL": "http://localhost:8788",

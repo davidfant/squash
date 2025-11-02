@@ -22,7 +22,7 @@
   },
   "scripts": {
     "dev": "pnpm typegen && concurrently \"pnpm dev:docker\" \"pnpm dev:wrangler\" \"pnpm dev:tsc\"",
-    "dev:docker": "docker-compose up -d",
+    "dev:docker": "docker compose up -d",
     "dev:wrangler": "pnpm drizzle-kit push && wrangler dev",
     "dev:tsc": "tsc --watch --preserveWatchOutput",
     "drizzle:migrate:dev": "drizzle-kit push",

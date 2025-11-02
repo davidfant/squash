@@ -1,16 +1,24 @@
 import { randomUUID } from "crypto";
+import { createRequire } from "module";
 import path from "path";
 import * as timers from "timers/promises";
-import * as ts from "typescript";
+import type * as TypeScript from "typescript";
+import { pathToFileURL } from "url";
 import { stripAnsi } from "./strip-ansi.js";
 
-export function startTypeScriptWatch(cwd: string) {
+export async function startTypeScriptWatch(cwd: string) {
+  const require = createRequire(import.meta.url);
+  const tsPath = require.resolve("typescript", {
+    paths: [cwd],
+  });
+  const ts = (await import(pathToFileURL(tsPath).href)) as typeof TypeScript;
+
   const configFile = ts.findConfigFile(cwd, ts.sys.fileExists);
   if (!configFile) {
     throw new Error("No tsconfig.json found");
   }
 
-  type StatusCallback = (diag: ts.Diagnostic) => void;
+  type StatusCallback = (diag: TypeScript.Diagnostic) => void;
   const statusCallbacks = new Map<string, StatusCallback>();
 
   const host = ts.createWatchCompilerHost(

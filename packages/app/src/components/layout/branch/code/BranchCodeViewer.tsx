@@ -567,7 +567,7 @@ export function BranchCodeViewer() {
             Failed to load files.
           </div>
         ) : filesQuery.data?.files?.length ? (
-          <ScrollArea className="flex-1">
+          <ScrollArea className="flex-1 min-h-0">
             <div className="flex flex-col gap-1 px-2 pb-2">
               {renderTree(tree)}
             </div>

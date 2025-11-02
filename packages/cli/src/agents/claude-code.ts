@@ -10,6 +10,25 @@ import type { ClaudeCodeCLIOptions, ClaudeCodeSession } from "../schema.js";
 
 const MAX_RETRIES = 3;
 
+type Resolve<T> = (v: T) => void;
+type Reject = (e: Error) => void;
+type Deferred<T> = {
+  resolve: Resolve<T>;
+  reject: Reject;
+  promise: Promise<T>;
+};
+
+function createDeferred<T = void>(): Deferred<T> {
+  let resolve: Resolve<T> | undefined;
+  let reject: Reject | undefined;
+  const promise = new Promise<T>((...args) => ([resolve, reject] = args));
+  return Object.freeze(<Deferred<T>>{
+    resolve: resolve!,
+    reject: reject!,
+    promise,
+  });
+}
+
 function consoleLogMessage(text: string, sessionId: string) {
   const index = 0;
   console.log(
@@ -56,7 +75,8 @@ export async function runClaudeCode(
   let sessionId = req.options?.sessionId;
 
   const envVars = parseEnvFile(path.join(req.cwd, ".env"));
-  const tscWatch = startTypeScriptWatch(req.cwd);
+  const deferred = createDeferred<void>();
+  const tscWatchPromise = startTypeScriptWatch(req.cwd);
 
   retryLoop: for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {
@@ -85,7 +105,7 @@ export async function runClaudeCode(
             message: { role: "user", content },
           };
 
-          await new Promise(() => {});
+          await deferred.promise;
         })(),
         options: {
           cwd: req.cwd,
@@ -120,6 +140,7 @@ export async function runClaudeCode(
                       return { continue: true };
                     }
 
+                    const tscWatch = await tscWatchPromise;
                     const toolInput = input.tool_input as { file_path: string };
                     if (!tscWatch.isFileInProject(toolInput.file_path)) {
                       return { continue: true };
@@ -135,6 +156,16 @@ export async function runClaudeCode(
                         },
                       }))
                       .catch(() => ({ continue: true }));
+                  },
+                ],
+              },
+            ],
+            Stop: [
+              {
+                hooks: [
+                  async () => {
+                    deferred.resolve();
+                    return { continue: true };
                   },
                 ],
               },

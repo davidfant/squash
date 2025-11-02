@@ -234,8 +234,19 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
             };
           }
 
-          if (JSON.stringify(envVars) !== JSON.stringify(repo.env)) {
+          if (
+            JSON.stringify(envVars) !== JSON.stringify(repo.env) ||
+            !(await that
+              .readEnvFile()
+              .then(() => true)
+              .catch(() => false))
+          ) {
+            logger.debug("Writing env file", { envVars: Object.keys(envVars) });
             await that.writeEnvFile(envVars);
+          } else {
+            logger.debug("Env file is up to date", {
+              envVars: Object.keys(envVars),
+            });
           }
         },
       },

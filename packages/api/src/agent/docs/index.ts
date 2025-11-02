@@ -2,6 +2,7 @@ import aiGatewayComposioDocs from "./ai-gateway-composio.md";
 import aiGatewayDocs from "./ai-gateway.md";
 import clerkTrpcDocs from "./clerk-trpc.md";
 import clerkDocs from "./clerk.md";
+import cloudflareWorkerAssetsDocs from "./cloudflare-worker-assets.md";
 import cloudflareWorkerDocs from "./cloudflare-worker.md";
 import composioDocs from "./composio.md";
 import shadcnDocs from "./shadcn.md";
@@ -46,6 +47,7 @@ export const docs: Documentation[] = [
   parseDocs(["ai-gateway"], aiGatewayDocs),
   parseDocs(["ai-gateway", "composio"], aiGatewayComposioDocs),
   parseDocs(["cloudflare-worker"], cloudflareWorkerDocs),
+  parseDocs(["cloudflare-worker"], cloudflareWorkerAssetsDocs),
   parseDocs(["composio"], composioDocs),
   parseDocs(["shadcn"], shadcnDocs),
   parseDocs(["trpc"], trpcDocs),

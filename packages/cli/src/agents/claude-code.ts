@@ -1,4 +1,3 @@
-import type { ClaudeCodeCLIOptions, ClaudeCodeSession } from "@/schema";
 import {
   query,
   type SDKPartialAssistantMessage,
@@ -6,6 +5,8 @@ import {
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { parseEnvFile } from "../lib/parse-env-file.js";
+import { startTypeScriptWatch } from "../lib/typescript.js";
+import type { ClaudeCodeCLIOptions, ClaudeCodeSession } from "../schema.js";
 
 const MAX_RETRIES = 3;
 
@@ -55,6 +56,7 @@ export async function runClaudeCode(
   let sessionId = req.options?.sessionId;
 
   const envVars = parseEnvFile(path.join(req.cwd, ".env"));
+  const tscWatch = startTypeScriptWatch(req.cwd);
 
   retryLoop: for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {
@@ -82,6 +84,8 @@ export async function runClaudeCode(
             parent_tool_use_id: null,
             message: { role: "user", content },
           };
+
+          await new Promise(() => {});
         })(),
         options: {
           cwd: req.cwd,
@@ -105,6 +109,36 @@ export async function runClaudeCode(
                 authorization: `Bearer ${envVars.COMPOSIO_API_KEY}:${envVars.COMPOSIO_PLAYGROUND_USER_ID}`,
               },
             },
+          },
+          hooks: {
+            PostToolUse: [
+              {
+                matcher: "Write|Edit|MultiEdit|NotebookEdit",
+                hooks: [
+                  async (input, toolUseId) => {
+                    if (input.hook_event_name !== "PostToolUse" || !toolUseId) {
+                      return { continue: true };
+                    }
+
+                    const toolInput = input.tool_input as { file_path: string };
+                    if (!tscWatch.isFileInProject(toolInput.file_path)) {
+                      return { continue: true };
+                    }
+
+                    return tscWatch
+                      .waitForCompilationDone()
+                      .then(() => ({
+                        continue: true,
+                        hookSpecificOutput: {
+                          hookEventName: "PostToolUse" as const,
+                          additionalContext: tscWatch.getErrorSummary(),
+                        },
+                      }))
+                      .catch(() => ({ continue: true }));
+                  },
+                ],
+              },
+            ],
           },
         },
       });

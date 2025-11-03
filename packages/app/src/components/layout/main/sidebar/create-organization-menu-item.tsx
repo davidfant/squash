@@ -33,18 +33,14 @@ export function CreateOrganizationMenuItem({
 
     setLoading(true);
     try {
-      const res = await authClient.organization.create({
+      const { organization } = await authClient.organization.create({
         name: name,
         slug: `${kebabCase(name)}-${uuid.v4().split("-")[0]}`,
       });
-      if (res.error) {
-        console.error("Failed to create organization:", res.error);
-        return;
-      }
 
       setName("");
       setOpen(false);
-      await onSuccess(res.data.id);
+      await onSuccess(organization.id);
     } catch (error) {
       console.error("Failed to create organization:", error);
     } finally {

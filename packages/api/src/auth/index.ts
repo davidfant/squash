@@ -1,13 +1,24 @@
-import { betterAuth, type User } from "better-auth";
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { jwt, organization } from "better-auth/plugins";
+import { createClerkClient, type ClerkClient } from "@clerk/backend";
 import { randomUUID } from "crypto";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, type InferSelectModel } from "drizzle-orm";
 import kebabCase from "lodash.kebabcase";
-import { createDatabase, type Database } from "../database";
+import { type Database } from "../database";
 import * as schema from "../database/schema/auth";
 
-async function createDefaultOrganization(db: Database, user: User) {
+const CLERK_PROVIDER_ID = "clerk";
+
+export type DbUser = InferSelectModel<typeof schema.user>;
+
+function selectUserById(db: Database, userId: string) {
+  return db
+    .select()
+    .from(schema.user)
+    .where(eq(schema.user.id, userId))
+    .limit(1)
+    .then(([user]) => user);
+}
+
+async function createDefaultOrganization(db: Database, user: DbUser) {
   const organizationId = randomUUID();
 
   await db
@@ -33,71 +44,145 @@ async function createDefaultOrganization(db: Database, user: User) {
   return organizationId;
 }
 
-export function createAuth(
-  env: CloudflareBindings
-): ReturnType<typeof betterAuth> {
-  const db = createDatabase(env);
+async function resolveActiveOrganization(db: Database, user: DbUser) {
+  if (user.activeOrganizationId) {
+    return user.activeOrganizationId;
+  }
 
-  return betterAuth({
-    appName: "Squash",
-    database: drizzleAdapter(db, { provider: "pg" }),
-    basePath: "/auth",
-    trustedOrigins: env.TRUSTED_ORIGINS.split(","),
-    // baseURL: env.BETTER_AUTH_URL,
-    secret: env.BETTER_AUTH_SECRET,
-    socialProviders: {
-      google: {
-        clientId: env.GOOGLE_CLIENT_ID!,
-        clientSecret: env.GOOGLE_CLIENT_SECRET!,
-      },
-    },
-    emailAndPassword: { enabled: true },
-    plugins: [organization(), jwt()],
-    advanced: { database: { generateId: () => randomUUID() } },
-    databaseHooks: {
-      user: {
-        create: {
-          after: async (user) => {
-            await createDefaultOrganization(db, user);
-          },
-        },
-      },
-      session: {
-        create: {
-          before: async (session) => {
-            const [member] = await db
-              .select()
-              .from(schema.member)
-              .where(eq(schema.member.userId, session.userId))
-              .orderBy(asc(schema.member.createdAt))
-              .limit(1);
+  const [member] = await db
+    .select()
+    .from(schema.member)
+    .where(eq(schema.member.userId, user.id))
+    .orderBy(asc(schema.member.createdAt))
+    .limit(1);
 
-            if (!!member) {
-              return {
-                data: {
-                  ...session,
-                  activeOrganizationId: member.organizationId,
-                },
-              };
-            }
+  if (member) {
+    await db
+      .update(schema.user)
+      .set({ activeOrganizationId: member.organizationId })
+      .where(eq(schema.user.id, user.id));
+    return member.organizationId;
+  }
 
-            if (!member) {
-              const [user] = await db
-                .select()
-                .from(schema.user)
-                .where(eq(schema.user.id, session.userId))
-                .limit(1);
-              const activeOrganizationId = await createDefaultOrganization(
-                db,
-                user!
-              );
-              return { data: { ...session, activeOrganizationId } };
-            }
-          },
-        },
-      },
-    },
-  });
+  const organizationId = await createDefaultOrganization(db, user);
+  await db
+    .update(schema.user)
+    .set({ activeOrganizationId: organizationId })
+    .where(eq(schema.user.id, user.id));
+  return organizationId;
 }
 
-export type Auth = ReturnType<typeof createAuth>;
+async function createUserFromClerk(
+  db: Database,
+  clerk: ClerkClient,
+  clerkUserId: string
+) {
+  const clerkUser = await clerk.users.getUser(clerkUserId);
+  const userId = randomUUID();
+
+  const primaryEmail =
+    clerkUser.primaryEmailAddress?.emailAddress ??
+    clerkUser.emailAddresses[0]?.emailAddress ??
+    "";
+
+  const emailVerified =
+    clerkUser.primaryEmailAddress?.verification?.status === "verified" ||
+    clerkUser.emailAddresses.some(
+      (email) => email.verification?.status === "verified"
+    );
+
+  const name =
+    clerkUser.fullName ??
+    [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ").trim() ||
+    clerkUser.username ||
+    primaryEmail ||
+    "New User";
+
+  await db.insert(schema.user).values({
+    id: userId,
+    name,
+    email: primaryEmail,
+    emailVerified,
+    image: clerkUser.imageUrl ?? undefined,
+  });
+
+  await db.insert(schema.account).values({
+    id: randomUUID(),
+    accountId: clerkUserId,
+    providerId: CLERK_PROVIDER_ID,
+    userId,
+  });
+
+  const user = await selectUserById(db, userId);
+  if (!user) {
+    throw new Error("Failed to create user record");
+  }
+
+  const organizationId = await createDefaultOrganization(db, user);
+  await db
+    .update(schema.user)
+    .set({ activeOrganizationId: organizationId })
+    .where(eq(schema.user.id, userId));
+
+  return {
+    ...user,
+    activeOrganizationId: organizationId,
+  } satisfies DbUser;
+}
+
+export async function getUserWithActiveOrganization(
+  db: Database,
+  userId: string
+) {
+  const user = await selectUserById(db, userId);
+  if (!user) return null;
+
+  const activeOrganizationId = await resolveActiveOrganization(db, user);
+
+  return {
+    ...user,
+    activeOrganizationId,
+  } satisfies DbUser;
+}
+
+export async function ensureUser({
+  db,
+  clerk,
+  clerkUserId,
+}: {
+  db: Database;
+  clerk: ClerkClient;
+  clerkUserId: string;
+}) {
+  const existingAccount = await db
+    .select({
+      userId: schema.account.userId,
+    })
+    .from(schema.account)
+    .where(
+      and(
+        eq(schema.account.providerId, CLERK_PROVIDER_ID),
+        eq(schema.account.accountId, clerkUserId)
+      )
+    )
+    .limit(1)
+    .then(([account]) => account);
+
+  if (!existingAccount) {
+    return createUserFromClerk(db, clerk, clerkUserId);
+  }
+
+  const user = await getUserWithActiveOrganization(db, existingAccount.userId);
+  if (!user) {
+    return createUserFromClerk(db, clerk, clerkUserId);
+  }
+
+  return user;
+}
+
+export function createClerk(env: CloudflareBindings) {
+  return createClerkClient({
+    secretKey: env.CLERK_SECRET_KEY,
+    publishableKey: env.CLERK_PUBLISHABLE_KEY,
+  });
+}

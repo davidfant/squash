@@ -1,25 +1,23 @@
-import { authClient } from "@/auth/client";
-import { SignInForm } from "@/components/layout/auth/SignInForm";
+import { SignIn, SignedIn, SignedOut } from "@clerk/clerk-react";
 import { Navigate, useSearchParams } from "react-router";
 import { AuthLayout } from "./components/layout";
 
 export function LoginPage() {
-  const session = authClient.useSession();
   const [searchParams] = useSearchParams();
-
-  // If already authenticated, redirect to landing page
-  if (!session.isPending && session.data?.user) {
-    return <Navigate to="/" replace />;
-  }
+  const redirect = searchParams.get("redirect") ?? "/";
 
   return (
     <AuthLayout>
-      <SignInForm
-        showHeader
-        callbackURL={
-          searchParams.get("redirect") ?? (undefined as string | undefined)
-        }
-      />
+      <SignedIn>
+        <Navigate to={redirect} replace />
+      </SignedIn>
+      <SignedOut>
+        <SignIn
+          redirectUrl={redirect}
+          afterSignInUrl={redirect}
+          afterSignUpUrl={redirect}
+        />
+      </SignedOut>
     </AuthLayout>
   );
 }

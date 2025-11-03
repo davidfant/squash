@@ -9,8 +9,10 @@ import { authMiddleware } from "./auth/middleware";
 import { databaseMiddleware } from "./database/middleware";
 import { createSignedAndPublicUrl } from "./lib/cloudflare";
 import { logger } from "./lib/logger";
+import { authRouter } from "./routers/auth";
 import { githubRouter } from "./routers/integrations/github";
 import { invitesRouter } from "./routers/invites";
+import { organizationsRouter } from "./routers/organizations";
 import { reposRouter } from "./routers/repos";
 import { repoBranchesRouter } from "./routers/repos/branches";
 import { repoProvidersRouter } from "./routers/repos/providers";
@@ -21,9 +23,10 @@ const app = new Hono<{ Bindings: CloudflareBindings }>()
   .use(honoLogger())
   .use(databaseMiddleware)
   .use(authMiddleware)
-  .on(["GET", "POST"], "/auth/*", (c) => c.get("auth").handler(c.req.raw))
+  .route("/auth", authRouter)
   .route("/repos/providers", repoProvidersRouter)
   .route("/branches", repoBranchesRouter)
+  .route("/organizations", organizationsRouter)
   .route("/repos", reposRouter)
   .route("/invites", invitesRouter)
   .route("/integrations/github", githubRouter)

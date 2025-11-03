@@ -170,9 +170,14 @@ export const invitesRouter = new Hono<{
 
         if (existingMember) {
           await db
-            .update(schema.session)
+            .update(schema.user)
             .set({ activeOrganizationId: invite.organizationId })
-            .where(eq(schema.session.userId, user.id));
+            .where(eq(schema.user.id, user.id));
+
+          c.set("session", {
+            userId: user.id,
+            activeOrganizationId: invite.organizationId,
+          });
 
           return c.json({
             success: true,
@@ -195,11 +200,16 @@ export const invitesRouter = new Hono<{
             .set({ usageCount: invite.usageCount + 1 })
             .where(eq(schema.invitation.id, invite.id)),
           tx
-            .update(schema.session)
+            .update(schema.user)
             .set({ activeOrganizationId: invite.organizationId })
-            .where(eq(schema.session.userId, user.id)),
+            .where(eq(schema.user.id, user.id)),
         ]);
         // });
+
+        c.set("session", {
+          userId: user.id,
+          activeOrganizationId: invite.organizationId,
+        });
 
         return c.json({
           success: true,

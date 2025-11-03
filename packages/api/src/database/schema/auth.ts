@@ -19,6 +19,15 @@ export const memberRole = pgEnum("member_role", [
 
 export type MemberRole = InferEnum<typeof memberRole>;
 
+export const organization = pgTable("organization", {
+  id: uuid("id").primaryKey(),
+  name: text("name").notNull(),
+  slug: text("slug").unique(),
+  logo: text("logo"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  metadata: text("metadata"),
+});
+
 export const user = pgTable("user", {
   id: uuid("id").primaryKey(),
   name: text("name").notNull(),
@@ -27,6 +36,10 @@ export const user = pgTable("user", {
     .$defaultFn(() => false)
     .notNull(),
   image: text("image"),
+  activeOrganizationId: uuid("active_organization_id").references(
+    () => organization.id,
+    { onDelete: "set null" }
+  ),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -70,15 +83,6 @@ export const verification = pgTable("verification", {
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
-export const organization = pgTable("organization", {
-  id: uuid("id").primaryKey(),
-  name: text("name").notNull(),
-  slug: text("slug").unique(),
-  logo: text("logo"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  metadata: text("metadata"),
 });
 
 export const member = pgTable("member", {

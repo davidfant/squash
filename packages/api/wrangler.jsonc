@@ -42,6 +42,8 @@
     "TRUSTED_ORIGINS": "http://localhost:5173",
     "PREVIEW_PROXY_URL": "http://localhost:8788",
     "DEPLOYMENT_PROXY_URL": "http://localhost:8790",
+    "CLERK_SECRET_KEY": "YOUR_SECRET_KEY",
+    "CLERK_PUBLISHABLE_KEY": "YOUR_PUBLISHABLE_KEY",
     "TZ": "utc"
   },
   "env": {
@@ -52,6 +54,8 @@
         "TRUSTED_ORIGINS": "https://app.squash.build,https://*.app-7j7.pages.dev",
         "PREVIEW_PROXY_URL": "https://magicsite.app",
         "DEPLOYMENT_PROXY_URL": "https://squashprototype.com",
+        "CLERK_SECRET_KEY": "YOUR_SECRET_KEY",
+        "CLERK_PUBLISHABLE_KEY": "YOUR_PUBLISHABLE_KEY",
         "TZ": "utc"
       },
       "durable_objects": {

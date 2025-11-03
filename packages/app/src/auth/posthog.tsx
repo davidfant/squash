@@ -1,6 +1,6 @@
 import posthog from "posthog-js";
 import { useEffect } from "react";
-import { authClient } from "./client"; // your Better Auth client
+import { authClient } from "./client";
 
 export function PosthogIdentify() {
   const session = authClient.useSession();

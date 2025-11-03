@@ -1,4 +1,10 @@
 import { Toaster } from "@/components/ui/sonner";
+import {
+  ClerkLoaded,
+  ClerkProvider,
+  SignedIn,
+  SignedOut,
+} from "@clerk/clerk-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import i18n from "i18next";
 import { PostHogProvider } from "posthog-js/react";
@@ -6,7 +12,6 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { initReactI18next } from "react-i18next";
 import { BrowserRouter, Route, Routes } from "react-router";
-import { authClient } from "./auth/client";
 import { PosthogIdentify } from "./auth/posthog";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import "./index.css";
@@ -30,60 +35,78 @@ i18n.use(initReactI18next).init({
 
 const queryClient = new QueryClient();
 
-const IndexPage = () => {
-  const session = authClient.useSession();
-  if (session.isPending) return null;
-  const isAuthenticated = !!session.data?.session;
-  return isAuthenticated ? <BranchesPage /> : <NewPage />;
-};
+const IndexPage = () => (
+  <ClerkLoaded>
+    <SignedIn>
+      <BranchesPage />
+    </SignedIn>
+    <SignedOut>
+      <NewPage />
+    </SignedOut>
+  </ClerkLoaded>
+);
+
+const publishableKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+if (!publishableKey) {
+  throw new Error(
+    "Missing Clerk publishable key. Set VITE_CLERK_PUBLISHABLE_KEY."
+  );
+}
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <PostHogProvider
-      apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_KEY}
-      options={{
-        api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
-        defaults: "2025-05-24",
-        capture_exceptions: true,
-        debug: import.meta.env.MODE === "development",
-      }}
-    >
-      <PosthogIdentify />
-      <ThemeProvider>
-        <QueryClientProvider client={queryClient}>
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<IndexPage />} />
-              <Route path="/new" element={<NewPage />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/invite/:inviteId" element={<InvitePage />} />
+    <ClerkProvider publishableKey={publishableKey} afterSignOutUrl="/">
+      <PostHogProvider
+        apiKey={import.meta.env.VITE_PUBLIC_POSTHOG_KEY}
+        options={{
+          api_host: import.meta.env.VITE_PUBLIC_POSTHOG_HOST,
+          defaults: "2025-05-24",
+          capture_exceptions: true,
+          debug: import.meta.env.MODE === "development",
+        }}
+      >
+        <SignedIn>
+          <PosthogIdentify />
+        </SignedIn>
+        <ThemeProvider>
+          <QueryClientProvider client={queryClient}>
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<IndexPage />} />
+                <Route path="/new" element={<NewPage />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/invite/:inviteId" element={<InvitePage />} />
 
-              <Route path="/templates" element={<ReposPage />} />
-              <Route path="/templates/:repoId" element={<ReposPage />} />
-              <Route
-                path="/template/:repoId/new"
-                element={<NewBranchFromRepoPage />}
-              />
-              <Route element={<RequireAuthGuard />}>
-                <Route path="/extension-auth" element={<ExtensionAuthPage />} />
-                <Route path="/apps" element={<BranchesPage />} />
-                <Route path="/apps/:branchId" element={<BranchPage />} />
-              </Route>
+                <Route path="/templates" element={<ReposPage />} />
+                <Route path="/templates/:repoId" element={<ReposPage />} />
+                <Route
+                  path="/template/:repoId/new"
+                  element={<NewBranchFromRepoPage />}
+                />
+                <Route element={<RequireAuthGuard />}>
+                  <Route
+                    path="/extension-auth"
+                    element={<ExtensionAuthPage />}
+                  />
+                  <Route path="/apps" element={<BranchesPage />} />
+                  <Route path="/apps/:branchId" element={<BranchPage />} />
+                </Route>
 
-              <Route
-                path="*"
-                element={
-                  <div className="flex flex-col items-center justify-center h-screen">
-                    <h1>404 – Page Not Found</h1>
-                    <p>The page you are looking for doesn’t exist.</p>
-                  </div>
-                }
-              />
-            </Routes>
-            <Toaster />
-          </BrowserRouter>
-        </QueryClientProvider>
-      </ThemeProvider>
-    </PostHogProvider>
+                <Route
+                  path="*"
+                  element={
+                    <div className="flex flex-col items-center justify-center h-screen">
+                      <h1>404 – Page Not Found</h1>
+                      <p>The page you are looking for doesn’t exist.</p>
+                    </div>
+                  }
+                />
+              </Routes>
+              <Toaster />
+            </BrowserRouter>
+          </QueryClientProvider>
+        </ThemeProvider>
+      </PostHogProvider>
+    </ClerkProvider>
   </StrictMode>
 );

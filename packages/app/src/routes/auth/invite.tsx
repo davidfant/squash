@@ -1,11 +1,17 @@
 import { authClient } from "@/auth/client";
-import { SignInForm } from "@/components/layout/auth/SignInForm";
 import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { CardTitle } from "@/components/ui/card";
 import { toast } from "@/components/ui/sonner";
 import { api, useMutation, useQuery } from "@/hooks/api";
+import {
+  SignInButton as ClerkSignInButton,
+  SignUpButton,
+  SignedIn,
+  SignedOut,
+} from "@clerk/clerk-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router";
 import { AuthLayout } from "./components/layout";
@@ -13,9 +19,9 @@ import { AuthLayout } from "./components/layout";
 function InviteContent() {
   const { inviteId } = useParams<{ inviteId: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const session = authClient.useSession();
-  const user = session.data?.user;
 
   const invite = useQuery(api.invites[":id"].$get, {
     params: { id: inviteId! },
@@ -25,7 +31,10 @@ function InviteContent() {
   const acceptInvite = useMutation(api.invites[":id"].accept.$post, {
     onSuccess: async (data) => {
       toast.success(data.message);
-      await authClient.updateUser();
+      await Promise.all([
+        session.refetch?.().catch(() => undefined),
+        queryClient.invalidateQueries(),
+      ]);
       navigate(invite.data?.path ?? "/");
     },
   });
@@ -69,7 +78,7 @@ function InviteContent() {
           {invite.data.organization.name}
         </p>
       </div>
-      {user ? (
+      <SignedIn>
         <Button
           onClick={() => acceptInvite.mutate({ param: { id: inviteId! } })}
           disabled={acceptInvite.isPending}
@@ -85,9 +94,29 @@ function InviteContent() {
             "Accept Invite"
           )}
         </Button>
-      ) : (
-        <SignInForm callbackURL={window.location.href} />
-      )}
+      </SignedIn>
+      <SignedOut>
+        <div className="space-y-3">
+          <ClerkSignInButton
+            mode="modal"
+            redirectUrl={window.location.href}
+            afterSignInUrl={window.location.href}
+          >
+            <Button className="w-full" size="lg">
+              Sign in to join
+            </Button>
+          </ClerkSignInButton>
+          <SignUpButton
+            mode="modal"
+            redirectUrl={window.location.href}
+            afterSignUpUrl={window.location.href}
+          >
+            <Button className="w-full" variant="outline" size="lg">
+              Create an account
+            </Button>
+          </SignUpButton>
+        </div>
+      </SignedOut>
     </div>
   );
 }

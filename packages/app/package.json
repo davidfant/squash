@@ -36,7 +36,7 @@
     "@squashai/api": "workspace:*",
     "@tanstack/react-query": "^5.83.0",
     "ai": "^5.0.76",
-    "better-auth": "^1.2.12",
+    "@clerk/clerk-react": "^5.18.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dayjs": "^1.11.18",

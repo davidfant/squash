@@ -12,7 +12,7 @@ export function BranchHeader({
   extra?: React.ReactNode;
 }) {
   return (
-    <header className="flex items-center justify-between p-2">
+    <header className="flex items-center justify-between px-2 py-1">
       <div className="flex items-center gap-2">
         <Link to="/" className="flex items-center">
           <LogoIcon className="size-6 hover:opacity-80 transition-opacity" />

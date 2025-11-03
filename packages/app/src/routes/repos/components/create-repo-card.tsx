@@ -1,6 +1,5 @@
 import { Plus } from "lucide-react";
 import { useState } from "react";
-import { CloneScreenshotDialog } from "./clone-screenshot-dialog";
 
 export const CreateRepoCard = () => {
   const [open, setOpen] = useState(false);
@@ -13,7 +12,7 @@ export const CreateRepoCard = () => {
       >
         <Plus className="size-8 text-border group-hover:text-muted-foreground transition-colors" />
       </div>
-      <CloneScreenshotDialog open={open} onOpenChange={setOpen} />
+      {/* <CloneScreenshotDialog open={open} onOpenChange={setOpen} /> */}
     </>
   );
 };

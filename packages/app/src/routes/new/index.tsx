@@ -6,17 +6,18 @@ import {
   ChatInputProvider,
   type ChatInputValue,
 } from "@/components/layout/chat/input/context";
-import { Logo } from "@/components/Logo";
+import { MainLayout } from "@/components/layout/main/layout";
+import { useWaitlist } from "@/components/layout/main/waitlist-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/components/ui/sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { api, useMutation, useQuery } from "@/hooks/api";
+import { ArrowRightIcon } from "lucide-react";
 import { forwardRef, memo, useState } from "react";
-import { Link, Navigate, useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { useLocalStorage } from "usehooks-ts";
 import { FlowingGradientBackground } from "./components/flowing-gradient-background";
-import { WaitlistDialog } from "./components/waitlist-dialog";
 import { usePlaceholder } from "./usePlaceholder";
 
 const MemoizedTextarea = memo(Textarea);
@@ -98,13 +99,10 @@ const popularToolkits: Array<{
   },
 ];
 
-export function NextPage() {
+function Content() {
   const navigate = useNavigate();
   const repos = useQuery(api.repos.public.$get, { params: {} });
   const [toolkitId, setToolkitId] = useState<string | null>(null);
-  const [waitlistDialogContext, setWaitlistDialogContext] = useState<
-    unknown | null
-  >(null);
 
   console.log("public", repos.data);
   // const repos = useRepos();
@@ -119,91 +117,45 @@ export function NextPage() {
     onError: () => toast.error("Failed to create repository"),
   });
 
-  const createBranch = useMutation(api.repos[":repoId"].branches.$post, {
-    onSuccess: (data) => navigate(`/branches/${data.id}`),
-  });
+  const createBranch = useMutation(api.repos[":repoId"].branches.$post);
 
+  const isAuthenticated = !!authClient.useSession().data?.session;
+  const waitlist = useWaitlist();
   const handleSubmit = async (content: ChatInputValue) => {
-    setWaitlistDialogContext({ type: "chat", content });
-    // const repoId = await (async () => {
-    //   // if (repos.current) return repos.current.id;
-    //   const newRepo = await createRepo.mutateAsync({
-    //     json: {
-    //       name: `base-${Date.now()}`,
-    //       gitUrl: "s3://repos/templates/base-vite-ts",
-    //       defaultBranch: "master",
-    //       hidden: true,
-    //       snapshot: {
-    //         type: "daytona",
-    //         snapshot: "base-vite-ts:v0.0.2",
-    //         port: 5173,
-    //         cwd: "/repo",
-    //         env: {},
-    //         tasks: {
-    //           install: [
-    //             {
-    //               id: "install",
-    //               title: "Install dependencies",
-    //               type: "command",
-    //               command: "pnpm",
-    //               args: ["install"],
-    //             },
-    //           ],
-    //           dev: {
-    //             id: "dev",
-    //             title: "Start development server",
-    //             type: "command",
-    //             command: "pnpm",
-    //             args: ["dev"],
-    //           },
-    //           build: [],
-    //         },
-    //       },
-    //     },
-    //   });
-    //   return newRepo.id;
-    // })();
-    // await createBranch.mutateAsync({
-    //   param: { repoId },
-    //   json: {
-    //     message: {
-    //       parts: [{ type: "text", text: content.text }, ...content.files],
-    //     },
-    //   },
-    // });
-    // setChatInitialValue({ text: "", files: [] });
+    if (isAuthenticated) {
+      const newRepo = await createRepo.mutateAsync({
+        json: {
+          template: "base-vite-trpc-cloudflare-worker-ts",
+          hidden: true,
+        },
+      });
+
+      const parts = [
+        ...(content.text
+          ? [{ type: "text" as const, text: content.text }]
+          : []),
+        ...(content.files ?? []),
+      ];
+      const branch = await createBranch.mutateAsync({
+        param: { repoId: newRepo.id },
+        json: { message: { parts } },
+      });
+
+      setChatInitialValue({ text: "", files: [] });
+      navigate(`/apps/${branch.id}`);
+    } else {
+      waitlist.setContext({ type: "chat", content });
+    }
   };
 
-  const session = authClient.useSession();
-  if (session.data?.user) return <Navigate to="/playgrounds" replace />;
   return (
     <div className="relative">
-      <div className="absolute inset-0 opacity-20 blur-md will-change-auto 2xl:blur-2xl z-0">
-        <FlowingGradientBackground scale={3} />
-      </div>
+      {!isAuthenticated && (
+        <div className="absolute inset-0 opacity-20 blur-md will-change-auto 2xl:blur-2xl z-0">
+          <FlowingGradientBackground scale={3} />
+        </div>
+      )}
       <div className="relative z-1">
-        <header className="mx-auto flex max-w-7xl items-center px-6 h-14 gap-2">
-          <Link to="/">
-            <Logo />
-          </Link>
-          <div className="flex-1" />
-          {/* <Link to="/login"> */}
-          <Button
-            variant="outline"
-            onClick={() => setWaitlistDialogContext({ type: "log-in" })}
-          >
-            Log In
-          </Button>
-          {/* </Link> */}
-          {/* <Link to="/login"> */}
-          <Button
-            onClick={() => setWaitlistDialogContext({ type: "get-started" })}
-          >
-            Get Started
-          </Button>
-          {/* </Link> */}
-        </header>
-
         <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-6 py-24 gap-32">
           <section className="flex flex-col items-center gap-12 text-center">
             {/* <Badge variant="secondary" className="px-3 py-1.5 rounded-full">
@@ -242,15 +194,15 @@ export function NextPage() {
             </ChatInputProvider>
           </section>
 
-          <Card>
+          <Card className="shadow-none">
             <CardContent className="space-y-2">
               <div className="flex justify-between items-center">
-                <h2 className="text-lg">From the Community</h2>
-                {/* <Link to="/templates">
+                <h2 className="text-lg">Featured Templates</h2>
+                <Link to="/templates">
                   <Button variant="ghost" size="sm">
                     View all <ArrowRightIcon />
                   </Button>
-                </Link> */}
+                </Link>
               </div>
               {/* <Suggestions className="mb-4">
                 <Suggestion
@@ -278,22 +230,18 @@ export function NextPage() {
                 ))}
               </Suggestions> */}
               <FeatureCardGrid
-                children={
-                  repos.data
-                    ? repos.data.map((repo, index) => (
-                        <RepoCard
-                          key={repo.id}
-                          repo={repo}
-                          index={index}
-                          onStartBuilding={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setWaitlistDialogContext({ type: "repo", repo });
-                          }}
-                        />
-                      ))
-                    : undefined
-                }
+                children={repos.data?.map((repo, index) => (
+                  <RepoCard
+                    key={repo.id}
+                    repo={repo}
+                    index={index}
+                    onStartBuilding={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      waitlist.setContext({ type: "repo", repo });
+                    }}
+                  />
+                ))}
               />
             </CardContent>
           </Card>
@@ -301,11 +249,12 @@ export function NextPage() {
           {/* <RecentBranchesGrid /> */}
         </main>
       </div>
-      <WaitlistDialog
-        open={!!waitlistDialogContext}
-        onOpenChange={() => setWaitlistDialogContext(null)}
-        context={waitlistDialogContext!}
-      />
     </div>
   );
 }
+
+export const NewPage = () => (
+  <MainLayout>
+    <Content />
+  </MainLayout>
+);

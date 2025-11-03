@@ -31,7 +31,7 @@ export function RepoCard({
         repo={repo}
         open={open}
         onOpenChange={setOpen}
-        onStartBuilding={onStartBuilding}
+        onNew={onStartBuilding}
       />
     </>
   );

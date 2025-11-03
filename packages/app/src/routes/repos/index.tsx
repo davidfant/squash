@@ -1,13 +1,13 @@
+import { authClient } from "@/auth/client";
 import { FeatureCard } from "@/components/blocks/feature/card";
 import { FeatureCardGrid } from "@/components/blocks/feature/grid";
-import { AppSidebar } from "@/components/layout/sidebar/app-sidebar";
-import { SiteHeader } from "@/components/layout/sidebar/site-header";
+import { AppSidebar } from "@/components/layout/main/sidebar/app-sidebar";
+import { SiteHeader } from "@/components/layout/main/sidebar/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { toast } from "@/components/ui/sonner";
 import { api, type QueryOutput, useMutation, useQuery } from "@/hooks/api";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { CreateRepoCard } from "./components/create-repo-card";
 import { RepoDetailsDialog } from "./components/repo-details-dialog";
 
 type Repo = QueryOutput<typeof api.repos.$get>[number];
@@ -29,7 +29,7 @@ function RepoCard({
     onError: () => toast.error("Failed to rename playground"),
   });
   return (
-    <Link to={`/playgrounds/${repo.id}`}>
+    <Link to={`/templates/${repo.id}`}>
       <FeatureCard
         title={repo.name}
         imageUrl={repo.imageUrl}
@@ -45,37 +45,48 @@ function RepoCard({
 
 export function ReposPage() {
   const navigate = useNavigate();
-  const repos = useQuery(api.repos.$get, { params: {} });
+
+  const isAuthenticated = !!authClient.useSession().data?.session;
+  const orgRepos = useQuery(api.repos.$get, {
+    params: {},
+    enabled: isAuthenticated,
+  });
+  const publicRepos = useQuery(api.repos.public.$get, { params: {} });
   const { repoId } = useParams();
 
   const [currentRepo, setCurrentRepo] = useState<Repo>();
   useEffect(() => {
-    const repo = repos.data?.find((repo) => repo.id === repoId);
+    const allRepos = [...(orgRepos.data ?? []), ...(publicRepos.data ?? [])];
+    const repo = allRepos.find((r) => r.id === repoId);
     if (repo) setCurrentRepo(repo);
-  }, [repoId, repos.data]);
+  }, [repoId, orgRepos.data, publicRepos.data]);
 
   return (
     <SidebarProvider>
       <AppSidebar variant="inset" />
       <SidebarInset>
-        <SiteHeader title="Playgrounds" />
+        <SiteHeader title="Templates" />
         <main className="p-3">
           <FeatureCardGrid
-            children={
-              repos.data
-                ? [
-                    ...repos.data.map((repo, index) => (
-                      <RepoCard
-                        key={repo.id}
-                        repo={repo}
-                        index={index}
-                        onRenamed={() => repos.refetch()}
-                      />
-                    )),
-                    <CreateRepoCard key="create" />,
-                  ]
-                : undefined
-            }
+            children={orgRepos.data?.map((repo, index) => (
+              <RepoCard
+                key={repo.id}
+                repo={repo}
+                index={index}
+                onRenamed={() => orgRepos.refetch()}
+              />
+            ))}
+          />
+          <h2 className="text-lg mt-8 mb-4">Featured Templates</h2>
+          <FeatureCardGrid
+            children={publicRepos.data?.map((repo, index) => (
+              <RepoCard
+                key={repo.id}
+                repo={repo}
+                index={index}
+                onRenamed={() => orgRepos.refetch()}
+              />
+            ))}
           />
         </main>
       </SidebarInset>
@@ -85,7 +96,7 @@ export function ReposPage() {
         <RepoDetailsDialog
           repo={currentRepo}
           open={!!repoId}
-          onOpenChange={() => navigate("/playgrounds")}
+          onOpenChange={() => navigate("/templates")}
         />
       )}
     </SidebarProvider>

@@ -12,7 +12,7 @@ import { Link, useNavigate } from "react-router";
 export function RepoDetailsDialog({
   repo,
   open,
-  onStartBuilding,
+  onNew,
   onOpenChange,
 }: {
   repo: {
@@ -22,7 +22,7 @@ export function RepoDetailsDialog({
     previewUrl: string | null;
   };
   open: boolean;
-  onStartBuilding?: MouseEventHandler<HTMLButtonElement>;
+  onNew?: MouseEventHandler<HTMLButtonElement>;
   onOpenChange(open: boolean): void;
 }) {
   const navigate = useNavigate();
@@ -39,8 +39,8 @@ export function RepoDetailsDialog({
       >
         <DialogHeader className="p-4 pb-0 flex-row items-center justify-between">
           <DialogTitle className="pl-1">{repo.name}</DialogTitle>
-          <Link to={`/playgrounds/${repo.id}/new`}>
-            <Button onClick={onStartBuilding}>Start Building</Button>
+          <Link to={`/templates/${repo.id}/new`}>
+            <Button onClick={onNew}>Use Template</Button>
           </Link>
         </DialogHeader>
 

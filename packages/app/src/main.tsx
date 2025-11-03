@@ -6,6 +6,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { initReactI18next } from "react-i18next";
 import { BrowserRouter, Route, Routes } from "react-router";
+import { authClient } from "./auth/client";
 import { PosthogIdentify } from "./auth/posthog";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import "./index.css";
@@ -17,7 +18,7 @@ import { BranchesPage } from "./routes/branches";
 import { BranchPage } from "./routes/branches/details";
 import { NewBranchFromRepoPage } from "./routes/branches/new";
 import { ExtensionAuthPage } from "./routes/extension-auth";
-import { NextPage } from "./routes/landing";
+import { NewPage } from "./routes/new";
 import { ReposPage } from "./routes/repos";
 
 i18n.use(initReactI18next).init({
@@ -28,6 +29,11 @@ i18n.use(initReactI18next).init({
 });
 
 const queryClient = new QueryClient();
+
+const IndexPage = () => {
+  const isAuthenticated = !!authClient.useSession().data;
+  return isAuthenticated ? <BranchesPage /> : <NewPage />;
+};
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -45,19 +51,21 @@ createRoot(document.getElementById("root")!).render(
         <QueryClientProvider client={queryClient}>
           <BrowserRouter>
             <Routes>
-              <Route path="/" element={<NextPage />} />
+              <Route path="/" element={<IndexPage />} />
+              <Route path="/new" element={<NewPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/invite/:inviteId" element={<InvitePage />} />
+
+              <Route path="/templates" element={<ReposPage />} />
+              <Route path="/templates/:repoId" element={<ReposPage />} />
               <Route
-                path="/playgrounds/:repoId/new"
+                path="/template/:repoId/new"
                 element={<NewBranchFromRepoPage />}
               />
               <Route element={<RequireAuthGuard />}>
                 <Route path="/extension-auth" element={<ExtensionAuthPage />} />
-                <Route path="/playgrounds" element={<ReposPage />} />
-                <Route path="/playgrounds/:repoId" element={<ReposPage />} />
-                <Route path="/prototypes" element={<BranchesPage />} />
-                <Route path="/prototypes/:branchId" element={<BranchPage />} />
+                <Route path="/apps" element={<BranchesPage />} />
+                <Route path="/apps/:branchId" element={<BranchPage />} />
               </Route>
 
               <Route

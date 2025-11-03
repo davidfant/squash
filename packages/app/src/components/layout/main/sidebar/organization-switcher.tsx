@@ -2,7 +2,7 @@ import { ChevronsUpDown } from "lucide-react";
 
 import { authClient } from "@/auth/client";
 import { CreateInviteLinkDropdownMenuItem } from "@/components/blocks/CreateInviteLinkDropdownMenuItem";
-import { CreateOrganizationMenuItem } from "@/components/layout/sidebar/create-organization-menu-item";
+import { CreateOrganizationMenuItem } from "@/components/layout/main/sidebar/create-organization-menu-item";
 import { Avatar } from "@/components/ui/avatar";
 import {
   DropdownMenu,

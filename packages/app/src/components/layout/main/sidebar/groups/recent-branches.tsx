@@ -9,9 +9,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { api, useQuery } from "@/hooks/api";
 import { Link } from "react-router";
 
-export function ReposSidebarGroup() {
-  const repos = useQuery(api.repos.$get, { params: {} });
-  if (!repos.data) {
+export function RecentBranchesSidebarGroup() {
+  const branches = useQuery(api.branches.$get, { params: {} });
+  if (!branches.data?.length) return null;
+
+  if (!branches.data) {
     return (
       <SidebarGroup>
         <SidebarGroupLabel>
@@ -27,30 +29,30 @@ export function ReposSidebarGroup() {
   }
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>Playgrounds</SidebarGroupLabel>
+      <SidebarGroupLabel>Recent Apps</SidebarGroupLabel>
       <SidebarMenu className="gap-0">
-        {!!repos.data.length ? (
+        {!!branches.data.length ? (
           <>
-            {repos.data.slice(0, 5).map((r) => (
-              <Link key={r.id} to={`/playgrounds/${r.id}`} className="truncate">
+            {branches.data.slice(0, 5).map((b) => (
+              <Link key={b.id} to={`/apps/${b.id}`} className="truncate">
                 <SidebarMenuItem>
                   <SidebarMenuButton className="cursor-pointer">
-                    {r.name}
+                    {b.title}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </Link>
             ))}
-            <Link to="/playgrounds" className="truncate">
+            {/* <Link to="/apps" className="truncate">
               <SidebarMenuItem>
                 <SidebarMenuButton className="cursor-pointer">
                   See All
                 </SidebarMenuButton>
               </SidebarMenuItem>
-            </Link>
+            </Link> */}
           </>
         ) : (
           <div className="px-2 text-sm text-muted-foreground italic">
-            No playgrounds yet
+            No apps yet
           </div>
         )}
       </SidebarMenu>

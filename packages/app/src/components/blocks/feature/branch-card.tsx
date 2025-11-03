@@ -32,7 +32,7 @@ export function BranchFeatureCard({
     onError: () => toast.error("Failed to rename prototype"),
   });
   return (
-    <Link to={`/prototypes/${branch.id}`}>
+    <Link to={`/apps/${branch.id}`}>
       <FeatureCard
         title={branch.title}
         imageUrl={branch.imageUrl}

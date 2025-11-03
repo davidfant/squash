@@ -50,13 +50,13 @@ export function NewBranchFromRepoPage() {
               param: { repoId: forkedRepo.id },
               json: { message: { parts } },
             });
-            await navigate(`/prototypes/${branch.id}`);
+            await navigate(`/apps/${branch.id}`);
           } else {
             const branch = await createBranch.mutateAsync({
               param: { repoId },
               json: { message: { parts } },
             });
-            await navigate(`/prototypes/${branch.id}`);
+            await navigate(`/apps/${branch.id}`);
           }
           // if repo does not belong to current organization, fork it!!
           setInitialValue(undefined);
@@ -69,7 +69,7 @@ export function NewBranchFromRepoPage() {
         <div className="h-screen flex">
           <div className="flex flex-col w-1/3">
             <div className="flex items-center text-sm">
-              <Link to={isAuthenticated ? `/playgrounds/${repoId}` : "/"}>
+              <Link to={isAuthenticated ? `/templates/${repoId}` : "/"}>
                 <Button size="icon" variant="ghost">
                   <ArrowLeft className="size-4" />
                 </Button>

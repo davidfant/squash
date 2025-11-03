@@ -9,9 +9,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { api, useQuery } from "@/hooks/api";
 import { Link } from "react-router";
 
-export function RecentBranchesSidebarGroup() {
-  const branches = useQuery(api.branches.$get, { params: {} });
-  if (!branches.data) {
+export function ReposSidebarGroup() {
+  const repos = useQuery(api.repos.$get, { params: {} });
+  if (!repos.data) {
     return (
       <SidebarGroup>
         <SidebarGroupLabel>
@@ -27,20 +27,20 @@ export function RecentBranchesSidebarGroup() {
   }
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>Recent Prototypes</SidebarGroupLabel>
+      <SidebarGroupLabel>Playgrounds</SidebarGroupLabel>
       <SidebarMenu className="gap-0">
-        {!!branches.data.length ? (
+        {!!repos.data.length ? (
           <>
-            {branches.data.slice(0, 5).map((b) => (
-              <Link key={b.id} to={`/prototypes/${b.id}`} className="truncate">
+            {repos.data.slice(0, 5).map((r) => (
+              <Link key={r.id} to={`/templates/${r.id}`} className="truncate">
                 <SidebarMenuItem>
                   <SidebarMenuButton className="cursor-pointer">
-                    {b.title}
+                    {r.name}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </Link>
             ))}
-            <Link to="/prototypes" className="truncate">
+            <Link to="/templates" className="truncate">
               <SidebarMenuItem>
                 <SidebarMenuButton className="cursor-pointer">
                   See All
@@ -50,7 +50,7 @@ export function RecentBranchesSidebarGroup() {
           </>
         ) : (
           <div className="px-2 text-sm text-muted-foreground italic">
-            No prototypes yet
+            No playgrounds yet
           </div>
         )}
       </SidebarMenu>

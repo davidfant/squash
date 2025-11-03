@@ -26,7 +26,7 @@ function RepoCard({
   const renameRepo = useMutation(api.repos[":repoId"].$patch, {
     onSuccess: () => {
       toast.success("Playground renamed");
-      onRenamed();
+      onRenamed?.();
     },
     onError: () => toast.error("Failed to rename playground"),
   });

@@ -31,7 +31,9 @@ i18n.use(initReactI18next).init({
 const queryClient = new QueryClient();
 
 const IndexPage = () => {
-  const isAuthenticated = !!authClient.useSession().data;
+  const session = authClient.useSession();
+  if (session.isPending) return null;
+  const isAuthenticated = !!session.data?.session;
   return isAuthenticated ? <BranchesPage /> : <NewPage />;
 };
 

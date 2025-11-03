@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { FeatureCardSkeleton } from "./card-skeleton";
 
 export const FeatureCardGrid = ({
@@ -5,7 +6,7 @@ export const FeatureCardGrid = ({
   empty,
 }: {
   children: React.ReactNode[] | undefined;
-  empty?: string;
+  empty?: ReactNode;
 }) =>
   children?.length === 0 ? (
     <p className="text-sm text-muted-foreground">{empty}</p>

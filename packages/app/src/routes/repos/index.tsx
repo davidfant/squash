@@ -75,7 +75,7 @@ export function ReposPage() {
       <SidebarInset>
         <SiteHeader title="Templates" />
         <main className="p-3">
-          <FeatureCardGrid
+          {/* <FeatureCardGrid
             children={orgRepos.data?.map((repo, index) => (
               <RepoCard
                 key={repo.id}
@@ -86,7 +86,7 @@ export function ReposPage() {
               />
             ))}
           />
-          <h2 className="text-lg mt-8 mb-4">Featured Templates</h2>
+          <h2 className="text-lg mt-8 mb-4">Featured Templates</h2> */}
           <FeatureCardGrid
             children={featuredRepos.data?.map((repo, index) => (
               <RepoCard key={repo.id} repo={repo} index={index} />

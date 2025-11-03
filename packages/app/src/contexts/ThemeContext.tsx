@@ -18,8 +18,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       return savedTheme;
     }
     // Fall back to system preference
-    // return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-    return "light";
+    return window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
+    // return "light";
   });
 
   // Apply theme to document

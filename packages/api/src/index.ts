@@ -5,31 +5,21 @@ import { logger as honoLogger } from "hono/logger";
 import { requestId } from "hono/request-id";
 import { OpenAI } from "openai";
 import z from "zod";
-import { authMiddleware } from "./auth/middleware";
 import { databaseMiddleware } from "./database/middleware";
 import { createSignedAndPublicUrl } from "./lib/cloudflare";
 import { logger } from "./lib/logger";
-import { authRouter } from "./routers/auth";
-import { githubRouter } from "./routers/integrations/github";
-import { invitesRouter } from "./routers/invites";
-import { organizationsRouter } from "./routers/organizations";
+import { repoBranchesRouter } from "./routers/branches";
 import { reposRouter } from "./routers/repos";
-import { repoBranchesRouter } from "./routers/repos/branches";
-import { repoProvidersRouter } from "./routers/repos/providers";
+import { clerkWebhookRouter } from "./routers/webhooks/clerk";
 
 const app = new Hono<{ Bindings: CloudflareBindings }>()
   .use("*", cors({ origin: process.env.APP_URL, credentials: true }))
   .use(requestId())
   .use(honoLogger())
   .use(databaseMiddleware)
-  .use(authMiddleware)
-  .route("/auth", authRouter)
-  .route("/repos/providers", repoProvidersRouter)
   .route("/branches", repoBranchesRouter)
-  .route("/organizations", organizationsRouter)
   .route("/repos", reposRouter)
-  .route("/invites", invitesRouter)
-  .route("/integrations/github", githubRouter)
+  .route("/webhooks/clerk", clerkWebhookRouter)
   .post(
     "/upload",
     zValidator("json", z.object({ filename: z.string() })),
@@ -75,5 +65,5 @@ const app = new Hono<{ Bindings: CloudflareBindings }>()
 export default app;
 export type AppType = typeof app;
 
-export type { MemberRole } from "./database/schema/auth";
 export { DaytonaSandboxManager } from "./sandbox/daytona/manager";
+export type { ClerkOrganizationRole as ClerkRole } from "./types";

@@ -15,7 +15,11 @@ export function BranchFeatureCard({
     title: string;
     imageUrl: string | null;
     createdAt: string;
-    createdBy: { name: string; image: string | null };
+    createdBy: {
+      firstName: string | null;
+      lastName: string | null;
+      imageUrl: string | null;
+    };
   };
   index: number;
   onDeleted: () => void;

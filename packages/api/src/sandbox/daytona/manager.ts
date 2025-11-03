@@ -474,7 +474,7 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
   }
 
   async getForkTasks(
-    forkOptions?: Sandbox.ForkOptions
+    forkOptions: Sandbox.ForkOptions
   ): Promise<Sandbox.Snapshot.Task.Any[]> {
     const [options, deployTasks] = await Promise.all([
       this.getOptions(),
@@ -575,15 +575,15 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
             throw new Error(`Branch not found: ${options.branch.id}`);
 
           await db.insert(schema.repo).values({
-            name: forkOptions?.name ?? branch.title,
-            private: repo.private,
+            name: forkOptions.name ?? branch.title,
+            public: repo.public,
             organizationId: repo.organizationId,
             gitUrl,
             // imageUrl: screenshot?.url,
             previewUrl: branch.deployment?.url,
             defaultBranch,
-            hidden: false,
             snapshot: repo.snapshot,
+            createdBy: forkOptions.userId,
             // suggestions,
           });
 

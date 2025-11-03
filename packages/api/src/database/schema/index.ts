@@ -1,3 +1,3 @@
-export * from "./auth";
 export * from "./messages";
 export * from "./repos";
+export * from "./user";

@@ -1,4 +1,3 @@
-import { authClient } from "@/auth/client";
 import { FeatureCard } from "@/components/blocks/feature/card";
 import { FeatureCardGrid } from "@/components/blocks/feature/grid";
 import { AppSidebar } from "@/components/layout/main/sidebar/app-sidebar";
@@ -6,6 +5,7 @@ import { SiteHeader } from "@/components/layout/main/sidebar/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { toast } from "@/components/ui/sonner";
 import { api, type QueryOutput, useMutation, useQuery } from "@/hooks/api";
+import { useAuth } from "@clerk/clerk-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { RepoDetailsDialog } from "./components/repo-details-dialog";
@@ -54,20 +54,20 @@ function RepoCard({
 export function ReposPage() {
   const navigate = useNavigate();
 
-  const isAuthenticated = !!authClient.useSession().data?.session;
+  const auth = useAuth();
   const orgRepos = useQuery(api.repos.$get, {
     params: {},
-    enabled: isAuthenticated,
+    enabled: auth.isSignedIn,
   });
-  const publicRepos = useQuery(api.repos.public.$get, { params: {} });
+  const featuredRepos = useQuery(api.repos.featured.$get, { params: {} });
   const { repoId } = useParams();
 
   const [currentRepo, setCurrentRepo] = useState<Repo>();
   useEffect(() => {
-    const allRepos = [...(orgRepos.data ?? []), ...(publicRepos.data ?? [])];
+    const allRepos = [...(orgRepos.data ?? []), ...(featuredRepos.data ?? [])];
     const repo = allRepos.find((r) => r.id === repoId);
     if (repo) setCurrentRepo(repo);
-  }, [repoId, orgRepos.data, publicRepos.data]);
+  }, [repoId, orgRepos.data, featuredRepos.data]);
 
   return (
     <SidebarProvider>
@@ -88,7 +88,7 @@ export function ReposPage() {
           />
           <h2 className="text-lg mt-8 mb-4">Featured Templates</h2>
           <FeatureCardGrid
-            children={publicRepos.data?.map((repo, index) => (
+            children={featuredRepos.data?.map((repo, index) => (
               <RepoCard key={repo.id} repo={repo} index={index} />
             ))}
           />

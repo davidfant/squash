@@ -56,7 +56,10 @@ const templates = {
 
 export type TemplateName = keyof typeof templates;
 
-export const TEMPLATE_NAMES = Object.keys(templates) as TemplateName[];
+export const TEMPLATE_NAMES = Object.keys(templates) as [
+  TemplateName,
+  ...TemplateName[]
+];
 
 interface ForkResult {
   id: string;

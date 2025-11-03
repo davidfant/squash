@@ -1,5 +1,10 @@
-import { ClerkLoaded, SignedIn, SignedOut } from "@clerk/clerk-react";
-import { Navigate, Outlet } from "react-router";
+import {
+  ClerkLoaded,
+  RedirectToSignIn,
+  SignedIn,
+  SignedOut,
+} from "@clerk/clerk-react";
+import { Outlet } from "react-router";
 
 export function RequireAuthGuard() {
   return (
@@ -8,7 +13,7 @@ export function RequireAuthGuard() {
         <Outlet />
       </SignedIn>
       <SignedOut>
-        <Navigate to="/login" replace />
+        <RedirectToSignIn redirectUrl={window.location.href} />
       </SignedOut>
     </ClerkLoaded>
   );

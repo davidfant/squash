@@ -10,8 +10,8 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
-import { organization, user } from "./auth";
 import { messageThread } from "./messages";
+import { user } from "./user";
 
 export const repoProviderType = pgEnum("repo_provider_type", ["github"]);
 export type RepoProviderType = InferEnum<typeof repoProviderType>;
@@ -58,26 +58,32 @@ export interface RepoSuggestion {
   color: RepoSuggestionColor;
 }
 
-export const repo = pgTable("repo", {
-  id: uuid().primaryKey().defaultRandom(),
-  previewUrl: text(),
-  imageUrl: text(),
-  gitUrl: text().notNull(),
-  name: text().notNull(),
-  suggestions: jsonb("suggestions").$type<RepoSuggestion[] | null>(),
-  snapshot: jsonb("snapshot").$type<Sandbox.Snapshot.Config.Any>().notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  deletedAt: timestamp("deleted_at"),
-  defaultBranch: text("default_branch").notNull(),
-  private: boolean("private").notNull(),
-  hidden: boolean("hidden").notNull().default(false),
-  providerId: uuid("provider_id").references(() => repoProvider.id),
-  externalId: text("external_id"),
-  organizationId: uuid("organization_id")
-    .notNull()
-    .references(() => organization.id),
-});
+export const repo = pgTable(
+  "repo",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    previewUrl: text(),
+    imageUrl: text(),
+    gitUrl: text().notNull(),
+    name: text().notNull(),
+    suggestions: jsonb("suggestions").$type<RepoSuggestion[] | null>(),
+    snapshot: jsonb("snapshot").$type<Sandbox.Snapshot.Config.Any>().notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    deletedAt: timestamp("deleted_at"),
+    defaultBranch: text("default_branch").notNull(),
+    public: boolean("public").notNull(),
+    // hidden: boolean("hidden").notNull().default(false),
+    organizationId: text("organization_id").notNull(),
+    createdBy: text("created_by")
+      .notNull()
+      .references(() => user.id),
+  },
+  (table) => [
+    index("repo_created_by_index").on(table.createdBy),
+    index("repo_organization_id_index").on(table.organizationId),
+  ]
+);
 
 export const repoBranch = pgTable(
   "repo_branch",
@@ -100,54 +106,17 @@ export const repoBranch = pgTable(
     repoId: uuid("repo_id")
       .notNull()
       .references(() => repo.id),
-    createdBy: uuid("created_by")
+    createdBy: text("created_by")
       .notNull()
       .references(() => user.id),
     // previewImageUrl: text("preview_image_url"),
   },
-  (table) => [index("workflow_thread_id_index").on(table.threadId)]
+  (table) => [
+    index("repo_branch_thread_id_index").on(table.threadId),
+    index("repo_branch_created_by_index").on(table.createdBy),
+    index("repo_branch_repo_id_index").on(table.repoId),
+  ]
 );
-
-export const repoProvider = pgTable("repo_provider", {
-  id: uuid().primaryKey().defaultRandom(),
-  type: repoProviderType("type").notNull(),
-  organizationId: uuid("organization_id")
-    .notNull()
-    .references(() => organization.id),
-  data: jsonb("data").$type<RepoProviderData>().notNull(),
-  // scopes: text("scopes").notNull(),
-  // token: text().notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-  deletedAt: timestamp("deleted_at"),
-});
-
-export const repoProviderVerification = pgTable("repo_provider_verification", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  type: repoProviderType("type").notNull(),
-  organizationId: uuid("organization_id")
-    .notNull()
-    .references(() => organization.id),
-  callbackUrl: text("callback_url"),
-});
-
-// export const repoDomain = pgTable("repo_domain", {
-//   id: uuid().primaryKey().defaultRandom(),
-//   repoId: uuid("repo_id")
-//     .notNull()
-//     .references(() => repo.id),
-//   url: text("url").notNull().unique(),
-//   createdAt: timestamp("created_at").defaultNow().notNull(),
-//   updatedAt: timestamp("updated_at").defaultNow().notNull(),
-//   deletedAt: timestamp("deleted_at"),
-// });
-
-export const repoRelations = relations(repo, ({ one }) => ({
-  provider: one(repoProvider, {
-    fields: [repo.providerId],
-    references: [repoProvider.id],
-  }),
-}));
 
 export const branchesRelations = relations(repoBranch, ({ one, many }) => ({
   thread: one(messageThread, {
@@ -159,8 +128,4 @@ export const branchesRelations = relations(repoBranch, ({ one, many }) => ({
 
 export const reposRelations = relations(repo, ({ many, one }) => ({
   branches: many(repoBranch),
-  organization: one(organization, {
-    fields: [repo.organizationId],
-    references: [organization.id],
-  }),
 }));

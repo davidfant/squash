@@ -1,4 +1,3 @@
-import { authClient } from "@/auth/client";
 import { FeatureCardGrid } from "@/components/blocks/feature/grid";
 import { RepoCard } from "@/components/blocks/feature/repo-card";
 import { ChatInput } from "@/components/layout/chat/input/ChatInput";
@@ -13,6 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/components/ui/sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { api, useMutation, useQuery } from "@/hooks/api";
+import { useAuth } from "@clerk/clerk-react";
 import { ArrowRightIcon } from "lucide-react";
 import { forwardRef, memo, useState } from "react";
 import { Link, useNavigate } from "react-router";
@@ -101,7 +101,7 @@ const popularToolkits: Array<{
 
 function Content() {
   const navigate = useNavigate();
-  const repos = useQuery(api.repos.public.$get, { params: {} });
+  const repos = useQuery(api.repos.featured.$get, { params: {} });
   const [toolkitId, setToolkitId] = useState<string | null>(null);
 
   console.log("public", repos.data);
@@ -117,32 +117,26 @@ function Content() {
     onError: () => toast.error("Failed to create repository"),
   });
 
-  const createBranch = useMutation(api.repos[":repoId"].branches.$post);
-
-  const isAuthenticated = !!authClient.useSession().data?.session;
+  const isSignedIn = useAuth().isSignedIn;
   const waitlist = useWaitlist();
   const handleSubmit = async (content: ChatInputValue) => {
-    if (isAuthenticated) {
+    if (isSignedIn) {
       const newRepo = await createRepo.mutateAsync({
         json: {
           template: "base-vite-trpc-cloudflare-worker-ts",
-          hidden: true,
+          message: {
+            parts: [
+              ...(content.text
+                ? [{ type: "text" as const, text: content.text }]
+                : []),
+              ...(content.files ?? []),
+            ],
+          },
         },
       });
 
-      const parts = [
-        ...(content.text
-          ? [{ type: "text" as const, text: content.text }]
-          : []),
-        ...(content.files ?? []),
-      ];
-      const branch = await createBranch.mutateAsync({
-        param: { repoId: newRepo.id },
-        json: { message: { parts } },
-      });
-
       setChatInitialValue({ text: "", files: [] });
-      navigate(`/apps/${branch.id}`);
+      navigate(`/apps/${newRepo.branches[0]!.id}`);
     } else {
       waitlist.setContext({ type: "chat", content });
     }
@@ -150,7 +144,7 @@ function Content() {
 
   return (
     <div className="relative">
-      {!isAuthenticated && (
+      {!isSignedIn && (
         <div className="absolute inset-0 opacity-20 blur-md will-change-auto 2xl:blur-2xl z-0">
           <FlowingGradientBackground scale={3} />
         </div>
@@ -175,11 +169,11 @@ function Content() {
                 <ChatInput
                   clearOnSubmit={false}
                   onSubmit={handleSubmit}
-                  submitting={createRepo.isPending || createBranch.isPending}
+                  submitting={createRepo.isPending}
                   minRows={3}
                   maxRows={10}
                   Textarea={TextareaWithPlaceholder as any}
-                  disabled={createRepo.isPending || createBranch.isPending}
+                  disabled={createRepo.isPending}
                 />
 
                 {/* <div className="mt-6 flex flex-wrap items-center justify-center gap-3">

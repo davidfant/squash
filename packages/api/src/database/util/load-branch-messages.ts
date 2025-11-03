@@ -5,7 +5,7 @@ import { and, asc, eq } from "drizzle-orm";
 export const loadBranchMessages = (
   db: Database,
   branchId: string,
-  userId: string
+  organizationId: string
 ) =>
   db
     .select({
@@ -21,12 +21,11 @@ export const loadBranchMessages = (
       schema.message,
       eq(schema.message.threadId, schema.repoBranch.threadId)
     )
-    .innerJoin(schema.repo, eq(schema.repo.id, schema.repoBranch.repoId))
-    .innerJoin(
-      schema.member,
-      eq(schema.repo.organizationId, schema.member.organizationId)
-    )
+    .innerJoin(schema.repo, eq(schema.repoBranch.repoId, schema.repo.id))
     .where(
-      and(eq(schema.repoBranch.id, branchId), eq(schema.member.userId, userId))
+      and(
+        eq(schema.repoBranch.id, branchId),
+        eq(schema.repo.organizationId, organizationId)
+      )
     )
     .orderBy(asc(schema.message.createdAt));

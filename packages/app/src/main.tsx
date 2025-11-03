@@ -4,6 +4,7 @@ import {
   ClerkProvider,
   SignedIn,
   SignedOut,
+  SignIn,
 } from "@clerk/clerk-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import i18n from "i18next";
@@ -17,11 +18,8 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import "./index.css";
 import resources from "./locales/default";
 import { RequireAuthGuard } from "./routes/auth/guard";
-import { InvitePage } from "./routes/auth/invite";
-import { LoginPage } from "./routes/auth/login";
 import { BranchesPage } from "./routes/branches";
 import { BranchPage } from "./routes/branches/details";
-import { NewBranchFromRepoPage } from "./routes/branches/new";
 import { ExtensionAuthPage } from "./routes/extension-auth";
 import { NewPage } from "./routes/new";
 import { ReposPage } from "./routes/repos";
@@ -65,24 +63,17 @@ createRoot(document.getElementById("root")!).render(
           debug: import.meta.env.MODE === "development",
         }}
       >
-        <SignedIn>
-          <PosthogIdentify />
-        </SignedIn>
+        <PosthogIdentify />
         <ThemeProvider>
           <QueryClientProvider client={queryClient}>
             <BrowserRouter>
               <Routes>
                 <Route path="/" element={<IndexPage />} />
                 <Route path="/new" element={<NewPage />} />
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/invite/:inviteId" element={<InvitePage />} />
+                <Route path="/sign-in" element={<SignIn />} />
 
                 <Route path="/templates" element={<ReposPage />} />
                 <Route path="/templates/:repoId" element={<ReposPage />} />
-                <Route
-                  path="/template/:repoId/new"
-                  element={<NewBranchFromRepoPage />}
-                />
                 <Route element={<RequireAuthGuard />}>
                   <Route
                     path="/extension-auth"

@@ -26,7 +26,11 @@ export const FeatureCard = ({
   title: string;
   imageUrl: string | null;
   subtitle?: ReactNode;
-  avatar?: { name: string; image: string | null };
+  avatar?: {
+    firstName: string | null;
+    lastName: string | null;
+    imageUrl: string | null;
+  };
   index: number;
   className?: string;
   onDelete?(): void;
@@ -45,7 +49,7 @@ export const FeatureCard = ({
         )}
         onClick={onClick}
       >
-        <div className="relative aspect-[3/2] rounded-lg overflow-hidden border-b border-b-muted">
+        <div className="relative aspect-3/2 rounded-lg overflow-hidden border-b border-b-muted">
           <div
             className="absolute inset-0 opacity-40 group-hover:opacity-50 transition-opacity"
             style={{
@@ -73,8 +77,10 @@ export const FeatureCard = ({
         <div className="flex gap-2 px-3 items-center h-10 relative">
           {!!avatar && (
             <Avatar
-              name={avatar?.name}
-              image={avatar?.image ?? undefined}
+              name={[avatar.firstName, avatar.lastName]
+                .filter(Boolean)
+                .join(" ")}
+              image={avatar.imageUrl ?? undefined}
               className="size-6"
             />
           )}

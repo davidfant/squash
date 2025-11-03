@@ -120,6 +120,7 @@ export namespace Sandbox {
 
   export interface ForkOptions {
     name?: string;
+    userId: string;
   }
 
   export namespace Manager {
@@ -131,7 +132,7 @@ export namespace Sandbox {
       start(): Promise<void>;
       waitUntilStarted(): Promise<void>;
       deploy(): Promise<void>;
-      fork(options?: ForkOptions): Promise<void>;
+      fork(options: ForkOptions): Promise<void>;
       getPreviewUrl(): Promise<string>;
       execute(
         request: Exec.Request,

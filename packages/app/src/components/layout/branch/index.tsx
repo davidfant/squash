@@ -1,11 +1,5 @@
-import { useRef, useState } from "react";
-
-import { authClient } from "@/auth/client";
-import { RequireRole } from "@/auth/RequireRole";
 import { useBranchContext } from "@/components/layout/branch/context";
 import { BranchHeader } from "@/components/layout/branch/header";
-import { InviteButton } from "@/components/layout/branch/header/InviteButton";
-import { ShareButton } from "@/components/layout/branch/header/ShareButton";
 import { BranchTabContent } from "@/components/layout/branch/main-content";
 import { ChatThread } from "@/components/layout/chat/ChatThread";
 import { ChatProvider } from "@/components/layout/chat/context";
@@ -18,19 +12,20 @@ import {
 import { Tabs } from "@/components/ui/tabs";
 import { api, useQuery } from "@/hooks/api";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@clerk/clerk-react";
 import type { ChatMessage } from "@squashai/api/agent/types";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { useRef, useState } from "react";
 import type { ImperativePanelHandle } from "react-resizable-panels";
 import { ChatInputProvider } from "../chat/input/context";
-import { ForkButton } from "./header/ForkButton";
 
 export function BranchLayout({ branchId }: { branchId: string }) {
   const { branch, setPreviewSha } = useBranchContext();
 
-  const session = authClient.useSession();
+  const { isSignedIn } = useAuth();
   const threadMessages = useQuery(api.branches[":branchId"].messages.$get, {
     params: { branchId },
-    enabled: !!session.data?.user,
+    enabled: isSignedIn,
   });
 
   const chatPanelRef = useRef<ImperativePanelHandle>(null);
@@ -84,17 +79,17 @@ export function BranchLayout({ branchId }: { branchId: string }) {
                   <span className="sr-only">Toggle chat thread</span>
                 </Button>
               }
-              extra={
-                <div className="flex items-center gap-2">
-                  <RequireRole roles={["admin", "owner"]}>
-                    <ForkButton />
-                  </RequireRole>
-                  <RequireRole roles={["admin", "owner"]}>
-                    <InviteButton />
-                  </RequireRole>
-                  <ShareButton />
-                </div>
-              }
+              // extra={
+              //   <div className="flex items-center gap-2">
+              //     <RequireRole roles={["admin", "owner"]}>
+              //       <ForkButton />
+              //     </RequireRole>
+              //     <RequireRole roles={["admin", "owner"]}>
+              //       <InviteButton />
+              //     </RequireRole>
+              //     <ShareButton />
+              //   </div>
+              // }
             />
             <ResizablePanelGroup
               direction="horizontal"

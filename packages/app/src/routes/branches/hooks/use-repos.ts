@@ -1,15 +1,15 @@
-import { authClient } from "@/auth/client";
 import { useChatInputContext } from "@/components/layout/chat/input/context";
 import { api, useQuery } from "@/hooks/api";
+import { useAuth } from "@clerk/clerk-react";
 import { useMemo } from "react";
 import { useLocalStorage } from "usehooks-ts";
 
 export function useRepos() {
   const repos = useQuery(api.repos.$get, { params: {} });
   const input = useChatInputContext();
-  const activeOrg = authClient.useActiveOrganization();
+  const auth = useAuth();
   const [currentRepoId, setCurrentRepoId] = useLocalStorage<string | null>(
-    `lp.${activeOrg.data?.id}.currentRepoId`,
+    `lp.${auth.orgId}.currentRepoId`,
     null
   );
 

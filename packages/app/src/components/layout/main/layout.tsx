@@ -1,5 +1,5 @@
-import { authClient } from "@/auth/client";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { SignedIn, SignedOut, useAuth } from "@clerk/clerk-react";
 import { type ReactNode } from "react";
 import { MainHeader } from "./header";
 import { AppSidebar } from "./sidebar/app-sidebar";
@@ -13,12 +13,11 @@ export function MainLayout({
   children: ReactNode;
   title?: string;
 }) {
-  const session = authClient.useSession();
-  const isAuthenticated = !!session.data?.session;
-  if (session.isPending) return null;
+  const isSignedIn = useAuth().isSignedIn;
+  if (isSignedIn === undefined) return null;
   return (
     <WaitlistProvider>
-      {isAuthenticated ? (
+      <SignedIn>
         <SidebarProvider>
           <AppSidebar variant="inset" />
           <SidebarInset>
@@ -26,12 +25,11 @@ export function MainLayout({
             {children}
           </SidebarInset>
         </SidebarProvider>
-      ) : (
-        <>
-          <MainHeader />
-          {children}
-        </>
-      )}
+      </SignedIn>
+      <SignedOut>
+        <MainHeader />
+        {children}
+      </SignedOut>
     </WaitlistProvider>
   );
 }

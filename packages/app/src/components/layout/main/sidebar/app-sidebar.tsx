@@ -5,15 +5,16 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarHeader,
+  SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { OrganizationSwitcher } from "@clerk/clerk-react";
 import { BoxIcon, LayoutTemplateIcon, Plus } from "lucide-react";
 import * as React from "react";
 import { Link, useLocation } from "react-router";
 import { RecentBranchesSidebarGroup } from "./groups/recent-branches";
 import { NavUser } from "./nav-user";
-import { OrganizationSwitcher } from "./organization-switcher";
 
 // Move navMainItems inside the component so it can access selectedRepoId
 
@@ -23,7 +24,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <OrganizationSwitcher />
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <OrganizationSwitcher />
+          </SidebarMenuItem>
+        </SidebarMenu>
         <Link to="/new">
           <Button className="w-full">
             <Plus />

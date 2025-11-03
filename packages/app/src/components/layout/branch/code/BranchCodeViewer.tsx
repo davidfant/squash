@@ -201,7 +201,7 @@ export function BranchCodeViewer() {
     path: null,
   });
 
-  const filesQuery = useQuery(api.branches[":branchId"].fs.$get, {
+  const filesQuery = useQuery(api.branches[":branchId"].preview.fs.$get, {
     params: { branchId: branch.id },
   });
 
@@ -247,7 +247,7 @@ export function BranchCodeViewer() {
 
     const load = async () => {
       try {
-        const res = await api.branches[":branchId"].fs.content.$get({
+        const res = await api.branches[":branchId"].preview.fs.content.$get({
           param: { branchId: branch.id },
           query: { path: target },
         });

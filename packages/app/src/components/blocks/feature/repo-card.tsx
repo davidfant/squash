@@ -1,11 +1,10 @@
 import { RepoDetailsDialog } from "@/routes/repos/components/repo-details-dialog";
-import { useState, type MouseEventHandler } from "react";
+import { useState } from "react";
 import { FeatureCard } from "./card";
 
 export function RepoCard({
   repo,
   index,
-  onStartBuilding,
 }: {
   repo: {
     id: string;
@@ -14,7 +13,6 @@ export function RepoCard({
     previewUrl: string | null;
   };
   index: number;
-  onStartBuilding: MouseEventHandler<HTMLButtonElement>;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -27,12 +25,7 @@ export function RepoCard({
         className="cursor-pointer"
         onClick={() => setOpen(true)}
       />
-      <RepoDetailsDialog
-        repo={repo}
-        open={open}
-        onOpenChange={setOpen}
-        onNew={onStartBuilding}
-      />
+      <RepoDetailsDialog repo={repo} open={open} onOpenChange={setOpen} />
     </>
   );
 }

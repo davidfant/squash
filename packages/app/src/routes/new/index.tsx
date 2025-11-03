@@ -6,14 +6,14 @@ import {
   type ChatInputValue,
 } from "@/components/layout/chat/input/context";
 import { MainLayout } from "@/components/layout/main/layout";
-import { useWaitlist } from "@/components/layout/main/waitlist-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/components/ui/sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { api, useMutation, useQuery } from "@/hooks/api";
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth, useClerk } from "@clerk/clerk-react";
 import { ArrowRightIcon } from "lucide-react";
+import { usePostHog } from "posthog-js/react";
 import { forwardRef, memo, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { useLocalStorage } from "usehooks-ts";
@@ -118,7 +118,8 @@ function Content() {
   });
 
   const isSignedIn = useAuth().isSignedIn;
-  const waitlist = useWaitlist();
+  const posthog = usePostHog();
+  const clerk = useClerk();
   const handleSubmit = async (content: ChatInputValue) => {
     if (isSignedIn) {
       const newRepo = await createRepo.mutateAsync({
@@ -138,7 +139,9 @@ function Content() {
       setChatInitialValue({ text: "", files: [] });
       navigate(`/apps/${newRepo.branches[0]!.id}`);
     } else {
-      waitlist.setContext({ type: "chat", content });
+      posthog?.capture("on_submit_unauthed_chat_input", { content });
+      clerk.openWaitlist();
+      // TODO: open sign in modal
     }
   };
 
@@ -225,16 +228,7 @@ function Content() {
               </Suggestions> */}
               <FeatureCardGrid
                 children={repos.data?.map((repo, index) => (
-                  <RepoCard
-                    key={repo.id}
-                    repo={repo}
-                    index={index}
-                    onStartBuilding={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      waitlist.setContext({ type: "repo", repo });
-                    }}
-                  />
+                  <RepoCard key={repo.id} repo={repo} index={index} />
                 ))}
               />
             </CardContent>

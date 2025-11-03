@@ -6,13 +6,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import type { MouseEventHandler } from "react";
+import { SignedIn, SignedOut, SignUpButton } from "@clerk/clerk-react";
 import { Link, useNavigate } from "react-router";
 
 export function RepoDetailsDialog({
   repo,
   open,
-  onNew,
   onOpenChange,
 }: {
   repo: {
@@ -22,7 +21,6 @@ export function RepoDetailsDialog({
     previewUrl: string | null;
   };
   open: boolean;
-  onNew?: MouseEventHandler<HTMLButtonElement>;
   onOpenChange(open: boolean): void;
 }) {
   const navigate = useNavigate();
@@ -39,9 +37,16 @@ export function RepoDetailsDialog({
       >
         <DialogHeader className="p-4 pb-0 flex-row items-center justify-between">
           <DialogTitle className="pl-1">{repo.name}</DialogTitle>
-          <Link to={`/templates/${repo.id}/new`}>
-            <Button onClick={onNew}>Use Template</Button>
-          </Link>
+          <SignedIn>
+            <Link to={`/templates/${repo.id}/new`}>
+              <Button>Use Template</Button>
+            </Link>
+          </SignedIn>
+          <SignedOut>
+            <SignUpButton mode="modal">
+              <Button variant="outline">Log In</Button>
+            </SignUpButton>
+          </SignedOut>
         </DialogHeader>
 
         <div className="p-4 pt-0 flex-1 overflow-y-auto">

@@ -272,10 +272,13 @@ const repoBranchRouter = new Hono<{
       const { branchId } = c.req.valid("param");
       const sandbox = c.env.DAYTONA_SANDBOX_MANAGER.getByName(branchId);
 
+      const stopAgentPromise = sandbox.stopAgent();
+
       const allMessages = await loadBranchMessages(db, branchId, user.id);
       const messages = resolveMessageThreadHistory(allMessages, body.messageId);
 
-      sandbox.stopAgent();
+      await stopAgentPromise;
+
       logger.info("Restoring version from API request");
       await sandbox.restoreVersion(messages);
       return c.json({ success: true });

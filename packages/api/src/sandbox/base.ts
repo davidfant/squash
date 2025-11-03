@@ -363,11 +363,18 @@ export abstract class BaseSandboxManagerDurableObject<
     });
   }
 
-  stopAgent() {
+  async stopAgent() {
     if (!this.handles.agent.active) {
       logger.debug("Agent is not active, skipping stop");
       return;
     }
+
+    const waitForStream = this.handles.agent.promise.catch((error) => {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+      throw error;
+    });
 
     logger.info("Stopping agent");
     this.handles.agent.controller.abort(
@@ -379,6 +386,7 @@ export abstract class BaseSandboxManagerDurableObject<
     );
 
     this.handles.agent.active = false;
+    await waitForStream;
   }
 
   private async consumeStream(

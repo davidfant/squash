@@ -156,7 +156,7 @@ export namespace Sandbox {
         branchId: string;
         restoreVersion: boolean;
       }): Promise<void>;
-      stopAgent(): void;
+      stopAgent(): Promise<void>;
       listenToAgent(): Response;
       listenToStart(): Response;
       listenToDeploy(): Response;

@@ -15,11 +15,13 @@ type Repo = QueryOutput<typeof api.repos.$get>[number];
 function RepoCard({
   repo,
   index,
+  editable,
   onRenamed,
 }: {
   repo: Repo;
   index: number;
-  onRenamed: () => void;
+  editable?: boolean;
+  onRenamed?: () => void;
 }) {
   const renameRepo = useMutation(api.repos[":repoId"].$patch, {
     onSuccess: () => {
@@ -35,8 +37,14 @@ function RepoCard({
         imageUrl={repo.imageUrl}
         index={index}
         className="cursor-pointer"
-        onEdit={(name) =>
-          renameRepo.mutateAsync({ param: { repoId: repo.id }, json: { name } })
+        onEdit={
+          editable
+            ? (name) =>
+                renameRepo.mutateAsync({
+                  param: { repoId: repo.id },
+                  json: { name },
+                })
+            : undefined
         }
       />
     </Link>
@@ -73,6 +81,7 @@ export function ReposPage() {
                 key={repo.id}
                 repo={repo}
                 index={index}
+                editable
                 onRenamed={() => orgRepos.refetch()}
               />
             ))}
@@ -80,12 +89,7 @@ export function ReposPage() {
           <h2 className="text-lg mt-8 mb-4">Featured Templates</h2>
           <FeatureCardGrid
             children={publicRepos.data?.map((repo, index) => (
-              <RepoCard
-                key={repo.id}
-                repo={repo}
-                index={index}
-                onRenamed={() => orgRepos.refetch()}
-              />
+              <RepoCard key={repo.id} repo={repo} index={index} />
             ))}
           />
         </main>

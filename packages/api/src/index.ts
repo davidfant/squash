@@ -68,4 +68,4 @@ export default app;
 export type AppType = typeof app;
 
 export { DaytonaSandboxManager } from "./sandbox/daytona/manager";
-export type { ClerkOrganizationRole as ClerkRole } from "./types";
+export type { ClerkOrganizationRole } from "./types";

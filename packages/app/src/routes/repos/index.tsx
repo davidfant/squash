@@ -1,8 +1,6 @@
 import { FeatureCard } from "@/components/blocks/feature/card";
 import { FeatureCardGrid } from "@/components/blocks/feature/grid";
-import { AppSidebar } from "@/components/layout/main/sidebar/app-sidebar";
-import { SiteHeader } from "@/components/layout/main/sidebar/site-header";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { MainLayout } from "@/components/layout/main/layout";
 import { toast } from "@/components/ui/sonner";
 import { api, type QueryOutput, useMutation, useQuery } from "@/hooks/api";
 import { useAuth } from "@clerk/clerk-react";
@@ -70,12 +68,8 @@ export function ReposPage() {
   }, [repoId, orgRepos.data, featuredRepos.data]);
 
   return (
-    <SidebarProvider>
-      <AppSidebar variant="inset" />
-      <SidebarInset>
-        <SiteHeader title="Templates" />
-        <main className="p-3">
-          {/* <FeatureCardGrid
+    <MainLayout title="Templates">
+      {/* <FeatureCardGrid
             children={orgRepos.data?.map((repo, index) => (
               <RepoCard
                 key={repo.id}
@@ -87,15 +81,11 @@ export function ReposPage() {
             ))}
           />
           <h2 className="text-lg mt-8 mb-4">Featured Templates</h2> */}
-          <FeatureCardGrid
-            children={featuredRepos.data?.map((repo, index) => (
-              <RepoCard key={repo.id} repo={repo} index={index} />
-            ))}
-          />
-        </main>
-      </SidebarInset>
-
-      {/* Dialog is always rendered once we have repo data, but open state is controlled by URL */}
+      <FeatureCardGrid
+        children={featuredRepos.data?.map((repo, index) => (
+          <RepoCard key={repo.id} repo={repo} index={index} />
+        ))}
+      />
       {currentRepo && (
         <RepoDetailsDialog
           repo={currentRepo}
@@ -103,6 +93,6 @@ export function ReposPage() {
           onOpenChange={() => navigate("/templates")}
         />
       )}
-    </SidebarProvider>
+    </MainLayout>
   );
 }

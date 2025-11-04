@@ -50,7 +50,7 @@ const TextareaWithPlaceholder = memo(
         />
         {showPlaceholder && (
           <div
-            className="absolute inset-0 pointer-events-none flex items-start px-3 py-2 text-muted-foreground text-sm"
+            className="absolute inset-0 pointer-events-none flex flex-wrap items-start px-3 py-2 text-muted-foreground text-sm"
             aria-hidden="true"
           >
             {placeholder}
@@ -153,7 +153,7 @@ function Content() {
         </div>
       )}
       <div className="relative z-1">
-        <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-6 py-24 gap-32">
+        <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-2 md:px-6 py-24 gap-32">
           <section className="flex flex-col items-center gap-12 text-center">
             {/* <Badge variant="secondary" className="px-3 py-1.5 rounded-full">
             Build anything with AI

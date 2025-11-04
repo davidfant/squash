@@ -83,7 +83,7 @@ export function usePlaceholder() {
         <span
           key={index}
           className={cn(
-            "transition-opacity duration-500 whitespace-pre",
+            "transition-opacity duration-500 whitespace-pre shrink-0",
             index < charIndex ? "opacity-100" : "opacity-0"
           )}
         >

@@ -25,10 +25,14 @@ export function messageToStreamPart(
 ) {
   const usesJsonResponseTool = false;
   const contentBlocks: Record<
-    string,
+    number,
     | { type: "text" }
     | { type: "reasoning" }
     | { type: "tool-call"; toolCallId: string; toolName: string; input: string }
+  > = {};
+  const subagentToolCalls: Record<
+    string,
+    { id: string; toolName: string; input: string }
   > = {};
 
   const usage: LanguageModelV2Usage = {
@@ -50,9 +54,8 @@ export function messageToStreamPart(
           switch (part.type) {
             case "tool_use": {
               const id = String(part.id);
-              contentBlocks[part.id] = {
-                type: "tool-call",
-                toolCallId: part.id,
+              subagentToolCalls[part.id] = {
+                id: part.id,
                 toolName: toToolName(part.name),
                 input: "",
               };
@@ -70,9 +73,11 @@ export function messageToStreamPart(
               break;
             }
             case "tool_result": {
-              const tc = Object.values(contentBlocks)
-                .filter((cb) => cb.type === "tool-call")
-                .find((cb) => cb.toolCallId === part.tool_use_id);
+              const tc =
+                subagentToolCalls[part.tool_use_id] ??
+                Object.values(contentBlocks)
+                  .filter((cb) => cb.type === "tool-call")
+                  .find((cb) => cb.toolCallId === part.tool_use_id);
               if (!tc) {
                 console.error("Received tool result for unknown tool call", {
                   contentBlocks,
@@ -168,7 +173,6 @@ export function messageToStreamPart(
                   toolCallId: value.content_block.id,
                   toolName: toToolName(value.content_block.name),
                   input: "",
-                  // providerExecuted: true,
                 };
                 controller.enqueue({
                   type: "tool-input-start",
@@ -275,35 +279,22 @@ export function messageToStreamPart(
         case "content_block_stop": {
           // when finishing a tool call block, send the full tool call:
           const contentBlock = contentBlocks[value.index];
-          if (contentBlock) {
-            switch (contentBlock.type) {
-              case "text": {
-                controller.enqueue({
-                  type: "text-end",
-                  id: String(value.index),
-                });
-                break;
-              }
-
-              case "reasoning": {
-                controller.enqueue({
-                  type: "reasoning-end",
-                  id: String(value.index),
-                });
-                break;
-              }
-
-              case "tool-call":
-                // when a json response tool is used, the tool call is returned as text,
-                // so we ignore the tool call content:
-                if (!usesJsonResponseTool) {
-                  controller.enqueue({
-                    type: "tool-input-end",
-                    id: contentBlock.toolCallId,
-                  });
-                  controller.enqueue(contentBlock);
-                }
-                break;
+          if (contentBlock?.type === "text") {
+            controller.enqueue({
+              type: "text-end",
+              id: String(value.index),
+            });
+          } else if (contentBlock?.type === "reasoning") {
+            controller.enqueue({
+              type: "reasoning-end",
+              id: String(value.index),
+            });
+          } else if (contentBlock?.type === "tool-call") {
+            if (!usesJsonResponseTool) {
+              controller.enqueue({
+                type: "tool-input-end",
+                id: contentBlock.toolCallId,
+              });
             }
           }
 
@@ -359,28 +350,23 @@ export function messageToStreamPart(
               const contentBlock = contentBlocks[value.index];
               const delta = value.delta.partial_json;
 
-              if (usesJsonResponseTool) {
-                if (contentBlock?.type !== "text") {
-                  return;
+              if (contentBlock?.type === "text") {
+                if (usesJsonResponseTool) {
+                  controller.enqueue({
+                    type: "text-delta",
+                    id: String(value.index),
+                    delta,
+                  });
                 }
-
-                controller.enqueue({
-                  type: "text-delta",
-                  id: String(value.index),
-                  delta,
-                });
-              } else {
-                if (contentBlock?.type !== "tool-call") {
-                  return;
+              } else if (contentBlock?.type === "tool-call") {
+                if (!usesJsonResponseTool) {
+                  controller.enqueue({
+                    type: "tool-input-delta",
+                    id: contentBlock.toolCallId,
+                    delta,
+                  });
+                  contentBlock.input += delta;
                 }
-
-                controller.enqueue({
-                  type: "tool-input-delta",
-                  id: contentBlock.toolCallId,
-                  delta,
-                });
-
-                contentBlock.input += delta;
               }
 
               return;

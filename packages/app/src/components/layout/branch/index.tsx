@@ -1,5 +1,5 @@
 import { useBranchContext } from "@/components/layout/branch/context";
-import { BranchHeader } from "@/components/layout/branch/header";
+import { BranchHeader } from "@/components/layout/branch/header/branch-header";
 import { BranchTabContent } from "@/components/layout/branch/main-content";
 import { ChatThread } from "@/components/layout/chat/ChatThread";
 import { ChatProvider } from "@/components/layout/chat/context";

@@ -1,11 +1,22 @@
 import { cn } from "@/lib/utils";
-import { useRef } from "react";
+import { SquashIframeBridge } from "@squashai/iframe-bridge";
+import { useEffect, useRef } from "react";
 import { useBranchContext } from "../context";
 import { BranchPreviewConsole } from "./console";
 
-export function BranchPreview({ className }: { className?: string }) {
-  const { screenSize, previewPath, previewUrl } = useBranchContext();
+const Iframe = () => {
+  const { screenSize, preview } = useBranchContext();
   const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  useEffect(() => {
+    const window = iframeRef.current?.contentWindow;
+    if (!window) return;
+    const bridge = new SquashIframeBridge(window, {
+      debug: import.meta.env.MODE === "development",
+    });
+    bridge.on("navigate", (p) => preview.setCurrentPath(p.path));
+    return () => bridge.dispose();
+  }, [iframeRef.current?.contentWindow]);
 
   const getPreviewWidth = () => {
     if (screenSize === "desktop") return "w-full";
@@ -13,18 +24,26 @@ export function BranchPreview({ className }: { className?: string }) {
     if (screenSize === "mobile") return "w-[375px]";
   };
 
-  if (!previewUrl) return null;
+  return (
+    <iframe
+      ref={iframeRef}
+      key={preview.refreshKey}
+      src={`${preview.url}${preview.initialPath}`}
+      className={cn(
+        "flex-1 mx-auto transition-all duration-300 z-2",
+        getPreviewWidth()
+      )}
+      allow="microphone; speech-recognition; on-device-speech-recognition; clipboard-read; clipboard-write;"
+    />
+  );
+};
+
+export function BranchPreview({ className }: { className?: string }) {
+  const { preview } = useBranchContext();
+  if (!preview.url) return null;
   return (
     <div className={cn("flex flex-col", className)}>
-      <iframe
-        ref={iframeRef}
-        src={`${previewUrl}${previewPath}`}
-        className={cn(
-          "flex-1 mx-auto transition-all duration-300 z-2",
-          getPreviewWidth()
-        )}
-        allow="microphone; speech-recognition; on-device-speech-recognition; clipboard-read; clipboard-write;"
-      />
+      <Iframe />
       <BranchPreviewConsole />
     </div>
   );

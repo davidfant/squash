@@ -108,9 +108,11 @@ export abstract class BaseSandboxManagerDurableObject<
   }
 
   async start(): Promise<void> {
+    logger.debug("Starting sandbox", { name: this.name });
+    const tasks = await this.getStartTasks();
     await this.state.blockConcurrencyWhile(async () => {
       if (!this.handles.start.active && !(await this.isStarted())) {
-        const tasks = await this.getStartTasks();
+        logger.debug("Starting new agent run because no run is active");
         const controller = new AbortController();
 
         const start: Handle = {
@@ -135,11 +137,11 @@ export abstract class BaseSandboxManagerDurableObject<
 
   async deploy(): Promise<void> {
     await this.waitUntilStarted();
+    const tasks = await this.getDeployTasks();
 
     await this.state.blockConcurrencyWhile(async () => {
       if (this.handles.deploy.active) return;
 
-      const tasks = await this.getDeployTasks();
       const controller = new AbortController();
       const deploy: Handle = {
         type: "deploy",

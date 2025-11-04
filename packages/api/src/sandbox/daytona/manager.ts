@@ -874,9 +874,9 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
       target.hostname.split(".")[0],
       ".",
       proxy.host,
-      target.pathname,
-      target.search,
-      target.hash,
+      // target.pathname,
+      // target.search,
+      // target.hash,
     ].join("");
   }
 

@@ -1,3 +1,4 @@
+import { SquashProvider } from "@squashai/iframe-bridge";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink } from "@trpc/client";
 import { StrictMode, useState } from "react";
@@ -15,16 +16,18 @@ function Root() {
   );
 
   return (
-    <trpc.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<App />} />
-          </Routes>
-          <Toaster />
-        </BrowserRouter>
-      </QueryClientProvider>
-    </trpc.Provider>
+    <SquashProvider debug={import.meta.env.MODE === "development"}>
+      <trpc.Provider client={trpcClient} queryClient={queryClient}>
+        <QueryClientProvider client={queryClient}>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<App />} />
+            </Routes>
+            <Toaster />
+          </BrowserRouter>
+        </QueryClientProvider>
+      </trpc.Provider>
+    </SquashProvider>
   );
 }
 

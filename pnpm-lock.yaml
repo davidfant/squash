@@ -300,6 +300,9 @@ importers:
       '@squashai/api':
         specifier: workspace:*
         version: link:../api
+      '@squashai/iframe-bridge':
+        specifier: workspace:*
+        version: link:../iframe-bridge
       '@tanstack/react-query':
         specifier: ^5.83.0
         version: 5.90.2(react@19.2.0)
@@ -465,11 +468,21 @@ importers:
         specifier: ~5.8.3
         version: 5.8.3
 
-  packages/deployment-proxy:
+  packages/iframe-bridge:
+    dependencies:
+      html2canvas-pro:
+        specifier: ^1.5.11
+        version: 1.5.11
+      react:
+        specifier: ^19.2.0
+        version: 19.2.0
     devDependencies:
-      wrangler:
-        specifier: ^4.43.0
-        version: 4.43.0(@cloudflare/workers-types@4.20251004.0)
+      '@types/react':
+        specifier: ^19.2.0
+        version: 19.2.0
+      typescript:
+        specifier: ~5.8.3
+        version: 5.8.3
 
   packages/mcp-composio:
     dependencies:

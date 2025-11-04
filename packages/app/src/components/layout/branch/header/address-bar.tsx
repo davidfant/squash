@@ -6,25 +6,26 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { MonitorSmartphone, RotateCw, Smartphone, Tablet } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { getNextScreenSize, useBranchContext } from "../context";
 
-export function PreviewAddressBar() {
+export function AddressBar() {
   const { t } = useTranslation("branch");
-  const { previewPath, setPreviewPath, screenSize, setScreenSize, branch } =
-    useBranchContext();
-  const [inputValue, setInputValue] = useState(previewPath || "/");
+  const { preview, screenSize, setScreenSize } = useBranchContext();
+  const [inputValue, setInputValue] = useState(preview.currentPath);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
-      setPreviewPath(inputValue);
+      preview.setInitialPath(inputValue);
+      preview.refresh();
       (e.currentTarget as HTMLInputElement).blur();
     } else if (e.key === "Escape") {
-      setInputValue(previewPath || "/");
+      setInputValue(preview.currentPath);
       (e.currentTarget as HTMLInputElement).blur();
     }
   };
+  useEffect(() => setInputValue(preview.currentPath), [preview.currentPath]);
 
   const screenSizeIcons = {
     mobile: <Smartphone />,
@@ -61,7 +62,7 @@ export function PreviewAddressBar() {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            onBlur={() => setPreviewPath(inputValue)}
+            onBlur={() => preview.setInitialPath(inputValue)}
           />
         </TooltipTrigger>
         <TooltipContent>{t("addressBar.path.tooltip")}</TooltipContent>
@@ -69,11 +70,7 @@ export function PreviewAddressBar() {
 
       <Tooltip>
         <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => alert("TODO: refresh")}
-          >
+          <Button variant="ghost" size="sm" onClick={preview.refresh}>
             <RotateCw />
           </Button>
         </TooltipTrigger>

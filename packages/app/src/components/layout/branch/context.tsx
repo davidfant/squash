@@ -20,11 +20,18 @@ export interface BranchContextValue {
   setScreenSize(size: ScreenSize): void;
   toggleScreenSize(): void;
 
-  previewUrl: string | null;
-  previewSha: string | null;
-  setPreviewSha(sha: string): void;
-  previewPath: string;
-  setPreviewPath(path: string): void;
+  preview: {
+    url: string | null;
+    sha: string | null;
+    setSha(sha: string): void;
+    initialPath: string;
+    currentPath: string;
+    setInitialPath(path: string): void;
+    setCurrentPath(path: string): void;
+    refreshKey: number;
+    refresh(): void;
+  };
+
   restoreVersion(messageId: string): Promise<void>;
   refetch(): Promise<unknown>;
 }
@@ -34,11 +41,17 @@ const BranchContext = createContext<BranchContextValue>({
   screenSize: "desktop",
   setScreenSize: () => {},
   toggleScreenSize: () => {},
-  previewUrl: null,
-  previewSha: null,
-  previewPath: "",
-  setPreviewSha: () => {},
-  setPreviewPath: () => {},
+  preview: {
+    url: null,
+    sha: null,
+    setSha: () => {},
+    initialPath: "/",
+    currentPath: "/",
+    setInitialPath: () => {},
+    setCurrentPath: () => {},
+    refreshKey: 0,
+    refresh: () => {},
+  },
   restoreVersion: () => Promise.resolve(),
   refetch: () => Promise.resolve(),
 });
@@ -59,8 +72,10 @@ export const BranchContextProvider = ({
     params: { branchId },
   });
   const [screenSize, setScreenSize] = useState<ScreenSize>("desktop");
-  const [previewPath, setPreviewPath] = useState("");
-  const [previewSha, setPreviewSha] = useState<string | null>(null);
+  const [initialPath, setInitialPath] = useState("/");
+  const [currentPath, setCurrentPath] = useState("/");
+  const [sha, setSha] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const isVisible = usePageInView();
   const previewUrl =
@@ -76,7 +91,7 @@ export const BranchContextProvider = ({
   });
   useEffect(() => {
     if (upstreamSha.data?.sha) {
-      setPreviewSha(upstreamSha.data.sha);
+      setSha(upstreamSha.data.sha);
     }
   }, [upstreamSha.data?.sha]);
 
@@ -94,11 +109,17 @@ export const BranchContextProvider = ({
         screenSize,
         setScreenSize,
         toggleScreenSize,
-        previewPath,
-        previewUrl,
-        previewSha,
-        setPreviewSha,
-        setPreviewPath,
+        preview: {
+          url: previewUrl,
+          sha,
+          setSha,
+          initialPath,
+          currentPath,
+          setInitialPath,
+          setCurrentPath,
+          refreshKey,
+          refresh: () => setRefreshKey(refreshKey + 1),
+        },
         restoreVersion: async (messageId) => {
           await restoreVersion.mutateAsync({
             param: { branchId },

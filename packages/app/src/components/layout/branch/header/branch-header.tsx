@@ -1,6 +1,7 @@
 import { LogoIcon } from "@/components/Logo";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "react-router";
+import { AddressBar } from "./address-bar";
 
 export function BranchHeader({
   title,
@@ -25,6 +26,7 @@ export function BranchHeader({
         <TabsTrigger value="preview">Preview</TabsTrigger>
         <TabsTrigger value="code">Code</TabsTrigger>
       </TabsList>
+      <AddressBar />
 
       {extra}
     </header>

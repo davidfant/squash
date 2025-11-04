@@ -1,7 +1,6 @@
 import type { Database } from "@/database";
 import * as schema from "@/database/schema";
 import {
-  loadAuth,
   requireAuth,
   requireRepoBranch,
   requireRole,
@@ -19,7 +18,7 @@ const repoBranchRouter = new Hono<{
   Variables: { db: Database; auth: AuthObject };
 }>()
   .use(zValidator("param", z.object({ branchId: z.uuid() })))
-  .use(requireRepoBranch)
+  .use(requireAuth, requireRepoBranch)
   .route("/preview", repoBranchPreviewRouter)
   .route("/messages", repoBranchMessagesRouter)
   .get(
@@ -27,20 +26,21 @@ const repoBranchRouter = new Hono<{
     zValidator("param", z.object({ branchId: z.uuid() })),
     async (c) => {
       const { branchId } = c.req.valid("param");
-      const auth = c.get("auth");
+      const organizationId = c.get("organizationId");
       const branch = await c
         .get("db")
         .select({
           id: schema.repoBranch.id,
           title: schema.repoBranch.title,
           deployment: schema.repoBranch.deployment,
+          repo: { id: schema.repo.id, name: schema.repo.name },
         })
         .from(schema.repoBranch)
         .innerJoin(schema.repo, eq(schema.repoBranch.repoId, schema.repo.id))
         .where(
           and(
             eq(schema.repoBranch.id, branchId),
-            eq(schema.repo.organizationId, auth.orgId!)
+            eq(schema.repo.organizationId, organizationId)
           )
         )
         .then(([branch]) => branch);
@@ -58,7 +58,7 @@ const repoBranchRouter = new Hono<{
       const { branchId } = c.req.valid("param");
       const body = c.req.valid("json");
 
-      const auth = c.get("auth");
+      const organizationId = c.get("organizationId");
       const branch = await db
         .select()
         .from(schema.repoBranch)
@@ -66,7 +66,7 @@ const repoBranchRouter = new Hono<{
         .where(
           and(
             eq(schema.repoBranch.id, branchId),
-            eq(schema.repo.organizationId, auth.orgId!)
+            eq(schema.repo.organizationId, organizationId)
           )
         )
         .then(([branch]) => branch);
@@ -149,7 +149,7 @@ export const repoBranchesRouter = new Hono<{
   Bindings: CloudflareBindings;
   Variables: { db: Database };
 }>()
-  .use(loadAuth, requireAuth)
+  .use(requireAuth)
   .get("/", async (c) => {
     const organizationId = c.get("organizationId");
     const db = c.get("db");
@@ -175,7 +175,7 @@ export const repoBranchesRouter = new Hono<{
         schema.repoBranch,
         eq(schema.repo.id, schema.repoBranch.repoId)
       )
-      .innerJoin(schema.user, eq(schema.repoBranch.createdBy, schema.user.id))
+      .leftJoin(schema.user, eq(schema.repoBranch.createdBy, schema.user.id))
       .where(
         and(
           eq(schema.repo.organizationId, organizationId),

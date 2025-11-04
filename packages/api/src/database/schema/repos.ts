@@ -11,7 +11,6 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { messageThread } from "./messages";
-import { user } from "./user";
 
 export const repoProviderType = pgEnum("repo_provider_type", ["github"]);
 export type RepoProviderType = InferEnum<typeof repoProviderType>;
@@ -75,9 +74,7 @@ export const repo = pgTable(
     public: boolean("public").notNull(),
     // hidden: boolean("hidden").notNull().default(false),
     organizationId: text("organization_id").notNull(),
-    createdBy: text("created_by")
-      .notNull()
-      .references(() => user.id),
+    createdBy: text("created_by").notNull(),
   },
   (table) => [
     index("repo_created_by_index").on(table.createdBy),
@@ -106,9 +103,7 @@ export const repoBranch = pgTable(
     repoId: uuid("repo_id")
       .notNull()
       .references(() => repo.id),
-    createdBy: text("created_by")
-      .notNull()
-      .references(() => user.id),
+    createdBy: text("created_by").notNull(),
     // previewImageUrl: text("preview_image_url"),
   },
   (table) => [

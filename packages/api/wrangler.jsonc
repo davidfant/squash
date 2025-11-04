@@ -26,13 +26,6 @@
     { "binding": "AGENT_SESSIONS", "bucket_name": "agent-sessions-dev" },
     { "binding": "REPOS", "bucket_name": "repos", "remote": true }
   ],
-  "kv_namespaces": [
-    {
-      "binding": "DOMAIN_MAPPINGS",
-      "id": "5c48626c71ad46c988fe7ba22068dcb1",
-      "remote": true
-    }
-  ],
   "migrations": [
     { "tag": "v1", "new_sqlite_classes": ["DaytonaSandboxManager"] }
   ],

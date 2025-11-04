@@ -2,7 +2,11 @@ import type { Database } from "@/database";
 import { loadBranchMessages } from "@/database/util/load-branch-messages";
 import { logger } from "@/lib/logger";
 import { resolveMessageThreadHistory } from "@/lib/resolveMessageThreadHistory";
-import { requireRepoBranch, requireRole } from "@/routers/util/auth-middleware";
+import {
+  requireAuth,
+  requireRepoBranch,
+  requireRole,
+} from "@/routers/util/auth-middleware";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import mime from "mime/lite";
@@ -12,14 +16,16 @@ export const repoBranchPreviewRouter = new Hono<{
   Bindings: CloudflareBindings;
   Variables: { db: Database };
 }>()
-  .use(requireRole("org:admin", "org:builder"), requireRepoBranch)
+  .use(requireAuth, requireRole("org:admin", "org:builder"), requireRepoBranch)
   .get(
     "/",
     zValidator("param", z.object({ branchId: z.uuid() })),
     async (c) => {
       const params = c.req.valid("param");
       const sandbox = c.env.DAYTONA_SANDBOX_MANAGER.getByName(params.branchId);
-      c.executionCtx.waitUntil(sandbox.keepAlive());
+      c.executionCtx.waitUntil(
+        sandbox.waitUntilStarted().then(() => sandbox.keepAlive())
+      );
       return c.json({ url: await sandbox.getPreviewUrl() });
     }
   )
@@ -60,14 +66,18 @@ export const repoBranchPreviewRouter = new Hono<{
     requireRepoBranch,
     async (c) => {
       const db = c.get("db");
-      const auth = c.get("auth");
+      const organizationId = c.get("organizationId");
       const body = c.req.valid("json");
       const { branchId } = c.req.valid("param");
       const sandbox = c.env.DAYTONA_SANDBOX_MANAGER.getByName(branchId);
 
       const stopAgentPromise = sandbox.stopAgent();
 
-      const allMessages = await loadBranchMessages(db, branchId, auth.orgId!);
+      const allMessages = await loadBranchMessages(
+        db,
+        branchId,
+        organizationId
+      );
       const messages = resolveMessageThreadHistory(allMessages, body.messageId);
 
       await stopAgentPromise;

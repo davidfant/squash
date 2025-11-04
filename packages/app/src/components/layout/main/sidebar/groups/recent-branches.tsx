@@ -37,7 +37,7 @@ export function RecentBranchesSidebarGroup() {
               <Link key={b.id} to={`/apps/${b.id}`} className="truncate">
                 <SidebarMenuItem>
                   <SidebarMenuButton className="cursor-pointer">
-                    {b.title}
+                    {b.repo.name}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </Link>

@@ -4,7 +4,11 @@ import * as schema from "@/database/schema";
 import { loadBranchMessages } from "@/database/util/load-branch-messages";
 import { logger } from "@/lib/logger";
 import { resolveMessageThreadHistory } from "@/lib/resolveMessageThreadHistory";
-import { requireRepoBranch, requireRole } from "@/routers/util/auth-middleware";
+import {
+  requireAuth,
+  requireRepoBranch,
+  requireRole,
+} from "@/routers/util/auth-middleware";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import z from "zod";
@@ -14,17 +18,17 @@ export const repoBranchMessagesRouter = new Hono<{
   Bindings: CloudflareBindings;
   Variables: { db: Database };
 }>()
-  .use(requireRole("org:admin", "org:builder"), requireRepoBranch)
+  .use(requireAuth, requireRole("org:admin", "org:builder"), requireRepoBranch)
   .get(
     "/",
     zValidator("param", z.object({ branchId: z.uuid() })),
     async (c) => {
-      const auth = c.get("auth");
+      const organizationId = c.get("organizationId");
       const { branchId } = c.req.valid("param");
       const messages = await loadBranchMessages(
         c.get("db"),
         branchId,
-        auth.orgId!
+        organizationId
       );
 
       if (!messages.length)
@@ -62,13 +66,14 @@ export const repoBranchMessagesRouter = new Hono<{
     async (c) => {
       const body = c.req.valid("json");
       const params = c.req.valid("param");
-      const auth = c.get("auth");
+      const organizationId = c.get("organizationId");
+      const userId = c.get("userId");
       const db = c.get("db");
 
       const allMessages = await loadBranchMessages(
         db,
         params.branchId,
-        auth.orgId!
+        organizationId
       );
       if (!allMessages.length) {
         logger.debug("No messages found in branch", {
@@ -98,7 +103,7 @@ export const repoBranchMessagesRouter = new Hono<{
           parentId: body.message.parentId,
           role: "user",
           threadId,
-          createdBy: auth.userId!,
+          createdBy: userId,
         })
         .returning()
         .then(([message]) => message);

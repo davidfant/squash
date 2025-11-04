@@ -59,7 +59,7 @@ export function BranchLayout({ branchId }: { branchId: string }) {
         <ChatInputProvider>
           <div className="flex flex-col h-screen">
             <BranchHeader
-              title={branch.title}
+              title={branch.repo.name}
               inlineAction={
                 <Button
                   variant="ghost"

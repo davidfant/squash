@@ -12,14 +12,15 @@ export function BranchFeatureCard({
 }: {
   branch: {
     id: string;
-    title: string;
+    // title: string;
     imageUrl: string | null;
     createdAt: string;
+    repo: { name: string };
     createdBy: {
       firstName: string | null;
       lastName: string | null;
       imageUrl: string | null;
-    };
+    } | null;
   };
   index: number;
   onDeleted: () => void;
@@ -38,7 +39,7 @@ export function BranchFeatureCard({
   return (
     <Link to={`/apps/${branch.id}`}>
       <FeatureCard
-        title={branch.title}
+        title={branch.repo.name}
         imageUrl={branch.imageUrl}
         subtitle={formatDate(branch.createdAt)}
         avatar={branch.createdBy}

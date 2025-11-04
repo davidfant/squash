@@ -3,12 +3,12 @@ import type { Database } from "@/database";
 import * as schema from "@/database/schema";
 import { TEMPLATE_NAMES, forkTemplate } from "@/lib/repo/fork";
 import {
-  loadAuth,
   requireAuth,
   requireRepo,
   requireRole,
 } from "@/routers/util/auth-middleware";
 import { zUserMessagePart } from "@/routers/util/zod";
+import { getAuth } from "@hono/clerk-auth";
 import { zValidator } from "@hono/zod-validator";
 import { randomUUID } from "crypto";
 import { and, asc, desc, eq, isNull, or } from "drizzle-orm";
@@ -38,7 +38,7 @@ export const reposRouter = new Hono<{
 
     return c.json(repos);
   })
-  .get("/", loadAuth, requireAuth, async (c) => {
+  .get("/", requireAuth, async (c) => {
     const organizationId = c.get("organizationId");
     const db = c.get("db");
 
@@ -71,10 +71,8 @@ export const reposRouter = new Hono<{
         message: z.object({ parts: zUserMessagePart.array().min(1) }),
       })
     ),
-    loadAuth,
     requireAuth,
     requireRole("org:admin", "org:builder"),
-    requireRepo,
     async (c) => {
       const body = c.req.valid("json");
       const db = c.get("db");
@@ -187,10 +185,9 @@ export const reposRouter = new Hono<{
   .get(
     "/:repoId",
     zValidator("param", z.object({ repoId: z.uuid() })),
-    loadAuth,
     async (c) => {
       const { repoId } = c.req.valid("param");
-      const organizationId = c.get("organizationId");
+      const organizationId = getAuth(c)?.orgId;
 
       const repo = await c
         .get("db")
@@ -221,7 +218,6 @@ export const reposRouter = new Hono<{
   .delete(
     "/:repoId",
     zValidator("param", z.object({ repoId: z.string() })),
-    loadAuth,
     requireAuth,
     requireRole("org:admin", "org:builder"),
     requireRepo,
@@ -239,7 +235,6 @@ export const reposRouter = new Hono<{
     "/:repoId",
     zValidator("param", z.object({ repoId: z.uuid() })),
     zValidator("json", z.object({ name: z.string().min(1).max(255) })),
-    loadAuth,
     requireAuth,
     requireRole("org:admin", "org:builder"),
     requireRepo,

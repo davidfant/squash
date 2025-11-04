@@ -98,6 +98,9 @@ importers:
       '@daytonaio/sdk':
         specifier: ^0.108.0
         version: 0.108.0(patch_hash=6498011b9f9990a58daa29ffc1a281a17132674e23746a7aa82d71cc6b0d4d0f)(ws@8.18.3)
+      '@hono/clerk-auth':
+        specifier: ^3.0.3
+        version: 3.0.3(hono@4.9.10)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       '@hono/zod-validator':
         specifier: ^0.7.1
         version: 0.7.3(hono@4.9.10)(zod@4.1.12)
@@ -1520,6 +1523,12 @@ packages:
 
   '@floating-ui/utils@0.2.10':
     resolution: {integrity: sha512-aGTxbpbg8/b5JfU1HXSrbH3wXZuLPJcNEcZQFMxLs3oSzgtVu6nFPkbbGGUvBcUjKV2YyB9Wxxabo+HEH9tcRQ==}
+
+  '@hono/clerk-auth@3.0.3':
+    resolution: {integrity: sha512-N671mw3ulvxqxY8ou8D8ojVT7EKljXE6RjdC2egWExMcrQAglMSTvqvU096MbOT5zvWtc8QMo3SKiyTXn30BrQ==}
+    engines: {node: '>=16.x.x'}
+    peerDependencies:
+      hono: '>=3.0.0'
 
   '@hono/zod-validator@0.7.3':
     resolution: {integrity: sha512-uYGdgVib3RlGD698WR5dVM0zB3UuPY5vHKXffGUbUh7r4xY+mFIhF3/v4AcQVLrU5CQdBso8BJr4wuVoCrjTuQ==}
@@ -6858,6 +6867,15 @@ snapshots:
       react-dom: 19.2.0(react@19.2.0)
 
   '@floating-ui/utils@0.2.10': {}
+
+  '@hono/clerk-auth@3.0.3(hono@4.9.10)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)':
+    dependencies:
+      '@clerk/backend': 2.19.1(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+      '@clerk/types': 4.96.0
+      hono: 4.9.10
+    transitivePeerDependencies:
+      - react
+      - react-dom
 
   '@hono/zod-validator@0.7.3(hono@4.9.10)(zod@4.1.12)':
     dependencies:

@@ -1,3 +1,4 @@
+import { clerkMiddleware } from "@hono/clerk-auth";
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -17,6 +18,7 @@ const app = new Hono<{ Bindings: CloudflareBindings }>()
   .use(requestId())
   .use(honoLogger())
   .use(databaseMiddleware)
+  .use(clerkMiddleware())
   .route("/branches", repoBranchesRouter)
   .route("/repos", reposRouter)
   .route("/webhooks/clerk", clerkWebhookRouter)

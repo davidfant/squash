@@ -6,6 +6,7 @@ packages:
   - "!packages/flyio-ssh-proxy"
   - "!packages/replicator"
   - "!packages/replicator-git-sync"
+  - "!packages/deployment-proxy"
   - "!packages/screenshot-api"
 patchedDependencies:
   "@daytonaio/sdk": patches/@daytonaio__sdk.patch

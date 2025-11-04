@@ -30,7 +30,7 @@ export const FeatureCard = ({
     firstName: string | null;
     lastName: string | null;
     imageUrl: string | null;
-  };
+  } | null;
   index: number;
   className?: string;
   onDelete?(): void;
@@ -75,12 +75,12 @@ export const FeatureCard = ({
           </div>
         </div>
         <div className="flex gap-2 px-3 items-center h-10 relative">
-          {!!avatar && (
+          {avatar !== undefined && (
             <Avatar
-              name={[avatar.firstName, avatar.lastName]
+              name={[avatar?.firstName, avatar?.lastName]
                 .filter(Boolean)
                 .join(" ")}
-              image={avatar.imageUrl ?? undefined}
+              image={avatar?.imageUrl ?? undefined}
               className="size-6"
             />
           )}

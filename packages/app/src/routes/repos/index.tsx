@@ -69,7 +69,8 @@ export function ReposPage() {
 
   return (
     <MainLayout title="Templates">
-      {/* <FeatureCardGrid
+      <main className="p-3">
+        {/* <FeatureCardGrid
             children={orgRepos.data?.map((repo, index) => (
               <RepoCard
                 key={repo.id}
@@ -81,11 +82,12 @@ export function ReposPage() {
             ))}
           />
           <h2 className="text-lg mt-8 mb-4">Featured Templates</h2> */}
-      <FeatureCardGrid
-        children={featuredRepos.data?.map((repo, index) => (
-          <RepoCard key={repo.id} repo={repo} index={index} />
-        ))}
-      />
+        <FeatureCardGrid
+          children={featuredRepos.data?.map((repo, index) => (
+            <RepoCard key={repo.id} repo={repo} index={index} />
+          ))}
+        />
+      </main>
       {currentRepo && (
         <RepoDetailsDialog
           repo={currentRepo}

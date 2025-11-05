@@ -1,5 +1,6 @@
 import { clerkMiddleware } from "@hono/clerk-auth";
 import { zValidator } from "@hono/zod-validator";
+import { env } from "cloudflare:workers";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger as honoLogger } from "hono/logger";
@@ -9,19 +10,21 @@ import z from "zod";
 import { databaseMiddleware } from "./database/middleware";
 import { createSignedAndPublicUrl } from "./lib/cloudflare";
 import { logger } from "./lib/logger";
+import { stripAnsi } from "./lib/strip-ansi";
 import { repoBranchesRouter } from "./routers/branches";
 import { reposRouter } from "./routers/repos";
 import { clerkWebhookRouter } from "./routers/webhooks/clerk";
 
 const app = new Hono<{ Bindings: CloudflareBindings }>()
-  .use("*", cors({ origin: process.env.APP_URL, credentials: true }))
+  .use(cors({ origin: env.APP_URL, credentials: true }))
   .use(requestId())
-  .use(honoLogger())
+  .use(honoLogger((msg) => console.log(stripAnsi(msg))))
   .use(databaseMiddleware)
+  .route("/webhooks/clerk", clerkWebhookRouter)
+
   .use(clerkMiddleware())
   .route("/branches", repoBranchesRouter)
   .route("/repos", reposRouter)
-  .route("/webhooks/clerk", clerkWebhookRouter)
   .post(
     "/upload",
     zValidator("json", z.object({ filename: z.string() })),

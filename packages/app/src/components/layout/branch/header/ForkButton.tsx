@@ -6,6 +6,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAuthHeaders } from "@/hooks/api";
 import { useChat } from "@ai-sdk/react";
 import type { SandboxTaskMessage } from "@squashai/api/agent/types";
 import { DefaultChatTransport } from "ai";
@@ -18,11 +19,12 @@ export function ForkButton() {
   const { t } = useTranslation("branch");
   const { branch } = useBranchContext();
 
+  const headers = useAuthHeaders();
   const stream = useChat<SandboxTaskMessage>({
     messages: [],
     transport: new DefaultChatTransport({
       api: `${import.meta.env.VITE_API_URL}/branches/${branch.id}/fork`,
-      credentials: "include",
+      headers,
     }),
   });
 

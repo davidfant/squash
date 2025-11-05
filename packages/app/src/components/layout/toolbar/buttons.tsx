@@ -5,6 +5,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Tooltip,
   TooltipContent,
@@ -15,7 +16,6 @@ import {
   Command,
   CopyMinus,
   CornerDownLeft,
-  Loader2,
   MoreVertical,
   Paperclip,
   Trash2,
@@ -38,7 +38,7 @@ export const SubmitButton = ({
         className="rounded-full"
         onClick={onClick}
       >
-        {loading ? <Loader2 className="animate-spin" /> : <ArrowUp />}
+        {loading ? <Spinner /> : <ArrowUp />}
       </Button>
     </TooltipTrigger>
     <TooltipContent>

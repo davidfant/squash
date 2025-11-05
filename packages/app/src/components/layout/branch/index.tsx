@@ -20,7 +20,7 @@ import type { ImperativePanelHandle } from "react-resizable-panels";
 import { ChatInputProvider } from "../chat/input/context";
 
 export function BranchLayout({ branchId }: { branchId: string }) {
-  const { branch, setPreviewSha } = useBranchContext();
+  const { branch, preview } = useBranchContext();
 
   const { isSignedIn } = useAuth();
   const threadMessages = useQuery(api.branches[":branchId"].messages.$get, {
@@ -53,7 +53,7 @@ export function BranchLayout({ branchId }: { branchId: string }) {
           const latestSha = step.message.parts.findLast(
             (part) => part.type === "tool-GitCommit"
           )?.output?.sha;
-          if (latestSha) setPreviewSha(latestSha);
+          if (latestSha) preview.setSha(latestSha);
         }}
       >
         <ChatInputProvider>

@@ -17,7 +17,7 @@ import escape from "shell-escape";
 import { BaseSandboxManagerDurableObject } from "../base";
 import type { Sandbox } from "../types";
 import { pullLatestChanges } from "../util";
-import { downloadFileFromSandbox, uploadSandboxFileToDeployment } from "./api";
+import { downloadFileFromSandbox } from "./api";
 
 export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
   Sandbox.Snapshot.Config.Daytona,
@@ -345,7 +345,7 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
       options.config.tasks.build = [];
     }
 
-    if (options.config.build.type === "static") {
+    /*if (options.config.build.type === "static") {
       const build = options.config.build;
       return [
         ...options.config.tasks.build,
@@ -411,7 +411,8 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
           },
         },
       ];
-    } else if (options.config.build.type === "cloudflare-worker") {
+    } else */
+    if (options.config.build.type === "cloudflare-worker") {
       return [
         ...options.config.tasks.build,
         {

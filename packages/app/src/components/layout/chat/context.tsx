@@ -1,3 +1,4 @@
+import { useAuthHeaders } from "@/hooks/api";
 import { usePrevious } from "@/hooks/usePrevious";
 import {
   useChat,
@@ -29,12 +30,13 @@ export const ChatProvider = ({
   endpoint: string;
   initialMessages?: ChatMessage[];
 } & UseChatOptions<ChatMessage>) => {
+  const headers = useAuthHeaders();
   const chat = useChat<ChatMessage>({
     messages: initialMessages,
     resume: true,
     transport: new DefaultChatTransport({
       api: endpoint,
-      credentials: "include",
+      headers,
       prepareSendMessagesRequest: ({ messages }) => {
         const l = messages[messages.length - 1]!;
         const parentId = l.metadata!.parentId;

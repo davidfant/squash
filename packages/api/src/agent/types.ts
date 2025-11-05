@@ -22,11 +22,7 @@ export type AllTools = ClaudeCodeTools & {
 export type AgentState = { type: "discover" } | { type: "implement" };
 
 export type ChatMessageData = {
-  GitSha: {
-    sha: string;
-    title: string;
-    description: string;
-  };
+  GitSha: { sha: string; title: string; description: string };
   AgentSession: { type: "claude-code"; id: string; objectKey: string };
   AgentState: AgentState;
   AbortRequest: { reason: string };

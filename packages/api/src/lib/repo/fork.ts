@@ -15,7 +15,7 @@ const templates = {
     defaultBranch: "master",
     snapshot: {
       type: "daytona",
-      snapshot: "base-vite-trpc-cloudflare-worker-ts:v0.0.2",
+      snapshot: "base-vite-trpc-cloudflare-worker-ts:v0.1.0",
       port: 5173,
       cwd: "/repo",
       envFile: ".env",

@@ -97,7 +97,7 @@ export function ChatEmptyState({
     <div className="w-full flex flex-col justify-end p-8">
       <div className="text-center space-y-6">
         <p className="text-muted-foreground text-sm">
-          Integrate your apps by chatting with Squash
+          Build apps for your team by chatting with Squash
         </p>
 
         <div className="flex gap-3 justify-center flex-wrap">

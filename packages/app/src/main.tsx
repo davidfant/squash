@@ -4,7 +4,6 @@ import {
   ClerkProvider,
   SignedIn,
   SignedOut,
-  SignIn,
   useAuth,
 } from "@clerk/clerk-react";
 import { dark } from "@clerk/themes";
@@ -26,7 +25,6 @@ import resources from "./locales/default";
 import { RequireAuthGuard } from "./routes/auth/guard";
 import { BranchesPage } from "./routes/branches";
 import { BranchPage } from "./routes/branches/details";
-import { ExtensionAuthPage } from "./routes/extension-auth";
 import { NewPage } from "./routes/new";
 import { ReposPage } from "./routes/repos";
 
@@ -96,12 +94,10 @@ export const Content = () => {
             <Routes>
               <Route path="/" element={<IndexPage />} />
               <Route path="/new" element={<NewPage />} />
-              <Route path="/sign-in" element={<SignIn />} />
 
               <Route path="/templates" element={<ReposPage />} />
               <Route path="/templates/:repoId" element={<ReposPage />} />
               <Route element={<RequireAuthGuard />}>
-                <Route path="/extension-auth" element={<ExtensionAuthPage />} />
                 <Route path="/apps" element={<BranchesPage />} />
                 <Route path="/apps/:branchId" element={<BranchPage />} />
               </Route>

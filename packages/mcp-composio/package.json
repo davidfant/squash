@@ -19,8 +19,7 @@
     "build": "tsc --project tsconfig.json",
     "dev": "wrangler dev",
     "dev:inspect": "npx @modelcontextprotocol/inspector",
-    "push": "wrangler deploy --env production",
-    "typecheck": "tsc --noEmit"
+    "push": "wrangler deploy --env production"
   },
   "dependencies": {
     "@ai-sdk/mcp": "^0.0.3",

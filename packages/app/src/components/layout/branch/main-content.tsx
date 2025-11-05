@@ -1,6 +1,7 @@
 import { WebPreview } from "@/components/ai-elements/web-preview";
 import { SandboxTaskStream } from "@/components/blocks/SandboxTaskStream";
 import { TabsContent } from "@/components/ui/tabs";
+import { useAuthHeaders } from "@/hooks/api";
 import { useMounted } from "@/hooks/useMounted";
 import { cn } from "@/lib/utils";
 import { useChat } from "@ai-sdk/react";
@@ -14,13 +15,14 @@ import { BranchPreview } from "./preview";
 export function BranchTabContent({ className }: { className?: string }) {
   const { branch } = useBranchContext();
 
+  const headers = useAuthHeaders();
   const stream = useChat<SandboxTaskMessage>({
     messages: [],
     transport: new DefaultChatTransport({
       api: `${import.meta.env.VITE_API_URL}/branches/${
         branch.id
       }/preview/stream`,
-      credentials: "include",
+      headers,
     }),
   });
 

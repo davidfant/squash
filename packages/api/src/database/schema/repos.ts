@@ -12,9 +12,6 @@ import {
 } from "drizzle-orm/pg-core";
 import { messageThread } from "./messages";
 
-export const repoProviderType = pgEnum("repo_provider_type", ["github"]);
-export type RepoProviderType = InferEnum<typeof repoProviderType>;
-
 export const sandboxProviderType = pgEnum("sandbox_provider_type", [
   "cloudflare",
   "fly",

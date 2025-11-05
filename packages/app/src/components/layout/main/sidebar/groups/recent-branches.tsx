@@ -33,7 +33,7 @@ export function RecentBranchesSidebarGroup() {
       <SidebarMenu className="gap-0">
         {!!branches.data.length ? (
           <>
-            {branches.data.slice(0, 5).map((b) => (
+            {branches.data.slice(0, 10).map((b) => (
               <Link key={b.id} to={`/apps/${b.id}`} className="truncate">
                 <SidebarMenuItem>
                   <SidebarMenuButton className="cursor-pointer">

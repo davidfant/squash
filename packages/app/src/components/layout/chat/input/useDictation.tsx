@@ -1,3 +1,4 @@
+import { useAuthHeaders } from "@/hooks/api";
 import { useCallback, useRef, useState } from "react";
 
 export type DictationStatus = "idle" | "recording" | "transcribing";
@@ -101,6 +102,7 @@ export function useDictation(onTranscription?: (text: string) => void): {
    * Stop recording, upload the audio blob and resolve when finished.
    * The transcription text (if any) is emitted through `onTranscription`.
    */
+  const headers = useAuthHeaders();
   const stop = useCallback(async (): Promise<void> => {
     if (status !== "recording") return;
 
@@ -123,11 +125,7 @@ export function useDictation(onTranscription?: (text: string) => void): {
 
           const res = await fetch(
             `${import.meta.env.VITE_API_URL}/transcribe`,
-            {
-              method: "POST",
-              body: formData,
-              credentials: "include",
-            }
+            { method: "POST", body: formData, headers: await headers() }
           );
 
           if (!res.ok) throw new Error("Transcription failed");

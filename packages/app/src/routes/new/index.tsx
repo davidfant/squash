@@ -160,7 +160,7 @@ function Content() {
           </Badge> */}
             <div className="space-y-4">
               <h1 className="text-balance text-4xl font-light tracking-tight sm:text-5xl">
-                Integrate your apps
+                Build apps for your team
               </h1>
               <p className="max-w-2xl text-balance text-xl text-muted-foreground">
                 Connect 500+ apps with enterprise-grade integrations

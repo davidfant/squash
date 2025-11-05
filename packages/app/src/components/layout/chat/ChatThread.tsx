@@ -1,8 +1,8 @@
 import { ChatInput } from "@/components/layout/chat/input/ChatInput";
 import { Card } from "@/components/ui/card";
+import { Spinner } from "@/components/ui/spinner";
 import { api, useMutation } from "@/hooks/api";
 import { AnimatePresence, motion } from "framer-motion";
-import { Loader2 } from "lucide-react";
 import { useMemo, type ReactNode } from "react";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import { ChatThreadContent } from "./ChatThreadContent";
@@ -79,7 +79,7 @@ export function ChatThread({
     if (loading) {
       return (
         <div className="flex-1 w-full grid place-items-center">
-          <Loader2 className="size-6 animate-spin opacity-20" />
+          <Spinner className="size-6 opacity-20" />
         </div>
       );
     }

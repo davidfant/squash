@@ -25,23 +25,34 @@ const Iframe = () => {
     bridge?.on("navigate", (p) => preview.setCurrentPath(p.path));
   }, [bridge]);
 
-  const { getToken } = useAuth();
+  const { getToken, sessionId } = useAuth();
   useEffect(() => {
-    const pushToken = async () => {
-      const token = await getToken();
-      if (!token) return;
-      bridge?.post({
-        source: "@squashai/iframe-bridge",
-        id: crypto.randomUUID(),
-        command: "jwt-token",
-        token,
-      });
-    };
-    bridge?.on("connected", pushToken);
+    if (!bridge) return;
 
-    const interval = setInterval(pushToken, 10_000);
-    return () => clearInterval(interval);
-  }, [bridge, getToken]);
+    const pushToken = async () => {
+      try {
+        const token = await getToken({ skipCache: true });
+        if (!token) return;
+        bridge.post({
+          source: "@squashai/iframe-bridge",
+          id: crypto.randomUUID(),
+          command: "jwt-token",
+          token,
+        });
+      } catch (error) {
+        console.error("Failed to fetch Clerk token", error);
+      }
+    };
+
+    const unsubscribe = bridge.on("connected", pushToken);
+    void pushToken();
+
+    const interval = window.setInterval(pushToken, 50_000);
+    return () => {
+      clearInterval(interval);
+      unsubscribe();
+    };
+  }, [bridge, getToken, sessionId]);
 
   const getPreviewWidth = () => {
     if (screenSize === "desktop") return "w-full";

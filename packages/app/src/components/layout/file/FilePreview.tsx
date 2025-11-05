@@ -1,9 +1,10 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import type { FileUIPart } from "ai";
-import { Loader2, X } from "lucide-react";
+import { X } from "lucide-react";
 
 interface FilePreviewProps {
   file: FileUIPart;
@@ -51,7 +52,7 @@ export function FilePreview({
         {content}
         {loading && (
           <div className="absolute inset-0 bg-background/70 flex items-center justify-center">
-            <Loader2 className="size-4 animate-spin" />
+            <Spinner className="size-4" />
           </div>
         )}
       </Card>

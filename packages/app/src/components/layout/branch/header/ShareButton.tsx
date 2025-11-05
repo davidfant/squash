@@ -7,7 +7,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
-import { api, useMutation } from "@/hooks/api";
+import { api, useAuthHeaders, useMutation } from "@/hooks/api";
 import { useChat } from "@ai-sdk/react";
 import type { SandboxTaskMessage } from "@squashai/api/agent/types";
 import { DefaultChatTransport } from "ai";
@@ -18,13 +18,14 @@ import { useBranchContext } from "../context";
 
 export function ShareButton() {
   const { t } = useTranslation("branch");
-  const { branch, previewSha, refetch } = useBranchContext();
+  const { branch, preview, refetch } = useBranchContext();
 
   const [messages, setMessages] = useState<SandboxTaskMessage[]>([]);
+  const headers = useAuthHeaders();
   const stream = useChat<SandboxTaskMessage>({
     transport: new DefaultChatTransport({
       api: `${import.meta.env.VITE_API_URL}/branches/${branch.id}/deploy`,
-      credentials: "include",
+      headers,
     }),
     onFinish: async ({ message }) => {
       await refetch();
@@ -51,7 +52,9 @@ export function ShareButton() {
   }, [stream.sendMessage, stream.setMessages]);
 
   const isDeploymentOutdated =
-    !!branch.deployment && previewSha && previewSha !== branch.deployment?.sha;
+    !!branch.deployment &&
+    preview.sha &&
+    preview.sha !== branch.deployment?.sha;
   const publishing = ["submitted", "streaming"].includes(stream.status);
 
   return (

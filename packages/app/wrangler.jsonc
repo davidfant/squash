@@ -10,7 +10,7 @@
     "production": {
       "vars": {
         "VITE_API_URL": "https://api.squash.build",
-        "VITE_CLERK_PUBLISHABLE_KEY": "",
+        "VITE_CLERK_PUBLISHABLE_KEY": "pk_live_Y2xlcmsuc3F1YXNoLmJ1aWxkJA",
         "VITE_PUBLIC_POSTHOG_KEY": "phc_CBC2hL2ueZZtFATE2Nqgu1graixLdEqklZSwA9NAdXK",
         "VITE_PUBLIC_POSTHOG_HOST": "https://posthog.squash.build"
       }

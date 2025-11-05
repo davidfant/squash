@@ -1,5 +1,6 @@
 import type { Database } from "@/database";
 import * as schema from "@/database/schema";
+import { logger } from "@/lib/logger";
 import type { WebhookEvent } from "@clerk/backend";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
@@ -31,9 +32,12 @@ export const clerkWebhookRouter = new Hono<{
       "svix-signature": svixSignature,
     }) as WebhookEvent;
 
+    logger.info("Clerk webhook received", evt);
+
     switch (evt.type) {
       case "user.created":
       case "user.updated":
+        logger.info("Clerk webhook: upsert user", evt.data);
         await db
           .insert(schema.user)
           .values({
@@ -57,10 +61,12 @@ export const clerkWebhookRouter = new Hono<{
         break;
 
       case "user.deleted":
+        logger.info("Clerk webhook: deleting user", evt.data);
         await db.delete(schema.user).where(eq(schema.user.id, evt.data.id!));
         break;
 
       default:
+        logger.info("Clerk webhook: ignoring event", evt.type);
       // ignore other events
     }
 

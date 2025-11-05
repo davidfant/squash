@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Spinner } from "@/components/ui/spinner";
 import { usePrevious } from "@/hooks/usePrevious";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
-import { Loader2, type LucideIcon } from "lucide-react";
+import { type LucideIcon } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { type EventBlockItem } from "./groupMessageEvents";
 
@@ -33,7 +34,7 @@ export const Event = ({
       onClick={onClick}
     >
       {loading ? (
-        <Loader2 className="size-3 shrink-0 animate-spin" />
+        <Spinner className="size-3 shrink-0" />
       ) : (
         Icon && <Icon className="size-3 shrink-0" />
       )}

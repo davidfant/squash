@@ -10,15 +10,19 @@ export namespace SquashIframeBridgeCommand {
       command: "capture-screenshot";
     }
 
-    export interface Token extends Base {
-      command: "token";
+    export interface JWTToken extends Base {
+      command: "jwt-token";
       token: string;
     }
 
-    export type Any = CaptureScreenshot | Token;
+    export type Any = CaptureScreenshot | JWTToken;
   }
 
   export namespace Iframe {
+    export interface Connected extends Base {
+      command: "connected";
+    }
+
     export interface SubmitScreenshot extends Base {
       command: "submit-screenshot";
       mimeType: string;
@@ -30,7 +34,7 @@ export namespace SquashIframeBridgeCommand {
       path: string;
     }
 
-    export type Any = SubmitScreenshot | Navigate;
+    export type Any = Connected | SubmitScreenshot | Navigate;
   }
 
   export type Any = Parent.Any | Iframe.Any;

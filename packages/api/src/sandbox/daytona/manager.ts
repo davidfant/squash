@@ -215,6 +215,9 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
           if (!envVars.AI_GATEWAY_API_KEY) {
             envVars.AI_GATEWAY_API_KEY = env.AI_GATEWAY_API_KEY;
           }
+          if (!envVars.JWT_ISSUER) {
+            envVars.JWT_ISSUER = env.JWT_ISSUER;
+          }
 
           if (
             !envVars.COMPOSIO_API_KEY ||

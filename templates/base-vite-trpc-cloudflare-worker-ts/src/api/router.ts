@@ -1,24 +1,23 @@
-import { env } from "cloudflare:workers";
 import { z } from "zod";
 import { composio } from "./integrations/composio";
-import { procedure, router } from "./trpc";
+import { protectedProcedure, router } from "./trpc";
 
 export const appRouter = router({
   composio: router({
-    isConnected: procedure
+    isConnected: protectedProcedure
       .input(z.object({ toolkitSlug: z.string() }))
-      .query(async ({ input }) => {
+      .query(async ({ input, ctx }) => {
         const page = await composio.connectedAccounts.list({
-          userIds: [env.COMPOSIO_PLAYGROUND_USER_ID],
+          userIds: [ctx.auth.userId],
           toolkitSlugs: [input.toolkitSlug],
           statuses: ["ACTIVE"],
           limit: 1,
         });
         return !!page.items.length;
       }),
-    createConnectLink: procedure
+    createConnectLink: protectedProcedure
       .input(z.object({ toolkitSlug: z.string() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const authConfigs = await composio.authConfigs.list({
           toolkit: input.toolkitSlug,
         });
@@ -27,7 +26,7 @@ export const appRouter = router({
         }
 
         const req = await composio.connectedAccounts.link(
-          env.COMPOSIO_PLAYGROUND_USER_ID,
+          ctx.auth.userId,
           authConfigs.items[0]!.id
         );
         if (!req.redirectUrl) {
@@ -35,7 +34,7 @@ export const appRouter = router({
         }
         return { id: req.id, redirectUrl: req.redirectUrl };
       }),
-    waitForConnect: procedure
+    waitForConnect: protectedProcedure
       .input(z.object({ connectLinkId: z.string() }))
       .mutation(async ({ input }) => {
         await composio.connectedAccounts.waitForConnection(input.connectLinkId);

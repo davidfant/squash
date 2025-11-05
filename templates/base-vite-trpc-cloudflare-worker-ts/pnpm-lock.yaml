@@ -96,8 +96,8 @@ importers:
         specifier: ^1.2.8
         version: 1.2.8(@types/react-dom@19.0.4(@types/react@19.0.10))(@types/react@19.0.10)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       '@squashai/iframe-bridge':
-        specifier: next
-        version: 0.0.0-alpha.4(react@19.0.0)
+        specifier: latest
+        version: 0.0.0(react@19.0.0)
       '@tailwindcss/vite':
         specifier: ^4.1.14
         version: 4.1.14(vite@7.1.10(@types/node@24.7.2)(jiti@2.6.1)(lightningcss@1.30.1))
@@ -131,6 +131,9 @@ importers:
       input-otp:
         specifier: ^1.4.2
         version: 1.4.2(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
+      jose:
+        specifier: ^6.1.0
+        version: 6.1.0
       lucide-react:
         specifier: ^0.525.0
         version: 0.525.0(react@19.0.0)
@@ -1594,8 +1597,8 @@ packages:
   '@speed-highlight/core@1.2.7':
     resolution: {integrity: sha512-0dxmVj4gxg3Jg879kvFS/msl4s9F3T9UXC1InxgOf7t5NvcPD97u/WTA5vL/IxWHMn7qSxBozqrnnE2wvl1m8g==}
 
-  '@squashai/iframe-bridge@0.0.0-alpha.4':
-    resolution: {integrity: sha512-kA5qpGwGR3jWle0lShjSUpjWrPsiUlo0js93WmgD/DKNQZLWVjdpRS7bQQ2gmoIVagXV1XctRZwN/9vHf8bWjg==}
+  '@squashai/iframe-bridge@0.0.0':
+    resolution: {integrity: sha512-0MlEh9OUaMXrCJbQYdlfuHG15XeunFnYJC1h2JDtqtZOigqi3a9Sdu5Xv3mAIkj4Bk/VtIZFEdcmDi3kCwNIHg==}
     peerDependencies:
       react: ^19.2.0
 
@@ -2066,6 +2069,9 @@ packages:
   jiti@2.6.1:
     resolution: {integrity: sha512-ekilCSN1jwRvIbgeg/57YFh8qQDNbwDb9xT/qu2DAHbFFZUicIl4ygVaAvzveMhMVr3LnpSKTNnwt8PoOfmKhQ==}
     hasBin: true
+
+  jose@6.1.0:
+    resolution: {integrity: sha512-TTQJyoEoKcC1lscpVDCSsVgYzUDg/0Bt3WE//WiTPK6uOCQC2KZS4MpugbMWt/zyjkopgZoXhZuCi00gLudfUA==}
 
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
@@ -3834,7 +3840,7 @@ snapshots:
 
   '@speed-highlight/core@1.2.7': {}
 
-  '@squashai/iframe-bridge@0.0.0-alpha.4(react@19.0.0)':
+  '@squashai/iframe-bridge@0.0.0(react@19.0.0)':
     dependencies:
       html2canvas-pro: 1.5.12
       react: 19.0.0
@@ -4284,6 +4290,8 @@ snapshots:
   is-arrayish@0.3.4: {}
 
   jiti@2.6.1: {}
+
+  jose@6.1.0: {}
 
   js-tokens@4.0.0: {}
 

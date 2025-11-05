@@ -28,8 +28,13 @@ export function SquashProvider({
     if (!window.top || window.top === window.self) return;
 
     const bridge = new SquashIframeBridge(window.top, { debug });
+    bridge.post({
+      source: "@squashai/iframe-bridge",
+      id: crypto.randomUUID(),
+      command: "connected",
+    });
     const unsubs = [
-      bridge.on("token", (payload) => setToken(payload.token)),
+      bridge.on("jwt-token", (payload) => setToken(payload.token)),
       bridge.on("capture-screenshot", async (command) => {
         const screenshot = await html2canvas(document.body);
         const base64 = screenshot.toDataURL("image/webp");

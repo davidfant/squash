@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
+import { useAuth } from "@clerk/clerk-react";
 import { SquashIframeBridge } from "@squashai/iframe-bridge";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useBranchContext } from "../context";
 import { BranchPreviewConsole } from "./console";
 
@@ -8,15 +9,39 @@ const Iframe = () => {
   const { screenSize, preview } = useBranchContext();
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
+  const [bridge, setBridge] = useState<SquashIframeBridge | undefined>();
   useEffect(() => {
     const window = iframeRef.current?.contentWindow;
-    if (!window) return;
-    const bridge = new SquashIframeBridge(window, {
-      debug: import.meta.env.MODE === "development",
-    });
-    bridge.on("navigate", (p) => preview.setCurrentPath(p.path));
-    return () => bridge.dispose();
-  }, [iframeRef.current?.contentWindow]);
+    if (!window) throw new Error("Iframe not found");
+    setBridge(
+      new SquashIframeBridge(window, {
+        debug: import.meta.env.MODE === "development",
+      })
+    );
+  }, []);
+
+  useEffect(() => () => bridge?.dispose(), [bridge]);
+  useEffect(() => {
+    bridge?.on("navigate", (p) => preview.setCurrentPath(p.path));
+  }, [bridge]);
+
+  const { getToken } = useAuth();
+  useEffect(() => {
+    const pushToken = async () => {
+      const token = await getToken();
+      if (!token) return;
+      bridge?.post({
+        source: "@squashai/iframe-bridge",
+        id: crypto.randomUUID(),
+        command: "jwt-token",
+        token,
+      });
+    };
+    bridge?.on("connected", pushToken);
+
+    const interval = setInterval(pushToken, 10_000);
+    return () => clearInterval(interval);
+  }, [bridge, getToken]);
 
   const getPreviewWidth = () => {
     if (screenSize === "desktop") return "w-full";

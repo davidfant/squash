@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
-import { usePrevious } from "@/hooks/usePrevious";
+import { usePrevious } from "@/hooks/use-previous";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import { type LucideIcon } from "lucide-react";

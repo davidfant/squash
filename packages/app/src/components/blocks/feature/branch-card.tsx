@@ -23,15 +23,18 @@ export function BranchFeatureCard({
     } | null;
   };
   index: number;
-  onDeleted: () => void;
+  onDeleted?: () => void;
   onUpdated?: () => void;
 }) {
   const deleteBranch = useMutation(api.branches[":branchId"].$delete, {
-    onSuccess: onDeleted,
+    onSuccess: () => {
+      toast.success("App deleted");
+      onDeleted?.();
+    },
   });
   const updateBranch = useMutation(api.branches[":branchId"].$patch, {
     onSuccess: () => {
-      toast.success("Prototype renamed");
+      toast.success("App renamed");
       onUpdated?.();
     },
     onError: () => toast.error("Failed to rename prototype"),
@@ -44,12 +47,19 @@ export function BranchFeatureCard({
         subtitle={formatDate(branch.createdAt)}
         avatar={branch.createdBy}
         index={index}
-        onDelete={() => deleteBranch.mutate({ param: { branchId: branch.id } })}
-        onEdit={(title) =>
-          updateBranch.mutateAsync({
-            param: { branchId: branch.id },
-            json: { title },
-          })
+        onDelete={
+          onDeleted
+            ? () => deleteBranch.mutate({ param: { branchId: branch.id } })
+            : undefined
+        }
+        onEdit={
+          onUpdated
+            ? (title) =>
+                updateBranch.mutateAsync({
+                  param: { branchId: branch.id },
+                  json: { title },
+                })
+            : undefined
         }
       />
     </Link>

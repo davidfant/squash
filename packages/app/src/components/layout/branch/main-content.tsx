@@ -2,7 +2,7 @@ import { WebPreview } from "@/components/ai-elements/web-preview";
 import { SandboxTaskStream } from "@/components/blocks/SandboxTaskStream";
 import { TabsContent } from "@/components/ui/tabs";
 import { useAuthHeaders } from "@/hooks/api";
-import { useMounted } from "@/hooks/useMounted";
+import { useMounted } from "@/hooks/use-mounted";
 import { cn } from "@/lib/utils";
 import { useChat } from "@ai-sdk/react";
 import type { SandboxTaskMessage } from "@squashai/api/agent/types";

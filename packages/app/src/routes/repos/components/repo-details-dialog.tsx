@@ -7,7 +7,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { SignedIn, SignedOut, SignUpButton } from "@clerk/clerk-react";
-import { Link, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 
 export function RepoDetailsDialog({
   repo,
@@ -38,9 +38,11 @@ export function RepoDetailsDialog({
         <DialogHeader className="p-4 pb-0 flex-row items-center justify-between">
           <DialogTitle className="pl-1">{repo.name}</DialogTitle>
           <SignedIn>
-            <Link to={`/templates/${repo.id}/new`}>
-              <Button>Use Template</Button>
-            </Link>
+            {/* <Link to={`/templates/${repo.id}/new`}> */}
+            <Button onClick={() => alert("Not implemented")}>
+              Use Template
+            </Button>
+            {/* </Link> */}
           </SignedIn>
           <SignedOut>
             <SignUpButton mode="modal">

@@ -2,6 +2,7 @@ import { BranchFeatureCard } from "@/components/blocks/feature/branch-card";
 import { FeatureCardGrid } from "@/components/blocks/feature/grid";
 import { MainLayout } from "@/components/layout/main/layout";
 import { api, useQuery } from "@/hooks/api";
+import { useAuth } from "@clerk/clerk-react";
 import { Navigate } from "react-router";
 import { useRepos } from "./hooks/use-repos";
 
@@ -12,7 +13,9 @@ export function BranchesPage() {
     params: {},
   });
 
-  if (branches.data?.length === 0) return <Navigate to="/new" />;
+  const { has } = useAuth();
+  const isBuilder = has?.({ role: "org:admin" });
+  if (branches.data?.length === 0 && isBuilder) return <Navigate to="/new" />;
   return (
     <MainLayout title="Apps">
       <main className="p-3">
@@ -22,8 +25,8 @@ export function BranchesPage() {
               key={b.id}
               branch={b}
               index={index}
-              onDeleted={() => branches.refetch()}
-              onUpdated={() => branches.refetch()}
+              onDeleted={isBuilder ? () => branches.refetch() : undefined}
+              onUpdated={isBuilder ? () => branches.refetch() : undefined}
             />
           ))}
         />

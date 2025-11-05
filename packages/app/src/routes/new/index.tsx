@@ -104,9 +104,6 @@ function Content() {
   const repos = useQuery(api.repos.featured.$get, { params: {} });
   const [toolkitId, setToolkitId] = useState<string | null>(null);
 
-  console.log("public", repos.data);
-  // const repos = useRepos();
-
   const [chatInitialValue, setChatInitialValue] =
     useLocalStorage<ChatInputValue>("BranchFeed.chatInitialValue", {
       text: "",

@@ -1,5 +1,5 @@
 import { useAuthHeaders } from "@/hooks/api";
-import { usePrevious } from "@/hooks/usePrevious";
+import { usePrevious } from "@/hooks/use-previous";
 import {
   useChat,
   type UseChatHelpers,

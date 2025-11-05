@@ -2,6 +2,8 @@ import { Toaster } from "@/components/ui/sonner";
 import {
   ClerkLoaded,
   ClerkProvider,
+  Protect,
+  RedirectToSignIn,
   SignedIn,
   SignedOut,
   useAuth,
@@ -17,12 +19,11 @@ import { PostHogProvider } from "posthog-js/react";
 import { StrictMode, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { initReactI18next } from "react-i18next";
-import { BrowserRouter, Route, Routes } from "react-router";
-import { PosthogIdentify } from "./auth/posthog";
+import { BrowserRouter, Navigate, Outlet, Route, Routes } from "react-router";
 import { ThemeProvider, useTheme } from "./contexts/ThemeContext";
 import "./index.css";
+import { PosthogIdentify } from "./lib/posthog";
 import resources from "./locales/default";
-import { RequireAuthGuard } from "./routes/auth/guard";
 import { BranchesPage } from "./routes/branches";
 import { BranchPage } from "./routes/branches/details";
 import { NewPage } from "./routes/new";
@@ -93,11 +94,28 @@ export const Content = () => {
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<IndexPage />} />
-              <Route path="/new" element={<NewPage />} />
+              <Route
+                path="/new"
+                element={
+                  <Protect role="org:admin" fallback={<Navigate to="/" />}>
+                    <NewPage />
+                  </Protect>
+                }
+              />
 
               <Route path="/templates" element={<ReposPage />} />
               <Route path="/templates/:repoId" element={<ReposPage />} />
-              <Route element={<RequireAuthGuard />}>
+              <Route
+                element={
+                  <Protect
+                    fallback={
+                      <RedirectToSignIn redirectUrl={window.location.href} />
+                    }
+                  >
+                    <Outlet />
+                  </Protect>
+                }
+              >
                 <Route path="/apps" element={<BranchesPage />} />
                 <Route path="/apps/:branchId" element={<BranchPage />} />
               </Route>

@@ -8,6 +8,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { useAuth } from "@clerk/clerk-react";
 import { BoxIcon, LayoutTemplateIcon, Plus } from "lucide-react";
 import * as React from "react";
 import { Link, useLocation } from "react-router";
@@ -18,18 +19,21 @@ import { OrganizationSwitcher } from "./organization-switcher";
 // Move navMainItems inside the component so it can access selectedRepoId
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { has } = useAuth();
   const location = useLocation();
 
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         <OrganizationSwitcher />
-        <Link to="/new">
-          <Button className="w-full">
-            <Plus />
-            New App
-          </Button>
-        </Link>
+        {has?.({ role: "org:admin" }) && (
+          <Link to="/new">
+            <Button className="w-full">
+              <Plus />
+              New App
+            </Button>
+          </Link>
+        )}
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>

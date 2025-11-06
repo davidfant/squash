@@ -11,6 +11,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -19,6 +20,21 @@ import { v4 as uuid } from "uuid";
 export const ChatContext = createContext<UseChatHelpers<ChatMessage>>(
   null as any
 );
+
+function useIsResuming(status: ChatStatus, messages: unknown[]) {
+  const sticky = useRef(false); // keeps the “we’re resuming” state
+
+  if (status === "submitted") {
+    // start the flag the *first* time we see "submitted" with zero messages
+    if (messages.length === 0) sticky.current = true;
+    // otherwise keep whatever value we already have (true or false)
+  } else {
+    // left "submitted" ➜ always clear
+    sticky.current = false;
+  }
+
+  return sticky.current;
+}
 
 export const ChatProvider = ({
   children,
@@ -57,7 +73,18 @@ export const ChatProvider = ({
     }
   }, [!!initialMessages]);
 
-  return <ChatContext.Provider value={chat}>{children}</ChatContext.Provider>;
+  const isResuming = useIsResuming(chat.status, chat.messages);
+
+  return (
+    <ChatContext.Provider
+      value={{
+        ...chat,
+        status: isResuming ? "ready" : chat.status,
+      }}
+    >
+      {children}
+    </ChatContext.Provider>
+  );
 };
 
 export const EmptyChatProvider = ({

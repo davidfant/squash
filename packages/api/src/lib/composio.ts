@@ -1,5 +1,4 @@
 import { env } from "cloudflare:workers";
-import { randomUUID } from "node:crypto";
 
 async function fetchJSON<T>(url: string, opts: RequestInit = {}): Promise<T> {
   const res = await fetch(url, opts);
@@ -20,11 +19,14 @@ export const createProject = (repoId: string) =>
     }
   );
 
-export async function createEnvVariables(projectId: string) {
-  const project = await createProject(projectId);
+export async function createEnvVariables(
+  composioProjectId: string,
+  orgId: string
+) {
+  const project = await createProject(composioProjectId);
   return {
     COMPOSIO_PROJECT_ID: project.id,
     COMPOSIO_API_KEY: project.api_key,
-    COMPOSIO_PLAYGROUND_USER_ID: `playground-${randomUUID()}`,
+    COMPOSIO_PLAYGROUND_USER_ID: orgId,
   };
 }

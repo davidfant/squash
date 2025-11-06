@@ -56,7 +56,7 @@ function build_repo() {
     # docker push $DOCKER_TAG
     export NO_PROXY=cr.app.daytona.io,localhost,127.0.0.1
 
-    daytona_ snapshot push "$DOCKER_TAG" --name "$DOCKER_TAG" --entrypoint "sleep infinity" --memory 1 --disk 2 || echo "Did not push snapshot"
+    daytona_ snapshot push "$DOCKER_TAG" --name "$DOCKER_TAG" --entrypoint "sleep infinity" --memory 2 --disk 2 || echo "Did not push snapshot"
   popd
 }
 

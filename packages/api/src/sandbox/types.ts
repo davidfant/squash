@@ -115,7 +115,12 @@ export namespace Sandbox {
     C extends Snapshot.Config.Any = Snapshot.Config.Any
   > {
     config: C;
-    branch: { id: string; repoId: string; name: string };
+    organizationId: string;
+    branch: {
+      id: string;
+      repoId: string;
+      name: string;
+    };
   }
 
   export interface ForkOptions {

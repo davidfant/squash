@@ -85,6 +85,7 @@ export const reposRouter = new Hono<{
       const parentId = randomUUID();
       const messageId = randomUUID();
       const branchId = randomUUID();
+      const organizationId = c.get("organizationId");
 
       const threadP = db
         .insert(schema.messageThread)
@@ -117,7 +118,7 @@ export const reposRouter = new Hono<{
             snapshot: provisioned.snapshot,
             // TODO: default to true for non-paying orgs
             public: false,
-            organizationId: c.get("organizationId"),
+            organizationId,
             createdBy: c.get("userId"),
           })
           .returning()
@@ -154,6 +155,7 @@ export const reposRouter = new Hono<{
           }),
           manager.init({
             config: provisioned.snapshot,
+            organizationId,
             branch: {
               id: branchId,
               repoId: provisioned.id,

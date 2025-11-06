@@ -2,13 +2,15 @@ import { z } from "zod";
 import { composio } from "./integrations/composio";
 import { protectedProcedure, router } from "./trpc";
 
+const connectScope = z.union([z.literal("org"), z.literal("user")]);
+
 export const appRouter = router({
   composio: router({
     isConnected: protectedProcedure
-      .input(z.object({ toolkitSlug: z.string() }))
+      .input(z.object({ toolkitSlug: z.string(), scope: connectScope }))
       .query(async ({ input, ctx }) => {
         const page = await composio.connectedAccounts.list({
-          userIds: [ctx.auth.userId],
+          userIds: input.scope === "org" ? [ctx.auth.orgId] : [ctx.auth.userId],
           toolkitSlugs: [input.toolkitSlug],
           statuses: ["ACTIVE"],
           limit: 1,
@@ -16,7 +18,7 @@ export const appRouter = router({
         return !!page.items.length;
       }),
     createConnectLink: protectedProcedure
-      .input(z.object({ toolkitSlug: z.string() }))
+      .input(z.object({ toolkitSlug: z.string(), scope: connectScope }))
       .mutation(async ({ input, ctx }) => {
         const authConfigs = await composio.authConfigs.list({
           toolkit: input.toolkitSlug,
@@ -26,7 +28,7 @@ export const appRouter = router({
         }
 
         const req = await composio.connectedAccounts.link(
-          ctx.auth.userId,
+          input.scope === "org" ? ctx.auth.orgId : ctx.auth.userId,
           authConfigs.items[0]!.id
         );
         if (!req.redirectUrl) {

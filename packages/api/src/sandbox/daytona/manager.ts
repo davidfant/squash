@@ -230,7 +230,10 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
               timestamp: new Date().toISOString(),
             };
 
-            const composioEnvVars = await createEnvVariables(options.branch.id);
+            const composioEnvVars = await createEnvVariables(
+              options.branch.id,
+              options.organizationId
+            );
             Object.assign(envVars, composioEnvVars);
 
             yield {

@@ -37,7 +37,7 @@ export function BranchHeader({
   return (
     <header className="flex items-center px-2 py-1">
       <div
-        className="flex items-center gap-2"
+        className="flex items-center gap-2 mr-2"
         style={{ width: siderWidth ? `${siderWidth}%` : undefined }}
       >
         <Link to="/" className="flex items-center">

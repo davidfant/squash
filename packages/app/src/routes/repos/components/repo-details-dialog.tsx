@@ -1,4 +1,4 @@
-import { IframePreview } from "@/components/blocks/iframe-preview";
+import { IframeCard } from "@/components/blocks/iframe";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -52,7 +52,7 @@ export function RepoDetailsDialog({
         </DialogHeader>
 
         <div className="p-4 pt-0 flex-1 overflow-y-auto">
-          <IframePreview
+          <IframeCard
             url={repo.previewUrl}
             imageUrl={repo.imageUrl}
             className="aspect-video"

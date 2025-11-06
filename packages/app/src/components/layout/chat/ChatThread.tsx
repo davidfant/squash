@@ -79,7 +79,7 @@ export function ChatThread({
     if (loading) {
       return (
         <div className="flex-1 w-full grid place-items-center">
-          <Spinner className="size-6 opacity-20" />
+          <Spinner className="size-6" />
         </div>
       );
     }

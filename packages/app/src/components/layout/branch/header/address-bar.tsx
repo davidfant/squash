@@ -58,7 +58,7 @@ export function AddressBar() {
         <TooltipTrigger asChild>
           <Input
             placeholder={t("addressBar.path.placeholder")}
-            className="flex-1 border-none shadow-none cursor-pointer"
+            className="flex-1 border-none shadow-none cursor-pointer h-8"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}

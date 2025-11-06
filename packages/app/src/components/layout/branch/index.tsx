@@ -3,7 +3,6 @@ import { BranchHeader } from "@/components/layout/branch/header/branch-header";
 import { BranchTabContent } from "@/components/layout/branch/main-content";
 import { ChatThread } from "@/components/layout/chat/ChatThread";
 import { ChatProvider } from "@/components/layout/chat/context";
-import { Button } from "@/components/ui/button";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -14,7 +13,6 @@ import { api, useQuery } from "@/hooks/api";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@clerk/clerk-react";
 import type { ChatMessage } from "@squashai/api/agent/types";
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useRef, useState } from "react";
 import type { ImperativePanelHandle } from "react-resizable-panels";
 import { ChatInputProvider } from "../chat/input/context";
@@ -30,16 +28,13 @@ export function BranchLayout({ branchId }: { branchId: string }) {
 
   const chatPanelRef = useRef<ImperativePanelHandle>(null);
   const [isChatCollapsed, setIsChatCollapsed] = useState(false);
+  const [siderWidth, setSiderWidth] = useState(30);
 
   const toggleChatVisibility = () => {
     const panel = chatPanelRef.current;
     if (!panel) return;
-
-    if (isChatCollapsed) {
-      panel.expand();
-    } else {
-      panel.collapse();
-    }
+    if (isChatCollapsed) panel.expand();
+    else panel.collapse();
   };
 
   return (
@@ -60,36 +55,8 @@ export function BranchLayout({ branchId }: { branchId: string }) {
           <div className="flex flex-col h-screen">
             <BranchHeader
               title={branch.repo.name}
-              inlineAction={
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-8"
-                  onClick={toggleChatVisibility}
-                  aria-pressed={!isChatCollapsed}
-                  aria-label={`${
-                    isChatCollapsed ? "Show" : "Hide"
-                  } chat thread`}
-                >
-                  {isChatCollapsed ? (
-                    <PanelLeftOpen className="size-4" />
-                  ) : (
-                    <PanelLeftClose className="size-4" />
-                  )}
-                  <span className="sr-only">Toggle chat thread</span>
-                </Button>
-              }
-              // extra={
-              //   <div className="flex items-center gap-2">
-              //     <RequireRole roles={["admin", "owner"]}>
-              //       <ForkButton />
-              //     </RequireRole>
-              //     <RequireRole roles={["admin", "owner"]}>
-              //       <InviteButton />
-              //     </RequireRole>
-              //     <ShareButton />
-              //   </div>
-              // }
+              siderWidth={isChatCollapsed ? undefined : siderWidth}
+              onToggleSider={toggleChatVisibility}
             />
             <ResizablePanelGroup
               direction="horizontal"
@@ -97,11 +64,12 @@ export function BranchLayout({ branchId }: { branchId: string }) {
             >
               <ResizablePanel
                 ref={chatPanelRef}
-                defaultSize={30}
-                minSize={25}
-                maxSize={35}
+                defaultSize={siderWidth}
+                minSize={20}
+                maxSize={40}
                 collapsedSize={0}
                 collapsible
+                onResize={(size) => setSiderWidth(size)}
                 onCollapse={() => setIsChatCollapsed(true)}
                 onExpand={() => setIsChatCollapsed(false)}
                 className={cn("flex", isChatCollapsed && "ml-2")}

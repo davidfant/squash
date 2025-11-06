@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/collapsible";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { api, useQuery } from "@/hooks/api";
+import { api, useAuthHeaders, useQuery } from "@/hooks/api";
 import { cn } from "@/lib/utils";
 import { ChevronRight, File as FileIcon /* , Folder */ } from "lucide-react";
 
@@ -235,6 +235,7 @@ export function BranchCodeViewer() {
     };
   }, [content]);
 
+  const headers = useAuthHeaders();
   useEffect(() => {
     if (!selectedFile) {
       setContent({ status: "idle", path: null });
@@ -247,10 +248,10 @@ export function BranchCodeViewer() {
 
     const load = async () => {
       try {
-        const res = await api.branches[":branchId"].preview.fs.content.$get({
-          param: { branchId: branch.id },
-          query: { path: target },
-        });
+        const res = await api.branches[":branchId"].preview.fs.content.$get(
+          { param: { branchId: branch.id }, query: { path: target } },
+          { headers }
+        );
 
         if (!res.ok) {
           throw new Error(`Failed to load file (${res.status})`);

@@ -161,13 +161,7 @@ export class SquashIframeBridge {
       data.source === "@squashai/iframe-bridge"
     ) {
       if (this.options.debug) {
-        console.log(
-          `[SquashIframeBridge#${this.id}]`,
-          "handleMessage",
-          data,
-          this.listeners,
-          this.id
-        );
+        console.log(`[SquashIframeBridge#${this.id}]`, "handleMessage", data);
       }
       const cmd = data as SquashIframeBridgeCommand.Any;
       this.listeners.get(cmd.command)?.forEach((fn) => fn(cmd));

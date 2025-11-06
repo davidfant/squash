@@ -8,3 +8,4 @@ dist
 .turbo
 .wrangler
 worker-configuration.d.ts
+update-check

@@ -340,11 +340,6 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
     const options = await this.getOptions();
     const that = this;
 
-    if (Math.random()) {
-      options.config.build = { type: "cloudflare-worker" };
-      options.config.tasks.build = [];
-    }
-
     /*if (options.config.build.type === "static") {
       const build = options.config.build;
       return [

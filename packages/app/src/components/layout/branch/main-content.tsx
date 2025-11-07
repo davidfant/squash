@@ -40,7 +40,7 @@ export function BranchTabContent({ className }: { className?: string }) {
   );
 
   return (
-    <WebPreview className={cn("relative h-full", className)}>
+    <WebPreview className={cn("relative h-full bg-muted", className)}>
       <div className="z-2 w-full h-full">
         <TabsContent value="preview" className="h-full">
           <BranchPreview className="h-full bg-muted" />

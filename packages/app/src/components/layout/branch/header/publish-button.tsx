@@ -11,12 +11,12 @@ import { api, useAuthHeaders, useMutation } from "@/hooks/api";
 import { useChat } from "@ai-sdk/react";
 import type { SandboxTaskMessage } from "@squashai/api/agent/types";
 import { DefaultChatTransport } from "ai";
-import { ExternalLink, Share } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useBranchContext } from "../context";
 
-export function ShareButton() {
+export function PublishButton() {
   const { t } = useTranslation("branch");
   const { branch, preview, refetch } = useBranchContext();
 
@@ -67,7 +67,7 @@ export function ShareButton() {
     >
       <DropdownMenuTrigger asChild>
         <Button variant="default" size="sm">
-          <Share />
+          {/* <Share /> */}
           {t("deploy.button")}
         </Button>
       </DropdownMenuTrigger>

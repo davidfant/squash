@@ -183,7 +183,7 @@
   content: "";
   border-radius: inherit;
   inset: 0px;
-  background: linear-gradient(rgba(255, 255, 255, 0.2) 0%, transparent 100%);
+  background: linear-gradient(rgba(255, 255, 255, 0.15) 0%, transparent 100%);
 }
 
 /* .btn-glass {

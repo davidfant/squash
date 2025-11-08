@@ -135,7 +135,7 @@ export function BranchPreviewConsole() {
       className="h-full w-72 flex flex-col pr-2"
       height={64}
     >
-      <div ref={contentRef} className="space-y-2">
+      <div ref={contentRef}>
         {toolCallIds
           .map((id) => toolCalls[id])
           .filter((t) => !!t)

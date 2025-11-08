@@ -11,13 +11,13 @@ import { eq } from "drizzle-orm";
 import { Buffer } from "node:buffer";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
-import { setTimeout } from "node:timers/promises";
 import pRetry, { AbortError } from "p-retry";
-import escape from "shell-escape";
 import { BaseSandboxManagerDurableObject } from "../base";
 import type { Sandbox } from "../types";
 import { pullLatestChanges } from "../util";
 import { downloadFileFromSandbox } from "./api";
+import { DaytonaDevServer } from "./dev-server";
+import { startCommand } from "./util";
 
 export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
   Sandbox.Snapshot.Config.Daytona,
@@ -25,15 +25,30 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
 > {
   name = "daytona";
   private readonly daytona = new Daytona({ apiKey: env.DAYTONA_API_KEY });
-  private sandbox: DaytonaSandbox | null = null;
+  private _sandbox: DaytonaSandbox | null = null;
+  private _devServer: DaytonaDevServer | null = null;
 
   private async getSandbox(source: string): Promise<DaytonaSandbox> {
     logger.debug("Getting sandbox", { source });
-    if (this.sandbox) return this.sandbox;
+    if (this._sandbox) return this._sandbox;
     const sandboxId = await this.storage.get("sandboxId");
     const sandbox = await this.daytona.get(sandboxId);
-    this.sandbox = sandbox;
+    this._sandbox = sandbox;
     return sandbox;
+  }
+
+  private async getDevServer(): Promise<DaytonaDevServer | null> {
+    logger.debug("Getting dev server");
+    if (this._devServer) return this._devServer;
+    const sandbox = await this.getSandbox("getDevServer");
+    const devServer = await this.storage.get("devServer", null);
+    if (!devServer) return null;
+    this._devServer = new DaytonaDevServer(
+      sandbox,
+      devServer.sessionId,
+      devServer.commandId
+    );
+    return this._devServer;
   }
 
   private async isDevServerRunning(): Promise<boolean> {
@@ -56,9 +71,10 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
   async isStarted(): Promise<boolean> {
     try {
       const sandbox = await this.getSandbox("isStarted");
-      const isDevServerRunningP = this.isDevServerRunning();
+      const devServer = await this.getDevServer();
+      const isDevServerRunningP = devServer?.isRunning();
       await sandbox.refreshData();
-      return sandbox.state === "started" && (await isDevServerRunningP);
+      return sandbox.state === "started" && !!(await isDevServerRunningP);
     } catch {
       return false;
     }
@@ -134,7 +150,7 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
             });
           }
 
-          that.sandbox = sandbox;
+          that._sandbox = sandbox;
         },
       },
       {
@@ -279,61 +295,36 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
         ],
         type: "function",
         function: async function* () {
-          const isDevServerRunning = await that.isDevServerRunning();
+          let devServer = await that.getDevServer();
 
-          if (!isDevServerRunning) {
-            const devServer = await that.startCommand(
-              {
-                command: options.config.tasks.dev.command,
-                args: options.config.tasks.dev.args ?? [],
-              },
-              undefined
+          if (!devServer) {
+            const sandbox = await that.getSandbox("start-dev-server");
+            devServer = await DaytonaDevServer.start(
+              sandbox,
+              options.config.tasks.dev
             );
+            that._devServer = devServer;
+            await that.storage.set("devServer", {
+              sessionId: devServer.sessionId,
+              commandId: devServer.commandId,
+            });
+          }
+
+          const isRunning = await devServer.isRunning();
+          if (!isRunning) {
             yield {
               type: "stdout",
               data: "Starting development server...\n",
               timestamp: new Date().toISOString(),
             };
-
-            await that.storage.set("devServer", devServer);
           }
 
-          for (let attempt = 0; attempt < 100; attempt++) {
-            try {
-              const preview = await that.sandbox!.getPreviewLink(
-                options.config.port
-              );
-              logger.debug("Fetching preview", { url: preview.url, attempt });
-              const response = await fetch(preview.url, { method: "GET" });
-              if (response.ok) {
-                const text = await response.text();
-                if (text.length) {
-                  yield {
-                    type: "stdout",
-                    data: "Dev server started\n",
-                    timestamp: new Date().toISOString(),
-                  };
-                  return;
-                }
-              }
-              logger.debug("Waiting for dev server", { url: preview.url });
-              yield {
-                type: "stdout",
-                data: "Waiting for dev server...\n",
-                timestamp: new Date().toISOString(),
-              };
-            } catch (error) {
-              logger.error("Error getting preview link", {
-                name: (error as Error).name,
-                message: (error as Error).message,
-                stack: (error as Error).stack,
-              });
-            }
-
-            await setTimeout(200);
-          }
-
-          throw new Error("Dev server not started");
+          await devServer.waitUntilReachable(options.config.port);
+          yield {
+            type: "stdout",
+            data: "Dev server started\n",
+            timestamp: new Date().toISOString(),
+          };
         },
       },
     ];
@@ -647,7 +638,7 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
     const now = () => new Date().toISOString();
     const sandbox = await this.getSandbox("execute");
 
-    const exec = await this.startCommand(request, abortSignal);
+    const exec = await startCommand(sandbox, request, abortSignal);
     const gen = await toAsyncIterator<[Sandbox.Exec.Event.Any]>(async (add) => {
       try {
         add({ type: "start", timestamp: now() });
@@ -743,41 +734,6 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
       }
       yield event;
     }
-  }
-
-  private async startCommand(
-    request: Sandbox.Exec.Request,
-    abortSignal: AbortSignal | undefined
-  ): Promise<{ sessionId: string; commandId: string }> {
-    const sandbox = await this.getSandbox("startCommand");
-    const sessionId = randomUUID();
-    logger.debug("Creating exec session", {
-      sessionId,
-      command: request.command,
-      args: request.args,
-    });
-    await sandbox.process.createSession(sessionId);
-
-    if (abortSignal?.aborted) {
-      await sandbox.process.deleteSession(sessionId);
-      logger.debug("Deleted exec session", { sessionId });
-    }
-    abortSignal?.addEventListener("abort", async () => {
-      await sandbox.process.deleteSession(sessionId);
-      logger.debug("Deleted exec session", { sessionId });
-    });
-
-    const command = await sandbox.process.executeSessionCommand(sessionId, {
-      command: [
-        ...Object.entries(request.env ?? {}).map(([k, v]) => `${k}=${v}`),
-        escape([request.command, ...(request.args ?? [])]),
-      ]
-        .join(" ")
-        .trim(),
-      runAsync: true,
-    });
-    logger.debug("Started executing command", command);
-    return { sessionId, commandId: command.cmdId! };
   }
 
   // TODO: should we have concurrency control here?
@@ -876,70 +832,17 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
       target.hostname.split(".")[0],
       ".",
       proxy.host,
-      // target.pathname,
-      // target.search,
-      // target.hash,
     ].join("");
   }
 
   async listenToLogs(): Promise<Response> {
     await this.waitUntilStarted();
-
-    const encoder = new TextEncoder();
-    const devServer = await this.storage.get("devServer", null);
-
+    const devServer = await this.getDevServer();
     if (!devServer) {
       logger.warn("Dev server logs requested before command started");
       return new Response(null, { status: 204 });
     }
-
-    const sandbox = await this.getSandbox("listenToLogs");
-    let aborted = false;
-
-    const stream = new ReadableStream<Uint8Array>({
-      async start(controller) {
-        const send = (chunk: string | undefined | null) => {
-          if (aborted || !chunk) return;
-          const lines = chunk.replace(/\r/g, "").split("\n");
-          if (!lines.length) return;
-          const payload = lines.map((line) => `data: ${line}`).join("\n");
-          controller.enqueue(encoder.encode(`${payload}\n\n`));
-        };
-
-        try {
-          // const history = await sandbox.process.getSessionCommandLogs(
-          //   devServer.sessionId,
-          //   devServer.commandId
-          // );
-
-          // if (history.output) send(history.output);
-
-          await sandbox.process.getSessionCommandLogs(
-            devServer.sessionId,
-            devServer.commandId,
-            (data: string) => send(data),
-            (data: string) => send(data)
-          );
-        } catch (error) {
-          logger.error("Failed streaming dev server logs", {
-            error: {
-              message: (error as Error).message,
-              stack: (error as Error).stack,
-              name: (error as Error).name,
-            },
-            sandboxId: sandbox.id,
-            devServer,
-          });
-          send(`ERROR: ${(error as Error).message}`);
-        } finally {
-          controller.close();
-        }
-      },
-      cancel() {
-        aborted = true;
-      },
-    });
-
+    const stream = devServer.listenToLogs();
     return new Response(stream, {
       status: 200,
       headers: {

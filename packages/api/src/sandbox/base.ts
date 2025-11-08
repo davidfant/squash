@@ -253,7 +253,11 @@ export abstract class BaseSandboxManagerDurableObject<
     await this.waitUntilStarted();
     logger.info("Resetting git to", { sha });
     const stream = await this.execute(
-      { command: "git", args: ["reset", "--hard", sha] },
+      // { command: "git", args: ["reset", "--hard", sha] },
+      {
+        command: "sh",
+        args: ["-c", `git reset --hard ${sha} && git clean -fd`],
+      },
       abortSignal
     );
     await runCommand(stream);

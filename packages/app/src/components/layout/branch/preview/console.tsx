@@ -1,39 +1,74 @@
-import {
-  WebPreviewConsole,
-  type WebPreviewConsoleLogEntry,
-} from "@/components/ai-elements/web-preview";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { FadingScrollView } from "@/components/blocks/fading-scroll-view";
+import { Fragment, useEffect, useRef, useState } from "react";
+import { useStickToBottom } from "use-stick-to-bottom";
 import { useBranchContext } from "../context";
+import { ToolCallItem, type ToolCall } from "./console-tool-call";
+import { zConsoleLogEntrySchema, type ConsoleLogEntry } from "./schemas";
 
-const MAX_LOG_LINES = 200;
+function parseConsoleLogEntry(line: string): ConsoleLogEntry | undefined {
+  try {
+    return zConsoleLogEntrySchema.parse(JSON.parse(line));
+  } catch (error) {
+    return undefined;
+  }
+}
 
 export function BranchPreviewConsole() {
   const { branch } = useBranchContext();
-  const [entries, setEntries] = useState<WebPreviewConsoleLogEntry[]>([]);
+  const { scrollRef, contentRef } = useStickToBottom({ initial: "instant" });
+  const [toolCallIds, setToolCallIds] = useState<string[]>([]);
+  const [toolCalls, setToolCalls] = useState<Record<string, ToolCall>>({});
   const [status, setStatus] = useState<
     "connecting" | "open" | "closed" | "error"
   >("connecting");
-  const containerRef = useRef<HTMLDivElement>(null);
   const pendingRef = useRef("");
 
   useEffect(() => {
-    setEntries([]);
+    setToolCallIds([]);
     setStatus("connecting");
     pendingRef.current = "";
 
     const appendLines = (lines: string[]) => {
       if (!lines.length) return;
-      setEntries((prev) => {
-        const next = [
-          ...prev,
-          ...lines.map((line) => ({
-            message: line.length === 0 ? " " : line,
-            level: "log" as const,
-            timestamp: new Date(),
-          })),
-        ];
-        return next.slice(-MAX_LOG_LINES);
-      });
+      const parsed = lines
+        .map(parseConsoleLogEntry)
+        .filter((e) => !!e)
+        .map((d) => d.data)
+        .filter(
+          (d) =>
+            d.type === "composio-tool-call" ||
+            d.type === "composio-tool-result" ||
+            d.type === "composio-tool-error"
+        );
+
+      setToolCallIds((prev) => [
+        ...prev,
+        ...parsed
+          .map((d) => d.id)
+          .filter((id, idx, all) => all.indexOf(id) === idx)
+          .filter((id) => !prev.includes(id)),
+      ]);
+      setToolCalls((prev) =>
+        parsed.reduce((acc, d) => {
+          if (d.type === "composio-tool-call") {
+            acc[d.id] = {
+              id: d.id,
+              tool: d.tool,
+              input: d.input,
+              output: undefined,
+              error: undefined,
+              state: "input",
+            };
+          } else if (d.type === "composio-tool-result" && acc[d.id]) {
+            acc[d.id]!.output = d.data;
+            acc[d.id]!.state = "output";
+          } else if (d.type === "composio-tool-error" && acc[d.id]) {
+            acc[d.id]!.error = d.error;
+            acc[d.id]!.state = "error";
+          }
+          return acc;
+        }, prev)
+      );
     };
 
     const flushPending = () => {
@@ -75,24 +110,31 @@ export function BranchPreviewConsole() {
     };
   }, [branch.id]);
 
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    el.scrollTop = el.scrollHeight;
-  }, [entries]);
-
-  const statusLabel = useMemo(() => {
-    switch (status) {
-      case "open":
-        return "Live";
-      case "error":
-        return "Connection lost";
-      case "closed":
-        return "Ended";
-      default:
-        return "Connecting";
-    }
-  }, [status]);
-
-  return <WebPreviewConsole logs={entries} />;
+  return (
+    <FadingScrollView
+      ref={scrollRef}
+      className="h-full w-96 flex flex-col"
+      height={64}
+    >
+      <div ref={contentRef} className="space-y-2">
+        {toolCallIds.length === 0 ? (
+          <p className="text-muted-foreground">No console output</p>
+        ) : (
+          toolCallIds
+            .map((id) => toolCalls[id])
+            .filter((t) => !!t)
+            .map((tc, index) => (
+              <Fragment key={index}>
+                {index !== 0 && (
+                  <div className="flex justify-center">
+                    <div className="h-8 border-l border-dashed" />
+                  </div>
+                )}
+                <ToolCallItem toolCall={tc} />
+              </Fragment>
+            ))
+        )}
+      </div>
+    </FadingScrollView>
+  );
 }

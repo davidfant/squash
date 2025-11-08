@@ -110,6 +110,7 @@ export async function runClaudeCode(
         options: {
           cwd: req.cwd,
           resume: req.options?.sessionId,
+          forkSession: !!req.options?.sessionId,
           model: req.model,
           executable: "node",
           includePartialMessages: true,

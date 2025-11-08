@@ -1,10 +1,13 @@
+import { FadingScrollView } from "@/components/blocks/fading-scroll-view";
 import { ChatInput } from "@/components/layout/chat/input/ChatInput";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { api, useMutation } from "@/hooks/api";
 import { AnimatePresence, motion } from "framer-motion";
+import { ArrowDownIcon } from "lucide-react";
 import { useMemo, type ReactNode } from "react";
-import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
+import { useStickToBottom } from "use-stick-to-bottom";
 import { ChatThreadContent } from "./ChatThreadContent";
 import { useChatContext } from "./context";
 import { useMessageLineage } from "./messageLineage";
@@ -15,14 +18,15 @@ function ChatInputWithScrollToBottom({
   disabled,
   clearOnSubmit,
   onStop,
+  onSubmit,
 }: {
   parentId: string;
   disabled?: boolean;
   clearOnSubmit?: boolean;
   onStop: () => Promise<unknown>;
+  onSubmit: () => void;
 }) {
   const { status, sendMessage } = useChatContext();
-  const { scrollToBottom } = useStickToBottomContext();
   return (
     <ChatInput
       disabled={disabled}
@@ -37,23 +41,22 @@ function ChatInputWithScrollToBottom({
           ...value,
           metadata: { createdAt: new Date().toISOString(), parentId },
         });
-        scrollToBottom();
+        onSubmit();
       }}
     />
   );
 }
 
-export function ChatThread({
-  id,
-  loading,
-  clearInputOnSubmit,
-  empty,
-}: {
+interface ChatThreadProps {
   id: string;
   loading?: boolean;
   clearInputOnSubmit?: boolean;
   empty?: ReactNode;
-}) {
+}
+
+function Content({ id, loading, clearInputOnSubmit, empty }: ChatThreadProps) {
+  const { scrollRef, contentRef, scrollToBottom, isAtBottom } =
+    useStickToBottom({ initial: "instant" });
   const { messages: allMessages, status } = useChatContext();
   const messages = useMessageLineage(allMessages, id);
 
@@ -78,28 +81,42 @@ export function ChatThread({
   const content = (() => {
     if (loading) {
       return (
-        <div className="flex-1 w-full grid place-items-center">
+        <div className="flex-1 grid place-items-center">
           <Spinner className="size-6" />
         </div>
       );
     }
 
     if (messages.activePath.length === 0) {
-      return <div className="flex-1 w-full flex">{empty}</div>;
+      return <div className="flex-1 flex">{empty}</div>;
     }
 
-    return <ChatThreadContent id={id} />;
+    return (
+      <FadingScrollView
+        ref={scrollRef}
+        height={64}
+        className="flex-1 w-full relative"
+      >
+        <div ref={contentRef} className="pt-0 pl-2 pr-4 relative">
+          <ChatThreadContent id={id} />
+          {!isAtBottom && (
+            <Button
+              className="absolute bottom-4 left-[50%] translate-x-[-50%] rounded-full"
+              onClick={() => scrollToBottom()}
+              size="icon"
+              variant="outline"
+            >
+              <ArrowDownIcon className="size-4" />
+            </Button>
+          )}
+        </div>
+      </FadingScrollView>
+    );
   })();
 
   return (
-    <StickToBottom
-      key={`${loading}-${!!messages.activePath.length}`}
-      className="h-full w-full flex flex-col"
-      initial="instant"
-      resize="smooth"
-    >
+    <div className="h-full w-full flex flex-col">
       {content}
-
       <div className="p-2 pt-0">
         <AnimatePresence>
           {!!todos && !todos.every((t) => t.status === "completed") && (
@@ -120,8 +137,20 @@ export function ChatThread({
           disabled={loading}
           clearOnSubmit={clearInputOnSubmit}
           onStop={() => stop.mutateAsync({ param: { branchId: id } })}
+          onSubmit={scrollToBottom}
         />
       </div>
-    </StickToBottom>
+    </div>
+  );
+}
+
+export function ChatThread(props: ChatThreadProps) {
+  const { messages: allMessages } = useChatContext();
+  const messages = useMessageLineage(allMessages, props.id);
+  return (
+    <Content
+      key={`${props.loading}-${!!messages.activePath.length}`}
+      {...props}
+    />
   );
 }

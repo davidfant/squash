@@ -1,7 +1,3 @@
-import {
-  ConversationContent,
-  ConversationScrollButton,
-} from "@/components/ai-elements/conversation";
 import { useBranchContext } from "@/components/layout/branch/context";
 import { ChatInput } from "@/components/layout/chat/input/ChatInput";
 import {
@@ -79,87 +75,84 @@ export function ChatThreadContent({ id }: { id: string }) {
     (status === "streaming" && lastMessage?.role === "user");
 
   return (
-    <div className="flex-1 w-full overflow-hidden relative">
-      <ConversationContent className="pt-0 pl-2 pb-2 pr-4">
-        {messages.activePath.map((m, idx) => {
-          switch (m.role) {
-            case "user":
-              const isEditing = editingMessageId === m.id;
-              const textContent = m.parts
-                .filter((p) => p.type === "text")
-                .map((p) => p.text)
-                .join("");
+    <>
+      {messages.activePath.map((m, idx) => {
+        switch (m.role) {
+          case "user":
+            const isEditing = editingMessageId === m.id;
+            const textContent = m.parts
+              .filter((p) => p.type === "text")
+              .map((p) => p.text)
+              .join("");
 
-              if (isEditing) {
-                return (
-                  <div className="w-full" key={m.id}>
-                    <ChatInputProvider
-                      initialValue={{
-                        text: textContent,
-                        files: m.parts.filter((p) => p.type === "file"),
-                        state: m.parts.find((p) => p.type === "data-AgentState")
-                          ?.data,
-                      }}
-                    >
-                      <ChatInput
-                        submitting={false}
-                        autoFocus
-                        placeholder="Edit your message..."
-                        disabled={false}
-                        onSubmit={(value) => handleEditSubmit(m.id, value)}
-                      />
-                      <div className="flex gap-2 mt-2 justify-end">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setEditingMessageId(null)}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </ChatInputProvider>
-                  </div>
-                );
-              }
-
+            if (isEditing) {
               return (
-                <UserMessage
-                  key={m.id}
-                  message={m}
-                  variants={messages.variants.get(m.metadata!.parentId)}
-                  onEdit={() => setEditingMessageId(m.id)}
-                  onVariantChange={handleVariantChange}
-                />
+                <div className="w-full" key={m.id}>
+                  <ChatInputProvider
+                    initialValue={{
+                      text: textContent,
+                      files: m.parts.filter((p) => p.type === "file"),
+                      state: m.parts.find((p) => p.type === "data-AgentState")
+                        ?.data,
+                    }}
+                  >
+                    <ChatInput
+                      submitting={false}
+                      autoFocus
+                      placeholder="Edit your message..."
+                      disabled={false}
+                      onSubmit={(value) => handleEditSubmit(m.id, value)}
+                    />
+                    <div className="flex gap-2 mt-2 justify-end">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setEditingMessageId(null)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </ChatInputProvider>
+                </div>
               );
-            case "assistant":
-              return (
-                <AssistantMessage
-                  key={m.id}
-                  message={m}
-                  streaming={status === "streaming" && m.id === lastMessageId}
-                  isLast={m.id === lastMessageId}
-                  className="mb-4"
-                  onRetry={() => handleRetry(m.id)}
-                />
-              );
-          }
-        })}
-        {showLoading && (
-          <AssistantMessage
-            message={{ id: "", role: "assistant", parts: [] }}
-            isLast
-            streaming
-            className="mb-4"
-          />
-        )}
+            }
 
-        {lastMessage?.role !== "assistant" && status === "error" && (
-          <div className="ml-7">
-            <ChatErrorAlert />
-          </div>
-        )}
-      </ConversationContent>
-      <ConversationScrollButton />
-    </div>
+            return (
+              <UserMessage
+                key={m.id}
+                message={m}
+                variants={messages.variants.get(m.metadata!.parentId)}
+                onEdit={() => setEditingMessageId(m.id)}
+                onVariantChange={handleVariantChange}
+              />
+            );
+          case "assistant":
+            return (
+              <AssistantMessage
+                key={m.id}
+                message={m}
+                streaming={status === "streaming" && m.id === lastMessageId}
+                isLast={m.id === lastMessageId}
+                className="mb-4"
+                onRetry={() => handleRetry(m.id)}
+              />
+            );
+        }
+      })}
+      {showLoading && (
+        <AssistantMessage
+          message={{ id: "", role: "assistant", parts: [] }}
+          isLast
+          streaming
+          className="mb-4"
+        />
+      )}
+
+      {lastMessage?.role !== "assistant" && status === "error" && (
+        <div className="ml-7">
+          <ChatErrorAlert />
+        </div>
+      )}
+    </>
   );
 }

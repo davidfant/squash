@@ -1,9 +1,8 @@
 import { Iframe } from "@/components/blocks/iframe";
 import { cn } from "@/lib/utils";
 import { useBranchContext } from "../context";
-import { BranchPreviewConsole } from "./console";
 
-export function BranchPreview({ className }: { className?: string }) {
+export function BranchPreview() {
   const { screenSize, preview } = useBranchContext();
   const getPreviewWidth = () => {
     if (screenSize === "desktop") return "w-full";
@@ -13,17 +12,14 @@ export function BranchPreview({ className }: { className?: string }) {
 
   if (!preview.url) return null;
   return (
-    <div className={cn("flex flex-col", className)}>
-      <Iframe
-        url={preview.url}
-        key={preview.refreshKey}
-        className={cn(
-          "flex-1 mx-auto transition-all duration-300 z-2",
-          getPreviewWidth()
-        )}
-        onNavigate={preview.setCurrentPath}
-      />
-      <BranchPreviewConsole />
-    </div>
+    <Iframe
+      url={preview.url}
+      key={preview.refreshKey}
+      className={cn(
+        "flex-1 mx-auto transition-all duration-300 z-2",
+        getPreviewWidth()
+      )}
+      onNavigate={preview.setCurrentPath}
+    />
   );
 }

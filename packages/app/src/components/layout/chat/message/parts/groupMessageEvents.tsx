@@ -5,7 +5,6 @@ import {
   EyeIcon,
   FolderSearch,
   ListTodoIcon,
-  PackageSearchIcon,
   SearchIcon,
   SquarePenIcon,
   TerminalIcon,
@@ -302,7 +301,7 @@ export function groupMessageEvents(
       case "tool-ClaudeCode__mcp__Composio__GetToolDetails": {
         const count = part.input?.tools?.length;
         currentEvents.push({
-          icon: PackageSearchIcon,
+          icon: SearchIcon,
           loading: isToolLoading(part.state),
           // label: part.input?.reason,
           label: count

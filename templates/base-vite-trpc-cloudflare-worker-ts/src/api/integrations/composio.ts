@@ -1,6 +1,8 @@
 import { Composio } from "@composio/core";
 import { VercelProvider } from "@composio/vercel";
 import { env } from "cloudflare:workers";
+import { randomUUID } from "crypto";
+import { logger } from "../logger";
 
 export const composio = new Composio({ apiKey: env.COMPOSIO_API_KEY });
 
@@ -13,7 +15,14 @@ export async function executeTool<Input, Output>(params: {
   error: string | null;
   data: Output;
 }> {
-  console.log(JSON.stringify({ message: `Tool call started`, ...params }));
+  const toolCallId = randomUUID();
+  logger.debug("Tool call started", {
+    type: "composio-tool-call",
+    id: toolCallId,
+    tool: params.tool,
+    userId: params.userId,
+    input: params.input,
+  });
 
   try {
     const res = await composio.tools.execute(params.tool, {
@@ -21,15 +30,13 @@ export async function executeTool<Input, Output>(params: {
       arguments: params.input as Record<string, unknown>,
     });
 
-    console.log(
-      JSON.stringify({
-        message: `Tool call completed`,
-        ...params,
-        successful: res.successful,
-        error: res.error,
-        data: res.data,
-      })
-    );
+    logger.debug("Tool call completed", {
+      type: "composio-tool-result",
+      id: toolCallId,
+      successful: res.successful,
+      error: res.error,
+      data: res.data,
+    });
 
     return {
       successful: res.successful,
@@ -37,13 +44,11 @@ export async function executeTool<Input, Output>(params: {
       data: res.data as Output,
     };
   } catch (error) {
-    console.error(
-      JSON.stringify({
-        message: `Tool call failed`,
-        ...params,
-        error: error instanceof Error ? error.message : String(error),
-      })
-    );
+    logger.error("Tool call error", {
+      type: "composio-tool-error",
+      id: toolCallId,
+      error: error instanceof Error ? error.message : String(error),
+    });
     return {
       successful: false,
       error: error.message,

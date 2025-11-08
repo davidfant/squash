@@ -1,5 +1,5 @@
 {
-  "name": "base-vite-trpc-cloudflare-worker-ts",
+  "name": "squash-template",
   "private": true,
   "version": "0.1.0",
   "type": "module",

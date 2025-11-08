@@ -907,12 +907,12 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
         };
 
         try {
-          const history = await sandbox.process.getSessionCommandLogs(
-            devServer.sessionId,
-            devServer.commandId
-          );
+          // const history = await sandbox.process.getSessionCommandLogs(
+          //   devServer.sessionId,
+          //   devServer.commandId
+          // );
 
-          if (history.output) send(history.output);
+          // if (history.output) send(history.output);
 
           await sandbox.process.getSessionCommandLogs(
             devServer.sessionId,

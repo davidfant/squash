@@ -271,10 +271,10 @@ export const tools = {
     description: "Terminates a long-running Bash shell by its ID.",
   }),
 
-  ClaudeCode__mcp__Composio__GetConnectedTools: tool({
-    inputSchema: z.unknown(),
-    outputSchema: z.unknown(),
-  }),
+  // ClaudeCode__mcp__Composio__GetConnectedTools: tool({
+  //   inputSchema: z.unknown(),
+  //   outputSchema: z.unknown(),
+  // }),
   ClaudeCode__mcp__Composio__MultiExecuteTool: tool({
     inputSchema: z.object({
       toolCalls: z.array(
@@ -295,20 +295,26 @@ export const tools = {
     inputSchema: z.unknown(),
     outputSchema: z.unknown(),
   }),
-  ClaudeCode__mcp__Composio__SearchToolkits: tool({
+  ClaudeCode__mcp__Composio__SearchTools: tool({
     inputSchema: z.object({ useCases: z.string().array() }),
     outputSchema: z.unknown(),
   }),
-  ClaudeCode__mcp__Composio__ListConnectedToolkits: tool({
-    inputSchema: z.unknown(),
-    outputSchema: z.unknown(),
-  }),
-  ClaudeCode__mcp__Composio__ListTools: tool({
-    inputSchema: z.object({ toolkitSlug: z.string(), toolkitName: z.string() }),
-    outputSchema: z.unknown(),
-  }),
+  // ClaudeCode__mcp__Composio__SearchToolkits: tool({
+  //   inputSchema: z.object({ useCases: z.string().array() }),
+  //   outputSchema: z.unknown(),
+  // }),
+  // ClaudeCode__mcp__Composio__ListConnectedToolkits: tool({
+  //   inputSchema: z.unknown(),
+  //   outputSchema: z.unknown(),
+  // }),
+  // ClaudeCode__mcp__Composio__ListTools: tool({
+  //   inputSchema: z.object({ toolkitSlug: z.string(), toolkitName: z.string() }),
+  //   outputSchema: z.unknown(),
+  // }),
   ClaudeCode__mcp__Composio__GetToolDetails: tool({
-    inputSchema: z.object({ reason: z.string(), toolSlug: z.string() }),
+    inputSchema: z.object({
+      tools: z.object({ reason: z.string(), slug: z.string() }).array(),
+    }),
     outputSchema: z.unknown(),
   }),
   ClaudeCode__mcp__Composio__ConnectToToolkit: tool({

@@ -24,8 +24,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   return (
     <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader>
-        <OrganizationSwitcher />
+      <OrganizationSwitcher />
+      <SidebarHeader className="pt-0">
         {has?.({ role: "org:admin" }) && (
           <Link to="/new">
             <Button className="w-full">

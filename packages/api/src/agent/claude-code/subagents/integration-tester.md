@@ -10,8 +10,7 @@ the shape of the successful input and output
 
 ```json
 [
-  "mcp__Composio__ListConnectedToolkits",
-  "mcp__Composio__ListTools",
+  "mcp__Composio__SearchTools",
   "mcp__Composio__GetToolDetails",
   "mcp__Composio__MultiExecuteTool",
   "Read",
@@ -28,18 +27,17 @@ test whether the goal can be achieved with the currently connected tools.
 
 ## 🛠 Workflow
 
-1. **Get connected toolkits**
-   Call `ListConnectedToolkits` to list every toolkit available to you.
+1. **Get tool details**
+   Before calling any Composio tools you must call `GetToolDetails` with the provided tool slugs to get the details of the tools, including its input/output schemas which are needed before calling `MultiExecuteTool`.
 
-2. **Find relevant tools**
-   Call `ListTools` with the provided toolkitSlug to find all available tools for a toolkit. Call `GetToolDetails` with the tool slug to get the details of a tool, including its input/output schemas which are needed before calling `MultiExecuteTool`.
+2. **Test execution**
+   Use the Composio MCP server to execute the appropriate tool calls. Before each tool call, provide one sentence of what you are going to do and why. If you are missing any details from the user (for example account IDs, or other types of IDs), skip to `6. Return results` and provide information about what details you are missing.
 
-3. **Test execution**
-   Use the Composio MCP server to run the appropriate tool calls. Before each tool call, provide one sentence of what you are going to do and why.
-   _If the request cannot be completed_, return:
+3. **If test execution is stuck: search for tools**
+   If you are stuck because the tools you have available cannot accomplish the user's task, you can optionally call `SearchTools` with a list of use cases for what you want to do. This will provide a list of tools and guidance for how to use them.
 
-   - what went wrong or is missing
-   - which additional data, parameters, or tools would unblock progress.
+   - If you want to use any tool that's part of a toolkit that is not yet connected, you must immediately skip to step `6. Return results` and list the toolkits you want to connect.
+   - If you have found tools that you believe can used to successfully test the integration, go to step `2. Test execution`
 
 4. **Type-inference rules**
    When generating TypeScript types for each _successful_ tool call:
@@ -70,4 +68,4 @@ test whether the goal can be achieved with the currently connected tools.
    }
 
 6. **Return result**
-   Respond with a concise summary of every tool call you made.
+   Respond with a concise summary of every tool call you made and any new toolkit that needs to be connected.

@@ -1,12 +1,10 @@
 import { Badge } from "@/components/ui/badge";
 import type { ChatMessage } from "@squashai/api/agent/types";
 import {
-  BoxesIcon,
   Check,
   EyeIcon,
   FolderSearch,
   ListTodoIcon,
-  PackageIcon,
   PackageSearchIcon,
   SearchIcon,
   SquarePenIcon,
@@ -293,51 +291,52 @@ export function groupMessageEvents(
         });
         break;
       }
-      case "tool-ClaudeCode__mcp__Composio__ListTools": {
-        currentEvents.push({
-          icon: PackageIcon,
-          loading: isToolLoading(part.state),
-          label: `List tools for ${part.input?.toolkitName}`,
-        });
-        break;
-      }
+      // case "tool-ClaudeCode__mcp__Composio__ListTools": {
+      //   currentEvents.push({
+      //     icon: PackageIcon,
+      //     loading: isToolLoading(part.state),
+      //     label: `List tools for ${part.input?.toolkitName}`,
+      //   });
+      //   break;
+      // }
       case "tool-ClaudeCode__mcp__Composio__GetToolDetails": {
+        const count = part.input?.tools?.length;
         currentEvents.push({
           icon: PackageSearchIcon,
           loading: isToolLoading(part.state),
-          label: part.input?.reason,
+          // label: part.input?.reason,
+          label: count
+            ? `Getting details for ${count} ${count === 1 ? "tool" : "tools"}`
+            : "Getting details for...",
         });
         break;
       }
-      case "tool-ClaudeCode__mcp__Composio__SearchToolkits": {
-        currentEvents.push({
-          icon: SearchIcon,
-          loading: isToolLoading(part.state),
-          label: (
-            <>
-              <span>Search for</span>
-              {part.input?.useCases?.map((useCase, index) => (
-                <Badge
-                  key={index}
-                  variant="outline"
-                  className="border-none bg-muted"
-                >
+      // case "tool-ClaudeCode__mcp__Composio__SearchToolkits": {
+      case "tool-ClaudeCode__mcp__Composio__SearchTools": {
+        currentEvents.push(
+          ...(part.input?.useCases ?? []).map((useCase) => ({
+            icon: SearchIcon,
+            loading: isToolLoading(part.state),
+            label: (
+              <>
+                <span>Search for</span>
+                <Badge variant="outline" className="border-none bg-muted">
                   {useCase}
                 </Badge>
-              ))}
-            </>
-          ),
-        });
+              </>
+            ),
+          }))
+        );
         break;
       }
-      case "tool-ClaudeCode__mcp__Composio__ListConnectedToolkits": {
-        currentEvents.push({
-          icon: BoxesIcon,
-          loading: isToolLoading(part.state),
-          label: "List connected toolkits",
-        });
-        break;
-      }
+      // case "tool-ClaudeCode__mcp__Composio__ListConnectedToolkits": {
+      //   currentEvents.push({
+      //     icon: BoxesIcon,
+      //     loading: isToolLoading(part.state),
+      //     label: "List connected toolkits",
+      //   });
+      //   break;
+      // }
       case "tool-ClaudeCode__mcp__Composio__CheckConnectionStatus": {
         currentEvents.push({
           icon: UnplugIcon,
@@ -405,7 +404,7 @@ export function groupMessageEvents(
         }
         break;
       }
-      case "tool-ClaudeCode__mcp__Composio__GetConnectedTools":
+      // case "tool-ClaudeCode__mcp__Composio__GetConnectedTools":
       case "tool-ClaudeCode__mcp__Composio__WaitForConnection":
         break;
       case "tool-GitCommit": {

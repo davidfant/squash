@@ -1,6 +1,5 @@
 import debugInvestigator from "./debug-investigator.md";
 import integrationTester from "./integration-tester.md";
-import searchToolkits from "./search-toolkits.md";
 
 interface Subagent {
   name: string;
@@ -31,7 +30,7 @@ function parseSubagent(src: string): Subagent {
 }
 
 export const subagents = [
-  parseSubagent(searchToolkits),
+  // parseSubagent(searchToolkits),
   parseSubagent(integrationTester),
   parseSubagent(debugInvestigator),
 ];

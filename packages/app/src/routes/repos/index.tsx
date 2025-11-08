@@ -2,13 +2,18 @@ import { FeatureCard } from "@/components/blocks/feature/card";
 import { FeatureCardGrid } from "@/components/blocks/feature/grid";
 import { MainLayout } from "@/components/layout/main/layout";
 import { toast } from "@/components/ui/sonner";
-import { api, type QueryOutput, useMutation, useQuery } from "@/hooks/api";
+import { api, useMutation, useQuery } from "@/hooks/api";
 import { useAuth } from "@clerk/clerk-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { RepoDetailsDialog } from "./components/repo-details-dialog";
 
-type Repo = QueryOutput<typeof api.repos.$get>[number];
+interface Repo {
+  id: string;
+  name: string;
+  imageUrl: string | null;
+  previewUrl: string | null;
+}
 
 function RepoCard({
   repo,

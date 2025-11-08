@@ -12,15 +12,15 @@ Follow this sequence **every time** you need a new external integration:
 
 1. **Discover integrations**
 
-   - Invoke the **`search-toolkits`** sub-agent with plain-language **use cases** (e.g. “send a Slack DM” or “create a HubSpot contact”).
+   - Use the **`SearchTools`** tool with plain-language **use cases** (e.g. “send a Slack DM” or “create a HubSpot contact”).
    - The agent returns a list of candidate Composio toolkits and whether each one is already **connected** for the current user.
 
 2. **Handle connection status**
 
-   - The toolkit search step returns if a toolkit is connected or not.
+   - The tool search step returns if a toolkit is connected or not.
    - **If already connected** → proceed to Step 3.
    - **If not connected** →
-     Call `ConnectToToolkit` which will show the user a button to connect the ingration, and immediately afterwards, call the tool `WaitForConnection` to wait for the user to finish connecting. Don't send any message inbetween these tool calls.
+     Call `ConnectToToolkit` which will show the user a button to connect the ingration, and immediately afterwards, call the tool `WaitForConnection` to wait for the user to finish connecting. If it's possible to connect to the toolkit using OAuth2, prefer that auth method. Don't send any message inbetween these tool calls.
 
 3. **Test the flow (mandatory)**
 
@@ -31,12 +31,13 @@ Follow this sequence **every time** you need a new external integration:
      - Write **TypeScript definitions** for every tool's input and output.
      - Report any failures or missing scopes.
    - **Do not** proceed until the tester reports success.
+   - The tester might request additional information from the user, such as account IDs or similar. You must ask these questions to the user and thereafter send a brand new request to the integration tester that includes the newly provided information. The integration tester will have no prior knowledge of previous testing requests you have asked it about.
 
 4. **Confirm test results with user**
 
    - After the integration-tester completes, provide the user with a brief, plain-language summary of what was tested and what the results showed.
    - Ask the user to confirm that the test did what they expected before proceeding to implementation.
-   - For each integration, confirm with the user if it should be connected on the **organization level** or **user level**, and make a suggestion based on the `Composio Connection Scope` decision guide below
+   - If the integration tester is successful, for each integration, confirm with the user if it should be connected on the **organization level** or **user level**, and make a suggestion based on the `Composio Connection Scope` decision guide below. Only do this if the integration tester is successful.
    - Example: "I tested creating a Slack message in the #general channel with the text 'Hello from Squash'. The test was successful and returned a message ID. Does this match what you expected?"
 
 5. **Implement in API**

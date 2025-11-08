@@ -51,23 +51,6 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
     return this._devServer;
   }
 
-  private async isDevServerRunning(): Promise<boolean> {
-    try {
-      const [sandbox, devServer] = await Promise.all([
-        this.getSandbox("isDevServerRunning"),
-        this.storage.get("devServer", null),
-      ]);
-      if (!devServer) return false;
-      const command = await sandbox.process.getSessionCommand(
-        devServer.sessionId,
-        devServer.commandId
-      );
-      return command.exitCode === undefined;
-    } catch {
-      return false;
-    }
-  }
-
   async isStarted(): Promise<boolean> {
     try {
       const sandbox = await this.getSandbox("isStarted");
@@ -157,40 +140,7 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
         id: "pull-latest-changes",
         title: "Loading latest changes...",
         type: "function",
-        function: async function* () {
-          const repo = await db
-            .select()
-            .from(schema.repo)
-            .where(eq(schema.repo.id, options.branch.repoId))
-            .then(([repo]) => repo);
-          if (!repo) {
-            throw new Error(`Repo not found: ${options.branch.repoId}`);
-          }
-
-          logger.info("Pulling latest changes", options.branch);
-          yield* that.execute(
-            {
-              command: "sh",
-              args: [
-                "-c",
-                pullLatestChanges({
-                  gitUrl: repo.gitUrl,
-                  defaultBranch: repo.defaultBranch,
-                  targetBranch: options.branch.name,
-                }),
-              ],
-              // TODO: generate creds that can only access the specific repo if it's in the R2 bucket
-              env: {
-                AWS_ENDPOINT_URL_S3: env.R2_REPOS_ENDPOINT_URL_S3,
-                AWS_ACCESS_KEY_ID: env.R2_REPOS_ACCESS_KEY_ID,
-                AWS_SECRET_ACCESS_KEY: env.R2_REPOS_SECRET_ACCESS_KEY,
-                AWS_DEFAULT_REGION: "auto",
-              },
-              cwd: options.config.cwd,
-            },
-            undefined
-          );
-        },
+        function: () => pullLatestChanges(options.branch, that),
         dependsOn: ["create-sandbox"],
       },
       {
@@ -297,7 +247,13 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
         function: async function* () {
           let devServer = await that.getDevServer();
 
-          if (!devServer) {
+          if (!(await devServer?.isRunning())) {
+            yield {
+              type: "stdout",
+              data: "Starting development server...\n",
+              timestamp: new Date().toISOString(),
+            };
+
             const sandbox = await that.getSandbox("start-dev-server");
             devServer = await DaytonaDevServer.start(
               sandbox,
@@ -310,16 +266,7 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
             });
           }
 
-          const isRunning = await devServer.isRunning();
-          if (!isRunning) {
-            yield {
-              type: "stdout",
-              data: "Starting development server...\n",
-              timestamp: new Date().toISOString(),
-            };
-          }
-
-          await devServer.waitUntilReachable(options.config.port);
+          await devServer!.waitUntilReachable(options.config.port);
           yield {
             type: "stdout",
             data: "Dev server started\n",

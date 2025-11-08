@@ -28,11 +28,15 @@ export class DaytonaDevServer {
   }
 
   async isRunning(): Promise<boolean> {
-    const cmd = await this.sandbox.process.getSessionCommand(
-      this.sessionId,
-      this.commandId
-    );
-    return cmd.exitCode === undefined;
+    try {
+      const cmd = await this.sandbox.process.getSessionCommand(
+        this.sessionId,
+        this.commandId
+      );
+      return cmd.exitCode === undefined;
+    } catch {
+      return false;
+    }
   }
 
   async waitUntilReachable(port: number) {

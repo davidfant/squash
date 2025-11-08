@@ -1,7 +1,11 @@
 import type { ChatMessage, SandboxTaskToolInput } from "@/agent/types";
+import { createDatabase } from "@/database";
+import * as schema from "@/database/schema";
 import { logger } from "@/lib/logger";
 import type { InferUIMessageChunk } from "ai";
+import { env } from "cloudflare:workers";
 import { randomUUID } from "crypto";
+import { eq } from "drizzle-orm";
 import type { Sandbox } from "./types";
 
 export async function runCommand(
@@ -212,7 +216,7 @@ export const executeTasks = (
     },
   });
 
-export const pullLatestChanges = (opts: {
+const pullLatestChangesScript = (opts: {
   gitUrl: string;
   defaultBranch: string;
   targetBranch: string;
@@ -288,3 +292,44 @@ export const pullLatestChanges = (opts: {
       git checkout -b "$target_branch"
     fi
   `.trim();
+
+export async function* pullLatestChanges(
+  branch: {
+    name: string;
+    repoId: string;
+  },
+  sandbox: Sandbox.Manager.Base
+): AsyncGenerator<Sandbox.Exec.Event.Any> {
+  const db = createDatabase(env);
+  const repo = await db
+    .select()
+    .from(schema.repo)
+    .where(eq(schema.repo.id, branch.repoId))
+    .then(([repo]) => repo);
+  if (!repo) {
+    throw new Error(`Repo not found: ${branch.repoId}`);
+  }
+
+  logger.info("Pulling latest changes", branch);
+  yield* sandbox.execute(
+    {
+      command: "sh",
+      args: [
+        "-c",
+        pullLatestChangesScript({
+          gitUrl: repo.gitUrl,
+          defaultBranch: repo.defaultBranch,
+          targetBranch: branch.name,
+        }),
+      ],
+      // TODO: generate creds that can only access the specific repo if it's in the R2 bucket
+      env: {
+        AWS_ENDPOINT_URL_S3: env.R2_REPOS_ENDPOINT_URL_S3,
+        AWS_ACCESS_KEY_ID: env.R2_REPOS_ACCESS_KEY_ID,
+        AWS_SECRET_ACCESS_KEY: env.R2_REPOS_SECRET_ACCESS_KEY,
+        AWS_DEFAULT_REGION: "auto",
+      },
+    },
+    undefined
+  );
+}

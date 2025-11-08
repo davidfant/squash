@@ -1,33 +1,58 @@
-import { BranchFeatureCard } from "@/components/blocks/feature/branch-card";
+import { FeatureCard } from "@/components/blocks/feature/card";
 import { FeatureCardGrid } from "@/components/blocks/feature/grid";
 import { MainLayout } from "@/components/layout/main/layout";
-import { api, useQuery } from "@/hooks/api";
+import { toast } from "@/components/ui/sonner";
+import { api, useMutation, useQuery } from "@/hooks/api";
 import { useAuth } from "@clerk/clerk-react";
-import { Navigate } from "react-router";
-import { useRepos } from "./hooks/use-repos";
+import { Link, Navigate } from "react-router";
 
 export function BranchesPage() {
-  const repos = useRepos();
-  const branches = useQuery(api.branches.$get, {
-    enabled: !repos.currentId,
-    params: {},
-  });
+  const repos = useQuery(api.repos.$get, { params: {} });
 
   const { has } = useAuth();
   const isBuilder = has?.({ role: "org:admin" });
-  if (branches.data?.length === 0 && isBuilder) return <Navigate to="/new" />;
+  const updateRepo = useMutation(api.repos[":repoId"].$patch, {
+    onSuccess: async () => {
+      toast.success("App renamed");
+      await repos.refetch();
+    },
+    onError: () => toast.error("Failed to rename app"),
+  });
+  const deleteRepo = useMutation(api.repos[":repoId"].$delete, {
+    onSuccess: async () => {
+      toast.success("App deleted");
+      await repos.refetch();
+    },
+    onError: () => toast.error("Failed to delete app"),
+  });
+
+  if (repos.data?.length === 0 && isBuilder) return <Navigate to="/new" />;
   return (
     <MainLayout title="Apps">
       <main className="p-3">
         <FeatureCardGrid
-          children={branches.data?.map((b, index) => (
-            <BranchFeatureCard
-              key={b.id}
-              branch={b}
-              index={index}
-              onDeleted={isBuilder ? () => branches.refetch() : undefined}
-              onUpdated={isBuilder ? () => branches.refetch() : undefined}
-            />
+          children={repos.data?.map((b, index) => (
+            <Link key={b.id} to={`/apps/${b.masterBranchId}`}>
+              <FeatureCard
+                title={b.name}
+                imageUrl={b.imageUrl}
+                index={index}
+                onEdit={
+                  isBuilder
+                    ? (name) =>
+                        updateRepo.mutateAsync({
+                          param: { repoId: b.id },
+                          json: { name },
+                        })
+                    : undefined
+                }
+                onDelete={
+                  isBuilder
+                    ? () => deleteRepo.mutate({ param: { repoId: b.id } })
+                    : undefined
+                }
+              />
+            </Link>
           ))}
         />
       </main>

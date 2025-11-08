@@ -50,13 +50,19 @@ export const reposRouter = new Hono<{
         imageUrl: schema.repo.imageUrl,
         createdAt: schema.repo.createdAt,
         updatedAt: schema.repo.updatedAt,
+        masterBranchId: schema.repoBranch.id,
       })
       .from(schema.repo)
+      .innerJoin(
+        schema.repoBranch,
+        eq(schema.repo.id, schema.repoBranch.repoId)
+      )
       .orderBy(asc(schema.repo.name))
       .where(
         and(
           eq(schema.repo.organizationId, organizationId),
-          isNull(schema.repo.deletedAt)
+          isNull(schema.repo.deletedAt),
+          eq(schema.repoBranch.name, "master")
         )
       );
 

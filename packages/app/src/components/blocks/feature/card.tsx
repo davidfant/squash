@@ -45,6 +45,7 @@ export const FeatureCard = ({
       <Card
         className={cn(
           "p-1 shadow-none gap-1 group border-muted transition-colors hover:border-border",
+          onClick && "cursor-pointer",
           className
         )}
         onClick={onClick}

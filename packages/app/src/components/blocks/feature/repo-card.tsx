@@ -22,7 +22,6 @@ export function RepoCard({
         title={repo.name}
         imageUrl={repo.imageUrl}
         index={index}
-        className="cursor-pointer"
         onClick={() => setOpen(true)}
       />
       <RepoDetailsDialog repo={repo} open={open} onOpenChange={setOpen} />

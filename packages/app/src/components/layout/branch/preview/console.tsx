@@ -1,4 +1,6 @@
 import { FadingScrollView } from "@/components/blocks/fading-scroll-view";
+import { useAuthHeaders } from "@/hooks/api";
+import { EventSourcePolyfill } from "event-source-polyfill";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { useStickToBottom } from "use-stick-to-bottom";
 import { useBranchContext } from "../context";
@@ -23,6 +25,7 @@ export function BranchPreviewConsole() {
   >("connecting");
   const pendingRef = useRef("");
 
+  const getHeaders = useAuthHeaders();
   useEffect(() => {
     setToolCallIds([]);
     setStatus("connecting");
@@ -77,65 +80,75 @@ export function BranchPreviewConsole() {
       if (pending) appendLines([pending]);
     };
 
+    const abortController = new AbortController();
+
     const url = `${import.meta.env.VITE_API_URL}/branches/${
       branch.id
     }/preview/logs`;
-    const source = new EventSource(url, { withCredentials: true });
 
-    source.onopen = () => setStatus("open");
-    source.onerror = () => {
-      if (source.readyState === EventSource.CLOSED) {
-        flushPending();
-        setStatus("closed");
-      } else {
-        setStatus("error");
-      }
-    };
-    source.onmessage = (event) => {
-      setStatus("open");
-      const incoming = (event.data ?? "").replace(/\r/g, "");
-      if (!incoming) return;
+    (async () => {
+      const headers = await getHeaders();
+      if (abortController.signal.aborted) return;
 
-      const combined = pendingRef.current + incoming;
-      const lines = combined.split("\n");
-      pendingRef.current = lines.pop() ?? "";
+      const source = new EventSourcePolyfill(url, { headers });
+      abortController.signal.addEventListener("abort", () => source.close());
 
-      appendLines(lines);
-    };
+      source.onopen = () => setStatus("open");
+      source.onerror = () => {
+        if (source.readyState === EventSource.CLOSED) {
+          flushPending();
+          setStatus("closed");
+        } else {
+          setStatus("error");
+        }
+      };
+      source.onmessage = (event) => {
+        setStatus("open");
+        const incoming = (event.data ?? "").replace(/\r/g, "");
+        if (!incoming) return;
+
+        const combined = pendingRef.current + incoming;
+        const lines = combined.split("\n");
+        pendingRef.current = lines.pop() ?? "";
+
+        appendLines(lines);
+      };
+    })();
 
     return () => {
       flushPending();
       setStatus("closed");
-      source.close();
+      abortController.abort();
     };
   }, [branch.id]);
 
+  if (toolCallIds.length === 0) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center p-4 text-muted-foreground text-sm">
+        Tool calls will appear here
+      </div>
+    );
+  }
   return (
     <FadingScrollView
       ref={scrollRef}
       className="h-full w-72 flex flex-col pr-2"
       height={64}
     >
-      <div ref={contentRef} className="space-y-2 h-full">
-        {toolCallIds.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full p-4 text-muted-foreground text-sm">
-            Tool calls will appear here
-          </div>
-        ) : (
-          toolCallIds
-            .map((id) => toolCalls[id])
-            .filter((t) => !!t)
-            .map((tc, index) => (
-              <Fragment key={index}>
-                {index !== 0 && (
-                  <div className="flex justify-center">
-                    <div className="h-8 border-l border-dashed" />
-                  </div>
-                )}
-                <ToolCallItem toolCall={tc} />
-              </Fragment>
-            ))
-        )}
+      <div ref={contentRef} className="space-y-2">
+        {toolCallIds
+          .map((id) => toolCalls[id])
+          .filter((t) => !!t)
+          .map((tc, index) => (
+            <Fragment key={index}>
+              {index !== 0 && (
+                <div className="flex justify-center">
+                  <div className="h-8 border-l border-dashed" />
+                </div>
+              )}
+              <ToolCallItem toolCall={tc} />
+            </Fragment>
+          ))}
       </div>
     </FadingScrollView>
   );

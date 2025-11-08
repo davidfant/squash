@@ -45,6 +45,7 @@
     "embla-carousel-autoplay": "^8.6.0",
     "embla-carousel-react": "^8.6.0",
     "embla-carousel-wheel-gestures": "^8.1.0",
+    "event-source-polyfill": "^1.0.31",
     "eventsource-parser": "^3.0.3",
     "framer-motion": "^12.23.3",
     "hono": "^4.9.0",
@@ -74,6 +75,7 @@
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.19",
     "@tailwindcss/vite": "latest",
+    "@types/event-source-polyfill": "^1.0.5",
     "@types/lodash.kebabcase": "^4.1.9",
     "@types/lodash.startcase": "^4.4.9",
     "@types/react": "^19.1.8",

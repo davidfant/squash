@@ -1,4 +1,5 @@
 import { SandboxTaskStream } from "@/components/blocks/SandboxTaskStream";
+import { Card } from "@/components/ui/card";
 import { TabsContent } from "@/components/ui/tabs";
 import { useAuthHeaders } from "@/hooks/api";
 import { useMounted } from "@/hooks/use-mounted";
@@ -34,21 +35,16 @@ export function BranchTabContent() {
 
   if (!preview.url) {
     return (
-      <div className="h-full rounded-xl bg-muted overflow-y-auto relative">
-        <div className="flex flex-col gap-2 h-full items-center pt-[30%] p-8 overflow-y-auto">
-          <SandboxTaskStream
-            stream={stream}
-            label="Your preview is loading..."
-          />
-        </div>
-      </div>
+      <Card className="h-full bg-muted flex flex-col items-center pt-[30%] p-8 overflow-y-auto">
+        <SandboxTaskStream stream={stream} label="Your preview is loading..." />
+      </Card>
     );
   }
   return (
     <>
       <TabsContent
         value="code"
-        className="h-full rounded-xl bg-muted overflow-hidden"
+        className="h-full rounded-xl bg-muted overflow-hidden border"
       >
         <BranchCodeViewer />
       </TabsContent>

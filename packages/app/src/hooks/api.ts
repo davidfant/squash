@@ -16,6 +16,7 @@ import type {
   ClientErrorStatusCode,
   ServerErrorStatusCode,
 } from "hono/utils/http-status";
+import { useCallback } from "react";
 
 export const api = hc<AppType>(import.meta.env.VITE_API_URL);
 
@@ -31,10 +32,14 @@ export type QueryOutput<
 
 export function useAuthHeaders() {
   const { getToken } = useAuth();
-  return () =>
-    getToken().then(
-      (t): Record<string, string> => (t ? { Authorization: `Bearer ${t}` } : {})
-    );
+  return useCallback(
+    () =>
+      getToken().then(
+        (t): Record<string, string> =>
+          t ? { Authorization: `Bearer ${t}` } : {}
+      ),
+    [getToken]
+  );
 }
 
 export function useQuery<

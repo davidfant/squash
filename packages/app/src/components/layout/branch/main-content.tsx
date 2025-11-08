@@ -53,7 +53,7 @@ export function BranchTabContent() {
         <BranchCodeViewer />
       </TabsContent>
       <TabsContent value="preview" className="flex gap-2 h-full">
-        <div className="h-full rounded-xl bg-muted overflow-hidden flex-1">
+        <div className="h-full rounded-xl bg-muted overflow-hidden flex-1 border">
           <BranchPreview />
         </div>
         <BranchPreviewConsole />

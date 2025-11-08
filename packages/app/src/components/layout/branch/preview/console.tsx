@@ -113,12 +113,14 @@ export function BranchPreviewConsole() {
   return (
     <FadingScrollView
       ref={scrollRef}
-      className="h-full w-96 flex flex-col"
+      className="h-full w-72 flex flex-col pr-2"
       height={64}
     >
-      <div ref={contentRef} className="space-y-2">
+      <div ref={contentRef} className="space-y-2 h-full">
         {toolCallIds.length === 0 ? (
-          <p className="text-muted-foreground">No console output</p>
+          <div className="flex flex-col items-center justify-center h-full p-4 text-muted-foreground text-sm">
+            Tool calls will appear here
+          </div>
         ) : (
           toolCallIds
             .map((id) => toolCalls[id])

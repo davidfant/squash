@@ -38,8 +38,8 @@ export function ToolCallItem({ toolCall }: { toolCall: ToolCall }) {
       className="min-w-0 block self-start py-2 cursor-pointer hover:bg-muted/50 transition-colors"
       onClick={() => setIsOpen(!isOpen)}
     >
-      <div className="flex gap-3 w-full items-center">
-        <div className="flex-1">
+      <div className="flex gap-2 w-full items-center">
+        <div className="flex-1 min-w-0">
           <Badge variant="outline">
             <img src={logoUrl} alt={toolkitName} className="size-4" />
             {toolkitName}

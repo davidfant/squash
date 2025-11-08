@@ -77,7 +77,7 @@ export function BranchLayout({ branchId }: { branchId: string }) {
                 <ChatThread loading={threadMessages.isPending} id={branchId} />
               </ResizablePanel>
               <ResizableHandle className="bg-transparent w-[3px] data-[resize-handle-state=hover]:bg-primary/20 data-[resize-handle-state=drag]:bg-primary/20 transition-colors" />
-              <ResizablePanel defaultSize={75} className="pr-2 pb-2">
+              <ResizablePanel defaultSize={75} className="pb-2">
                 <BranchTabContent />
               </ResizablePanel>
             </ResizablePanelGroup>

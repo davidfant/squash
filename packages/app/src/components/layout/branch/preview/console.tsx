@@ -86,22 +86,12 @@ export function BranchPreviewConsole() {
       branch.id
     }/preview/logs`;
 
-    (async () => {
+    const open = async () => {
       const headers = await getHeaders();
       if (abortController.signal.aborted) return;
-
       const source = new EventSourcePolyfill(url, { headers });
-      abortController.signal.addEventListener("abort", () => source.close());
 
       source.onopen = () => setStatus("open");
-      source.onerror = () => {
-        if (source.readyState === EventSource.CLOSED) {
-          flushPending();
-          setStatus("closed");
-        } else {
-          setStatus("error");
-        }
-      };
       source.onmessage = (event) => {
         setStatus("open");
         const incoming = (event.data ?? "").replace(/\r/g, "");
@@ -113,14 +103,22 @@ export function BranchPreviewConsole() {
 
         appendLines(lines);
       };
-    })();
+      source.onerror = (e: any) => {
+        if (e.status === 401) {
+          source.close();
+          open();
+        }
+      };
+    };
+
+    open();
 
     return () => {
       flushPending();
       setStatus("closed");
       abortController.abort();
     };
-  }, [branch.id]);
+  }, [branch.id, getHeaders]);
 
   if (toolCallIds.length === 0) {
     return (

@@ -17,7 +17,7 @@ The gateway exposes any model that the underlying provider supports. Prefix the 
 
 | Provider prefix     | Example model id                       | Supported helpers                |
 | ------------------- | -------------------------------------- | -------------------------------- |
-| `openai/`           | `openai/gpt-4o-mini`, `openai/gpt-5`   | `generateText`, `generateObject` |
+| `openai/`           | `openai/gpt-5-mini`, `openai/gpt-5`    | `generateText`, `generateObject` |
 | `anthropic/`        | `anthropic/claude-sonnet-4-5-20250929` | `generateText`                   |
 | `google-ai-studio/` | `google-ai-studio/gemini-2.5-flash`    | `generateText`, `generateObject` |
 

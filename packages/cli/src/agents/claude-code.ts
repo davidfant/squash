@@ -5,7 +5,6 @@ import {
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { parseEnvFile } from "../lib/parse-env-file.js";
-import { startTypeScriptWatch } from "../lib/typescript.js";
 import type { ClaudeCodeCLIOptions, ClaudeCodeSession } from "../schema.js";
 
 const MAX_RETRIES = 3;
@@ -76,7 +75,7 @@ export async function runClaudeCode(
 
   const envVars = parseEnvFile(path.join(req.cwd, ".env"));
   const deferred = createDeferred<void>();
-  const tscWatchPromise = startTypeScriptWatch(req.cwd);
+  // const tscWatchPromise = startTypeScriptWatch(req.cwd);
 
   retryLoop: for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {
@@ -132,35 +131,35 @@ export async function runClaudeCode(
             },
           },
           hooks: {
-            PostToolUse: [
-              {
-                matcher: "Write|Edit|MultiEdit|NotebookEdit",
-                hooks: [
-                  async (input, toolUseId) => {
-                    if (input.hook_event_name !== "PostToolUse" || !toolUseId) {
-                      return { continue: true };
-                    }
+            // PostToolUse: [
+            //   {
+            //     matcher: "Write|Edit|MultiEdit|NotebookEdit",
+            //     hooks: [
+            //       async (input, toolUseId) => {
+            //         if (input.hook_event_name !== "PostToolUse" || !toolUseId) {
+            //           return { continue: true };
+            //         }
 
-                    const tscWatch = await tscWatchPromise;
-                    const toolInput = input.tool_input as { file_path: string };
-                    if (!tscWatch.isFileInProject(toolInput.file_path)) {
-                      return { continue: true };
-                    }
+            //         const tscWatch = await tscWatchPromise;
+            //         const toolInput = input.tool_input as { file_path: string };
+            //         if (!tscWatch.isFileInProject(toolInput.file_path)) {
+            //           return { continue: true };
+            //         }
 
-                    return tscWatch
-                      .waitForCompilationDone()
-                      .then(() => ({
-                        continue: true,
-                        hookSpecificOutput: {
-                          hookEventName: "PostToolUse" as const,
-                          additionalContext: tscWatch.getErrorSummary(),
-                        },
-                      }))
-                      .catch(() => ({ continue: true }));
-                  },
-                ],
-              },
-            ],
+            //         return tscWatch
+            //           .waitForCompilationDone()
+            //           .then(() => ({
+            //             continue: true,
+            //             hookSpecificOutput: {
+            //               hookEventName: "PostToolUse" as const,
+            //               additionalContext: tscWatch.getErrorSummary(),
+            //             },
+            //           }))
+            //           .catch(() => ({ continue: true }));
+            //       },
+            //     ],
+            //   },
+            // ],
             Stop: [
               {
                 hooks: [

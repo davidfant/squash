@@ -228,7 +228,7 @@ export function BranchPreviewConsole() {
   return (
     <FadingScrollView
       ref={scrollRef}
-      className="h-full w-72 flex flex-col pr-2"
+      className="h-full w-1/4 flex flex-col pr-2"
       height={64}
     >
       <div ref={contentRef}>

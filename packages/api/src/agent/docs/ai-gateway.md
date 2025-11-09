@@ -27,11 +27,10 @@ The gateway exposes any model that the underlying provider supports. Prefix the 
 
 **Generating Free‑form Text**
 
-Use `generateText` from `ai` to obtain unstructured completions.
+Use `generateText` from `./integrations/ai-gateway` to generate unstructured text completions.
 
 ```ts
-import { generateText } from "ai";
-import { gateway } from "./integrations/ai-gateway";
+import { gateway, generateText } from "./integrations/ai-gateway";
 
 function generateHeadline(titleIdea: string) {
   const { text } = await generateText({
@@ -45,12 +44,11 @@ function generateHeadline(titleIdea: string) {
 
 **Generating Typed Objects**
 
-`generateObject` makes the model return structured data into a validated TypeScript type by supplying a **Zod** schema.
+Use `generateObject` from `./integrations/ai-gateway` to generate structured data into a validated TypeScript type by supplying a **Zod** schema.
 
 ```ts
 import { z } from "zod";
-import { generateObject } from "ai";
-import { gateway } from "./integrations/ai-gateway";
+import { gateway, generateObject } from "./integrations/ai-gateway";
 
 const recipeSchema = z.object({
   title: z.string(),

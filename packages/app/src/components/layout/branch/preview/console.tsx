@@ -1,10 +1,16 @@
 import { FadingScrollView } from "@/components/blocks/fading-scroll-view";
 import { useAuthHeaders } from "@/hooks/api";
 import { EventSourcePolyfill } from "event-source-polyfill";
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 import { useStickToBottom } from "use-stick-to-bottom";
 import { useBranchContext } from "../context";
-import { ToolCallItem, type ToolCall } from "./console-tool-call";
+import {
+  AIGatewayLogItemHeader,
+  ConsoleLogItem,
+  ConsoleLogItemDetails,
+  ToolCallLogItemHeader,
+  type LogItemStatus,
+} from "./console-log-item";
 import { zConsoleLogEntrySchema, type ConsoleLogEntry } from "./schemas";
 
 function parseConsoleLogEntry(line: string): ConsoleLogEntry | undefined {
@@ -15,11 +21,19 @@ function parseConsoleLogEntry(line: string): ConsoleLogEntry | undefined {
   }
 }
 
+interface LogItem {
+  id: string;
+  title: ReactNode;
+  details: ReactNode;
+  input: unknown;
+  status: LogItemStatus;
+}
+
 export function BranchPreviewConsole() {
   const { branch } = useBranchContext();
   const { scrollRef, contentRef } = useStickToBottom({ initial: "instant" });
-  const [toolCallIds, setToolCallIds] = useState<string[]>([]);
-  const [toolCalls, setToolCalls] = useState<Record<string, ToolCall>>({});
+  const [logItemIds, setLogItemIds] = useState<string[]>([]);
+  const [logItems, setLogItems] = useState<Record<string, LogItem>>({});
   const [status, setStatus] = useState<
     "connecting" | "open" | "closed" | "error"
   >("connecting");
@@ -27,7 +41,7 @@ export function BranchPreviewConsole() {
 
   const getHeaders = useAuthHeaders();
   useEffect(() => {
-    setToolCallIds([]);
+    setLogItemIds([]);
     setStatus("connecting");
     pendingRef.current = "";
 
@@ -41,34 +55,118 @@ export function BranchPreviewConsole() {
           (d) =>
             d.type === "composio-tool-call" ||
             d.type === "composio-tool-result" ||
-            d.type === "composio-tool-error"
+            d.type === "composio-tool-error" ||
+            d.type === "ai-gateway-generate-text-input" ||
+            d.type === "ai-gateway-generate-text-output" ||
+            d.type === "ai-gateway-generate-text-error" ||
+            d.type === "ai-gateway-generate-object-input" ||
+            d.type === "ai-gateway-generate-object-output" ||
+            d.type === "ai-gateway-generate-object-error"
         );
 
-      setToolCallIds((prev) => [
+      setLogItemIds((prev) => [
         ...prev,
         ...parsed
           .map((d) => d.id)
           .filter((id, idx, all) => all.indexOf(id) === idx)
           .filter((id) => !prev.includes(id)),
       ]);
-      setToolCalls((prev) =>
+      setLogItems((prev) =>
         parsed.reduce((acc, d) => {
-          if (d.type === "composio-tool-call") {
-            acc[d.id] = {
-              id: d.id,
-              tool: d.tool,
-              input: d.input,
-              output: undefined,
-              error: undefined,
-              state: "input",
-            };
-          } else if (d.type === "composio-tool-result" && acc[d.id]) {
-            acc[d.id]!.output = d.data;
-            acc[d.id]!.state = "output";
-          } else if (d.type === "composio-tool-error" && acc[d.id]) {
-            acc[d.id]!.error = d.error;
-            acc[d.id]!.state = "error";
+          const t = acc[d.id];
+          if (!t) {
+            if (d.type === "composio-tool-call") {
+              acc[d.id] = {
+                id: d.id,
+                title: <ToolCallLogItemHeader tool={d.tool} />,
+                details: (
+                  <ConsoleLogItemDetails input={d.input} status="input" />
+                ),
+                input: d.input,
+                status: "input",
+              };
+            } else if (d.type === "ai-gateway-generate-text-input") {
+              acc[d.id] = {
+                id: d.id,
+                title: (
+                  <AIGatewayLogItemHeader
+                    model={d.model}
+                    label="Generate Text"
+                  />
+                ),
+                details: (
+                  <ConsoleLogItemDetails input={d.prompt} status="input" />
+                ),
+                input: d.prompt,
+                status: "input",
+              };
+            } else if (d.type === "ai-gateway-generate-object-input") {
+              acc[d.id] = {
+                id: d.id,
+                title: (
+                  <AIGatewayLogItemHeader
+                    model={d.model}
+                    label="Generate Object"
+                  />
+                ),
+                details: (
+                  <ConsoleLogItemDetails input={d.prompt} status="input" />
+                ),
+                input: d.prompt,
+                status: "input",
+              };
+            }
+          } else {
+            if (d.type === "composio-tool-result") {
+              t.details = (
+                <ConsoleLogItemDetails
+                  input={t.input}
+                  output={d.data}
+                  status="output"
+                />
+              );
+              t.status = "output";
+            } else if (d.type === "composio-tool-error") {
+              t.status = "error";
+            } else if (d.type === "ai-gateway-generate-text-output" && t) {
+              t.details = (
+                <ConsoleLogItemDetails
+                  input={t.input}
+                  output={d.text}
+                  status="output"
+                />
+              );
+              t.status = "output";
+            } else if (d.type === "ai-gateway-generate-text-error" && t) {
+              t.details = (
+                <ConsoleLogItemDetails
+                  input={t.input}
+                  error={d.error}
+                  status="error"
+                />
+              );
+              t.status = "error";
+            } else if (d.type === "ai-gateway-generate-object-output" && t) {
+              t.details = (
+                <ConsoleLogItemDetails
+                  input={t.input}
+                  output={d.object}
+                  status="output"
+                />
+              );
+              t.status = "output";
+            } else if (d.type === "ai-gateway-generate-object-error" && t) {
+              t.details = (
+                <ConsoleLogItemDetails
+                  input={t.input}
+                  error={d.error}
+                  status="error"
+                />
+              );
+              t.status = "error";
+            }
           }
+
           return acc;
         }, prev)
       );
@@ -120,7 +218,7 @@ export function BranchPreviewConsole() {
     };
   }, [branch.id, getHeaders]);
 
-  if (toolCallIds.length === 0) {
+  if (logItemIds.length === 0) {
     return (
       <div className="h-full flex flex-col items-center justify-center p-4 text-muted-foreground text-sm">
         Tool calls will appear here
@@ -134,17 +232,21 @@ export function BranchPreviewConsole() {
       height={64}
     >
       <div ref={contentRef}>
-        {toolCallIds
-          .map((id) => toolCalls[id])
-          .filter((t) => !!t)
-          .map((tc, index) => (
+        {logItemIds
+          .map((id) => logItems[id])
+          .filter((item) => !!item)
+          .map((item, index) => (
             <Fragment key={index}>
               {index !== 0 && (
                 <div className="flex justify-center">
                   <div className="h-8 border-l border-dashed" />
                 </div>
               )}
-              <ToolCallItem toolCall={tc} />
+              <ConsoleLogItem
+                title={item.title}
+                details={item.details}
+                status={item.status}
+              />
             </Fragment>
           ))}
       </div>

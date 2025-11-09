@@ -64,6 +64,45 @@ export const zTrpcResponseSchema = z.object({
   data: z.unknown().optional(),
 });
 
+export const zAIGatewayGenerateTextInputSchema = z.object({
+  type: z.literal("ai-gateway-generate-text-input"),
+  id: z.uuid(),
+  prompt: z.string(),
+  model: z.string(),
+  tools: z.object({ name: z.string(), description: z.string() }).array(),
+});
+
+export const zAIGatewayGenerateTextOutputSchema = z.object({
+  type: z.literal("ai-gateway-generate-text-output"),
+  id: z.uuid(),
+  text: z.string(),
+});
+
+export const zAIGatewayGenerateTextErrorSchema = z.object({
+  type: z.literal("ai-gateway-generate-text-error"),
+  id: z.uuid(),
+  error: z.string(),
+});
+
+export const zAIGatewayGenerateObjectErrorSchema = z.object({
+  type: z.literal("ai-gateway-generate-object-error"),
+  id: z.uuid(),
+  error: z.string(),
+});
+
+export const zAIGatewayGenerateObjectInputSchema = z.object({
+  type: z.literal("ai-gateway-generate-object-input"),
+  id: z.uuid(),
+  prompt: z.string(),
+  model: z.string(),
+});
+
+export const zAIGatewayGenerateObjectOutputSchema = z.object({
+  type: z.literal("ai-gateway-generate-object-output"),
+  id: z.uuid(),
+  object: z.unknown(),
+});
+
 export const zConsoleLogEntrySchema = z.object({
   __squash: z.literal(true),
   level: z.enum(["debug", "info", "warn", "error"]),
@@ -75,6 +114,12 @@ export const zConsoleLogEntrySchema = z.object({
     zAuthErrorSchema,
     zTrpcRequestSchema,
     zTrpcResponseSchema,
+    zAIGatewayGenerateTextInputSchema,
+    zAIGatewayGenerateTextOutputSchema,
+    zAIGatewayGenerateTextErrorSchema,
+    zAIGatewayGenerateObjectInputSchema,
+    zAIGatewayGenerateObjectOutputSchema,
+    zAIGatewayGenerateObjectErrorSchema,
   ]),
   package: z.string(),
   version: z.string(),
@@ -85,3 +130,16 @@ export type ComposioToolCallEntry = z.infer<typeof zComposioToolCallSchema>;
 export type ComposioToolResultEntry = z.infer<typeof zComposioToolResultSchema>;
 export type ComposioToolErrorEntry = z.infer<typeof zComposioToolErrorSchema>;
 export type ConsoleLogEntry = z.infer<typeof zConsoleLogEntrySchema>;
+
+export type AIGatewayGenerateTextInputEntry = z.infer<
+  typeof zAIGatewayGenerateTextInputSchema
+>;
+export type AIGatewayGenerateTextOutputEntry = z.infer<
+  typeof zAIGatewayGenerateTextOutputSchema
+>;
+export type AIGatewayGenerateObjectInputEntry = z.infer<
+  typeof zAIGatewayGenerateObjectInputSchema
+>;
+export type AIGatewayGenerateObjectOutputEntry = z.infer<
+  typeof zAIGatewayGenerateObjectOutputSchema
+>;

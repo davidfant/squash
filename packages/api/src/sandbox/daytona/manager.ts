@@ -789,7 +789,7 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
       logger.warn("Dev server logs requested before command started");
       return new Response(null, { status: 204 });
     }
-    const stream = devServer.listenToLogs();
+    const stream = await devServer.listenToLogs();
     return new Response(stream, {
       status: 200,
       headers: {

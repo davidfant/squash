@@ -6,26 +6,11 @@ import type { Sandbox } from "../types";
 import { startCommand } from "./util";
 
 export class DaytonaDevServer {
-  private logEncoder = new TextEncoder();
-  private logListeners = new Map<
-    string,
-    ReadableStreamDefaultController<Uint8Array>
-  >();
-
   constructor(
     private readonly sandbox: DaytonaSandbox,
     readonly sessionId: string,
     readonly commandId: string
-  ) {
-    this.sandbox.process
-      .getSessionCommandLogs(
-        this.sessionId,
-        this.commandId,
-        (data) => this.onLog(data),
-        (data) => this.onLog(data)
-      )
-      .then(() => this.closeLogListeners());
-  }
+  ) {}
 
   async isRunning(): Promise<boolean> {
     try {
@@ -68,36 +53,70 @@ export class DaytonaDevServer {
     sandbox: DaytonaSandbox,
     task: Sandbox.Snapshot.Task.Command
   ) {
+    logger.debug("Starting dev server", { sandboxId: sandbox.id });
     const { sessionId, commandId } = await startCommand(sandbox, {
       command: task.command,
       args: task.args ?? [],
     });
+    logger.debug("Started dev server", {
+      sandboxId: sandbox.id,
+      sessionId,
+      commandId,
+    });
     return new DaytonaDevServer(sandbox, sessionId, commandId);
   }
 
-  private async onLog(chunk: string) {
-    const lines = chunk.replace(/\r/g, "").split("\n");
-    if (!lines.length) return;
-    const payload = lines.map((line) => `data: ${line}`).join("\n");
-    const encoded = this.logEncoder.encode(`${payload}\n\n`);
-    for (const l of this.logListeners.values()) l.enqueue(encoded);
-  }
+  async listenToLogs() {
+    const encoder = new TextEncoder();
+    const result = await this.sandbox.process.getSessionCommandLogs(
+      this.sessionId,
+      this.commandId
+    );
+    const skip = {
+      // Note(fant): seems like Daytona result stdout is +1 longer than the sum of all the chunks
+      stdout: result.stdout?.length ?? 0,
+      stderr: result.stderr?.length ?? 0,
+    };
 
-  private closeLogListeners() {
-    for (const l of this.logListeners.values()) l.close();
-    this.logListeners.clear();
-  }
-
-  listenToLogs() {
     const listenerId = randomUUID();
+    logger.debug("Start listening to logs", {
+      sandboxId: this.sandbox.id,
+      listenerId,
+    });
     const stream = new ReadableStream<Uint8Array>({
-      start: (controller) => {
-        this.logListeners.set(listenerId, controller);
+      start: async (controller) => {
+        const log = (data: string) => {
+          const lines = data.replace(/\r/g, "").split("\n");
+          if (lines.length) {
+            const payload = lines.map((line) => `data: ${line}`).join("\n");
+            const encoded = encoder.encode(`${payload}\n\n`);
+            controller.enqueue(encoded);
+          }
+        };
+
+        await this.sandbox.process.getSessionCommandLogs(
+          this.sessionId,
+          this.commandId,
+          (data) => {
+            skip.stdout -= data.length;
+            if (skip.stdout < 0) log(data);
+          },
+          (data) => {
+            skip.stderr -= data.length;
+            if (skip.stderr < 0) log(data);
+          }
+        );
+
+        controller.close();
       },
       cancel: () => {
-        this.logListeners.delete(listenerId);
+        logger.debug("Cancel listening to logs", {
+          sandboxId: this.sandbox.id,
+          listenerId,
+        });
       },
     });
+
     return stream;
   }
 }

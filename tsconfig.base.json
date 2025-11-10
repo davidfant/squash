@@ -4,7 +4,6 @@
     "target": "ES2022",
     "module": "ES2022",
     "moduleResolution": "bundler",
-    "composite": true,
     "sourceMap": true,
     "strict": true,
     "strictNullChecks": true,

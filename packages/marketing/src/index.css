@@ -49,7 +49,8 @@
 }
 
 :root {
-  --radius: 0.625rem;
+  /* --radius: 0.625rem; */
+  --radius: 3rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -125,5 +126,13 @@
     @apply bg-background text-foreground;
     font-size: 1.05rem; /* 18px base font size (up from default 16px) */
     line-height: 1.75; /* Increased line height for better readability */
+  }
+
+  @supports (corner-shape: squircle) {
+    *,
+    ::before,
+    ::after {
+      corner-shape: squircle;
+    }
   }
 }

@@ -2,8 +2,8 @@
   "slug": "creative-automation",
   "hero": {
     "badge": "Automate your creative content generation",
-    "heading": "Work with our team to build an automation that generates creative content at scale.",
-    "description": "Partner with us to create powerful workflows that automatically generate, optimize, and distribute creative content across all your channels. From social media posts to marketing campaigns, we'll help you automate your entire creative pipeline.",
+    "heading": "Struggling with generating creative content at scale?",
+    "description": "Work with our team to build powerful automation workflows that generate, optimize, and distribute creative content across all your channels. From social media posts to marketing campaigns, we'll help you automate your entire creative pipeline.",
     "integrations": [
       {
         "name": "OpenAI",

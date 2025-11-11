@@ -20,7 +20,8 @@
     "dev": "wrangler dev",
     "dev:inspect": "npx @modelcontextprotocol/inspector",
     "push": "wrangler deploy --env production",
-    "push:logos": "tsx src/scripts/download-toolkit-logos.ts"
+    "push:logos": "tsx src/scripts/download-toolkit-logos.ts",
+    "push:logos:upload": "tsx src/scripts/upload-logo.ts"
   },
   "dependencies": {
     "@ai-sdk/mcp": "^0.0.3",

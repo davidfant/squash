@@ -18,10 +18,12 @@ type Toolkit = {
   };
 };
 
-type DownloadedLogo = {
+export type DownloadedLogo = {
   body: Buffer;
   contentType: string;
 };
+
+export type LogoVariant = "light" | "dark";
 
 type ListObjectsResponse = {
   success?: boolean;
@@ -40,7 +42,7 @@ const REQUIRED_ENV_VARS = [
   "CLOUDFLARE_ACCOUNT_ID",
 ] as const;
 
-const env = getValidatedEnv();
+export const env = getValidatedEnv();
 const R2_BASE_URL = `https://api.cloudflare.com/client/v4/accounts/${env.accountId}/r2/buckets/${env.bucket}`;
 const TOOLKITS_API = "https://backend.composio.dev/api/v3/toolkits";
 
@@ -118,12 +120,18 @@ async function processToolkit(toolkit: Toolkit, existingLogoKeys: Set<string>) {
   }
 }
 
-function buildObjectKeys(slug: string): string[] {
+export function buildObjectKeys(
+  slug: string,
+  variant?: LogoVariant
+): string[] {
   const normalizedSlug = slug.toLowerCase();
-  const withoutExtension = [
-    `logos/light/${normalizedSlug}`,
-    `logos/dark/${normalizedSlug}`,
-  ];
+  const withoutExtension =
+    typeof variant === "string"
+      ? [`logos/${variant}/${normalizedSlug}`]
+      : [
+          `logos/light/${normalizedSlug}`,
+          `logos/dark/${normalizedSlug}`,
+        ];
   const withExtension = withoutExtension.map((key) => `${key}.svg`);
   return Array.from(new Set([...withoutExtension, ...withExtension]));
 }
@@ -168,7 +176,7 @@ async function downloadLogo(
   }
 }
 
-async function uploadLogo(key: string, logo: DownloadedLogo) {
+export async function uploadLogo(key: string, logo: DownloadedLogo) {
   const response = await fetch(buildObjectUrl(key), {
     method: "PUT",
     headers: {

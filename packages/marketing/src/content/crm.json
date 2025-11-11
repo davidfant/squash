@@ -7,23 +7,23 @@
     "integrations": [
       {
         "name": "Salesforce",
-        "logo": "https://logos.composio.dev/api/salesforce"
+        "logo": "https://static.squash.build/logos/light/salesforce"
       },
       {
         "name": "HubSpot",
-        "logo": "https://logos.composio.dev/api/hubspot"
+        "logo": "https://static.squash.build/logos/light/hubspot"
       },
       {
         "name": "Pipedrive",
-        "logo": "https://logos.composio.dev/api/pipedrive"
+        "logo": "https://static.squash.build/logos/light/pipedrive"
       },
       {
         "name": "Zendesk",
-        "logo": "https://logos.composio.dev/api/zendesk"
+        "logo": "https://static.squash.build/logos/light/zendesk"
       },
       {
         "name": "Notion",
-        "logo": "https://logos.composio.dev/api/notion"
+        "logo": "https://static.squash.build/logos/light/notion"
       }
     ]
   },
@@ -44,7 +44,7 @@
         "id": "capture",
         "title": "Capture every lead",
         "description": "Forms · ads · events",
-        "logo": "https://logos.composio.dev/api/salesforce"
+        "logo": "https://static.squash.build/logos/light/salesforce"
       },
       {
         "id": "enrich",

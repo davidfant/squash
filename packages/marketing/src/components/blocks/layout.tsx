@@ -181,6 +181,15 @@ export const Layout = () => {
                 rel="noopener noreferrer"
                 className="text-primary hover:underline"
               >
+                Terms of Service
+              </a>
+              {"   |   "}
+              <a
+                href="https://docs.google.com/document/d/1js8GW_7AQG6HkSJ_78499iCjmeer1NPU2AIWWiJK4Bw/edit?tab=t.0#heading=h.ej3nc4gkvxnt"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
                 Privacy Policy
               </a>
             </p>

@@ -40,7 +40,7 @@ function NodeComponent({
         className="flex justify-center items-center"
         style={{ width: nodeWidth, height: nodeHeight }}
       >
-        <div className="rounded-lg border bg-card px-3 py-2 shadow-sm flex flex-col justify-center max-h-full w-full">
+        <div className="rounded-md border bg-card px-3 py-2 shadow-sm flex flex-col justify-center max-h-full w-full">
           <div className="flex items-center gap-2">
             {data.toolkitSlug && (
               <img
@@ -49,7 +49,7 @@ function NodeComponent({
                 className="size-4 object-contain"
               />
             )}
-            <p>{data.title}</p>
+            <p className="leading-none">{data.title}</p>
           </div>
           <p className="text-sm text-muted-foreground">{data.description}</p>
         </div>

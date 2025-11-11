@@ -26,12 +26,12 @@ const people = [
       "https://deifkwefumgah.cloudfront.net/shadcnblocks/block/avatar-2.webp",
   },
   {
-    name: "Mark Thompson",
+    name: "Emily Carter",
     avatar:
       "https://deifkwefumgah.cloudfront.net/shadcnblocks/block/avatar-3.webp",
   },
   {
-    name: "Emily Carter",
+    name: "Mark Thompson",
     avatar:
       "https://deifkwefumgah.cloudfront.net/shadcnblocks/block/avatar-4.webp",
   },

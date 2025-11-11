@@ -169,6 +169,33 @@ export const Layout = () => {
           onClick={openModal}
         />
       </div>
+
+      {/* Privacy Policy Footer */}
+      <footer className="border-t bg-muted/50">
+        <div className="mx-auto w-full max-w-6xl px-4 py-8 md:px-6">
+          <div className="text-sm text-muted-foreground">
+            <p className="mb-4 text-center">
+              <a
+                href="https://docs.google.com/document/d/1T1jA-2f3CUBWI1WAh79zVf_zSv-r8hVplbDoopekqeU/edit?tab=t.0"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                Terms of Service
+              </a>
+              {"   |   "}
+              <a
+                href="https://docs.google.com/document/d/1js8GW_7AQG6HkSJ_78499iCjmeer1NPU2AIWWiJK4Bw/edit?tab=t.0#heading=h.ej3nc4gkvxnt"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                Privacy Policy
+              </a>
+            </p>
+          </div>
+        </div>
+      </footer>
     </>
   );
 };

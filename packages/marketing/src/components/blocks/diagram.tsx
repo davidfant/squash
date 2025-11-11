@@ -12,6 +12,7 @@ import ReactFlow, {
   type NodeProps,
 } from "reactflow";
 import "reactflow/dist/style.css";
+import { getToolkitLogo } from "../util/get-toolkit-logo";
 
 const nodeWidth = 200;
 const nodeHeight = 100;
@@ -20,7 +21,7 @@ export type DiagramNodeData = {
   id: string;
   title: string;
   description: string;
-  logo?: string;
+  toolkitSlug?: string;
   parentId?: string;
 };
 
@@ -41,9 +42,9 @@ function NodeComponent({
       >
         <div className="rounded-lg border bg-card px-3 py-2 shadow-sm flex flex-col justify-center max-h-full w-full">
           <div className="flex items-center gap-2">
-            {data.logo && (
+            {data.toolkitSlug && (
               <img
-                src={data.logo}
+                src={getToolkitLogo(data.toolkitSlug)}
                 alt={data.title}
                 className="size-4 object-contain"
               />

@@ -4,7 +4,7 @@
 
 export interface Integrations {
   name: string;
-  logo: string;
+  toolkitSlug: string;
 }
 
 export interface HeroContent {
@@ -19,7 +19,7 @@ export interface WorkflowNode {
   title: string;
   description: string;
   parentId?: string;
-  logo?: string;
+  toolkitSlug?: string;
 }
 
 export interface WorkflowStep {
@@ -30,13 +30,7 @@ export interface WorkflowStep {
 export interface WorkflowContent {
   description: string;
   steps: WorkflowStep[];
-  nodes: Array<{
-    id: string;
-    parentId?: string;
-    title: string;
-    description: string;
-    logo?: string;
-  }>;
+  nodes: WorkflowNode[];
 }
 
 export interface CallToActionContent {

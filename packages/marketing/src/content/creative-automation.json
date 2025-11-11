@@ -5,26 +5,11 @@
     "heading": "Struggling with generating creative content at scale?",
     "description": "Work with our team to build powerful automation workflows that generate, optimize, and distribute creative content across all your channels. From social media posts to marketing campaigns, we'll help you automate your entire creative pipeline.",
     "integrations": [
-      {
-        "name": "OpenAI",
-        "logo": "https://static.squash.build/logos/dark/openai"
-      },
-      {
-        "name": "Gemini",
-        "logo": "https://static.squash.build/logos/light/gemini"
-      },
-      {
-        "name": "Facebook",
-        "logo": "https://static.squash.build/logos/light/facebook"
-      },
-      {
-        "name": "TikTok",
-        "logo": "https://static.squash.build/logos/light/tiktok"
-      },
-      {
-        "name": "LinkedIn",
-        "logo": "https://static.squash.build/logos/light/linkedin"
-      }
+      { "name": "OpenAI", "toolkitSlug": "openai" },
+      { "name": "Gemini", "toolkitSlug": "gemini" },
+      { "name": "Facebook", "toolkitSlug": "facebook" },
+      { "name": "TikTok", "toolkitSlug": "tiktok" },
+      { "name": "LinkedIn", "toolkitSlug": "linkedin" }
     ]
   },
   "workflow": {
@@ -44,13 +29,14 @@
         "id": "prompt",
         "title": "Define your prompts",
         "description": "Set up prompts for content generation",
-        "logo": "https://static.squash.build/logos/dark/openai"
+        "toolkitSlug": "openai"
       },
       {
         "id": "generate",
         "title": "Generate with AI",
         "description": "OpenAI · Gemini · AI models",
-        "parentId": "prompt"
+        "parentId": "prompt",
+        "toolkitSlug": "gemini"
       },
       {
         "id": "optimize",
@@ -68,7 +54,8 @@
         "id": "publish",
         "title": "Publish to platforms",
         "description": "Facebook · TikTok · LinkedIn",
-        "parentId": "review"
+        "parentId": "review",
+        "toolkitSlug": "facebook"
       }
     ]
   },
@@ -109,4 +96,3 @@
     "Real-Time Collaboration"
   ]
 }
-  

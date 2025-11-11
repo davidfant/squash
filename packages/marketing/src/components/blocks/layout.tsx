@@ -7,6 +7,7 @@ import posthog from "posthog-js";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Navigate, useParams } from "react-router";
 import "reactflow/dist/style.css";
+import { getToolkitLogo } from "../util/get-toolkit-logo";
 import { BookingDialog } from "./booking-dialog";
 import { CallToAction } from "./call-to-action";
 import { FlowDiagram } from "./diagram";
@@ -120,7 +121,7 @@ export const Layout = () => {
               {content.hero.integrations.map((partner, index) => (
                 <Badge key={partner.name} variant="outline" className="py-1">
                   <img
-                    src={partner.logo}
+                    src={getToolkitLogo(partner.toolkitSlug)}
                     alt={partner.name}
                     className="size-4"
                   />

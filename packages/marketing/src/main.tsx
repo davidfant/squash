@@ -3,8 +3,10 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes } from "react-router";
 import { Layout } from "./components/blocks/layout";
-import content from "./content/test.json";
 import "./index.css";
+import { initMetaPixel } from "./lib/meta";
+
+initMetaPixel(import.meta.env.VITE_META_PIXEL_ID);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -19,7 +21,7 @@ createRoot(document.getElementById("root")!).render(
     >
       <BrowserRouter>
         <Routes>
-          <Route path="/:slug" element={<Layout content={content} />} />
+          <Route path="/:slug" element={<Layout />} />
 
           <Route
             path="*"

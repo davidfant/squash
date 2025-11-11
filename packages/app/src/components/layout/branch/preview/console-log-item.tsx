@@ -2,6 +2,7 @@ import { FadingScrollView } from "@/components/blocks/fading-scroll-view";
 import { Item } from "@/components/ui/item";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
+import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import startCase from "lodash.startcase";
@@ -11,15 +12,12 @@ import { useState, type ReactNode } from "react";
 export type LogItemStatus = "input" | "output" | "error";
 
 export function ToolCallLogItemHeader({ tool }: { tool: string }) {
+  const { theme } = useTheme();
   const toolkitName = startCase(tool.split("_")[0]?.toLowerCase());
-  const logoUrl = `https://logos.composio.dev/api/${toolkitName}`;
+  const logoUrl = `https://static.squash.build/logos/${theme}/${toolkitName}`;
   const toolName = startCase(tool.split("_").slice(1).join("_").toLowerCase());
   return (
     <div className="flex-1 min-w-0">
-      {/* <Badge variant="outline">
-            <img src={logoUrl} alt={toolkitName} className="size-4" />
-            {toolkitName}
-          </Badge> */}
       <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
         <img src={logoUrl} alt={toolkitName} className="size-3" />
         {toolkitName}
@@ -36,6 +34,7 @@ export function AIGatewayLogItemHeader({
   model: string;
   label: string;
 }) {
+  const { theme } = useTheme();
   const [provider, modelId] = model.split("/");
   return (
     <div className="flex-1 min-w-0">
@@ -44,9 +43,9 @@ export function AIGatewayLogItemHeader({
           <img
             src={
               {
-                openai: "https://logos.composio.dev/api/openai",
-                google: "https://logos.composio.dev/api/googlesuper",
-                anthropic: "https://cdn.simpleicons.org/anthropic",
+                openai: `https://static.squash.build/logos/${theme}/openai`,
+                "google-ai-studio": `https://static.squash.build/logos/${theme}/googlesuper`,
+                anthropic: `https://static.squash.build/logos/${theme}/claude`,
               }[provider.toLocaleLowerCase()]
             }
             alt={provider}

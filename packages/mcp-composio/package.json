@@ -19,7 +19,9 @@
     "build": "tsc --project tsconfig.json",
     "dev": "wrangler dev",
     "dev:inspect": "npx @modelcontextprotocol/inspector",
-    "push": "wrangler deploy --env production"
+    "push": "wrangler deploy --env production",
+    "push:logos": "tsx src/scripts/download-toolkit-logos.ts",
+    "push:logos:upload": "tsx src/scripts/upload-logo.ts"
   },
   "dependencies": {
     "@ai-sdk/mcp": "^0.0.3",
@@ -36,6 +38,8 @@
     "@types/lodash.camelcase": "^4.3.9",
     "@types/lodash.upperfirst": "^4.3.9",
     "@types/node": "^22.8.7",
+    "dotenv": "^17.2.3",
+    "tsx": "^4.20.6",
     "typescript": "~5.8.3",
     "wrangler": "^4.42.0"
   }

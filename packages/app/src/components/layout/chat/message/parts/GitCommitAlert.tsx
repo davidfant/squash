@@ -1,8 +1,9 @@
+import { useBranchContext } from "@/components/layout/branch/context";
 import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useBranchContext } from "@/routes/branches/context";
-import { Loader2, RotateCw } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
+import { RotateCw } from "lucide-react";
 import { useState } from "react";
 
 export function GitCommitAlert({
@@ -14,8 +15,8 @@ export function GitCommitAlert({
   sha: string;
   messageId: string;
 }) {
-  const { previewSha, restoreVersion } = useBranchContext();
-  const isCurrent = previewSha === sha;
+  const { preview, restoreVersion } = useBranchContext();
+  const isCurrent = preview.sha === sha;
 
   const [restoring, setRestoring] = useState(false);
   const handleRestore = async () => {
@@ -42,7 +43,7 @@ export function GitCommitAlert({
           className="text-muted-foreground -mr-2"
           onClick={handleRestore}
         >
-          {restoring ? <Loader2 className="animate-spin" /> : <RotateCw />}
+          {restoring ? <Spinner /> : <RotateCw />}
           {/* Restore */}
         </Button>
       )}

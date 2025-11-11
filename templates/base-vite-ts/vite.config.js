@@ -5,6 +5,6 @@ import tsconfigPaths from "vite-tsconfig-paths";
 import { errorOverlayPlugin } from "./src/vite/plugin";
 
 export default defineConfig({
-  plugins: [react(), tailwindcss(), tsconfigPaths(), errorOverlayPlugin(),],
+  plugins: [react(), tailwindcss(), tsconfigPaths(), errorOverlayPlugin()],
   server: { hmr: { overlay: false } },
 });

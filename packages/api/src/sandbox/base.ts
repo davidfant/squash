@@ -7,6 +7,7 @@ import { type InferUIMessageChunk } from "ai";
 import { DurableObject, env } from "cloudflare:workers";
 import { randomUUID } from "crypto";
 import { eq } from "drizzle-orm";
+import type { Buffer } from "node:buffer";
 import escape from "shell-escape";
 import type { Sandbox } from "./types";
 import { executeTasks, runCommand, storage, type Storage } from "./util";
@@ -58,10 +59,12 @@ export abstract class BaseSandboxManagerDurableObject<
     start: Handle;
     agent: Handle;
     deploy: Handle;
+    fork: Handle;
   } = {
     start: emptyHandle("start"),
     agent: emptyHandle("agent"),
     deploy: emptyHandle("deploy"),
+    fork: emptyHandle("fork"),
   };
   private encoder = new TextEncoder();
 
@@ -82,10 +85,17 @@ export abstract class BaseSandboxManagerDurableObject<
   abstract destroy(): Promise<void>;
   abstract getStartTasks(): Promise<Sandbox.Snapshot.Task.Any[]>;
   abstract getDeployTasks(): Promise<Sandbox.Snapshot.Task.Any[]>;
+  abstract getForkTasks(
+    options?: Sandbox.ForkOptions
+  ): Promise<Sandbox.Snapshot.Task.Any[]>;
   abstract restoreVersion(messages: ChatMessage[]): Promise<void>;
   protected abstract readClaudeCodeSessionData(
     sessionId: string
   ): Promise<string>;
+  abstract readFile(path: string): Promise<Buffer>;
+  abstract keepAlive(): Promise<void>;
+  abstract readEnvFile(): Promise<Record<string, string | null>>;
+  abstract writeEnvFile(env: Record<string, string | null>): Promise<void>;
 
   async init(options: Sandbox.Options<C>): Promise<void> {
     await this.state.storage.put("options", options);
@@ -98,9 +108,11 @@ export abstract class BaseSandboxManagerDurableObject<
   }
 
   async start(): Promise<void> {
+    logger.debug("Starting sandbox", { name: this.name });
+    const tasks = await this.getStartTasks();
     await this.state.blockConcurrencyWhile(async () => {
       if (!this.handles.start.active && !(await this.isStarted())) {
-        const tasks = await this.getStartTasks();
+        logger.debug("Starting new agent run because no run is active");
         const controller = new AbortController();
 
         const start: Handle = {
@@ -125,11 +137,11 @@ export abstract class BaseSandboxManagerDurableObject<
 
   async deploy(): Promise<void> {
     await this.waitUntilStarted();
+    const tasks = await this.getDeployTasks();
 
     await this.state.blockConcurrencyWhile(async () => {
       if (this.handles.deploy.active) return;
 
-      const tasks = await this.getDeployTasks();
       const controller = new AbortController();
       const deploy: Handle = {
         type: "deploy",
@@ -138,26 +150,41 @@ export abstract class BaseSandboxManagerDurableObject<
         active: true,
         listeners: new Map(),
         promise: Promise.resolve(executeTasks(tasks, this)).then((s) =>
-          this.consumeStream(executeTasks(tasks, this), deploy)
+          this.consumeStream(s, deploy)
         ),
       };
 
       this.handles.deploy = deploy;
-
-      //   const domains = await db
-      //   .select()
-      //   .from(schema.repoBranchDomain)
-      //   .where(eq(schema.repoBranchDomain.branchId, params.branchId));
-      // if (!domains.length) {
-      //   await db.insert(schema.repoBranchDomain).values({
-      //     branchId: params.branchId,
-      //     url: `https://${params.branchId}.hypershape.app`,
-      //   });
-      // }
     });
   }
 
-  async gitPush(abortSignal: AbortSignal | undefined): Promise<void> {
+  async fork(options?: Sandbox.ForkOptions): Promise<void> {
+    await this.waitUntilStarted();
+    await this.state.blockConcurrencyWhile(async () => {
+      if (this.handles.fork.active) return;
+
+      const tasks = await this.getForkTasks(options);
+      const controller = new AbortController();
+      const fork: Handle = {
+        type: "fork",
+        controller,
+        buffer: [],
+        active: true,
+        listeners: new Map(),
+        promise: Promise.resolve(executeTasks(tasks, this)).then((s) =>
+          this.consumeStream(s, fork)
+        ),
+      };
+
+      this.handles.fork = fork;
+    });
+  }
+
+  async gitCommit(
+    title: string,
+    body: string,
+    abortSignal: AbortSignal | undefined
+  ): Promise<string> {
     const options = await this.getOptions();
 
     const db = createDatabase(env);
@@ -168,51 +195,55 @@ export abstract class BaseSandboxManagerDurableObject<
       .then(([repo]) => repo);
     if (!repo) throw new Error(`Repo not found: ${options.branch.repoId}`);
 
-    logger.info("Pushing git", options.branch);
-    await this.execute(
-      {
-        command: "sh",
-        args: [
-          "-c",
-          [
-            `git remote set-url origin ${repo.url}`,
-            `git push origin ${options.branch.name}`,
-          ].join(" && "),
-        ],
-        cwd: options.config.cwd,
-      },
-      abortSignal
-    );
-  }
-
-  async gitCommit(
-    title: string,
-    body: string,
-    abortSignal: AbortSignal | undefined
-  ): Promise<string> {
-    logger.info("Committing git", { title, body });
+    logger.info("Git commit and push", {
+      title,
+      body,
+      gitUrl: repo.gitUrl,
+      ...options,
+    });
     const stream = await this.execute(
       {
         command: "sh",
         args: [
           "-c",
-          [
-            `git add -A`,
-            `git config --global user.name 'Squash'`,
-            `git config --global user.email 'agent@squash.build'`,
-            `git commit --quiet ${[title, body]
-              .filter((v) => !!v.trim())
-              .map((v) => `-m ${escape([v])}`)
-              .join(" ")}`,
-            `git rev-parse HEAD`,
-          ].join(" && "),
+          `
+          set -e;
+
+          git add -A;
+          git config --global user.name 'Squash';
+          git config --global user.email 'agent@squash.build';
+          git commit --quiet ${[title, body]
+            .filter((v) => !!v.trim())
+            .map((v) => `-m ${escape([v])}`)
+            .join(" ")};
+
+          if git remote get-url origin > /dev/null 2>&1; then
+            git remote set-url origin ${repo.gitUrl}
+          else
+            git remote add origin ${repo.gitUrl}
+          fi
+
+          git push --force --set-upstream origin HEAD:${options.branch.name};
+
+          echo '<sha>';
+          git rev-parse HEAD;
+          echo '</sha>';
+          `,
         ],
+        env: {
+          AWS_ENDPOINT_URL_S3: env.R2_REPOS_ENDPOINT_URL_S3,
+          AWS_ACCESS_KEY_ID: env.R2_REPOS_ACCESS_KEY_ID,
+          AWS_SECRET_ACCESS_KEY: env.R2_REPOS_SECRET_ACCESS_KEY,
+          AWS_DEFAULT_REGION: "auto",
+        },
       },
       abortSignal
     );
 
     const { stdout } = await runCommand(stream);
-    return stdout.trim();
+    const sha = stdout.trim().split("<sha>")[1]?.split("</sha>")[0]?.trim();
+    if (!sha) throw new Error("Git commit failed");
+    return sha;
   }
 
   async gitReset(
@@ -222,7 +253,11 @@ export abstract class BaseSandboxManagerDurableObject<
     await this.waitUntilStarted();
     logger.info("Resetting git to", { sha });
     const stream = await this.execute(
-      { command: "git", args: ["reset", "--hard", sha] },
+      // { command: "git", args: ["reset", "--hard", sha] },
+      {
+        command: "sh",
+        args: ["-c", `git reset --hard ${sha} && git clean -fd`],
+      },
       abortSignal
     );
     await runCommand(stream);
@@ -239,6 +274,28 @@ export abstract class BaseSandboxManagerDurableObject<
 
     const { stdout } = await runCommand(stream);
     return stdout.trim();
+  }
+
+  async listFiles(): Promise<string[]> {
+    await this.waitUntilStarted();
+    const options = await this.getOptions();
+
+    logger.info("Listing repository files");
+    const stream = await this.execute(
+      {
+        command: "git",
+        args: ["ls-files", "--cached", "--others", "--exclude-standard"],
+        cwd: options.config.cwd,
+      },
+      undefined
+    );
+    const { stdout } = await runCommand(stream);
+
+    return stdout
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => !!line)
+      .sort((a, b) => a.localeCompare(b));
   }
 
   async isAgentRunning(): Promise<boolean> {
@@ -276,7 +333,7 @@ export abstract class BaseSandboxManagerDurableObject<
             sandbox: this,
             readSessionData: (id) => this.readClaudeCodeSessionData(id),
           })
-        ).then((s) => (s ? this.consumeStream(s, agent) : undefined)),
+        ).then((s) => this.consumeStream(s, agent)),
       };
       this.handles.agent = agent;
     });
@@ -291,6 +348,10 @@ export abstract class BaseSandboxManagerDurableObject<
   listenToDeploy(): Response {
     return this.listen("deploy");
   }
+  listenToFork(): Response {
+    return this.listen("fork");
+  }
+  abstract listenToLogs(): Promise<Response>;
 
   private listen(type: keyof typeof this.handles & string) {
     const handle = this.handles[type];
@@ -308,11 +369,18 @@ export abstract class BaseSandboxManagerDurableObject<
     });
   }
 
-  stopAgent() {
+  async stopAgent() {
     if (!this.handles.agent.active) {
       logger.debug("Agent is not active, skipping stop");
       return;
     }
+
+    const waitForStream = this.handles.agent.promise.catch((error) => {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+      throw error;
+    });
 
     logger.info("Stopping agent");
     this.handles.agent.controller.abort(
@@ -324,6 +392,7 @@ export abstract class BaseSandboxManagerDurableObject<
     );
 
     this.handles.agent.active = false;
+    await waitForStream;
   }
 
   private async consumeStream(
@@ -332,7 +401,8 @@ export abstract class BaseSandboxManagerDurableObject<
   ): Promise<void> {
     const reader = stream.getReader();
     try {
-      while (handle.controller.signal.aborted !== true) {
+      // while (handle.controller.signal.aborted !== true) {
+      while (true) {
         const { value, done } = await reader.read();
         if (done) break;
         if (value) this.broadcast(value, handle);
@@ -342,7 +412,13 @@ export abstract class BaseSandboxManagerDurableObject<
       if (error instanceof DOMException && error.name === "AbortError") {
         return;
       }
-      logger.error("Stream failed", { type: handle.type, error });
+      logger.error("Stream failed", {
+        type: handle.type,
+        error: (error as Error).message,
+        stack: (error as Error).stack,
+        name: (error as Error).name,
+        cause: (error as Error).cause,
+      });
       throw error;
     } finally {
       for (const listener of handle.listeners.values() ?? []) {

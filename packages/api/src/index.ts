@@ -1,32 +1,30 @@
+import { clerkMiddleware } from "@hono/clerk-auth";
 import { zValidator } from "@hono/zod-validator";
+import { env } from "cloudflare:workers";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger as honoLogger } from "hono/logger";
 import { requestId } from "hono/request-id";
 import { OpenAI } from "openai";
 import z from "zod";
-import { authMiddleware } from "./auth/middleware";
 import { databaseMiddleware } from "./database/middleware";
 import { createSignedAndPublicUrl } from "./lib/cloudflare";
 import { logger } from "./lib/logger";
-import { githubRouter } from "./routers/integrations/github";
-import { invitesRouter } from "./routers/invites";
+import { stripAnsi } from "./lib/strip-ansi";
+import { repoBranchesRouter } from "./routers/branches";
 import { reposRouter } from "./routers/repos";
-import { repoBranchesRouter } from "./routers/repos/branches";
-import { repoProvidersRouter } from "./routers/repos/providers";
+import { clerkWebhookRouter } from "./routers/webhooks/clerk";
 
 const app = new Hono<{ Bindings: CloudflareBindings }>()
-  .use("*", cors({ origin: process.env.APP_URL, credentials: true }))
+  .use(cors({ origin: env.APP_URL, credentials: true }))
   .use(requestId())
-  .use(honoLogger())
+  .use(honoLogger((msg) => console.log(stripAnsi(msg))))
   .use(databaseMiddleware)
-  .use(authMiddleware)
-  .on(["GET", "POST"], "/auth/*", (c) => c.get("auth").handler(c.req.raw))
-  .route("/repos/providers", repoProvidersRouter)
+  .route("/webhooks/clerk", clerkWebhookRouter)
+
+  .use(clerkMiddleware())
   .route("/branches", repoBranchesRouter)
   .route("/repos", reposRouter)
-  .route("/invites", invitesRouter)
-  .route("/integrations/github", githubRouter)
   .post(
     "/upload",
     zValidator("json", z.object({ filename: z.string() })),
@@ -72,5 +70,5 @@ const app = new Hono<{ Bindings: CloudflareBindings }>()
 export default app;
 export type AppType = typeof app;
 
-export type { MemberRole } from "./database/schema/auth";
 export { DaytonaSandboxManager } from "./sandbox/daytona/manager";
+export type { ClerkOrganizationRole } from "./types";

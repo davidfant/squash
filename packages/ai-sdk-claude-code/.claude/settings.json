@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    // "allow": ["mcp__composio__search_tools", "mcp__composio__connect_to_tool"],
+    // "ask": ["mcp__composio__search_tools"],
+    "defaultMode": "bypassPermissions"
+  }
+}

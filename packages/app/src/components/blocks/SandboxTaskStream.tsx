@@ -4,8 +4,9 @@ import type { UseChatHelpers } from "@ai-sdk/react";
 import type { SandboxTaskMessage } from "@squashai/api/agent/types";
 import type { Sandbox } from "@squashai/api/sandbox/types";
 import { AnimatePresence, motion } from "framer-motion";
-import { AlertCircle, Check, Loader2 } from "lucide-react";
+import { AlertCircle, Check } from "lucide-react";
 import { useState } from "react";
+import { Spinner } from "../ui/spinner";
 
 const stdoutOrStderr = (
   e: Sandbox.Exec.Event.Any
@@ -56,11 +57,7 @@ export function SandboxTaskStream({
             </Alert>
           ) : (
             <Alert className="text-muted-foreground overflow-x-scroll">
-              {t.state === "output-available" ? (
-                <Check />
-              ) : (
-                <Loader2 className="animate-spin" />
-              )}
+              {t.state === "output-available" ? <Check /> : <Spinner />}
               <AlertTitle>{t.input?.title}</AlertTitle>
               {showDetails && (
                 <AlertDescription className="font-mono whitespace-pre-wrap">

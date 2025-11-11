@@ -18,7 +18,7 @@ export const AssistantMessage = ({
   streaming?: boolean;
   onRetry?: () => void;
 }) => (
-  <div className={cn("group space-y-3", className)}>
+  <div className={cn("group space-y-1", className)}>
     <MessageHeader author="Squash" />
     <div className="ml-7">
       <MessageParts
@@ -28,7 +28,11 @@ export const AssistantMessage = ({
       />
       {isLast && <ChatErrorAlert />}
       {!streaming && (
-        <AssistantMessageActions className="-ml-3" onRetry={onRetry} />
+        <AssistantMessageActions
+          className="-ml-3"
+          onRetry={onRetry}
+          messageId={message.id}
+        />
       )}
     </div>
   </div>

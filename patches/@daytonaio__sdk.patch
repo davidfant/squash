@@ -1,32 +1,22 @@
 diff --git a/src/Process.js b/src/Process.js
-index 7f1d7c662aabade3c75e69ec2fee9f3175e9fd96..254a379180ceaa2d7fb2662d4035791405e9c1ef 100644
+index a5c3ea8dcaaea7e0ebd35f0a2ee6081a0a539f1a..781ff761200fd10f1cb4a8b517821ca55ac34bfa 100644
 --- a/src/Process.js
 +++ b/src/Process.js
-@@ -289,17 +289,17 @@ class Process {
-         const previewLink = await this.getPreviewLink(2280);
-         const url = `${previewLink.url.replace(/^http/, 'ws')}/process/session/${sessionId}/command/${commandId}/logs?follow=true`;
-         let ws;
--        if (Runtime_1.RUNTIME === Runtime_1.Runtime.BROWSER) {
-+        // if (Runtime_1.RUNTIME === Runtime_1.Runtime.BROWSER) {
-             ws = new isomorphic_ws_1.default(url + '&DAYTONA_SANDBOX_AUTH_KEY=' + previewLink.token, `X-Daytona-SDK-Version~${this.clientConfig.baseOptions.headers['X-Daytona-SDK-Version']}`);
--        }
--        else {
--            ws = new isomorphic_ws_1.default(url, {
--                headers: {
--                    ...this.clientConfig.baseOptions.headers,
--                    'X-Daytona-Preview-Token': previewLink.token,
--                },
--            });
--        }
-+        // }
-+        // else {
-+        //     ws = new isomorphic_ws_1.default(url, {
-+        //         headers: {
-+        //             ...this.clientConfig.baseOptions.headers,
-+        //             'X-Daytona-Preview-Token': previewLink.token,
-+        //         },
-+        //     });
-+        // }
-         await (0, Stream_1.stdDemuxStream)(ws, onStdout, onStderr);
-     }
-     /**
+@@ -625,16 +625,6 @@ function findSubarray(haystack, needle) {
+     return -1;
+ }
+ function createWebSocket(url, token, headers) {
+-    if (Runtime_1.RUNTIME === Runtime_1.Runtime.BROWSER) {
+-        return new isomorphic_ws_1.default(url + '&DAYTONA_SANDBOX_AUTH_KEY=' + token, `X-Daytona-SDK-Version~${headers['X-Daytona-SDK-Version']}`);
+-    }
+-    else {
+-        return new isomorphic_ws_1.default(url, {
+-            headers: {
+-                ...headers,
+-                'X-Daytona-Preview-Token': token,
+-            },
+-        });
+-    }
++    return new isomorphic_ws_1.default(url + '&DAYTONA_SANDBOX_AUTH_KEY=' + token, `X-Daytona-SDK-Version~${headers['X-Daytona-SDK-Version']}`);
+ }
+ //# sourceMappingURL=Process.js.map

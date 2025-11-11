@@ -29,6 +29,7 @@ export async function main(argv: string[] = process.argv) {
     .option("--model <name>")
     .option("--cwd <path>", "working directory for the agent", process.cwd())
     .option("--options <json>");
+
   //     .addHelpText(
   //       "after",
   //       `

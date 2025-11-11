@@ -1,68 +1,61 @@
-import { authClient } from "@/auth/client";
-import { ChatThread } from "@/components/layout/chat/ChatThread";
-import { ChatProvider } from "@/components/layout/chat/context";
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable";
-import { SidebarProvider } from "@/components/ui/sidebar";
-import { api, useQuery } from "@/hooks/api";
-import type { ChatMessage } from "@squashai/api/agent/types";
-import { useParams } from "react-router";
-import { BranchPreview } from "./BranchPreview";
-import { BranchContextProvider, useBranchContext } from "./context";
-import { BranchHeader } from "./header/BranchHeader";
+import { FeatureCard } from "@/components/blocks/feature/card";
+import { FeatureCardGrid } from "@/components/blocks/feature/grid";
+import { MainLayout } from "@/components/layout/main/layout";
+import { toast } from "@/components/ui/sonner";
+import { api, useMutation, useQuery } from "@/hooks/api";
+import { useAuth } from "@clerk/clerk-react";
+import { Link, Navigate } from "react-router";
 
-function Component({ branchId }: { branchId: string }) {
-  const { branch, setPreviewSha } = useBranchContext();
+export function BranchesPage() {
+  const repos = useQuery(api.repos.$get, { params: {} });
 
-  const session = authClient.useSession();
-  const threadMessages = useQuery(api.branches[":branchId"].messages.$get, {
-    params: { branchId },
-    enabled: !!session.data?.user,
+  const { has } = useAuth();
+  const isBuilder = has?.({ role: "org:admin" });
+  const updateRepo = useMutation(api.repos[":repoId"].$patch, {
+    onSuccess: async () => {
+      toast.success("App renamed");
+      await repos.refetch();
+    },
+    onError: () => toast.error("Failed to rename app"),
+  });
+  const deleteRepo = useMutation(api.repos[":repoId"].$delete, {
+    onSuccess: async () => {
+      toast.success("App deleted");
+      await repos.refetch();
+    },
+    onError: () => toast.error("Failed to delete app"),
   });
 
+  if (repos.data?.length === 0 && isBuilder) return <Navigate to="/new" />;
   return (
-    <ChatProvider
-      endpoint={`${import.meta.env.VITE_API_URL}/branches/${branchId}/messages`}
-      initialMessages={threadMessages.data as ChatMessage[]}
-      onFinish={(step) => {
-        const latestSha = step.message.parts.findLast(
-          (part) => part.type === "tool-GitCommit"
-        )?.output?.sha;
-        if (latestSha) setPreviewSha(latestSha);
-      }}
-    >
-      <SidebarProvider className="flex flex-col h-screen">
-        <BranchHeader title={branch.title} />
-        <ResizablePanelGroup
-          direction="horizontal"
-          className="flex-1 overflow-hidden"
-        >
-          <ResizablePanel
-            defaultSize={30}
-            minSize={25}
-            maxSize={35}
-            className="flex"
-          >
-            <ChatThread ready={!!threadMessages.data} id={branchId} />
-          </ResizablePanel>
-          <ResizableHandle className="bg-transparent w-[3px] data-[resize-handle-state=hover]:bg-primary/20 data-[resize-handle-state=drag]:bg-primary/20 transition-colors" />
-          <ResizablePanel defaultSize={75} className="pr-2 pb-2">
-            <BranchPreview />
-          </ResizablePanel>
-        </ResizablePanelGroup>
-      </SidebarProvider>
-    </ChatProvider>
-  );
-}
-
-export function BranchPage() {
-  const { branchId } = useParams();
-  return (
-    <BranchContextProvider branchId={branchId!}>
-      <Component branchId={branchId!} />
-    </BranchContextProvider>
+    <MainLayout title="Apps">
+      <main className="p-3">
+        <FeatureCardGrid
+          children={repos.data?.map((b, index) => (
+            <Link key={b.id} to={`/apps/${b.masterBranchId}`}>
+              <FeatureCard
+                title={b.name}
+                imageUrl={b.imageUrl}
+                index={index}
+                onEdit={
+                  isBuilder
+                    ? (name) =>
+                        updateRepo.mutateAsync({
+                          param: { repoId: b.id },
+                          json: { name },
+                        })
+                    : undefined
+                }
+                onDelete={
+                  isBuilder
+                    ? () => deleteRepo.mutate({ param: { repoId: b.id } })
+                    : undefined
+                }
+              />
+            </Link>
+          ))}
+        />
+      </main>
+    </MainLayout>
   );
 }

@@ -13,6 +13,16 @@ quiet() {
     | sed -u '/^ =>/d'
 }
 
+daytona_() {
+  echo "Daytona dev: $@"
+  daytona login --api-key $DAYTONA_API_KEY_DEV
+  daytona "$@"
+
+  # echo "Daytona prod: $@"
+  # daytona login --api-key $DAYTONA_API_KEY_PROD
+  # daytona "$@"
+}
+
 function build_repo() {
   TEMPLATE_NAME=$1
   echo "Building template: $TEMPLATE_NAME"
@@ -20,17 +30,17 @@ function build_repo() {
     TEMPLATE_VERSION=$(cat package.json | jq -r '.version')
 
     GIT_URL=s3://repos/templates/$TEMPLATE_NAME
-    # if added, set, if not, add
-    # if git remote get-url origin; then
-    #   git remote set-url origin $GIT_URL
-    # else
-    #   git remote add origin $GIT_URL
-    # fi
-    # git push --tags
+    if git remote get-url origin; then
+      git remote set-url origin $GIT_URL
+    else
+      git remote add origin $GIT_URL
+    fi
+    git push --set-upstream origin master
+    git push --tags
 
     DOCKER_TAG="$TEMPLATE_NAME:v$TEMPLATE_VERSION"
     echo "Docker tag: $DOCKER_TAG"
-    quiet docker build \
+    docker build \
       --platform linux/amd64 \
       --build-arg SQUASH_CLI_VERSION=$SQUASH_CLI_VERSION \
       --tag $DOCKER_TAG \
@@ -44,7 +54,9 @@ function build_repo() {
     # FLY_DOCKER_TAG="registry.fly.io/$APP_NAME:$DOCKER_TAG"
     # docker tag $DOCKER_TAG $FLY_DOCKER_TAG
     # docker push $DOCKER_TAG
-    daytona snapshot push "$DOCKER_TAG" --name "$DOCKER_TAG" --entrypoint "sleep infinity" --disk 1 || echo "Did not push snapshot"
+    export NO_PROXY=cr.app.daytona.io,localhost,127.0.0.1
+
+    daytona_ snapshot push "$DOCKER_TAG" --name "$DOCKER_TAG" --entrypoint "sleep infinity" --memory 2 --cpu 1 --disk 2 || echo "Did not push snapshot"
   popd
 }
 
@@ -70,6 +82,7 @@ function build_repo() {
 #   flyctl apps create $APP_NAME
 # fi
 
-build_repo base-vite-ts
+build_repo base-vite-trpc-cloudflare-worker-ts
+# build_repo base-vite-ts
 # build_repo replicator-vite-ts
 # build_node_image 20-alpine

@@ -5,50 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1755652283247,
-      "tag": "0000_fair_doctor_faustus",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1758215961595,
-      "tag": "0001_freezing_rogue",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1758601189769,
-      "tag": "0002_harsh_edwin_jarvis",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1758842421826,
-      "tag": "0003_fat_red_wolf",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1759014167874,
-      "tag": "0004_natural_hemingway",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1759361614315,
-      "tag": "0005_giant_deathstrike",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1759448759769,
-      "tag": "0006_low_phalanx",
+      "when": 1762348561612,
+      "tag": "0000_talented_richard_fisk",
       "breakpoints": true
     }
   ]

@@ -9,7 +9,8 @@
   },
   "upload_source_maps": true,
   "dev": {
-    "port": 8790
+    "port": 8790,
+    "inspector_port": 0
   },
   "r2_buckets": [
     {

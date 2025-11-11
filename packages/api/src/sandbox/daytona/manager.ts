@@ -1,18 +1,23 @@
 import type { ChatMessage } from "@/agent/types";
 import { createDatabase } from "@/database";
 import * as schema from "@/database/schema";
+import { createEnvVariables } from "@/lib/composio";
 import { logger } from "@/lib/logger";
-import { toAsyncIterator } from "@/lib/toAsyncIterator";
+import { toAsyncIterator } from "@/lib/to-async-iterator";
 import { Daytona, Sandbox as DaytonaSandbox } from "@daytonaio/sdk";
 import { env } from "cloudflare:workers";
+import dotenv from "dotenv";
 import { eq } from "drizzle-orm";
+import { Buffer } from "node:buffer";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
-import { setTimeout } from "node:timers/promises";
-import escape from "shell-escape";
+import pRetry, { AbortError } from "p-retry";
 import { BaseSandboxManagerDurableObject } from "../base";
 import type { Sandbox } from "../types";
-import { downloadFileFromSandbox, uploadSandboxFileToDeployment } from "./api";
+import { pullLatestChanges } from "../util";
+import { downloadFileFromSandbox } from "./api";
+import { DaytonaDevServer } from "./dev-server";
+import { startCommand } from "./util";
 
 export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
   Sandbox.Snapshot.Config.Daytona,
@@ -20,39 +25,39 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
 > {
   name = "daytona";
   private readonly daytona = new Daytona({ apiKey: env.DAYTONA_API_KEY });
-  private sandbox: DaytonaSandbox | null = null;
+  private _sandbox: DaytonaSandbox | null = null;
+  private _devServer: DaytonaDevServer | null = null;
 
-  private async getSandbox(): Promise<DaytonaSandbox> {
-    if (this.sandbox) return this.sandbox;
+  private async getSandbox(source: string): Promise<DaytonaSandbox> {
+    logger.debug("Getting sandbox", { source });
+    if (this._sandbox) return this._sandbox;
     const sandboxId = await this.storage.get("sandboxId");
     const sandbox = await this.daytona.get(sandboxId);
-    this.sandbox = sandbox;
+    this._sandbox = sandbox;
     return sandbox;
   }
 
-  private async isDevServerRunning(): Promise<boolean> {
-    try {
-      const [sandbox, devServer] = await Promise.all([
-        this.getSandbox(),
-        this.storage.get("devServer", null),
-      ]);
-      if (!devServer) return false;
-      const command = await sandbox.process.getSessionCommand(
-        devServer.sessionId,
-        devServer.commandId
-      );
-      return command.exitCode === undefined;
-    } catch {
-      return false;
-    }
+  private async getDevServer(): Promise<DaytonaDevServer | null> {
+    logger.debug("Getting dev server");
+    if (this._devServer) return this._devServer;
+    const sandbox = await this.getSandbox("getDevServer");
+    const devServer = await this.storage.get("devServer", null);
+    if (!devServer) return null;
+    this._devServer = new DaytonaDevServer(
+      sandbox,
+      devServer.sessionId,
+      devServer.commandId
+    );
+    return this._devServer;
   }
 
   async isStarted(): Promise<boolean> {
     try {
-      const sandbox = await this.getSandbox();
-      const isDevServerRunningP = this.isDevServerRunning();
+      const sandbox = await this.getSandbox("isStarted");
+      const devServer = await this.getDevServer();
+      const isDevServerRunningP = devServer?.isRunning();
       await sandbox.refreshData();
-      return sandbox.state === "started" && (await isDevServerRunningP);
+      return sandbox.state === "started" && !!(await isDevServerRunningP);
     } catch {
       return false;
     }
@@ -61,13 +66,16 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
   async getStartTasks(): Promise<Sandbox.Snapshot.Task.Any[]> {
     const options = await this.getOptions();
     const that = this;
+    const db = createDatabase(env);
     return [
       {
         id: "create-sandbox",
-        title: "Start environment",
+        title: "Starting environment...",
         type: "function",
         function: async function* () {
-          let sandbox = await that.getSandbox().catch(() => null);
+          let sandbox = await that
+            .getSandbox("getStartTasks")
+            .catch(() => null);
           if (sandbox) {
             yield {
               type: "stdout",
@@ -93,7 +101,6 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
               snapshot: options.config.snapshot,
               autoArchiveInterval: 24 * 60,
               autoStopInterval: 5,
-              envVars: options.config.env,
             });
             logger.debug("Created new sandbox", { sandboxId: sandbox.id });
             yield {
@@ -126,126 +133,145 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
             });
           }
 
-          that.sandbox = sandbox;
+          that._sandbox = sandbox;
         },
       },
       {
         id: "pull-latest-changes",
-        title: "Loading latest changes",
+        title: "Loading latest changes...",
         type: "function",
-        function: async function* () {
-          const db = createDatabase(env);
-          const repo = await db
-            .select()
-            .from(schema.repo)
-            .where(eq(schema.repo.id, options.branch.repoId))
-            .then(([repo]) => repo);
-          if (!repo)
-            throw new Error(`Repo not found: ${options.branch.repoId}`);
-
-          logger.info("Pulling latest changes", options.branch);
-          yield* that.execute(
-            {
-              command: "sh",
-              args: [
-                "-c",
-                `
-                set -e;
-
-                if ! git remote get-url origin > /dev/null 2>&1; then
-                  git remote add origin ${repo.url}
-                  git fetch --depth 1 origin ${repo.defaultBranch}
-                  git checkout --force origin/${repo.defaultBranch}
-                  git checkout -b ${options.branch.name}
-                fi
-                `,
-              ],
-              // TODO: generate creds that can only access the specific repo if it's in the R2 bucket
-              env: {
-                AWS_ENDPOINT_URL_S3: env.R2_REPOS_ENDPOINT_URL_S3,
-                AWS_ACCESS_KEY_ID: env.R2_REPOS_ACCESS_KEY_ID,
-                AWS_SECRET_ACCESS_KEY: env.R2_REPOS_SECRET_ACCESS_KEY,
-                AWS_DEFAULT_REGION: "auto",
-              },
-              cwd: options.config.cwd,
-            },
-            undefined
-          );
-        },
+        function: () => pullLatestChanges(options.branch, that),
         dependsOn: ["create-sandbox"],
       },
       {
         id: "install-squash-cli",
-        title: "Install Squash",
+        title: "Installing Squash...",
         dependsOn: ["create-sandbox"],
         type: "command",
         command: "npm",
-        args: [
-          "install",
-          "--global",
-          `@squashai/cli@${env.SQUASH_CLI_VERSION}`,
-        ],
+        args: ["install", "--global", env.SQUASH_CLI_PACKAGE],
+      },
+      {
+        id: "setup-composio",
+        title: "Setting up integrations...",
+        dependsOn: ["create-sandbox"],
+        type: "function",
+        function: async function* () {
+          yield {
+            type: "stdout",
+            data: "Setting up Composio...\n",
+            timestamp: new Date().toISOString(),
+          };
+
+          const branch = await db
+            .select()
+            .from(schema.repoBranch)
+            .where(eq(schema.repoBranch.id, options.branch.id))
+            .then(([branch]) => branch);
+          if (!branch) {
+            throw new Error(`Branch not found: ${options.branch.id}`);
+          }
+
+          const envVars = { ...branch.env };
+
+          if (!envVars.TZ) envVars.TZ = "utc";
+          if (!envVars.AI_GATEWAY_BASE_URL) {
+            envVars.AI_GATEWAY_BASE_URL = env.AI_GATEWAY_BASE_URL;
+          }
+          if (!envVars.AI_GATEWAY_API_KEY) {
+            envVars.AI_GATEWAY_API_KEY = env.AI_GATEWAY_API_KEY;
+          }
+          if (!envVars.JWT_ISSUER) {
+            envVars.JWT_ISSUER = env.JWT_ISSUER;
+          }
+
+          if (
+            !envVars.COMPOSIO_API_KEY ||
+            !envVars.COMPOSIO_PROJECT_ID ||
+            !envVars.COMPOSIO_PLAYGROUND_USER_ID
+          ) {
+            yield {
+              type: "stdout",
+              data: "Creating new Composio project...\n",
+              timestamp: new Date().toISOString(),
+            };
+
+            const composioEnvVars = await createEnvVariables(
+              options.branch.id,
+              options.organizationId
+            );
+            Object.assign(envVars, composioEnvVars);
+
+            yield {
+              type: "stdout",
+              data: "Created new Composio project...\n",
+              timestamp: new Date().toISOString(),
+            };
+          }
+
+          if (
+            JSON.stringify(envVars) !== JSON.stringify(branch.env) ||
+            !(await that
+              .readEnvFile()
+              .then(() => true)
+              .catch(() => false))
+          ) {
+            logger.debug("Writing env file", { envVars: Object.keys(envVars) });
+            await that.writeEnvFile(envVars);
+          } else {
+            logger.debug("Env file is up to date", {
+              envVars: Object.keys(envVars),
+            });
+          }
+        },
       },
       ...options.config.tasks.install.map((task) => ({
         ...task,
         dependsOn: [
           ...(task.dependsOn ?? []),
           "create-sandbox",
+          "setup-composio",
           "pull-latest-changes",
         ],
       })),
       {
         id: "start-dev-server",
-        title: "Start development server",
+        title: "Starting development server...",
         dependsOn: [
           "create-sandbox",
+          "setup-composio",
+          "pull-latest-changes",
           ...options.config.tasks.install.map((task) => task.id),
         ],
         type: "function",
         function: async function* () {
-          const isDevServerRunning = await that.isDevServerRunning();
+          let devServer = await that.getDevServer();
 
-          if (!isDevServerRunning) {
-            const devServer = await that.startCommand(
-              {
-                command: options.config.tasks.dev.command,
-                args: options.config.tasks.dev.args ?? [],
-              },
-              undefined
-            );
+          if (!(await devServer?.isRunning())) {
             yield {
               type: "stdout",
               data: "Starting development server...\n",
               timestamp: new Date().toISOString(),
             };
 
-            await that.storage.set("devServer", devServer);
+            const sandbox = await that.getSandbox("start-dev-server");
+            devServer = await DaytonaDevServer.start(
+              sandbox,
+              options.config.tasks.dev
+            );
+            that._devServer = devServer;
+            await that.storage.set("devServer", {
+              sessionId: devServer.sessionId,
+              commandId: devServer.commandId,
+            });
           }
 
-          while (true) {
-            const preview = await that.sandbox!.getPreviewLink(
-              options.config.port
-            );
-            const response = await fetch(preview.url, { method: "GET" });
-            if (response.ok) {
-              const text = await response.text();
-              if (text.length) {
-                yield {
-                  type: "stdout",
-                  data: "Dev server started\n",
-                  timestamp: new Date().toISOString(),
-                };
-                break;
-              }
-            }
-            logger.debug("Waiting for dev server", { url: preview.url });
-            yield {
-              type: "stdout",
-              data: "Waiting for dev server...\n",
-              timestamp: new Date().toISOString(),
-            };
-            await setTimeout(200);
-          }
+          await devServer!.waitUntilReachable(options.config.port);
+          yield {
+            type: "stdout",
+            data: "Dev server started\n",
+            timestamp: new Date().toISOString(),
+          };
         },
       },
     ];
@@ -253,78 +279,300 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
 
   async getDeployTasks(): Promise<Sandbox.Snapshot.Task.Any[]> {
     const options = await this.getOptions();
-    const sandboxP = this.storage
-      .get("sandboxId")
-      .then((id) => this.daytona.get(id));
+    const that = this;
+
+    /*if (options.config.build.type === "static") {
+      const build = options.config.build;
+      return [
+        ...options.config.tasks.build,
+        {
+          id: "upload-static-files",
+          title: "Uploading...",
+          type: "function",
+          dependsOn: options.config.tasks.build.map((task) => task.id),
+          function: async function* () {
+            yield {
+              type: "stdout",
+              data: "Preparing to upload files...\n",
+              timestamp: new Date().toISOString(),
+            };
+
+            const [gitSha, sandbox] = await Promise.all([
+              that.gitCurrentCommit(undefined),
+              that.getSandbox("getDeployTasks"),
+            ]);
+
+            const buildDir = path.join(options.config.cwd, build.dir);
+
+            const { files } = await sandbox.fs.searchFiles(buildDir, "*.*");
+            yield {
+              type: "stdout",
+              data: `Found ${files.length} files to upload\n`,
+              timestamp: new Date().toISOString(),
+            };
+
+            yield {
+              type: "stdout",
+              data: "Starting parallel uploads...\n",
+              timestamp: new Date().toISOString(),
+            };
+
+            const deploymentPath = `${options.branch.repoId}/${options.branch.id}/${gitSha}`;
+            await Promise.all(
+              files.map((file) =>
+                uploadSandboxFileToDeployment(
+                  sandbox.id,
+                  { absolute: file, relative: path.relative(buildDir, file) },
+                  deploymentPath
+                )
+              )
+            );
+
+            yield {
+              type: "stdout",
+              data: `Successfully uploaded ${files.length} files\n`,
+              timestamp: new Date().toISOString(),
+            };
+
+            const url = new URL(env.DEPLOYMENT_PROXY_URL);
+            url.host = `${options.branch.name}.${url.host}`;
+            const db = createDatabase(env);
+            await Promise.all([
+              // env.DOMAIN_MAPPINGS.put(url.host, deploymentPath),
+              db
+                .update(schema.repoBranch)
+                .set({ deployment: { url: url.origin, sha: gitSha } })
+                .where(eq(schema.repoBranch.id, options.branch.id)),
+            ]);
+          },
+        },
+      ];
+    } else */
+    if (options.config.build.type === "cloudflare-worker") {
+      return [
+        ...options.config.tasks.build,
+        {
+          id: "deploy-cloudflare-worker",
+          title: "Deploying...",
+          type: "function",
+          dependsOn: options.config.tasks.build.map((task) => task.id),
+          function: async function* () {
+            yield {
+              type: "stdout",
+              data: "Preparing to upload files...\n",
+              timestamp: new Date().toISOString(),
+            };
+
+            const gitSha = await that.gitCurrentCommit(undefined);
+
+            const deploymentName = options.branch.repoId.split("-")[0]!;
+            const stream = await that.execute(
+              {
+                command: "sh",
+                args: [
+                  "-c",
+                  [
+                    `pnpm wrangler build`,
+                    `pnpm wrangler secret bulk ${options.config.envFile} --name ${deploymentName}`,
+                    `pnpm wrangler deploy --name ${deploymentName}`,
+                  ].join(" && "),
+                ],
+                env: {
+                  CLOUDFLARE_API_TOKEN:
+                    env.CLOUDFLARE_WRANGLER_DEPLOY_API_TOKEN,
+                },
+              },
+              undefined
+            );
+            for await (const ev of stream) {
+              if (ev.type === "stdout" || ev.type === "stderr") yield ev;
+              if (ev.type === "error") throw new Error(ev.error);
+            }
+
+            // TODO: get base origin from env somehow
+            const url = `https://${deploymentName}.squash.workers.dev`;
+
+            yield {
+              type: "stdout",
+              data: `Successfully deployed Cloudflare Worker\n`,
+              timestamp: new Date().toISOString(),
+            };
+
+            const db = createDatabase(env);
+            await db
+              .update(schema.repoBranch)
+              .set({ deployment: { url: url, sha: gitSha } })
+              .where(eq(schema.repoBranch.id, options.branch.id));
+          },
+        },
+      ];
+    } else {
+      throw new Error(
+        `Unsupported build type: ${JSON.stringify(options.config.build)}`
+      );
+    }
+  }
+
+  async getForkTasks(
+    forkOptions: Sandbox.ForkOptions
+  ): Promise<Sandbox.Snapshot.Task.Any[]> {
+    const [options, deployTasks] = await Promise.all([
+      this.getOptions(),
+      this.getDeployTasks(),
+    ]);
+
+    // let screenshot: { url: string } | null = null;
+    // let suggestions: schema.RepoSuggestion[] | null = null;
+    const newRepoId = randomUUID();
+    const gitUrl = `s3://repos/forks/${newRepoId}`;
+    const defaultBranch = "master";
 
     const that = this;
     return [
-      ...options.config.tasks.build,
+      ...deployTasks,
+      // {
+      //   id: "screenshot",
+      //   title: "Capturing screenshot...",
+      //   type: "function",
+      //   function: async function* () {
+      //     const previewUrl = await that.getPreviewUrl();
+
+      //     yield {
+      //       type: "stdout",
+      //       data: "Capturing screenshot...\n",
+      //       timestamp: new Date().toISOString(),
+      //     };
+
+      //     screenshot = await fetch(
+      //       `${env.SCREENSHOT_API_URL}?url=${encodeURIComponent(previewUrl)}`
+      //     )
+      //       .then((r) => r.json<{ url: string }>())
+      //       .catch(() => null);
+      //     suggestions = screenshot
+      //       ? await generateRepoSuggestionsFromScreenshot(screenshot.url)
+      //       : null;
+
+      //     yield {
+      //       type: "stdout",
+      //       data: "Screenshot captured\n",
+      //       timestamp: new Date().toISOString(),
+      //     };
+      //   },
+      // },
       {
-        id: "upload-static-files",
-        title: "Upload",
+        id: "fork-and-push",
+        title: "Pushing playground code...",
+        dependsOn: ["screenshot"],
+        type: "command",
+        command: "sh",
+        env: {
+          AWS_ENDPOINT_URL_S3: env.R2_REPOS_ENDPOINT_URL_S3,
+          AWS_ACCESS_KEY_ID: env.R2_REPOS_ACCESS_KEY_ID,
+          AWS_SECRET_ACCESS_KEY: env.R2_REPOS_SECRET_ACCESS_KEY,
+          AWS_DEFAULT_REGION: "auto",
+        },
+        args: [
+          "-c",
+          [
+            `git remote add ${newRepoId} ${gitUrl}`,
+            `git push ${newRepoId} HEAD:${defaultBranch}`,
+          ]
+            .map((v) => `(${v})`)
+            .join(" && "),
+        ],
+      },
+      {
+        id: "create-new-repo",
+        title: "Creating new repo...",
+        dependsOn: [
+          "screenshot",
+          "fork-and-push",
+          ...deployTasks.map((task) => task.id),
+        ],
         type: "function",
-        dependsOn: options.config.tasks.build.map((task) => task.id),
         function: async function* () {
           yield {
             type: "stdout",
-            data: "Preparing to upload files...\n",
+            data: "Creating new repo...\n",
             timestamp: new Date().toISOString(),
           };
 
-          const [gitSha, sandbox] = await Promise.all([
-            that.gitCurrentCommit(undefined),
-            sandboxP,
-          ]);
-
-          const buildDir = path.join(
-            options.config.cwd,
-            options.config.build.dir
-          );
-
-          const { files } = await sandbox.fs.searchFiles(buildDir, "*.*");
-          yield {
-            type: "stdout",
-            data: `Found ${files.length} files to upload\n`,
-            timestamp: new Date().toISOString(),
-          };
-
-          yield {
-            type: "stdout",
-            data: "Starting parallel uploads...\n",
-            timestamp: new Date().toISOString(),
-          };
-
-          const deploymentPath = `${options.branch.repoId}/${options.branch.id}/${gitSha}`;
-          await Promise.all(
-            files.map((file) =>
-              uploadSandboxFileToDeployment(
-                sandbox.id,
-                { absolute: file, relative: path.relative(buildDir, file) },
-                deploymentPath
-              )
-            )
-          );
-
-          yield {
-            type: "stdout",
-            data: `Successfully uploaded ${files.length} files\n`,
-            timestamp: new Date().toISOString(),
-          };
-
-          const url = new URL(env.DEPLOYMENT_PROXY_URL);
-          url.host = `${options.branch.name}.${url.host}`;
           const db = createDatabase(env);
-          await Promise.all([
-            env.DOMAIN_MAPPINGS.put(url.host, deploymentPath),
+          const [repo, branch] = await Promise.all([
             db
-              .update(schema.repoBranch)
-              .set({ deployment: { url: url.origin, sha: gitSha } })
-              .where(eq(schema.repoBranch.id, options.branch.id)),
+              .select()
+              .from(schema.repo)
+              .where(eq(schema.repo.id, options.branch.repoId))
+              .then(([repo]) => repo),
+            db
+              .select()
+              .from(schema.repoBranch)
+              .where(eq(schema.repoBranch.id, options.branch.id))
+              .then(([branch]) => branch),
           ]);
+          if (!repo) throw new Error(`Repo not found: ${newRepoId}`);
+          if (!branch)
+            throw new Error(`Branch not found: ${options.branch.id}`);
+
+          await db.insert(schema.repo).values({
+            name: forkOptions.name ?? branch.title,
+            public: repo.public,
+            organizationId: repo.organizationId,
+            gitUrl,
+            // imageUrl: screenshot?.url,
+            previewUrl: branch.deployment?.url,
+            defaultBranch,
+            snapshot: repo.snapshot,
+            createdBy: forkOptions.userId,
+            // suggestions,
+          });
+
+          yield {
+            type: "stdout",
+            data: "Created new repo...\n",
+            timestamp: new Date().toISOString(),
+          };
         },
       },
     ];
+  }
+
+  async readFile(relativePath: string): Promise<Buffer> {
+    await this.waitUntilStarted();
+
+    const [options, sandbox] = await Promise.all([
+      this.getOptions(),
+      this.getSandbox("readFile"),
+    ]);
+
+    const cwd = options.config.cwd.replace(/\\/g, "/");
+    const normalizedRelative = path.posix
+      .normalize(relativePath)
+      .replace(/^\/+/, "");
+
+    if (!normalizedRelative || normalizedRelative === ".") {
+      throw new Error("Cannot read directory path");
+    }
+
+    if (normalizedRelative.startsWith("..")) {
+      throw new Error("Invalid file path");
+    }
+
+    const absolutePath = path.posix.join(cwd, normalizedRelative);
+    const resolved = path.posix.normalize(absolutePath);
+    const root = path.posix.normalize(cwd);
+    const rootWithSep = root.endsWith("/") ? root : `${root}/`;
+
+    if (!(resolved === root || resolved.startsWith(rootWithSep))) {
+      throw new Error("Resolved path is outside of repository root");
+    }
+
+    logger.debug("Reading file from sandbox", {
+      sandboxId: sandbox.id,
+      path: resolved,
+    });
+
+    return downloadFileFromSandbox(sandbox.id, resolved);
   }
 
   // TODO: avoid getting sandbox and session each time. Cache this somehow...
@@ -335,67 +583,67 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
     if (abortSignal?.aborted) return;
 
     const now = () => new Date().toISOString();
+    const sandbox = await this.getSandbox("execute");
+
+    const exec = await startCommand(sandbox, request, abortSignal);
     const gen = await toAsyncIterator<[Sandbox.Exec.Event.Any]>(async (add) => {
       try {
-        const exec = await this.startCommand(request, abortSignal);
         add({ type: "start", timestamp: now() });
-        const sandbox = await this.getSandbox();
 
         const streamed = { stdout: "", stderr: "" };
-        await sandbox.process.getSessionCommandLogs(
-          exec.sessionId,
-          exec.commandId,
-          (data: string) => {
-            add({ type: "stdout", data, timestamp: now() });
-            streamed.stdout += data;
-          },
-          (data: string) => {
-            add({ type: "stderr", data, timestamp: now() });
-            streamed.stderr += data;
+        await pRetry(
+          () =>
+            sandbox.process.getSessionCommandLogs(
+              exec.sessionId,
+              exec.commandId,
+              (data: string) => {
+                add({ type: "stdout", data, timestamp: now() });
+                streamed.stdout += data;
+              },
+              (data: string) => {
+                add({ type: "stderr", data, timestamp: now() });
+                streamed.stderr += data;
+              }
+            ),
+          {
+            retries: Infinity,
+            factor: 2,
+            maxTimeout: 0,
+            onFailedAttempt: async (ctx) => {
+              logger.error("Error streaming session command logs", {
+                attempt: ctx.attemptNumber,
+                message: ctx.error.message,
+                stack: ctx.error.stack,
+                name: ctx.error.name,
+              });
+
+              const result = await sandbox.process.getSessionCommand(
+                exec.sessionId,
+                exec.commandId
+              );
+              if (typeof result.exitCode === "number") {
+                throw new AbortError(
+                  `Command has exited with code ${result.exitCode}`
+                );
+              } else {
+                logger.debug(
+                  "Command is still running, will retry log streaming",
+                  { sessionId: exec.sessionId, commandId: exec.commandId }
+                );
+              }
+            },
           }
-        );
+        ).catch(() => {});
+
+        if (abortSignal?.aborted) {
+          add({ type: "error", error: "Aborted", timestamp: now() });
+          return;
+        }
 
         const result = await sandbox.process.getSessionCommand(
           exec.sessionId,
           exec.commandId
         );
-
-        // TODO(fant): if we don't get reports about errors bc no AgentSession
-        // is being saved, the unstreamed logic can be removed.
-        const full = await sandbox.process.getSessionCommandLogs(
-          exec.sessionId,
-          exec.commandId
-        );
-        const unstreamed = {
-          stdout: (full.stdout ?? "").slice(streamed.stdout.length),
-          stderr: (full.stderr ?? "").slice(streamed.stderr.length),
-        };
-        // logger.debug("Stream data", {
-        //   streamed: {
-        //     stdout: streamed.stdout.length,
-        //     stderr: streamed.stderr.length,
-        //   },
-        //   full: { stdout: full.stdout?.length, stderr: full.stderr?.length },
-        //   unstreamed: {
-        //     stdout: unstreamed.stdout.length,
-        //     stderr: unstreamed.stderr.length,
-        //   },
-        // });
-
-        if (!!unstreamed.stdout.length) {
-          logger.debug("Unstreamed stdout", {
-            length: unstreamed.stdout.length,
-            data: unstreamed.stdout.slice(0, 512),
-          });
-          // add({ type: "stdout", data: unstreamed.stdout, timestamp: now() });
-        }
-        if (!!unstreamed.stderr.length) {
-          logger.debug("Unstreamed stderr", {
-            length: unstreamed.stderr.length,
-            data: unstreamed.stderr.slice(0, 512),
-          });
-          // add({ type: "stderr", data: unstreamed.stderr, timestamp: now() });
-        }
 
         logger.debug("Command result", {
           id: result.id,
@@ -424,47 +672,15 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
 
     for await (const [event] of gen) {
       if (event.type === "stdout") {
-        logger.debug("Exec stdout", event.data.slice(0, 512));
+        logger.debug("Exec stdout", {
+          data: event.data.slice(0, 512),
+          ...exec,
+        });
       } else {
-        logger.debug(`Exec ${event.type}`, event);
+        logger.debug(`Exec ${event.type}`, { ...event, ...exec });
       }
       yield event;
     }
-  }
-
-  private async startCommand(
-    request: Sandbox.Exec.Request,
-    abortSignal: AbortSignal | undefined
-  ): Promise<{ sessionId: string; commandId: string }> {
-    const sandbox = await this.getSandbox();
-    const sessionId = randomUUID();
-    logger.debug("Creating exec session", {
-      sessionId,
-      command: request.command,
-      args: request.args,
-    });
-    await sandbox.process.createSession(sessionId);
-
-    if (abortSignal?.aborted) {
-      await sandbox.process.deleteSession(sessionId);
-      logger.debug("Deleted exec session", { sessionId });
-    }
-    abortSignal?.addEventListener("abort", async () => {
-      await sandbox.process.deleteSession(sessionId);
-      logger.debug("Deleted exec session", { sessionId });
-    });
-
-    const command = await sandbox.process.executeSessionCommand(sessionId, {
-      command: [
-        ...Object.entries(request.env ?? {}).map(([k, v]) => `${k}=${v}`),
-        escape([request.command, ...(request.args ?? [])]),
-      ]
-        .join(" ")
-        .trim(),
-      runAsync: true,
-    });
-    logger.debug("Started executing command", command);
-    return { sessionId, commandId: command.cmdId! };
   }
 
   // TODO: should we have concurrency control here?
@@ -479,29 +695,29 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
 
     logger.info("Restoring version", { sha: gitSha.data.sha });
 
-    // TODO: is it safe to assume that this is not async?
-    this.stopAgent();
     await Promise.all([
       this.gitReset(gitSha.data.sha, undefined),
       (async () => {
         if (agentSession?.type !== "claude-code") return;
-        const sandbox = await this.getSandbox();
-        logger.info("Restoring Claude Code agent session", {
-          id: agentSession.id,
-          type: agentSession.type,
-          data: JSON.stringify(agentSession.data).slice(0, 512),
-        });
+        const sandbox = await this.getSandbox("restoreVersion");
+        logger.info("Restoring Claude Code agent session", agentSession);
 
         const sessionDataPath = await this.getClaudeCodeSessionDataPath(
           agentSession.id
         );
-        const sessionData = agentSession.data as string;
+        const sessionObj = await env.AGENT_SESSIONS.get(agentSession.objectKey);
+        if (!sessionObj) {
+          logger.warn("No session data available to restore", agentSession);
+          return;
+        }
         logger.debug("Uploading Claude Code agent session file", {
-          id: agentSession.id,
           file: sessionDataPath,
-          data: sessionData.slice(0, 512),
+          session: agentSession,
         });
-        await sandbox.fs.uploadFile(Buffer.from(sessionData), sessionDataPath);
+        await sandbox.fs.uploadFile(
+          Buffer.from(await sessionObj.text()),
+          sessionDataPath
+        );
       })(),
     ]);
   }
@@ -509,7 +725,7 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
   protected async readClaudeCodeSessionData(
     sessionId: string
   ): Promise<string> {
-    const sandbox = await this.getSandbox();
+    const sandbox = await this.getSandbox("readClaudeCodeSessionData");
     logger.debug("Reading Claude Code agent session data", { sessionId });
     const sessionDataPath = await this.getClaudeCodeSessionDataPath(sessionId);
 
@@ -532,7 +748,7 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
     sessionId: string
   ): Promise<string> {
     const [sandbox, options] = await Promise.all([
-      this.getSandbox(),
+      this.getSandbox("getClaudeCodeSessionDataPath"),
       this.getOptions(),
     ]);
     const homeDir = await sandbox.getUserHomeDir();
@@ -551,7 +767,7 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
     await this.waitUntilStarted();
     const [options, sandbox] = await Promise.all([
       this.getOptions(),
-      this.getSandbox(),
+      this.getSandbox("getPreviewUrl"),
     ]);
     const preview = await sandbox.getPreviewLink(options.config.port);
 
@@ -560,18 +776,64 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
     return [
       proxy.protocol,
       "//",
-      // target.hostname.replaceAll(".", "---"),
       target.hostname.split(".")[0],
       ".",
       proxy.host,
-      target.pathname,
-      target.search,
-      target.hash,
     ].join("");
   }
 
+  async listenToLogs(): Promise<Response> {
+    await this.waitUntilStarted();
+    const devServer = await this.getDevServer();
+    if (!devServer) {
+      logger.warn("Dev server logs requested before command started");
+      return new Response(null, { status: 204 });
+    }
+    const stream = await devServer.listenToLogs();
+    return new Response(stream, {
+      status: 200,
+      headers: {
+        "content-type": "text/event-stream",
+        "cache-control": "no-cache",
+        connection: "keep-alive",
+      },
+    });
+  }
+
   async destroy(): Promise<void> {
-    const sandbox = await this.getSandbox();
+    const sandbox = await this.getSandbox("destroy");
     await sandbox.delete();
+  }
+
+  async keepAlive(): Promise<void> {
+    const sandbox = await this.getSandbox("keepAlive");
+    await sandbox.process.executeCommand("pwd");
+    await sandbox.refreshData();
+    logger.debug("Kept Daytona sandbox alive", {
+      sandboxId: sandbox.id,
+      state: sandbox.state,
+    });
+  }
+
+  async readEnvFile(): Promise<Record<string, string | null>> {
+    const [sandbox, options] = await Promise.all([
+      this.getSandbox("readEnvFile"),
+      this.getOptions(),
+    ]);
+    const envVarsPath = path.join(options.config.cwd, ".env");
+    const envVars = await downloadFileFromSandbox(sandbox.id, envVarsPath);
+    return dotenv.parse(envVars.toString("utf-8"));
+  }
+
+  async writeEnvFile(env: Record<string, string | null>): Promise<void> {
+    const [sandbox, options] = await Promise.all([
+      this.getSandbox("writeEnvFile"),
+      this.getOptions(),
+    ]);
+    const envVarsPath = path.join(options.config.cwd, ".env");
+    const envString = Object.entries(env)
+      .map(([k, v]) => `${k}=${v === null ? "" : JSON.stringify(v)}`)
+      .join("\n");
+    await sandbox.fs.uploadFile(Buffer.from(envString), envVarsPath);
   }
 }

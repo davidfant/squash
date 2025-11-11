@@ -18,17 +18,22 @@ interface AnthropicProviderMetadata extends SharedV2ProviderMetadata {
   usage: Record<string, JSONValue>;
 }
 
-const toToolName = (name: string) => `ClaudeCode${name}`;
+const toToolName = (name: string) => `ClaudeCode__${name}`;
 
 export function messageToStreamPart(
   controller: ReadableStreamDefaultController<LanguageModelV2StreamPart>
 ) {
   const usesJsonResponseTool = false;
-  const contentBlocks: Array<
+  const contentBlocks: Record<
+    number,
     | { type: "text" }
     | { type: "reasoning" }
     | { type: "tool-call"; toolCallId: string; toolName: string; input: string }
-  > = [];
+  > = {};
+  const subagentToolCalls: Record<
+    string,
+    { id: string; toolName: string; input: string }
+  > = {};
 
   const usage: LanguageModelV2Usage = {
     inputTokens: undefined,
@@ -37,23 +42,57 @@ export function messageToStreamPart(
   };
   let finishReason: LanguageModelV2FinishReason = "unknown";
   let providerMetadata: AnthropicProviderMetadata | undefined = undefined;
+  let subagents = new Set<string>();
 
   return (m: SDKMessage) => {
-    if (m.type === "user") {
+    if (
+      m.type === "user" ||
+      (m.type === "assistant" && !!m.parent_tool_use_id)
+    ) {
       if (Array.isArray(m.message.content)) {
         for (const part of m.message.content) {
           switch (part.type) {
+            case "tool_use": {
+              const id = String(part.id);
+              subagentToolCalls[part.id] = {
+                id: part.id,
+                toolName: toToolName(part.name),
+                input: "",
+              };
+              controller.enqueue({
+                id,
+                type: "tool-input-start",
+                toolName: toToolName(part.name),
+              });
+              controller.enqueue({
+                id,
+                type: "tool-input-delta",
+                delta: JSON.stringify(part.input),
+              });
+              controller.enqueue({ id, type: "tool-input-end" });
+              break;
+            }
             case "tool_result": {
-              const tc = contentBlocks
-                .filter((cb) => cb.type === "tool-call")
-                .find((cb) => cb.toolCallId === part.tool_use_id);
+              const tc =
+                subagentToolCalls[part.tool_use_id] ??
+                Object.values(contentBlocks)
+                  .filter((cb) => cb.type === "tool-call")
+                  .find((cb) => cb.toolCallId === part.tool_use_id);
+              if (!tc) {
+                console.error("Received tool result for unknown tool call", {
+                  contentBlocks,
+                  part,
+                });
+                throw new Error("Tool call not found", part.tool_use_id);
+              }
               controller.enqueue({
                 type: "tool-result",
                 toolCallId: part.tool_use_id,
-                toolName: tc?.toolName ?? "unknown",
+                toolName: tc.toolName,
                 result: part.content,
                 providerExecuted: true,
               });
+              break;
             }
           }
         }
@@ -118,6 +157,9 @@ export function messageToStreamPart(
                       toolName: toToolName(value.content_block.name),
                     }
               );
+              if (value.content_block.name === "Task") {
+                subagents.add(value.content_block.id);
+              }
               return;
             }
 
@@ -131,7 +173,6 @@ export function messageToStreamPart(
                   toolCallId: value.content_block.id,
                   toolName: toToolName(value.content_block.name),
                   input: "",
-                  // providerExecuted: true,
                 };
                 controller.enqueue({
                   type: "tool-input-start",
@@ -238,35 +279,22 @@ export function messageToStreamPart(
         case "content_block_stop": {
           // when finishing a tool call block, send the full tool call:
           const contentBlock = contentBlocks[value.index];
-          if (contentBlock) {
-            switch (contentBlock.type) {
-              case "text": {
-                controller.enqueue({
-                  type: "text-end",
-                  id: String(value.index),
-                });
-                break;
-              }
-
-              case "reasoning": {
-                controller.enqueue({
-                  type: "reasoning-end",
-                  id: String(value.index),
-                });
-                break;
-              }
-
-              case "tool-call":
-                // when a json response tool is used, the tool call is returned as text,
-                // so we ignore the tool call content:
-                if (!usesJsonResponseTool) {
-                  controller.enqueue({
-                    type: "tool-input-end",
-                    id: contentBlock.toolCallId,
-                  });
-                  controller.enqueue(contentBlock);
-                }
-                break;
+          if (contentBlock?.type === "text") {
+            controller.enqueue({
+              type: "text-end",
+              id: String(value.index),
+            });
+          } else if (contentBlock?.type === "reasoning") {
+            controller.enqueue({
+              type: "reasoning-end",
+              id: String(value.index),
+            });
+          } else if (contentBlock?.type === "tool-call") {
+            if (!usesJsonResponseTool) {
+              controller.enqueue({
+                type: "tool-input-end",
+                id: contentBlock.toolCallId,
+              });
             }
           }
 
@@ -322,28 +350,23 @@ export function messageToStreamPart(
               const contentBlock = contentBlocks[value.index];
               const delta = value.delta.partial_json;
 
-              if (usesJsonResponseTool) {
-                if (contentBlock?.type !== "text") {
-                  return;
+              if (contentBlock?.type === "text") {
+                if (usesJsonResponseTool) {
+                  controller.enqueue({
+                    type: "text-delta",
+                    id: String(value.index),
+                    delta,
+                  });
                 }
-
-                controller.enqueue({
-                  type: "text-delta",
-                  id: String(value.index),
-                  delta,
-                });
-              } else {
-                if (contentBlock?.type !== "tool-call") {
-                  return;
+              } else if (contentBlock?.type === "tool-call") {
+                if (!usesJsonResponseTool) {
+                  controller.enqueue({
+                    type: "tool-input-delta",
+                    id: contentBlock.toolCallId,
+                    delta,
+                  });
+                  contentBlock.input += delta;
                 }
-
-                controller.enqueue({
-                  type: "tool-input-delta",
-                  id: contentBlock.toolCallId,
-                  delta,
-                });
-
-                contentBlock.input += delta;
               }
 
               return;
@@ -365,6 +388,7 @@ export function messageToStreamPart(
         }
 
         case "message_start": {
+          // if (!m.parent_tool_use_id) {
           usage.inputTokens = value.message.usage.input_tokens;
           usage.cachedInputTokens =
             value.message.usage.cache_read_input_tokens ?? undefined;
@@ -380,6 +404,7 @@ export function messageToStreamPart(
             id: value.message.id ?? undefined,
             modelId: value.message.model ?? undefined,
           });
+          // }
 
           return;
         }
@@ -397,15 +422,19 @@ export function messageToStreamPart(
         }
 
         case "message_stop": {
-          controller.enqueue({
-            type: "finish",
-            finishReason,
-            usage,
-            providerMetadata,
-          });
-          usage.inputTokens = undefined;
-          usage.outputTokens = undefined;
-          usage.totalTokens = undefined;
+          if (m.parent_tool_use_id) {
+            subagents.delete(m.parent_tool_use_id);
+          } else if (!subagents.size) {
+            controller.enqueue({
+              type: "finish",
+              finishReason,
+              usage,
+              providerMetadata,
+            });
+            usage.inputTokens = undefined;
+            usage.outputTokens = undefined;
+            usage.totalTokens = undefined;
+          }
           return;
         }
 

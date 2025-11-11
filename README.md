@@ -53,3 +53,25 @@ openssl rsa -in private.dev.pem -pubout -out public.dev.pem
 - [x] abort returns 500
 - [ ] daytona preview warning
 - [x] flickers between previews when e.g. resetting to an older one
+
+For oct 7
+
+- [x] from UI set agent state to clone screenshot
+- [x] only run clone screenshot based on state
+- [ ] color thief
+- [ ] make sure stopping agent works
+- [x] claude msgs not getting saved
+- [ ] screenshots?
+- [x] hide scrollbar in reasoning trace
+- [ ] redesign everything
+- [x] make invite links make sense
+- [ ] figure out what to do about CC tsc
+- [ ] look into daytona pty
+
+- errors in one of the branches: https://app.squash.build/prototypes/db41e30a-fc1f-4ce6-b29a-a3e9bcdea926
+- internal server error https://app.squash.build/prototypes/2bd3ac7f-4100-49fb-93af-031bc0597cd5
+- TS issues: https://app.squash.build/prototypes/6c6068f9-d981-426a-93d5-d001525e9b42
+- invite links limited to 1
+- git push to repo + delete sandbox
+- redux research for a state
+- `AI_RetryError: Failed after 3 attempts. Last error: Service Temporarily Unavailable` when analyzing screenshot => jumps directly to implementation next

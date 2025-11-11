@@ -11,17 +11,17 @@ export default {
         title: "Welcome back",
         description:
           "To continue prototyping with Squash, sign in with your Google account.",
-        buttonText: "Continue with Google",
+        buttonText: "Sign in",
         switch: {
           text: "Don't have an account?",
           cta: "Sign up",
         },
       },
       signUp: {
-        title: "Create an account",
+        title: "Start Prototyping",
         description:
           "To start prototyping with Squash, sign in with your Google account.",
-        buttonText: "Continue with Google",
+        buttonText: "Sign up",
         switch: {
           text: "Already have an account?",
           cta: "Sign in",
@@ -59,18 +59,27 @@ export default {
       },
       refresh: "Refresh",
     },
-    share: {
-      button: "Share",
+    deploy: {
+      button: "Publish",
       dialog: {
-        title: "Share",
+        title: "Publish",
         description:
-          "Publish this prototype to share it with your team, testers, or others.",
+          "Publish this app to share it with your team, customers, or others.",
         publish: "Publish",
         publishing: "Publishing",
         outdatedWarning:
-          "The current prototype is showing an older version. Publish to update to the current version.",
+          "The current app version is outdated. Publish to update to the latest version.",
         unpublish: "Unpublish",
         unpublishing: "Unpublishing",
+      },
+    },
+    fork: {
+      dialog: {
+        title: "Create Playground",
+        description:
+          "Convert this prototype into a playground. This will let you use it as a starting point for new prototypes.",
+        fork: "Create Playground",
+        forking: "Creating Playground",
       },
     },
   },

@@ -2,10 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "api",
   "main": "src/index.ts",
-  "compatibility_flags": [
-    "nodejs_compat",
-    "no_handle_cross_request_promise_resolution"
-  ],
+  "compatibility_flags": ["nodejs_compat"],
   "compatibility_date": "2025-05-08",
   "observability": {
     "enabled": true
@@ -25,34 +22,27 @@
       "binding": "DEPLOYMENTS",
       "bucket_name": "deployments-dev",
       "remote": true
-    }
-  ],
-  "kv_namespaces": [
-    {
-      "binding": "DOMAIN_MAPPINGS",
-      "id": "5c48626c71ad46c988fe7ba22068dcb1",
-      "remote": true
-    }
+    },
+    { "binding": "AGENT_SESSIONS", "bucket_name": "agent-sessions-dev" },
+    { "binding": "REPOS", "bucket_name": "repos", "remote": true }
   ],
   "migrations": [
     { "tag": "v1", "new_sqlite_classes": ["DaytonaSandboxManager"] }
   ],
   "vars": {
-    "SQUASH_CLI_VERSION": "0.0.8",
+    "SQUASH_CLI_PACKAGE": "@squashai/cli@next",
     "APP_URL": "http://localhost:5173",
     "PREVIEW_PROXY_URL": "http://localhost:8788",
-    "DEPLOYMENT_PROXY_URL": "http://localhost:8790",
-    "SCREENSHOT_API_URL": "http://localhost:8789",
+    "JWT_ISSUER": "https://informed-hornet-43.clerk.accounts.dev",
     "TZ": "utc"
   },
   "env": {
     "production": {
       "vars": {
-        "SQUASH_CLI_VERSION": "0.0.8",
-        "APP_URL": "https://app.squash.build",
+        "SQUASH_CLI_PACKAGE": "@squashai/cli@latest",
+        "APP_URL": "https://squash.build",
         "PREVIEW_PROXY_URL": "https://magicsite.app",
-        "DEPLOYMENT_PROXY_URL": "https://squashprototype.com",
-        "SCREENSHOT_API_URL": "https://screenshot-api-production.squash.workers.dev",
+        "JWT_ISSUER": "https://clerk.squash.build",
         "TZ": "utc"
       },
       "durable_objects": {
@@ -64,10 +54,9 @@
         ]
       },
       "r2_buckets": [
-        {
-          "binding": "DEPLOYMENTS",
-          "bucket_name": "deployments"
-        }
+        { "binding": "DEPLOYMENTS", "bucket_name": "deployments" },
+        { "binding": "AGENT_SESSIONS", "bucket_name": "agent-sessions" },
+        { "binding": "REPOS", "bucket_name": "repos" }
       ],
       "kv_namespaces": [
         {

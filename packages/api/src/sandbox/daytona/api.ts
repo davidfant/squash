@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
-import path from "node:path";
 import mime from "mime/lite";
+import path from "node:path";
 
 async function downloadFile(sandboxId: string, filePath: string) {
   const url = `https://app.daytona.io/api/toolbox/${sandboxId}/toolbox/files/download?path=${encodeURIComponent(
@@ -43,4 +43,20 @@ export async function uploadSandboxFileToDeployment(
       customMetadata: { source: "daytona", sandboxId, path: filePath.absolute },
     }
   );
+}
+
+export async function fileExists(
+  sandboxId: string,
+  path: string
+): Promise<boolean> {
+  const url = `https://app.daytona.io/api/toolbox/${sandboxId}/toolbox/files/info?path=${encodeURIComponent(
+    path
+  )}`;
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${env.DAYTONA_API_KEY}` },
+  });
+  if (res.status === 404) return false;
+  if (!res.ok)
+    throw new Error(`Daytona responded ${res.status} while checking file info`);
+  return true;
 }

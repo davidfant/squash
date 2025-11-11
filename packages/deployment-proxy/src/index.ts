@@ -43,7 +43,6 @@ export default {
     );
     headers.set("Cloudflare-CDN-Cache-Control", "max-age=60");
     headers.set("Cache-Tag", host);
-    console.log("headers", headers);
     return new Response(object.body, { headers });
   },
 };

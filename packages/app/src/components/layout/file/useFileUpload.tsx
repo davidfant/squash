@@ -8,6 +8,39 @@ export interface ChatInputFile extends FileUIPart {
   status: "uploading" | "uploaded"; // | "error";
 }
 
+/**
+ * Validates that an image file's dimensions don't exceed the maximum allowed size.
+ */
+async function validateImageDimensions(
+  file: File,
+  maxDimension: number = 6000
+): Promise<{ valid: boolean; width?: number; height?: number }> {
+  // Only validate image files
+  if (!file.type.startsWith("image/")) {
+    return { valid: true };
+  }
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      const { width, height } = img;
+      const valid = width <= maxDimension && height <= maxDimension;
+      resolve({ valid, width, height });
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      // If we can't load the image, let it through (it will fail later)
+      resolve({ valid: true });
+    };
+
+    img.src = objectUrl;
+  });
+}
+
 export function useFileUpload(initialFiles?: ChatInputFile[]) {
   const [files, setFiles] = useState(initialFiles ?? []);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -38,10 +71,13 @@ export function useFileUpload(initialFiles?: ChatInputFile[]) {
         const signed = await getSignedUrl.mutateAsync({
           json: { filename: file.name },
         });
-        await fetch(signed.uploadUrl, {
-          method: "PUT",
-          body: file,
-        });
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            await fetch(signed.uploadUrl, { method: "PUT", body: file });
+          } catch (e) {
+            console.warn("Failed uploading file", e, { file, signed, attempt });
+          }
+        }
         patchUpload(id, { status: "uploaded", url: signed.publicUrl });
       } catch (e) {
         console.error("Failed uploading file", upload, e);
@@ -57,7 +93,29 @@ export function useFileUpload(initialFiles?: ChatInputFile[]) {
     async (files: File[]) => {
       if (!files.length) return;
 
-      const newUploads = files.map(
+      // Validate image dimensions before adding
+      const validationResults = await Promise.all(
+        files.map(async (file) => ({
+          file,
+          validation: await validateImageDimensions(file),
+        }))
+      );
+
+      // Filter out invalid images and show errors
+      const validFiles: File[] = [];
+      for (const { file, validation } of validationResults) {
+        if (!validation.valid) {
+          toast.error(
+            `Image "${file.name}" is too large (${validation.width}x${validation.height}px). Maximum dimension is 6000px.`
+          );
+        } else {
+          validFiles.push(file);
+        }
+      }
+
+      if (!validFiles.length) return;
+
+      const newUploads = validFiles.map(
         (file): ChatInputFile => ({
           id: Math.random().toString(36).substring(2, 15),
           type: "file",
@@ -68,7 +126,7 @@ export function useFileUpload(initialFiles?: ChatInputFile[]) {
         })
       );
       setFiles((prev) => [...prev, ...newUploads]);
-      await Promise.all(newUploads.map((u, i) => upload(u.id, files[i]!)));
+      await Promise.all(newUploads.map((u, i) => upload(u.id, validFiles[i]!)));
     },
     [upload]
   );

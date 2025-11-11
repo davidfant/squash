@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Tooltip,
   TooltipContent,
@@ -9,7 +10,6 @@ import {
   Check,
   Command,
   CornerDownLeft,
-  Loader2,
   Mic,
   Paperclip,
   Square,
@@ -29,11 +29,12 @@ export const ChatInputSubmitButton = ({
     <TooltipTrigger asChild>
       <Button
         size="icon"
+        // variant="glass"
         disabled={disabled}
         className="rounded-full"
         onClick={onClick}
       >
-        {loading ? <Loader2 className="animate-spin" /> : <ArrowUp />}
+        {loading ? <Spinner /> : <ArrowUp />}
       </Button>
     </TooltipTrigger>
     <TooltipContent>
@@ -125,7 +126,7 @@ export const ChatInputDictateStopButton = ({
         disabled={disabled}
         onClick={onClick}
       >
-        {loading ? <Loader2 className="animate-spin" /> : <Check />}
+        {loading ? <Spinner /> : <Check />}
       </Button>
     </TooltipTrigger>
     <TooltipContent>Transcribe</TooltipContent>

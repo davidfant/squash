@@ -22,8 +22,8 @@ export async function streamDiscoverAgent(
     return;
   }
 
-  const stream = await streamText({
-    model: google("gemini-2.5-flash"),
+  const stream = streamText({
+    model: google("gemini-flash-latest"),
     messages: [
       { role: "system", content: SystemInstructions },
       ...convertToModelMessages(messages),

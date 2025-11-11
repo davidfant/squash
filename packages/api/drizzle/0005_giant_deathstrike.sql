@@ -1,1 +1,0 @@
-ALTER TABLE "repo_branch" ADD COLUMN "deployment" json;

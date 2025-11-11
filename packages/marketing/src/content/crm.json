@@ -1,0 +1,111 @@
+{
+  "slug": "crm-stuff",
+  "hero": {
+    "badge": "Clean up your CRM pipeline",
+    "heading": "Give sales a CRM that is actually ready to work.",
+    "description": "Squash automatically removes duplicates, enriches missing context, and routes the right accounts to the right reps before they ever hit your CRM dashboards.",
+    "integrations": [
+      {
+        "name": "Salesforce",
+        "logo": "https://logos.composio.dev/api/salesforce"
+      },
+      {
+        "name": "HubSpot",
+        "logo": "https://logos.composio.dev/api/hubspot"
+      },
+      {
+        "name": "Pipedrive",
+        "logo": "https://logos.composio.dev/api/pipedrive"
+      },
+      {
+        "name": "Zendesk",
+        "logo": "https://logos.composio.dev/api/zendesk"
+      },
+      {
+        "name": "Notion",
+        "logo": "https://logos.composio.dev/api/notion"
+      }
+    ]
+  },
+  "workflow": {
+    "description": "Every cleanup workflow is powered by a simple drag-and-drop canvas. Here's the default playbook teams start from:",
+    "steps": [
+      {
+        "title": "Connect your stack",
+        "description": "Securely authenticate every form, ad network, and CRM workspace in one place."
+      },
+      {
+        "title": "Apply cleanup playbooks",
+        "description": "Deduplicate, normalize ownership, and auto-archive junk leads with pre-built rules."
+      }
+    ],
+    "nodes": [
+      {
+        "id": "capture",
+        "title": "Capture every lead",
+        "description": "Forms · ads · events",
+        "logo": "https://logos.composio.dev/api/salesforce"
+      },
+      {
+        "id": "enrich",
+        "title": "Normalize & enrich",
+        "description": "Company fields, owners, territories",
+        "parentId": "capture"
+      },
+      {
+        "id": "score",
+        "title": "Score & dedupe",
+        "description": "Intent, fit, duplicates",
+        "parentId": "enrich"
+      },
+      {
+        "id": "route",
+        "title": "Route to owners",
+        "description": "Territories & SLA guardrails",
+        "parentId": "score"
+      },
+      {
+        "id": "handoff",
+        "title": "Push clean pipeline",
+        "description": "CRM, ops dashboards, alerts",
+        "parentId": "score"
+      }
+    ]
+  },
+  "callToAction": {
+    "title": "Ready to see a clutter-free CRM?",
+    "description": "We'll audit your current pipeline and deliver a cleaned-up workspace within 48 hours."
+  },
+  "testimonials": {
+    "description": "Join a global network of thought leaders, product developers, and entrepreneurs who have transformed their workflows with our platform.",
+    "testimonials": [
+      {
+        "role": "CEO",
+        "content": "I love this platform because it has helped me streamline my workflow and save time."
+      },
+      {
+        "role": "CEO",
+        "content": "I love this platform because it has helped me streamline my workflow and save time."
+      },
+      {
+        "role": "CEO",
+        "content": "I love this platform because it has helped me streamline my workflow and save time."
+      },
+      {
+        "role": "CEO",
+        "content": "I love this platform because it has helped me streamline my workflow and save time."
+      },
+      {
+        "role": "CEO",
+        "content": "I love this platform because it has helped me streamline my workflow and save time."
+      }
+    ]
+  },
+  "usps": [
+    "Easy Integration",
+    "24/7 Support",
+    "Customizable Design",
+    "Scalable Performance",
+    "Hundreds of Blocks"
+  ]
+}

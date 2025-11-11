@@ -3,10 +3,14 @@ import type { ChatMessage } from "@squashai/api/agent/types";
 import {
   Check,
   EyeIcon,
-  FilePenIcon,
   FolderSearch,
+  ListTodoIcon,
   SearchIcon,
+  SquarePenIcon,
   TerminalIcon,
+  TriangleAlertIcon,
+  UnplugIcon,
+  ZapIcon,
   type LucideIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
@@ -16,6 +20,13 @@ import { FileBadge } from "../FileBadge";
 interface TextBlock {
   type: "text";
   content: string;
+  streaming: boolean;
+}
+
+export interface ReasoningBlock {
+  type: "reasoning";
+  summaries: Array<{ title: string; content: string }>;
+  streaming: boolean;
 }
 
 interface AbortBlock {
@@ -28,6 +39,12 @@ interface GitCommitBlock {
   sha: string;
 }
 
+export interface ConnectToToolkitBlock {
+  type: "connect-to-toolkit";
+  redirectUrl: string;
+  toolkit: { name: string; logoUrl: string };
+}
+
 interface LoadingBlock {
   type: "loading";
 }
@@ -36,6 +53,7 @@ export interface EventBlockItem {
   icon: LucideIcon;
   loading: boolean;
   label: ReactNode;
+  dialogContent?: ReactNode;
 }
 
 interface EventBlock {
@@ -46,13 +64,49 @@ interface EventBlock {
 
 type Block =
   | TextBlock
+  | ReasoningBlock
   | AbortBlock
+  | ConnectToToolkitBlock
   | GitCommitBlock
   | EventBlock
   | LoadingBlock;
 
 const isToolLoading = (state: `input-${string}` | `output-${string}`) =>
   state.startsWith("input-");
+
+function safeJsonParse<T>(src: string): T | null {
+  try {
+    return JSON.parse(src) as T;
+  } catch (error) {
+    return null;
+  }
+}
+
+function parseReasoningSummaries(src: string): ReasoningBlock["summaries"] {
+  const headerRE = /\*\*(.*?)\*\*/g;
+  const sections: ReasoningBlock["summaries"] = [];
+
+  let currentTitle: string | null = null;
+  let contentStart = 0;
+  let m: RegExpExecArray | null;
+
+  while ((m = headerRE.exec(src)) !== null) {
+    if (currentTitle !== null) {
+      const content = src.slice(contentStart, m.index).trim();
+      sections.push({ title: currentTitle, content });
+    }
+
+    currentTitle = m[1]!.trim();
+    contentStart = headerRE.lastIndex;
+  }
+
+  if (currentTitle !== null) {
+    const content = src.slice(contentStart).trim();
+    sections.push({ title: currentTitle, content });
+  }
+
+  return sections;
+}
 
 export function groupMessageEvents(
   parts: ChatMessage["parts"],
@@ -75,11 +129,35 @@ export function groupMessageEvents(
 
   for (const part of parts) {
     switch (part.type) {
-      case "text":
+      case "reasoning":
         flushEvents();
-        blocks.push({ type: "text", content: part.text });
+        const summaries = parseReasoningSummaries(part.text);
+        blocks.push({
+          type: "reasoning",
+          summaries,
+          streaming: parts.indexOf(part) === parts.length - 1,
+        });
         break;
-      case "tool-ClaudeCodeRead": {
+      case "text":
+        if (part.text.trim()) {
+          flushEvents();
+          blocks.push({
+            type: "text",
+            content: part.text,
+            streaming: part.state === "streaming",
+          });
+        }
+        break;
+      case "tool-AnalyzeScreenshot": {
+        flushEvents();
+        blocks.push({
+          type: "text",
+          content: "Finished analyzing the screenshot...",
+          streaming: false,
+        });
+        break;
+      }
+      case "tool-ClaudeCode__Read": {
         const path = part.input?.file_path;
         currentEvents.push({
           icon: EyeIcon,
@@ -93,12 +171,12 @@ export function groupMessageEvents(
         });
         break;
       }
-      case "tool-ClaudeCodeEdit":
-      case "tool-ClaudeCodeMultiEdit":
-      case "tool-ClaudeCodeWrite": {
+      case "tool-ClaudeCode__Edit":
+      case "tool-ClaudeCode__MultiEdit":
+      case "tool-ClaudeCode__Write": {
         const path = part.input?.file_path;
         currentEvents.push({
-          icon: FilePenIcon,
+          icon: SquarePenIcon,
           loading: part.state.startsWith("input-"),
           label: (
             <>
@@ -109,7 +187,7 @@ export function groupMessageEvents(
         });
         break;
       }
-      case "tool-ClaudeCodeBash": {
+      case "tool-ClaudeCode__Bash": {
         currentEvents.push({
           icon: TerminalIcon,
           loading: isToolLoading(part.state),
@@ -126,7 +204,7 @@ export function groupMessageEvents(
         });
         break;
       }
-      case "tool-ClaudeCodeTodoWrite": {
+      case "tool-ClaudeCode__TodoWrite": {
         if (part.state === "output-available") {
           const nextTodos = part.input.todos.map((t) => ({
             id: t.content,
@@ -167,7 +245,7 @@ export function groupMessageEvents(
         }
         break;
       }
-      case "tool-ClaudeCodeGlob": {
+      case "tool-ClaudeCode__Glob": {
         currentEvents.push({
           icon: FolderSearch,
           loading: isToolLoading(part.state),
@@ -187,7 +265,7 @@ export function groupMessageEvents(
           ),
         });
       }
-      case "tool-ClaudeCodeGrep": {
+      case "tool-ClaudeCode__Grep": {
         currentEvents.push({
           icon: SearchIcon,
           loading: isToolLoading(part.state),
@@ -204,6 +282,130 @@ export function groupMessageEvents(
         });
         break;
       }
+      case "tool-ClaudeCode__Task": {
+        currentEvents.push({
+          icon: ListTodoIcon,
+          loading: false, // isToolLoading(part.state),
+          label: part.input?.description,
+        });
+        break;
+      }
+      // case "tool-ClaudeCode__mcp__Composio__ListTools": {
+      //   currentEvents.push({
+      //     icon: PackageIcon,
+      //     loading: isToolLoading(part.state),
+      //     label: `List tools for ${part.input?.toolkitName}`,
+      //   });
+      //   break;
+      // }
+      case "tool-ClaudeCode__mcp__Composio__GetToolDetails": {
+        const count = part.input?.tools?.length;
+        currentEvents.push({
+          icon: SearchIcon,
+          loading: isToolLoading(part.state),
+          // label: part.input?.reason,
+          label: count
+            ? `Getting details for ${count} ${count === 1 ? "tool" : "tools"}`
+            : "Getting details for...",
+        });
+        break;
+      }
+      // case "tool-ClaudeCode__mcp__Composio__SearchToolkits": {
+      case "tool-ClaudeCode__mcp__Composio__SearchTools": {
+        currentEvents.push(
+          ...(part.input?.useCases ?? []).map((useCase) => ({
+            icon: SearchIcon,
+            loading: isToolLoading(part.state),
+            label: (
+              <>
+                <span>Search for</span>
+                <Badge variant="outline" className="border-none bg-muted">
+                  {useCase}
+                </Badge>
+              </>
+            ),
+          }))
+        );
+        break;
+      }
+      // case "tool-ClaudeCode__mcp__Composio__ListConnectedToolkits": {
+      //   currentEvents.push({
+      //     icon: BoxesIcon,
+      //     loading: isToolLoading(part.state),
+      //     label: "List connected toolkits",
+      //   });
+      //   break;
+      // }
+      case "tool-ClaudeCode__mcp__Composio__CheckConnectionStatus": {
+        currentEvents.push({
+          icon: UnplugIcon,
+          loading: isToolLoading(part.state),
+          label: "Check connection status",
+        });
+        break;
+      }
+      case "tool-ClaudeCode__mcp__Composio__MultiExecuteTool": {
+        part.input?.toolCalls
+          ?.filter((tc) => !!tc)
+          .map((tc) =>
+            currentEvents.push({
+              icon: ZapIcon,
+              loading: isToolLoading(part.state),
+              label: tc!.reason,
+            })
+          );
+        break;
+      }
+      case "tool-ClaudeCode__mcp__Composio__ConnectToToolkit": {
+        if (part.state === "output-available") {
+          const connectData = safeJsonParse<{
+            redirectUrl: string;
+            connectRequestId: string;
+            toolkit: { name: string; logoUrl: string };
+          }>(part.output);
+
+          if (connectData) {
+            const waitForConnectionPart = parts
+              .filter(
+                (p) =>
+                  p.type === "tool-ClaudeCode__mcp__Composio__WaitForConnection"
+              )
+              .find(
+                (p) =>
+                  p.input?.connectRequestId === connectData.connectRequestId
+              );
+            if (waitForConnectionPart?.output) {
+              const isConnected = safeJsonParse<{ isConnected: boolean }>(
+                waitForConnectionPart.output
+              )?.isConnected;
+              currentEvents.push({
+                icon: isConnected ? UnplugIcon : TriangleAlertIcon,
+                loading: false,
+                label: isConnected
+                  ? `Connected to ${connectData.toolkit.name}`
+                  : `Failed to connect to ${connectData.toolkit.name}`,
+              });
+            } else {
+              flushEvents();
+              blocks.push({
+                type: "connect-to-toolkit",
+                redirectUrl: connectData.redirectUrl,
+                toolkit: connectData.toolkit,
+              });
+            }
+          } else {
+            currentEvents.push({
+              icon: TriangleAlertIcon,
+              loading: false,
+              label: "Failed to connect to toolkit",
+            });
+          }
+        }
+        break;
+      }
+      // case "tool-ClaudeCode__mcp__Composio__GetConnectedTools":
+      case "tool-ClaudeCode__mcp__Composio__WaitForConnection":
+        break;
       case "tool-GitCommit": {
         if (part.state === "output-available") {
           flushEvents();
@@ -231,11 +433,17 @@ export function groupMessageEvents(
   flushEvents(true);
 
   const last = blocks[blocks.length - 1];
-  if (
-    (streaming && !last) ||
-    (last?.type === "events" && !last.events.some((ev) => ev.loading))
-  ) {
-    blocks.push({ type: "loading" });
+  if (streaming) {
+    if (!last) {
+      blocks.push({ type: "loading" });
+    } else if (
+      last?.type === "events" &&
+      !last.events.some((ev) => ev.loading)
+    ) {
+      blocks.push({ type: "loading" });
+    } else if (last?.type === "text" && !last.streaming) {
+      blocks.push({ type: "loading" });
+    }
   }
 
   return blocks;

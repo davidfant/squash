@@ -1,4 +1,5 @@
 import type { ChatMessage } from "@/agent/types";
+import type { Buffer } from "node:buffer";
 
 export namespace Sandbox {
   export namespace Snapshot {
@@ -13,6 +14,7 @@ export namespace Sandbox {
         type: "command";
         command: string;
         args?: string[];
+        env?: Record<string, string>;
       }
 
       export interface Function extends Base {
@@ -25,17 +27,30 @@ export namespace Sandbox {
       export type Any = Command | Function;
     }
 
+    export namespace Build {
+      export interface Static {
+        type: "static";
+        dir: string;
+      }
+
+      export interface CloudflareWorker {
+        type: "cloudflare-worker";
+      }
+
+      export type Any = Static | CloudflareWorker;
+    }
+
     export namespace Config {
       export interface Base {
         port: number;
         cwd: string;
-        env: Record<string, string>;
+        envFile: string;
         tasks: {
           install: Task.Any[];
           dev: Task.Command;
           build: Task.Any[];
         };
-        build: { type: "static"; dir: string };
+        build: Build.Any;
       }
 
       export interface Docker extends Base {
@@ -100,7 +115,17 @@ export namespace Sandbox {
     C extends Snapshot.Config.Any = Snapshot.Config.Any
   > {
     config: C;
-    branch: { id: string; repoId: string; name: string };
+    organizationId: string;
+    branch: {
+      id: string;
+      repoId: string;
+      name: string;
+    };
+  }
+
+  export interface ForkOptions {
+    name?: string;
+    userId: string;
   }
 
   export namespace Manager {
@@ -112,12 +137,12 @@ export namespace Sandbox {
       start(): Promise<void>;
       waitUntilStarted(): Promise<void>;
       deploy(): Promise<void>;
+      fork(options: ForkOptions): Promise<void>;
       getPreviewUrl(): Promise<string>;
       execute(
         request: Exec.Request,
         abortSignal?: AbortSignal
       ): AsyncGenerator<Exec.Event.Any>;
-      gitPush(abortSignal?: AbortSignal): Promise<void>;
       gitCommit(
         title: string,
         body: string,
@@ -127,6 +152,8 @@ export namespace Sandbox {
       gitCurrentCommit(abortSignal?: AbortSignal): Promise<string>;
       destroy(): Promise<void>;
       restoreVersion(messages: ChatMessage[]): Promise<void>;
+      listFiles(): Promise<string[]>;
+      readFile(path: string): Promise<Buffer>;
 
       isAgentRunning(): Promise<boolean>;
       startAgent(req: {
@@ -135,10 +162,15 @@ export namespace Sandbox {
         branchId: string;
         restoreVersion: boolean;
       }): Promise<void>;
-      stopAgent(): void;
+      stopAgent(): Promise<void>;
       listenToAgent(): Response;
       listenToStart(): Response;
       listenToDeploy(): Response;
+      listenToFork(): Response;
+      listenToLogs(): Promise<Response>;
+      keepAlive(): Promise<void>;
+      readEnvFile(): Promise<Record<string, string | null>>;
+      writeEnvFile(env: Record<string, string | null>): Promise<void>;
     }
   }
 

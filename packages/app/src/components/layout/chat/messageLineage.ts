@@ -244,9 +244,12 @@ export function variantsAlongPath(
 }
 
 export function useMessageLineage(messages: ChatMessage[], id: string) {
-  const [preferredLeafId, setPreferredLeafId] = useLocalStorage<
+  const [storedPreferredLeafId, setPreferredLeafId] = useLocalStorage<
     string | undefined
   >(`ChatThread.${id}.preferredLeafId`, undefined);
+  const preferredLeafId = messages.some((m) => m.id === storedPreferredLeafId)
+    ? storedPreferredLeafId
+    : undefined;
 
   const activePath = useMemo(
     () => getActivePathFromNode(messages, preferredLeafId),

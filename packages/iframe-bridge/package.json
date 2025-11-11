@@ -1,0 +1,32 @@
+{
+  "name": "@squashai/iframe-bridge",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "dist/server.js",
+  "types": "dist/server.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch --preserveWatchOutput",
+    "prepublishOnly": "npm run build",
+    "push": "npm publish || echo 'Already published, skipping'"
+  },
+  "dependencies": {
+    "html2canvas-pro": "^1.5.11"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "typescript": "~5.8.3"
+  },
+  "peerDependencies": {
+    "react": "^19.2.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

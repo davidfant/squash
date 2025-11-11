@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "@clerk/themes/shadcn.css";
+@plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -83,14 +85,14 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
+  --background: oklch(0.205 0 0);
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
+  --card: oklch(0.145 0 0);
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.269 0 0);
   --popover-foreground: oklch(0.985 0 0);
   --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.145 0 0);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
@@ -106,7 +108,7 @@
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
+  --sidebar: oklch(0.145 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
   --sidebar-primary-foreground: oklch(0.985 0 0);
@@ -128,19 +130,91 @@
 }
 
 @layer utilities {
-  @keyframes gradient {
+  :root {
+    --mask-stripe: linear-gradient(
+      90deg,
+      #fff 30%,
+      /* fully opaque */ rgba(255, 255, 255, 0.2) 50%,
+      /* ~80 % transparent “dip” */ #fff 70% /* back to opaque */
+    );
+  }
+
+  /* One animation for the whole group -------------------------------- */
+  @keyframes shimmer {
     0% {
-      background-position: 0% 50%;
-    }
-    50% {
-      background-position: 100% 50%;
+      mask-position: 100% 0;
+      -webkit-mask-position: 100% 0;
     }
     100% {
-      background-position: 0% 50%;
+      mask-position: -100% 0;
+      -webkit-mask-position: -100% 0;
     }
   }
 
-  .animate-gradient {
-    animation: gradient 3s ease infinite;
+  /* Apply the mask to the wrapper ------------------------------------ */
+  .shimmer {
+    /* the mask */
+    mask-image: var(--mask-stripe);
+    -webkit-mask-image: var(--mask-stripe); /* Safari / old Chromium */
+    mask-size: 200% 100%;
+    -webkit-mask-size: 200% 100%;
+
+    /* keep children visible wherever mask-alpha > 0 */
+    mask-repeat: repeat;
+    -webkit-mask-repeat: repeat;
+
+    /* motion */
+    animation: shimmer 2s linear infinite;
   }
 }
+
+@utility scrollbar-hidden {
+  /* Firefox */
+  scrollbar-width: none;
+
+  /* Safari and Chrome */
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.btn-glossy:after {
+  position: absolute;
+  content: "";
+  border-radius: inherit;
+  inset: 0px;
+  background: linear-gradient(rgba(255, 255, 255, 0.15) 0%, transparent 100%);
+}
+
+/* .btn-glass {
+  backdrop-filter: blur(16px);
+  background: #fff;
+  transition: background 200ms;
+
+  --ring-color: color-mix(in srgb, var(--color-slate-900) 12%, transparent);
+  --outer-shadow-color: color-mix(
+    in srgb,
+    var(--color-slate-900) 6%,
+    transparent
+  );
+  --inner-highlight-color: color-mix(
+    in srgb,
+    var(--color-white) 90%,
+    transparent
+  );
+  box-shadow: 0 0 0 0.5px var(--ring-color),
+    0 1px 1px -0.5px var(--outer-shadow-color),
+    0 2px 2px -1px var(--outer-shadow-color),
+    0 4px 4px -2px var(--outer-shadow-color),
+    0 8px 8px -4px var(--outer-shadow-color),
+    inset 0 1.5px 1px var(--inner-highlight-color),
+    inset 0 -1.5px 1px var(--inner-highlight-color),
+    inset 0 6px 6px -3px color-mix(in srgb, var(--color-slate-900) 8%, transparent),
+    inset 0 -4px 4px -2px
+      color-mix(in srgb, var(--color-slate-900) 10%, transparent);
+
+  
+    }
+    .btn-glass:hover {
+        background: #f8f8f8;
+      } */

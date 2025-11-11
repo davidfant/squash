@@ -122,8 +122,6 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-size: 1.05rem; /* 18px base font size (up from default 16px) */
-    line-height: 1.75; /* Increased line height for better readability */
   }
 }
 

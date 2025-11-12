@@ -47,10 +47,40 @@ export async function createContext(req: Request): Promise<Context> {
 
 const t = initTRPC.context<Context>().create();
 
+function truncateStringsRecursively(value: any, maxLength: number = 1000): any {
+  if (typeof value === "string") {
+    return value.length > maxLength ? value.substring(0, maxLength) : value;
+  }
+
+  if (
+    value === null ||
+    value === undefined ||
+    value instanceof Date ||
+    typeof value === "number" ||
+    typeof value === "boolean" ||
+    typeof value === "bigint"
+  ) {
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => truncateStringsRecursively(item, maxLength));
+  }
+
+  if (typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, val]) => [
+        key,
+        truncateStringsRecursively(val, maxLength),
+      ])
+    );
+  }
+}
+
 const loggerMiddleware = t.middleware(
   async ({ ctx, path, type, input, next }) => {
     logger.debug("tRPC request", {
-      type: "trpc-request",
+      event: "trpc-request",
       id: ctx.requestId,
       path,
       input,
@@ -62,7 +92,7 @@ const loggerMiddleware = t.middleware(
     const result = await next();
     const duration = Date.now() - start;
     logger.debug("tRPC response", {
-      type: "trpc-response",
+      event: "trpc-response",
       id: ctx.requestId,
       duration: duration,
       ok: result.ok,
@@ -73,7 +103,7 @@ const loggerMiddleware = t.middleware(
             message: result.error.message,
             stack: result.error.stack,
           },
-      data: result.ok ? result.data : undefined,
+      data: result.ok ? truncateStringsRecursively(result.data) : undefined,
     });
 
     return result;

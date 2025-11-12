@@ -2,7 +2,7 @@ import { z } from "zod";
 
 // Composio tool call started
 export const zComposioToolCallSchema = z.object({
-  type: z.literal("composio-tool-call"),
+  event: z.literal("composio-tool-call"),
   id: z.uuid(),
   tool: z.string(),
   userId: z.string(),
@@ -11,7 +11,7 @@ export const zComposioToolCallSchema = z.object({
 
 // Composio tool call completed
 export const zComposioToolResultSchema = z.object({
-  type: z.literal("composio-tool-result"),
+  event: z.literal("composio-tool-result"),
   id: z.uuid(),
   successful: z.boolean(),
   error: z.string().nullable(),
@@ -20,14 +20,14 @@ export const zComposioToolResultSchema = z.object({
 
 // Composio tool call error
 export const zComposioToolErrorSchema = z.object({
-  type: z.literal("composio-tool-error"),
+  event: z.literal("composio-tool-error"),
   id: z.uuid(),
   error: z.string(),
 });
 
 // Auth error (token verification)
 export const zAuthErrorSchema = z.object({
-  type: z.literal("auth-error"),
+  event: z.literal("auth-error"),
   token: z.string(),
   error: z.object({
     name: z.string().optional(),
@@ -40,7 +40,7 @@ export const zAuthErrorSchema = z.object({
 
 // tRPC request
 export const zTrpcRequestSchema = z.object({
-  type: z.literal("trpc-request"),
+  event: z.literal("trpc-request"),
   id: z.uuid(),
   path: z.string(),
   input: z.unknown().optional(),
@@ -50,7 +50,7 @@ export const zTrpcRequestSchema = z.object({
 
 // tRPC response
 export const zTrpcResponseSchema = z.object({
-  type: z.literal("trpc-response"),
+  event: z.literal("trpc-response"),
   id: z.uuid(),
   duration: z.number(),
   ok: z.boolean(),
@@ -64,43 +64,30 @@ export const zTrpcResponseSchema = z.object({
   data: z.unknown().optional(),
 });
 
-export const zAIGatewayGenerateTextInputSchema = z.object({
-  type: z.literal("ai-gateway-generate-text-input"),
+export const zAIGatewayGenerateInputSchema = z.object({
+  event: z.literal("ai-gateway-generate-input"),
   id: z.uuid(),
   prompt: z.string(),
-  model: z.string(),
+  model: z.object({ provider: z.string().nullable(), id: z.string() }),
   tools: z.object({ name: z.string(), description: z.string() }).array(),
 });
 
-export const zAIGatewayGenerateTextOutputSchema = z.object({
-  type: z.literal("ai-gateway-generate-text-output"),
+export const zAIGatewayGenerateContentSchema = z.union([
+  z.object({ type: z.literal("text"), text: z.string() }),
+  z.object({ type: z.literal("image") }),
+  z.object({ type: z.literal("object"), object: z.unknown() }),
+]);
+
+export const zAIGatewayGenerateOutputSchema = z.object({
+  event: z.literal("ai-gateway-generate-output"),
   id: z.uuid(),
-  text: z.string(),
+  content: z.array(zAIGatewayGenerateContentSchema),
 });
 
-export const zAIGatewayGenerateTextErrorSchema = z.object({
-  type: z.literal("ai-gateway-generate-text-error"),
+export const zAIGatewayGenerateErrorSchema = z.object({
+  event: z.literal("ai-gateway-generate-error"),
   id: z.uuid(),
   error: z.string(),
-});
-
-export const zAIGatewayGenerateObjectErrorSchema = z.object({
-  type: z.literal("ai-gateway-generate-object-error"),
-  id: z.uuid(),
-  error: z.string(),
-});
-
-export const zAIGatewayGenerateObjectInputSchema = z.object({
-  type: z.literal("ai-gateway-generate-object-input"),
-  id: z.uuid(),
-  prompt: z.string(),
-  model: z.string(),
-});
-
-export const zAIGatewayGenerateObjectOutputSchema = z.object({
-  type: z.literal("ai-gateway-generate-object-output"),
-  id: z.uuid(),
-  object: z.unknown(),
 });
 
 export const zConsoleLogEntrySchema = z.object({
@@ -114,12 +101,9 @@ export const zConsoleLogEntrySchema = z.object({
     zAuthErrorSchema,
     zTrpcRequestSchema,
     zTrpcResponseSchema,
-    zAIGatewayGenerateTextInputSchema,
-    zAIGatewayGenerateTextOutputSchema,
-    zAIGatewayGenerateTextErrorSchema,
-    zAIGatewayGenerateObjectInputSchema,
-    zAIGatewayGenerateObjectOutputSchema,
-    zAIGatewayGenerateObjectErrorSchema,
+    zAIGatewayGenerateInputSchema,
+    zAIGatewayGenerateOutputSchema,
+    zAIGatewayGenerateErrorSchema,
   ]),
   package: z.string(),
   version: z.string(),
@@ -131,15 +115,12 @@ export type ComposioToolResultEntry = z.infer<typeof zComposioToolResultSchema>;
 export type ComposioToolErrorEntry = z.infer<typeof zComposioToolErrorSchema>;
 export type ConsoleLogEntry = z.infer<typeof zConsoleLogEntrySchema>;
 
-export type AIGatewayGenerateTextInputEntry = z.infer<
-  typeof zAIGatewayGenerateTextInputSchema
+export type AIGatewayGenerateContentEntry = z.infer<
+  typeof zAIGatewayGenerateContentSchema
 >;
-export type AIGatewayGenerateTextOutputEntry = z.infer<
-  typeof zAIGatewayGenerateTextOutputSchema
+export type AIGatewayGenerateInputEntry = z.infer<
+  typeof zAIGatewayGenerateInputSchema
 >;
-export type AIGatewayGenerateObjectInputEntry = z.infer<
-  typeof zAIGatewayGenerateObjectInputSchema
->;
-export type AIGatewayGenerateObjectOutputEntry = z.infer<
-  typeof zAIGatewayGenerateObjectOutputSchema
+export type AIGatewayGenerateOutputEntry = z.infer<
+  typeof zAIGatewayGenerateOutputSchema
 >;

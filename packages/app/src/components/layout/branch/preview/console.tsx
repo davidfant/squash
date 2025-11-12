@@ -53,15 +53,12 @@ export function BranchPreviewConsole() {
         .map((d) => d.data)
         .filter(
           (d) =>
-            d.type === "composio-tool-call" ||
-            d.type === "composio-tool-result" ||
-            d.type === "composio-tool-error" ||
-            d.type === "ai-gateway-generate-text-input" ||
-            d.type === "ai-gateway-generate-text-output" ||
-            d.type === "ai-gateway-generate-text-error" ||
-            d.type === "ai-gateway-generate-object-input" ||
-            d.type === "ai-gateway-generate-object-output" ||
-            d.type === "ai-gateway-generate-object-error"
+            d.event === "composio-tool-call" ||
+            d.event === "composio-tool-result" ||
+            d.event === "composio-tool-error" ||
+            d.event === "ai-gateway-generate-input" ||
+            d.event === "ai-gateway-generate-output" ||
+            d.event === "ai-gateway-generate-error"
         );
 
       setLogItemIds((prev) => [
@@ -71,11 +68,12 @@ export function BranchPreviewConsole() {
           .filter((id, idx, all) => all.indexOf(id) === idx)
           .filter((id) => !prev.includes(id)),
       ]);
+      console.log("LAINs", lines);
       setLogItems((prev) =>
         parsed.reduce((acc, d) => {
           const t = acc[d.id];
           if (!t) {
-            if (d.type === "composio-tool-call") {
+            if (d.event === "composio-tool-call") {
               acc[d.id] = {
                 id: d.id,
                 title: <ToolCallLogItemHeader tool={d.tool} />,
@@ -85,29 +83,11 @@ export function BranchPreviewConsole() {
                 input: d.input,
                 status: "input",
               };
-            } else if (d.type === "ai-gateway-generate-text-input") {
+            } else if (d.event === "ai-gateway-generate-input") {
               acc[d.id] = {
                 id: d.id,
                 title: (
-                  <AIGatewayLogItemHeader
-                    model={d.model}
-                    label="Generate Text"
-                  />
-                ),
-                details: (
-                  <ConsoleLogItemDetails input={d.prompt} status="input" />
-                ),
-                input: d.prompt,
-                status: "input",
-              };
-            } else if (d.type === "ai-gateway-generate-object-input") {
-              acc[d.id] = {
-                id: d.id,
-                title: (
-                  <AIGatewayLogItemHeader
-                    model={d.model}
-                    label="Generate Object"
-                  />
+                  <AIGatewayLogItemHeader model={d.model} label="Generate" />
                 ),
                 details: (
                   <ConsoleLogItemDetails input={d.prompt} status="input" />
@@ -117,7 +97,7 @@ export function BranchPreviewConsole() {
               };
             }
           } else {
-            if (d.type === "composio-tool-result") {
+            if (d.event === "composio-tool-result") {
               t.details = (
                 <ConsoleLogItemDetails
                   input={t.input}
@@ -126,36 +106,18 @@ export function BranchPreviewConsole() {
                 />
               );
               t.status = "output";
-            } else if (d.type === "composio-tool-error") {
+            } else if (d.event === "composio-tool-error") {
               t.status = "error";
-            } else if (d.type === "ai-gateway-generate-text-output" && t) {
+            } else if (d.event === "ai-gateway-generate-output" && t) {
               t.details = (
                 <ConsoleLogItemDetails
                   input={t.input}
-                  output={d.text}
+                  output={d.content}
                   status="output"
                 />
               );
               t.status = "output";
-            } else if (d.type === "ai-gateway-generate-text-error" && t) {
-              t.details = (
-                <ConsoleLogItemDetails
-                  input={t.input}
-                  error={d.error}
-                  status="error"
-                />
-              );
-              t.status = "error";
-            } else if (d.type === "ai-gateway-generate-object-output" && t) {
-              t.details = (
-                <ConsoleLogItemDetails
-                  input={t.input}
-                  output={d.object}
-                  status="output"
-                />
-              );
-              t.status = "output";
-            } else if (d.type === "ai-gateway-generate-object-error" && t) {
+            } else if (d.event === "ai-gateway-generate-error" && t) {
               t.details = (
                 <ConsoleLogItemDetails
                   input={t.input}

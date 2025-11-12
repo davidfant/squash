@@ -31,28 +31,27 @@ export function AIGatewayLogItemHeader({
   model,
   label,
 }: {
-  model: string;
+  model: { provider: string | null; id: string };
   label: string;
 }) {
   const { theme } = useTheme();
-  const [provider, modelId] = model.split("/");
   return (
     <div className="flex-1 min-w-0">
       <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
-        {!!provider && (
+        {!!model.provider && (
           <img
             src={
               {
                 openai: `https://static.squash.build/logos/${theme}/openai`,
-                "google-ai-studio": `https://static.squash.build/logos/${theme}/googlesuper`,
+                google: `https://static.squash.build/logos/${theme}/googlesuper`,
                 anthropic: `https://static.squash.build/logos/${theme}/claude`,
-              }[provider.toLocaleLowerCase()]
+              }[model.provider.split(".")[0]!.toLocaleLowerCase()]
             }
-            alt={provider}
+            alt={model.provider}
             className="size-3"
           />
         )}
-        {modelId}
+        {model.id}
       </div>
       <p className="text-sm truncate">{label}</p>
     </div>

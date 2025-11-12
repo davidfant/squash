@@ -17,7 +17,7 @@ export async function executeTool<Input, Output>(params: {
 }> {
   const toolCallId = randomUUID();
   logger.debug("Tool call started", {
-    type: "composio-tool-call",
+    event: "composio-tool-call",
     id: toolCallId,
     tool: params.tool,
     userId: params.userId,
@@ -31,7 +31,7 @@ export async function executeTool<Input, Output>(params: {
     });
 
     logger.debug("Tool call completed", {
-      type: "composio-tool-result",
+      event: "composio-tool-result",
       id: toolCallId,
       successful: res.successful,
       error: res.error,
@@ -45,7 +45,7 @@ export async function executeTool<Input, Output>(params: {
     };
   } catch (error) {
     logger.error("Tool call error", {
-      type: "composio-tool-error",
+      event: "composio-tool-error",
       id: toolCallId,
       error: error instanceof Error ? error.message : String(error),
     });

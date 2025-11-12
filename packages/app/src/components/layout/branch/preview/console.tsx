@@ -68,7 +68,6 @@ export function BranchPreviewConsole() {
           .filter((id, idx, all) => all.indexOf(id) === idx)
           .filter((id) => !prev.includes(id)),
       ]);
-      console.log("LAINs", lines);
       setLogItems((prev) =>
         parsed.reduce((acc, d) => {
           const t = acc[d.id];

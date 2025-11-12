@@ -103,7 +103,7 @@ importers:
         version: 1.2.8(@types/react-dom@19.0.4(@types/react@19.0.10))(@types/react@19.0.10)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       '@squashai/iframe-bridge':
         specifier: latest
-        version: 0.0.0(react@19.0.0)
+        version: 0.0.1(react@19.0.0)
       '@tailwindcss/vite':
         specifier: ^4.1.14
         version: 4.1.14(vite@7.1.10(@types/node@24.7.2)(jiti@2.6.1)(lightningcss@1.30.1))
@@ -1624,8 +1624,8 @@ packages:
   '@speed-highlight/core@1.2.7':
     resolution: {integrity: sha512-0dxmVj4gxg3Jg879kvFS/msl4s9F3T9UXC1InxgOf7t5NvcPD97u/WTA5vL/IxWHMn7qSxBozqrnnE2wvl1m8g==}
 
-  '@squashai/iframe-bridge@0.0.0':
-    resolution: {integrity: sha512-0MlEh9OUaMXrCJbQYdlfuHG15XeunFnYJC1h2JDtqtZOigqi3a9Sdu5Xv3mAIkj4Bk/VtIZFEdcmDi3kCwNIHg==}
+  '@squashai/iframe-bridge@0.0.1':
+    resolution: {integrity: sha512-KRU/fMvmm0zY33VB3xhriIfxeqWB/y5bePSRpEcIdnQ+OdZXuRXHDIWdS6WgdoTRxZmjBO1WzBtfGC20/YGJxQ==}
     peerDependencies:
       react: ^19.2.0
 
@@ -3897,7 +3897,7 @@ snapshots:
 
   '@speed-highlight/core@1.2.7': {}
 
-  '@squashai/iframe-bridge@0.0.0(react@19.0.0)':
+  '@squashai/iframe-bridge@0.0.1(react@19.0.0)':
     dependencies:
       html2canvas-pro: 1.5.12
       react: 19.0.0

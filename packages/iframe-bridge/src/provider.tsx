@@ -15,6 +15,11 @@ interface SquashContextValue {
 
 const SquashContext = createContext<SquashContextValue | undefined>(undefined);
 
+const getTokenFromHash = (): string | undefined => {
+  const params = new URLSearchParams(window.location.hash.slice(1));
+  return params.get("jwt-token") || undefined;
+};
+
 export function SquashProvider({
   children,
   debug,
@@ -22,7 +27,7 @@ export function SquashProvider({
   children: ReactNode;
   debug?: boolean;
 }) {
-  const [token, setToken] = useState<string | undefined>(undefined);
+  const [token, setToken] = useState<string | undefined>(getTokenFromHash);
 
   useEffect(() => {
     if (!window.top || window.top === window.self) return;

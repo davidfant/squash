@@ -69,7 +69,10 @@ export const zAIGatewayGenerateInputSchema = z.object({
   id: z.uuid(),
   prompt: z.string(),
   model: z.object({ provider: z.string().nullable(), id: z.string() }),
-  tools: z.object({ name: z.string(), description: z.string() }).array(),
+  tools: z
+    .object({ name: z.string(), description: z.string() })
+    .array()
+    .optional(),
 });
 
 export const zAIGatewayGenerateContentSchema = z.union([

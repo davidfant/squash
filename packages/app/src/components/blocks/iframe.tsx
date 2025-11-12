@@ -2,18 +2,29 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@clerk/clerk-react";
 import { SquashIframeBridge } from "@squashai/iframe-bridge";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  Suspense,
+  use,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { Skeleton } from "../ui/skeleton";
 
-export function Iframe({
-  url,
-  className,
-  onNavigate,
-}: {
+interface IframeProps {
   url: string;
   className?: string;
   onNavigate?: (path: string) => void;
-}) {
+}
+
+function IframeWithTokenInjection({
+  url,
+  className,
+  initialTokenPromise,
+  onNavigate,
+}: IframeProps & { initialTokenPromise: Promise<string | null> }) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const [bridge, setBridge] = useState<SquashIframeBridge | undefined>();
@@ -61,13 +72,32 @@ export function Iframe({
     };
   }, [bridge, getToken, sessionId]);
 
+  const initialToken = use(initialTokenPromise);
   return (
     <iframe
       ref={iframeRef}
-      src={url}
+      src={`${url}#jwt-token=${encodeURIComponent(initialToken ?? "")}`}
       className={cn("w-full h-full", className)}
       allow="microphone; speech-recognition; on-device-speech-recognition"
     />
+  );
+}
+
+export function Iframe({ url, className, onNavigate }: IframeProps) {
+  const { getToken } = useAuth();
+  const initialTokenPromise = useMemo(
+    () => getToken({ skipCache: true }),
+    [getToken]
+  );
+  return (
+    <Suspense>
+      <IframeWithTokenInjection
+        url={url}
+        className={className}
+        initialTokenPromise={initialTokenPromise}
+        onNavigate={onNavigate}
+      />
+    </Suspense>
   );
 }
 

@@ -1,3 +1,4 @@
+import { ComposioToolkitLogo } from "@/components/blocks/composio-toolkit-logo";
 import { Badge } from "@/components/ui/badge";
 import type { ChatMessage } from "@squashai/api/agent/types";
 import {
@@ -10,10 +11,8 @@ import {
   TerminalIcon,
   TriangleAlertIcon,
   UnplugIcon,
-  ZapIcon,
-  type LucideIcon,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import type { ComponentType, ReactNode } from "react";
 import type { Todo } from "../../TodoList";
 import { FileBadge } from "../FileBadge";
 
@@ -50,7 +49,7 @@ interface LoadingBlock {
 }
 
 export interface EventBlockItem {
-  icon: LucideIcon;
+  icon: ComponentType<{ className: string }>;
   loading: boolean;
   label: ReactNode;
   dialogContent?: ReactNode;
@@ -347,13 +346,18 @@ export function groupMessageEvents(
       case "tool-ClaudeCode__mcp__Composio__MultiExecuteTool": {
         part.input?.toolCalls
           ?.filter((tc) => !!tc)
-          .map((tc) =>
+          .map((tc) => {
+            const toolkit = tc!.toolSlug?.split("_")[0]!.toLowerCase();
+            if (!toolkit) return;
             currentEvents.push({
-              icon: ZapIcon,
+              // icon: ZapIcon,
+              icon: (props) => (
+                <ComposioToolkitLogo {...props} toolkit={toolkit} />
+              ),
               loading: isToolLoading(part.state),
               label: tc!.reason,
-            })
-          );
+            });
+          });
         break;
       }
       case "tool-ClaudeCode__mcp__Composio__ConnectToToolkit": {
@@ -379,7 +383,12 @@ export function groupMessageEvents(
                 waitForConnectionPart.output
               )?.isConnected;
               currentEvents.push({
-                icon: isConnected ? UnplugIcon : TriangleAlertIcon,
+                icon: (props) => (
+                  <ComposioToolkitLogo
+                    {...props}
+                    toolkit={connectData.toolkit.name.toLowerCase()}
+                  />
+                ),
                 loading: false,
                 label: isConnected
                   ? `Connected to ${connectData.toolkit.name}`

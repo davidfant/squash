@@ -4,8 +4,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { usePrevious } from "@/hooks/use-previous";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
-import { type LucideIcon } from "lucide-react";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ComponentType, type ReactNode, useEffect, useState } from "react";
 import { type EventBlockItem } from "./groupMessageEvents";
 
 export const Event = ({
@@ -17,7 +16,7 @@ export const Event = ({
   onClick,
 }: {
   label: ReactNode;
-  Icon: LucideIcon | null;
+  Icon: ComponentType<{ className: string }> | null;
   loading: boolean;
   shimmer: boolean;
   actions?: ReactNode;

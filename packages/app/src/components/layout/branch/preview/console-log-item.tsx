@@ -1,3 +1,4 @@
+import { ComposioToolkitLogo } from "@/components/blocks/composio-toolkit-logo";
 import { FadingScrollView } from "@/components/blocks/fading-scroll-view";
 import { Item } from "@/components/ui/item";
 import { Label } from "@/components/ui/label";
@@ -12,14 +13,15 @@ import { useState, type ReactNode } from "react";
 export type LogItemStatus = "input" | "output" | "error";
 
 export function ToolCallLogItemHeader({ tool }: { tool: string }) {
-  const { theme } = useTheme();
   const toolkitName = startCase(tool.split("_")[0]?.toLowerCase());
-  const logoUrl = `https://static.squash.build/logos/${theme}/${toolkitName}`;
   const toolName = startCase(tool.split("_").slice(1).join("_").toLowerCase());
   return (
     <div className="flex-1 min-w-0">
       <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
-        <img src={logoUrl} alt={toolkitName} className="size-3" />
+        <ComposioToolkitLogo
+          toolkit={toolkitName.toLowerCase()}
+          className="size-3"
+        />
         {toolkitName}
       </div>
       <p className="text-sm truncate">{toolName}</p>

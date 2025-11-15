@@ -36,6 +36,8 @@ google("gemini-2.5-flash-image"); // Google Gemini Flash (image variant)
 
 > **Tip — unknown models:** New models appear frequently. If a user claims a model exists, **trust them and try it**. If the gateway returns _“model not found”_ or similar at runtime, handle the error and inform the user.
 
+> **Tip — avoid gpt-4o:** When using OpenAI default to the **gpt-5** series of models, as they are newer and all around better than the older **gpt-4o** series.
+
 ## AI Gateway Examples
 
 **Generating Free‑form Text**

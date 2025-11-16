@@ -38,6 +38,7 @@ export function BranchPreviewConsole() {
     "connecting" | "open" | "closed" | "error"
   >("connecting");
   const pendingRef = useRef("");
+  console.log("Console Log Items", logItems);
 
   const getHeaders = useAuthHeaders();
   useEffect(() => {
@@ -107,6 +108,13 @@ export function BranchPreviewConsole() {
               t.status = "output";
             } else if (d.event === "composio-tool-error") {
               t.status = "error";
+              t.details = (
+                <ConsoleLogItemDetails
+                  input={t.input}
+                  error={d.error}
+                  status="error"
+                />
+              );
             } else if (d.event === "ai-gateway-generate-output" && t) {
               t.details = (
                 <ConsoleLogItemDetails

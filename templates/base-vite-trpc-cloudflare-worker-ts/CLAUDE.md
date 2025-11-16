@@ -5,3 +5,9 @@ The project is a Cloudflare Worker containing a Vite React app in `src/app` and 
 Use pnpm as your package manager, not npm or yarn
 
 Store environment variables in `.env`. When updating `.env` always run `pnpm typegen` afterwards so that Cloudflare Worker TypeScript types are updated correctly.
+
+### Components
+
+You have access to all standard ShadCN components under `@/app/components/ui/...`. Below are some custom components that can be useful:
+
+- `<ComposioToolkitLogo toolkit="linear" className="size-3" />` shows the logo of a Composio toolkit. Use this throughout the UI to make it clear to the user what integrations and toolkits are being used where.

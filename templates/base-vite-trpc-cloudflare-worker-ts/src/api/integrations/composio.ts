@@ -30,13 +30,21 @@ export async function executeTool<Input, Output>(params: {
       arguments: params.input as Record<string, unknown>,
     });
 
-    logger.debug("Tool call completed", {
-      event: "composio-tool-result",
-      id: toolCallId,
-      successful: res.successful,
-      error: res.error,
-      data: res.data,
-    });
+    if (res.successful) {
+      logger.debug("Tool call completed", {
+        event: "composio-tool-result",
+        id: toolCallId,
+        successful: res.successful,
+        error: res.error,
+        data: res.data,
+      });
+    } else {
+      logger.error("Tool call failed", {
+        event: "composio-tool-error",
+        id: toolCallId,
+        error: res.error,
+      });
+    }
 
     return {
       successful: res.successful,

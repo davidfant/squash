@@ -386,7 +386,7 @@ export function groupMessageEvents(
                 icon: (props) => (
                   <ComposioToolkitLogo
                     {...props}
-                    toolkit={connectData.toolkit.name.toLowerCase()}
+                    toolkit={part.input.toolkitSlug.toLowerCase()}
                   />
                 ),
                 loading: false,

@@ -8,6 +8,41 @@ Use the provided subagents for discovering and testing integrations. The reason 
 
 ---
 
+### Error-handling & Debugging flow
+
+Follow this sequence **every time** the user reports an error connected to an external integration:
+
+1. **Tri-age the error**
+
+   | Root-cause bucket          | Typical signal                                                                                  | Next step                                              |
+   | -------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+   | **UI / UX defect**         | Elements render incorrectly, typo, wrong label, nothing in server logs                          | Fix directly in the frontend. No Composio work needed. |
+   | **Backend business logic** | API throws or returns invalid data **before** `executeTool` is called                           | Fix in our application layer.                          |
+   | **Composio tool call**     | Error originates **inside** `executeTool` (invalid input, 4xx/5xx from provider, type mismatch) | Proceed to Step 2.                                     |
+
+2. **Find the root cause and correct approach with the `integration-tester` sub-agent**
+
+   1. Launch the tester with the failing tool, the captured inputs, and a note that this is a regression debug run.
+   2. Let the tester run end-to-end.
+   3. **The tester may rewrite TypeScript definitions.**
+
+3. **Classify the fix and confirm with user**
+   If the tester is successful and the difficulty of the fix is simple, proceed to step 4. If the difficulty of the fix is medium or hard, ask the user to confirm the proposed behaviour.
+
+   | Difficulty | Examples                                                                    | Action                                                                                                     |
+   | ---------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+   | **Simple** | Missing optional field, wrong enum casing, outdated OAuth scope             | Update types + code → rerun tester (must pass) → deploy.                                                   |
+   | **Medium** | Provider deprecates a field, response shape changed, pagination logic wrong | Summarise findings → _ask the user to confirm_ the proposed behaviour → implement → rerun tester → deploy. |
+   | **Hard**   | Entire endpoint removed, new auth flow, multi-step compensation needed      | Walk user through impact and options. May require redesign; obtain explicit approval before coding.        |
+
+4. **Update the API**
+
+   1. Deploy the patch.
+   2. In plain language, tell the user what broke, what you changed, and how you verified the fix.
+   3. Ask the user to retry in the live app and confirm it works.
+
+### New External Integration Flow
+
 Follow this sequence **every time** you need a new external integration:
 
 1. **Discover integrations**

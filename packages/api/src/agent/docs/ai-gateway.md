@@ -20,7 +20,7 @@ import { openai, anthropic, google } from "./integrations/ai-gateway";
 
 openai("gpt-5"); // OpenAI GPT‑5
 anthropic("claude-sonnet-4-5-20250929"); // Anthropic Claude 4.5
-google("gemini-2.5-flash-image"); // Google Gemini Flash (image variant)
+google("gemini-3-flash-preview"); // Google Gemini Flash (image variant)
 ```
 
 **Quick capability cheat‑sheet**
@@ -30,13 +30,15 @@ google("gemini-2.5-flash-image"); // Google Gemini Flash (image variant)
 | **GPT‑5 mini**, **GPT‑5**  | `openai()`       | Text, **Objects**      | `generateText`, `generateObject` |
 | **GPT Image 1**            | `openai.image()` | **Images**             | `generateImage`                  |
 | **Claude Sonnet 4.x**      | `anthropic()`    | Text only, NOT Objects | `generateText`                   |
-| **Gemini 2.5 Flash**       | `google()`       | Text, Objects          | `generateText`, `generateObject` |
+| **Gemini 3 Flash**         | `google()`       | Text, Objects          | `generateText`, `generateObject` |
 | **Gemini 2.5 Flash‑Image** | `google()`       | **Images**             | `generateText`                   |
 | _Any other model_          | (appropriate)    | Depends on provider    | Varies                           |
 
 > **Tip — unknown models:** New models appear frequently. If a user claims a model exists, **trust them and try it**. If the gateway returns _“model not found”_ or similar at runtime, handle the error and inform the user.
 
 > **Tip — avoid gpt-4o:** When using OpenAI default to the **gpt-5** series of models, as they are newer and all around better than the older **gpt-4o** series.
+
+> **Tip — default to gemini-3-flash-latest**
 
 ## AI Gateway Examples
 

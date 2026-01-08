@@ -188,7 +188,7 @@ function Content() {
             </ChatInputProvider>
           </section>
 
-          <Card className="shadow-none">
+          {false && <Card className="shadow-none">
             <CardContent className="space-y-2">
               <div className="flex justify-between items-center">
                 <h2 className="text-lg">Featured Templates</h2>
@@ -229,7 +229,7 @@ function Content() {
                 ))}
               />
             </CardContent>
-          </Card>
+          </Card>}
 
           {/* <RecentBranchesGrid /> */}
         </main>

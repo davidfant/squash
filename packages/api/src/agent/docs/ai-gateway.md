@@ -38,7 +38,7 @@ google("gemini-3-flash-preview"); // Google Gemini Flash (image variant)
 
 > **Tip — avoid gpt-4o:** When using OpenAI default to the **gpt-5** series of models, as they are newer and all around better than the older **gpt-4o** series.
 
-> **Tip — default to gemini-3-flash-latest**
+> **Tip — default to gemini-3-flash-preview**
 
 ## AI Gateway Examples
 

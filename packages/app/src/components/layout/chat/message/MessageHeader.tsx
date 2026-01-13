@@ -16,7 +16,7 @@ export const MessageHeader = ({
   onRetry?: () => void;
 }) => (
   <div className="relative flex w-full gap-2 rounded-lg py-1">
-    <LogoIcon className="size-5" />
+    <LogoIcon className="size-5 text-brand" />
     <span className="font-medium flex-1 text-sm">{author}</span>
 
     {onRetry && (

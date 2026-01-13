@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { Link } from "react-router";
 import { AddressBar } from "./address-bar";
-import { PublishButton } from "./publish-button";
 
 const tabs = [
   { label: "Preview", value: "preview", icon: AppWindowIcon },
@@ -42,7 +41,7 @@ export function BranchHeader({
         style={{ width: siderWidth ? `${siderWidth}%` : undefined }}
       >
         <Link to="/" className="flex items-center">
-          <LogoIcon className="size-6 hover:opacity-80 transition-opacity" />
+          <LogoIcon className="size-6 hover:opacity-80 transition-opacity text-brand" />
         </Link>
         <span className="font-medium text-sm truncate">{title}</span>
         <Button
@@ -107,9 +106,9 @@ export function BranchHeader({
               Invite
             </Button>
           </Protect>
-          <Protect role="org:admin">
+          {/* <Protect role="org:admin">
             <PublishButton />
-          </Protect>
+          </Protect> */}
           {/* //   <div className="flex items-center gap-2">
               //     <RequireRole roles={["admin", "owner"]}>
               //       <ForkButton />

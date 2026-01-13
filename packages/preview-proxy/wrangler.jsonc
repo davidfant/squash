@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "preview-proxy",
+  "main": "src/index.ts",
+  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_date": "2025-05-08",
+  "observability": {
+    "enabled": true
+  },
+  "upload_source_maps": true,
+  "dev": {
+    "port": 8788
+  },
+  "vars": {
+    "PREVIEW_ROOT": ".localhost:8788"
+  },
+  "env": {
+    "production": {
+      "vars": {
+        "PREVIEW_ROOT": ".magicsite.app"
+      }
+    }
+  }
+}

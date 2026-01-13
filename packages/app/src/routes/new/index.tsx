@@ -17,7 +17,6 @@ import { usePostHog } from "posthog-js/react";
 import { forwardRef, memo, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { useLocalStorage } from "usehooks-ts";
-import { FlowingGradientBackground } from "./components/flowing-gradient-background";
 import { usePlaceholder } from "./usePlaceholder";
 
 const MemoizedTextarea = memo(Textarea);
@@ -144,11 +143,6 @@ function Content() {
 
   return (
     <div className="relative">
-      {!isSignedIn && (
-        <div className="absolute inset-0 opacity-20 blur-md will-change-auto 2xl:blur-2xl z-0">
-          <FlowingGradientBackground scale={3} />
-        </div>
-      )}
       <div className="relative z-1">
         <main className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-2 md:px-6 py-24 gap-32">
           <section className="flex flex-col items-center gap-12 text-center">
@@ -188,17 +182,18 @@ function Content() {
             </ChatInputProvider>
           </section>
 
-          {false && <Card className="shadow-none">
-            <CardContent className="space-y-2">
-              <div className="flex justify-between items-center">
-                <h2 className="text-lg">Featured Templates</h2>
-                <Link to="/templates">
-                  <Button variant="ghost" size="sm">
-                    View all <ArrowRightIcon />
-                  </Button>
-                </Link>
-              </div>
-              {/* <Suggestions className="mb-4">
+          {false && (
+            <Card className="shadow-none">
+              <CardContent className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-lg">Featured Templates</h2>
+                  <Link to="/templates">
+                    <Button variant="ghost" size="sm">
+                      View all <ArrowRightIcon />
+                    </Button>
+                  </Link>
+                </div>
+                {/* <Suggestions className="mb-4">
                 <Suggestion
                   suggestion="All"
                   variant={toolkitId === null ? "secondary" : "outline"}
@@ -223,13 +218,14 @@ function Content() {
                   </Suggestion>
                 ))}
               </Suggestions> */}
-              <FeatureCardGrid
-                children={repos.data?.map((repo, index) => (
-                  <RepoCard key={repo.id} repo={repo} index={index} />
-                ))}
-              />
-            </CardContent>
-          </Card>}
+                <FeatureCardGrid
+                  children={repos.data?.map((repo, index) => (
+                    <RepoCard key={repo.id} repo={repo} index={index} />
+                  ))}
+                />
+              </CardContent>
+            </Card>
+          )}
 
           {/* <RecentBranchesGrid /> */}
         </main>

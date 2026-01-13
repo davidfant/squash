@@ -47,6 +47,8 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  --color-brand: #69e974;
 }
 
 :root {
@@ -177,6 +179,71 @@
 
     /* motion */
     animation: shimmer 2s linear infinite;
+  }
+
+  @keyframes spinner-rotate {
+    0% {
+      transform: rotate(0deg);
+    }
+    48% {
+      transform: rotate(36deg);
+    }
+    52% {
+      transform: rotate(36deg);
+    }
+    100% {
+      transform: rotate(72deg);
+    }
+  }
+
+  @keyframes spinner-arm-pulse {
+    0% {
+      transform: translate(0, 0) rotate(var(--rotation));
+    }
+    40% {
+      transform: translate(var(--tx), var(--ty)) rotate(var(--rotation));
+    }
+    60% {
+      transform: translate(var(--tx), var(--ty)) rotate(var(--rotation));
+    }
+    100% {
+      transform: translate(0, 0) rotate(var(--rotation));
+    }
+  }
+
+  .spinner {
+    animation: spinner-rotate 1.2s ease-in-out infinite;
+    overflow: visible;
+  }
+
+  .spinner use {
+    animation: spinner-arm-pulse 1.2s ease-in-out infinite;
+  }
+
+  .spinner use:nth-child(1) {
+    --tx: 0px;
+    --ty: -14px;
+    --rotation: 72deg;
+  }
+  .spinner use:nth-child(2) {
+    --tx: 13px;
+    --ty: -4px;
+    --rotation: 144deg;
+  }
+  .spinner use:nth-child(3) {
+    --tx: 8px;
+    --ty: 12px;
+    --rotation: 216deg;
+  }
+  .spinner use:nth-child(4) {
+    --tx: -8px;
+    --ty: 12px;
+    --rotation: 288deg;
+  }
+  .spinner use:nth-child(5) {
+    --tx: -13px;
+    --ty: -4px;
+    --rotation: 0deg;
   }
 }
 

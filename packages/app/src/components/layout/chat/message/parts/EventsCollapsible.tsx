@@ -27,8 +27,7 @@ export const Event = ({
     <div
       className={cn(
         "flex items-center gap-2 text-muted-foreground text-sm min-h-7",
-        clickable ? "cursor-pointer" : "cursor-default",
-        shimmer && "shimmer"
+        clickable ? "cursor-pointer" : "cursor-default"
       )}
       onClick={onClick}
     >
@@ -37,7 +36,12 @@ export const Event = ({
       ) : (
         Icon && <Icon className="size-3 shrink-0" />
       )}
-      <div className="flex-1 inline space-x-2 overflow-hidden *:max-w-full">
+      <div
+        className={cn(
+          "flex-1 inline space-x-2 overflow-hidden *:max-w-full",
+          shimmer && "shimmer"
+        )}
+      >
         {label}
       </div>
       {actions}

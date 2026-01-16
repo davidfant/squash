@@ -165,6 +165,7 @@ export const executeTasks = (
           failed.add(task.id);
           logger.error("Task failed", {
             taskId: task.id,
+            input,
             error: {
               stack: (error as Error).stack,
               name: (error as Error).name,

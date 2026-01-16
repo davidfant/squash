@@ -67,9 +67,14 @@ export function ReposPage() {
 
   const [currentRepo, setCurrentRepo] = useState<Repo>();
   useEffect(() => {
-    const allRepos = [...(orgRepos.data ?? []), ...(featuredRepos.data ?? [])];
+    // const allRepos = [...(orgRepos.data ?? []), ...(featuredRepos.data ?? [])];
+    const allRepos = [...(orgRepos.data ?? [])];
     const repo = allRepos.find((r) => r.id === repoId);
-    if (repo) setCurrentRepo(repo);
+    if (repo)
+      setCurrentRepo({
+        ...repo,
+        imageUrl: repo.masterBranch.imageUrl,
+      });
   }, [repoId, orgRepos.data, featuredRepos.data]);
 
   return (
@@ -92,6 +97,9 @@ export function ReposPage() {
             <RepoCard key={repo.id} repo={repo} index={index} />
           ))}
         />
+        <p className="text-muted-foreground">
+          There are no templates available.
+        </p>
       </main>
       {currentRepo && (
         <RepoDetailsDialog

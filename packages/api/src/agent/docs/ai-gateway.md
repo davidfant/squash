@@ -25,14 +25,14 @@ google("gemini-3-flash-preview"); // Google Gemini Flash (image variant)
 
 **Quick capability cheat‑sheet**
 
-| Model (examples)           | Helper to call   | Can generate…          | Supported helpers                |
-| -------------------------- | ---------------- | ---------------------- | -------------------------------- |
-| **GPT‑5 mini**, **GPT‑5**  | `openai()`       | Text, **Objects**      | `generateText`, `generateObject` |
-| **GPT Image 1**            | `openai.image()` | **Images**             | `generateImage`                  |
-| **Claude Sonnet 4.x**      | `anthropic()`    | Text only, NOT Objects | `generateText`                   |
-| **Gemini 3 Flash**         | `google()`       | Text, Objects          | `generateText`, `generateObject` |
-| **Gemini 2.5 Flash‑Image** | `google()`       | **Images**             | `generateText`                   |
-| _Any other model_          | (appropriate)    | Depends on provider    | Varies                           |
+| Model (examples)           | Helper to call   | Can generate…       | Supported helpers                |
+| -------------------------- | ---------------- | ------------------- | -------------------------------- |
+| **Claude Sonnet 4.x**      | `anthropic()`    | Text, Objects       | `generateText`                   |
+| **Gemini 3 Flash**         | `google()`       | Text, Objects       | `generateText`, `generateObject` |
+| **GPT‑5 mini**, **GPT‑5**  | `openai()`       | Text, Objects       | `generateText`, `generateObject` |
+| **GPT Image 1**            | `openai.image()` | **Images**          | `generateImage`                  |
+| **Gemini 2.5 Flash‑Image** | `google()`       | **Images**          | `generateText`                   |
+| _Any other model_          | (appropriate)    | Depends on provider | Varies                           |
 
 > **Tip — unknown models:** New models appear frequently. If a user claims a model exists, **trust them and try it**. If the gateway returns _“model not found”_ or similar at runtime, handle the error and inform the user.
 

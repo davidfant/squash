@@ -12,6 +12,8 @@ export const requireAuth = createMiddleware<{
   const auth = getAuth(c);
 
   if (!auth?.userId) return c.json({ error: "Unauthorized" }, 401);
+  if (!auth.orgId) return c.json({ error: "No organization selected" }, 401);
+
   c.set("userId", auth.userId);
   c.set("organizationId", auth.orgId!);
   await next();

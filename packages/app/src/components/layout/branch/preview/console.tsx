@@ -188,11 +188,12 @@ export function BranchPreviewConsole() {
   }, [branch.id, getHeaders]);
 
   if (logItemIds.length === 0) {
-    return (
-      <div className="h-full flex flex-col items-center justify-center p-4 text-muted-foreground text-sm">
-        Tool calls will appear here
-      </div>
-    );
+    // return (
+    //   <div className="h-full flex flex-col items-center justify-center p-4 text-muted-foreground text-sm">
+    //     Tool calls will appear here
+    //   </div>
+    // );
+    return <div className="w-4" />;
   }
   return (
     <FadingScrollView

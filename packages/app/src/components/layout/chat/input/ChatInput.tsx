@@ -192,7 +192,7 @@ export function ChatInput({
   return (
     <Card
       className={cn(
-        "relative p-2 transition-all shadow-none border border-input focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-4 overflow-hidden",
+        "relative p-2 transition-all shadow-none border border-input focus-within:border-ring focus-within:ring-ring/50 focus-within:ring-4 overflow-hidden rounded-[24px]",
         isDragOver && "border-blue-500 ring-blue-500/40 ring-4"
       )}
       onDragEnter={handleDragEnter}

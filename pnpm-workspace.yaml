@@ -1,13 +1,7 @@
 packages:
   - packages/*
-  - templates
-  - "!templates/base-*"
-  - "!packages/chrome-extension"
-  - "!packages/flyio-ssh-proxy"
-  - "!packages/replicator"
-  - "!packages/replicator-git-sync"
-  - "!packages/deployment-proxy"
-  - "!packages/screenshot-api"
+  # - templates
+  # - "!templates/base-*"
 patchedDependencies:
   "@daytonaio/sdk": patches/@daytonaio__sdk.patch
   ai: patches/ai.patch

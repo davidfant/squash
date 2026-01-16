@@ -30,6 +30,7 @@ export async function streamClaudeCodeAgent(opts: {
   abortSignal: AbortSignal;
   messageMetadata: UIMessageStreamOptions<ChatMessage>["messageMetadata"];
   readSessionData(sessionId: string): Promise<string>;
+  onScreenshot(url: string): Promise<unknown>;
 }) {
   logger.debug("Starting Claude Code stream", {
     sandbox: opts.sandbox.name,
@@ -176,6 +177,29 @@ export async function streamClaudeCodeAgent(opts: {
           })) {
             opts.writer.write(msg);
           }
+
+          // waitUntil(
+          //   fetch(
+          //     `${env.SCREENSHOT_API_URL}?url=${encodeURIComponent(
+          //       opts.previewUrl
+          //     )}`
+          //   )
+          //     .then((r) => r.json<{ url: string }>())
+          //     .catch(() => null)
+          //     .then((result) => {
+          //       logger.debug("Captured screenshot", {
+          //         url: opts.previewUrl,
+          //         result,
+          //       });
+          //       if (result) return opts.onScreenshot(result.url);
+          //     })
+          //     .catch((error) => {
+          //       logger.warn("Failed to capture screenshot", {
+          //         url: opts.previewUrl,
+          //         error,
+          //       });
+          //     })
+          // );
         }
       })(),
       (async () => {

@@ -47,10 +47,12 @@ export const reposRouter = new Hono<{
         id: schema.repo.id,
         name: schema.repo.name,
         previewUrl: schema.repo.previewUrl,
-        imageUrl: schema.repo.imageUrl,
         createdAt: schema.repo.createdAt,
         updatedAt: schema.repo.updatedAt,
-        masterBranchId: schema.repoBranch.id,
+        masterBranch: {
+          id: schema.repoBranch.id,
+          imageUrl: schema.repoBranch.imageUrl,
+        },
       })
       .from(schema.repo)
       .innerJoin(

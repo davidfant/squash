@@ -1,77 +1,99 @@
-```bash
-brew install flyctl
-pip install git-remote-s3
+# Squash
+
+An AI-powered coding agent platform that enables you to build powerful internal tools through natural language conversations.
+
+**Try it now at [squash.build](https://squash.build)**
+
+![Squash Screenshot](assets/screenshot.png)
+
+## What is Squash?
+
+Squash helps you build internal tools by chatting with AI. Describe what you want to build in plain English, and Squash will write the code, set up the project structure, and provide live previews — all in real-time.
+
+## Features
+
+- **Conversational Development** — Build applications by chatting with an AI agent that understands your intent and writes production-quality code
+- **Live Previews** — See your changes instantly with real-time preview updates as the agent modifies your code
+- **Isolated Sandboxes** — Each project runs in its own secure, isolated environment powered by Daytona
+- **Pre-built Templates** — Start from curated templates including Vite + TypeScript and full-stack setups with tRPC and Cloudflare Workers
+- **Multi-Provider AI Gateway** — Unified interface for OpenAI, Anthropic, and Google models within your generated applications
+- **MCP Integrations** — Connect to external services via Composio for enhanced capabilities
+
+## Architecture
+
+Squash is a monorepo built with pnpm workspaces and Turborepo:
+
+```
+squash/
+├── packages/
+│   ├── app/              # React frontend (Vite, Tailwind, Clerk)
+│   ├── api/              # Cloudflare Worker backend (Hono, Drizzle)
+│   ├── cli/              # CLI wrapper for Claude Code agent
+│   ├── ai-sdk-claude-code/  # Vercel AI SDK adapter
+│   ├── iframe-bridge/    # Preview iframe communication
+│   ├── mcp-composio/     # MCP server for Composio integrations
+│   ├── preview-proxy/    # Preview URL proxy service
+│   └── screenshot-api/   # Screenshot generation service
+├── templates/            # Starter project templates
+└── patches/              # Dependency patches
 ```
 
-# Github private key
+## Getting Started
 
-Convert the downloaded private key from Github using the following command, and then paste the output into the `GITHUB_APP_PRIVATE_KEY` environment variable in the `.dev.vars` file.
+### Prerequisites
+
+- Node.js 18+
+- pnpm 10+
+- Docker (for local database)
+
+### Installation
 
 ```bash
-openssl pkcs8 -topk8 -inform PEM -in app-private-key.pem -outform PEM -nocrypt -out app-private-key.pkcs8.pem
+# Clone the repository
+git clone https://github.com/squashai/squash.git
+cd squash
+
+# Install dependencies
+pnpm install
 ```
 
-# flyio-ssh-proxy JWT key
+### Environment Setup
+
+Create a `.env` file in the root directory with the required environment variables (see each package's documentation for specific requirements).
+
+### Running Locally
 
 ```bash
-openssl genrsa -out private.dev.pem 2048
-openssl rsa -in private.dev.pem -pubout -out public.dev.pem
+# Start all services in development mode
+pnpm dev
 ```
 
-# TODO
+This will start:
 
-## p0
+- The frontend app on `http://localhost:5173`
+- The API server via Wrangler
+- Local PostgreSQL database via Docker
 
-- [x] Replace old LP w next, move branches to /builds/:id
-- [x] Clone screenshot doesn't work
-- [x] max height/scfoll in textbox
-- [x] attach button on /next not working
-- [x] add repo picker to input
-- [x] clean up branch preview header (share, menu, history)
-- [ ] fly io ssh proxy
-- [x] don't show recent prototypes if the list is empty
-- [x] loading
-- [x] persist e.g. current branch and filtered repo previews
-- [ ] get starter repo working
-- [x] typing placeholder
-- [x] animated presence for ChatInput height?
+## Tech Stack
 
-- [ ] Send a message while agent is running
-- [ ] Hooks for tsc
-- [ ] Google OAuth
-- [ ] Base repo
-- [ ] UI for when machine is starting/status
-- [ ] Error handling to avoid white screen of death
-- [ ] Publish
-- [x] Resume conversation/have chat stream once w DO
-- [x] Show todo list at the bottom
-- [ ] AI gateway for caching/org lvl $ tracking
-- [ ] create new chat
-- [ ] point and click chat
-- [ ] Password protected preview urls
+- **Frontend**: React 19, Vite, Tailwind CSS, Radix UI
+- **Backend**: Hono, Cloudflare Workers, Drizzle ORM
+- **Database**: PostgreSQL (Neon serverless)
+- **Auth**: Clerk
+- **AI**: Anthropic Claude Code, Vercel AI SDK
+- **Sandboxes**: Daytona
+- **Build**: Turborepo, pnpm workspaces
 
-- [x] abort returns 500
-- [ ] daytona preview warning
-- [x] flickers between previews when e.g. resetting to an older one
+## Packages
 
-For oct 7
+| Package                        | Description                                 |
+| ------------------------------ | ------------------------------------------- |
+| `@squashai/app`                | Web application frontend                    |
+| `@squashai/api`                | Backend API and agent orchestration         |
+| `@squashai/cli`                | Command-line interface for the coding agent |
+| `@squashai/ai-sdk-claude-code` | Vercel AI SDK provider for Claude Code      |
+| `@squashai/iframe-bridge`      | Communication layer for preview iframes     |
 
-- [x] from UI set agent state to clone screenshot
-- [x] only run clone screenshot based on state
-- [ ] color thief
-- [ ] make sure stopping agent works
-- [x] claude msgs not getting saved
-- [ ] screenshots?
-- [x] hide scrollbar in reasoning trace
-- [ ] redesign everything
-- [x] make invite links make sense
-- [ ] figure out what to do about CC tsc
-- [ ] look into daytona pty
+## License
 
-- errors in one of the branches: https://app.squash.build/prototypes/db41e30a-fc1f-4ce6-b29a-a3e9bcdea926
-- internal server error https://app.squash.build/prototypes/2bd3ac7f-4100-49fb-93af-031bc0597cd5
-- TS issues: https://app.squash.build/prototypes/6c6068f9-d981-426a-93d5-d001525e9b42
-- invite links limited to 1
-- git push to repo + delete sandbox
-- redux research for a state
-- `AI_RetryError: Failed after 3 attempts. Last error: Service Temporarily Unavailable` when analyzing screenshot => jumps directly to implementation next
+Private

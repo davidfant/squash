@@ -8,6 +8,7 @@ import type { Sandbox } from "@/sandbox/types";
 import { createUIMessageStream, type UIMessageStreamOptions } from "ai";
 import { env } from "cloudflare:workers";
 import { randomUUID } from "crypto";
+import { eq } from "drizzle-orm";
 import { storeInitialCommitInSystemMessage } from "./util";
 
 const getState = (messages: ChatMessage[]) =>
@@ -73,11 +74,13 @@ function streamInner(params: {
             abortSignal: params.controller.signal,
             messageMetadata: params.messageMetadata,
             readSessionData: params.readSessionData,
-            // onScreenshot: (imageUrl) =>
-            //   db
-            //     .update(schema.repoBranch)
-            //     .set({ imageUrl, updatedAt: new Date() })
-            //     .where(eq(schema.repoBranch.id, params.branchId)),
+            onScreenshot: (imageUrl) => {
+              console.log("ON SCREENSHOT", params.branchId, imageUrl);
+              return db
+                .update(schema.repoBranch)
+                .set({ imageUrl, updatedAt: new Date() })
+                .where(eq(schema.repoBranch.id, params.branchId));
+            },
           });
           break;
         // case "discover":

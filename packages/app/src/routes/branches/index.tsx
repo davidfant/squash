@@ -32,10 +32,10 @@ export function BranchesPage() {
       <main className="p-3">
         <FeatureCardGrid
           children={repos.data?.map((b, index) => (
-            <Link key={b.id} to={`/apps/${b.masterBranchId}`}>
+            <Link key={b.id} to={`/apps/${b.masterBranch.id}`}>
               <FeatureCard
                 title={b.name}
-                imageUrl={b.imageUrl}
+                imageUrl={b.masterBranch.imageUrl}
                 index={index}
                 onEdit={
                   isBuilder

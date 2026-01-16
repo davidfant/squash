@@ -1,10 +1,10 @@
 {
-  "name": "app",
+  "name": "squash-app",
   "compatibility_date": "2025-04-03",
   "pages_build_output_dir": "dist",
   "vars": {
     "VITE_API_URL": "http://localhost:8787",
-    "VITE_CLERK_PUBLISHABLE_KEY": "pk_test_aW5mb3JtZWQtaG9ybmV0LTQzLmNsZXJrLmFjY291bnRzLmRldiQ",
+    "VITE_CLERK_PUBLISHABLE_KEY": "pk_test_c3BlY2lhbC1idXJyby05Ni5jbGVyay5hY2NvdW50cy5kZXYk",
     "VITE_PUBLIC_POSTHOG_KEY": "",
     "VITE_PUBLIC_POSTHOG_HOST": ""
   },

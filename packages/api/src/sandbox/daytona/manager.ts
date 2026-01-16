@@ -95,6 +95,7 @@ export class DaytonaSandboxManager extends BaseSandboxManagerDurableObject<
             };
             logger.debug("Creating new sandbox", {
               snapshot: options.config.snapshot,
+              daytona: env.DAYTONA_API_KEY.slice(0, 5),
             });
             sandbox = await that.daytona.create({
               public: true,
